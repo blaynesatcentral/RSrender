@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSrender issue 34 accessibility harness</title>
+  <!--
+    THROWAWAY PROTOTYPE — NOT APPLICATION CODE.
+    Three accessibility/announcement variants, switchable with ?variant=A|B|C.
+    Synthetic clean-room content and in-memory state only.
+  -->
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18232d;
+      --muted: #52616f;
+      --paper: #fffdf5;
+      --surface: #f8fafb;
+      --line: #aebbc6;
+      --accent: #005e7a;
+      --accent-soft: #dff5fb;
+      --key: #9a4b00;
+      --danger: #9b1c1c;
+      --focus: #6d28d9;
+      font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: #dbe3e8; }
+    button, input { font: inherit; color: inherit; }
+    button { min-height: 36px; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr; }
+    .banner { display: flex; justify-content: space-between; gap: 20px; padding: 10px 16px; color: white; background: #17232d; }
+    .banner small { color: #d3dde4; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: white; }
+    .toolbar button, .property-grid input, .panel button { border: 1px solid #8e9dab; border-radius: 5px; background: white; padding: 6px 9px; }
+    .toolbar button:hover, .panel button:hover { background: #edf6f9; }
+    button[disabled] { opacity: .45; }
+    .toolbar-status { margin-left: auto; color: var(--muted); }
+    .workspace { min-width: 0; display: grid; gap: 1px; background: var(--line); }
+    .variant-A .workspace { grid-template-columns: minmax(280px,.8fr) minmax(520px,1.5fr) minmax(300px,.8fr); }
+    .variant-B .workspace { grid-template-columns: minmax(600px,1.7fr) minmax(300px,.7fr); grid-template-rows: minmax(520px,1fr) auto; }
+    .variant-B .canvas-panel { grid-column: 1; grid-row: 1 / span 2; }
+    .variant-B .tree-panel { grid-column: 2; grid-row: 1; }
+    .variant-B .properties-panel { grid-column: 2; grid-row: 2; }
+    .variant-C .workspace { grid-template-columns: minmax(420px,1.1fr) minmax(480px,1fr); grid-template-rows: minmax(420px,1fr) auto; }
+    .variant-C .tree-panel { grid-column: 1; grid-row: 1 / span 2; }
+    .variant-C .canvas-panel { grid-column: 2; grid-row: 1; }
+    .variant-C .properties-panel { grid-column: 2; grid-row: 2; }
+    .variant-C .tree-row { min-height: 48px; }
+    .panel { min-width: 0; padding: 12px; background: var(--surface); }
+    .panel h2 { margin: 0 0 10px; font-size: 1rem; }
+    .policy-note { margin: 0 0 10px; padding: 8px; border-left: 4px solid var(--accent); background: var(--accent-soft); }
+    .tree { display: grid; gap: 3px; }
+    .tree-row { display: grid; grid-template-columns: minmax(0,1fr) 42px 42px; align-items: center; min-height: 40px; border: 1px solid transparent; border-radius: 5px; }
+    .tree-row[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .tree-row.key { box-shadow: inset 5px 0 var(--key); }
+    .tree-row.inherited { color: var(--muted); }
+    .tree-main { min-width: 0; display: flex; gap: 8px; align-items: center; border: 0; background: transparent; text-align: left; padding: 7px 7px 7px calc(8px + var(--depth) * 22px); }
+    .tree-main .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-main .key-label { margin-left: auto; color: var(--key); font-weight: 800; font-size: .75rem; }
+    .tree-toggle { border: 0 !important; background: transparent !important; padding: 4px !important; }
+    .tree-toggle.local-off { color: var(--danger); background: #fee2e2 !important; }
+    .tree-toggle.inherited { text-decoration: line-through; }
+    .keyboard-help { margin-top: 12px; color: var(--muted); font-size: .875rem; }
+    .canvas-wrap { overflow: auto; padding: 18px; background: #ccd6dd; }
+    .page { position: relative; width: 520px; height: 620px; margin: 0 auto; border: 2px solid #697987; background: var(--paper); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+    .region { position: absolute; left: 18px; right: 18px; border: 1px dashed #7d8c98; color: var(--muted); font-size: .75rem; padding: 3px; pointer-events: none; }
+    .region.header { top: 18px; height: 104px; }
+    .region.depth { top: 132px; height: 420px; }
+    .region.footer { top: 562px; height: 38px; }
+    .page-item { position: absolute; min-height: 0; padding: 1px; border: 2px solid #485966; border-radius: 2px; background: white; text-align: left; overflow: hidden; cursor: move; font-size: 12px; line-height: 1; }
+    .page-item[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .page-item.key { outline: 4px double var(--key); outline-offset: 3px; }
+    .page-item[aria-disabled="true"] { border-style: dashed; color: var(--muted); cursor: not-allowed; }
+    .selection-description { margin: 0 0 10px; padding: 8px; border-left: 4px solid var(--key); background: #fff6e5; }
+    .property-grid { display: grid; grid-template-columns: repeat(2,minmax(90px,1fr)); gap: 10px; }
+    .property-grid label { display: grid; gap: 4px; color: var(--muted); font-size: .875rem; }
+    .property-grid input { width: 100%; min-height: 40px; }
+    .evidence { grid-column: 1 / -1; border-top: 1px solid var(--line); background: white; }
+    .evidence-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+    .evidence-card { min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 9px; background: #f8fafb; }
+    .evidence-card h3 { margin: 0 0 6px; font-size: .9rem; }
+    .evidence-card pre, .evidence-card output { display: block; max-height: 160px; overflow: auto; white-space: pre-wrap; font: .75rem/1.4 ui-monospace, monospace; }
+    .announcement-log { margin: 0; padding-left: 22px; max-height: 150px; overflow: auto; font-size: .8rem; }
+    .variant-switcher { position: fixed; z-index: 20; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 999px; color: white; background: #17232d; box-shadow: 0 8px 25px rgba(0,0,0,.28); }
+    .variant-switcher button { width: 2.5rem; height: 2.5rem; min-height: 2.5rem; border: 1px solid #aebbc6; border-radius: 50%; color: white; background: #314350; }
+    .variant-switcher output { min-width: 13.75rem; text-align: center; }
+    .sim-forced { --ink: CanvasText; --muted: CanvasText; --paper: Canvas; --surface: Canvas; --line: CanvasText; --accent: Highlight; --accent-soft: Canvas; --key: LinkText; --danger: LinkText; --focus: Highlight; }
+    .sim-forced *, .sim-forced .banner, .sim-forced .toolbar, .sim-forced .variant-switcher { box-shadow: none !important; text-shadow: none !important; }
+    .sim-forced button, .sim-forced input, .sim-forced .panel, .sim-forced .evidence-card { border-color: CanvasText !important; background: Canvas !important; color: CanvasText !important; }
+    .sim-forced [aria-selected="true"], .sim-forced [aria-pressed="true"] { outline: 3px solid Highlight !important; }
+    .sim-text-200 { font-size: 32px; }
+    .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (forced-colors: active) {
+      * { forced-color-adjust: auto; }
+      .banner, .toolbar, .panel, .page, .evidence-card, .variant-switcher { color: CanvasText; background: Canvas; border-color: CanvasText; box-shadow: none; }
+      .tree-row[aria-selected="true"], .page-item[aria-pressed="true"] { outline: 3px solid Highlight; background: Canvas; }
+      .tree-row.key, .page-item.key { outline: 4px double LinkText; }
+      :focus-visible { outline: 3px solid Highlight; }
+    }
+    @media (max-width: 980px) {
+      .variant-A .workspace, .variant-B .workspace, .variant-C .workspace { grid-template-columns: 1fr; grid-template-rows: auto; }
+      .variant-A .tree-panel, .variant-A .canvas-panel, .variant-A .properties-panel,
+      .variant-B .tree-panel, .variant-B .canvas-panel, .variant-B .properties-panel,
+      .variant-C .tree-panel, .variant-C .canvas-panel, .variant-C .properties-panel { grid-column: 1; grid-row: auto; }
+      .evidence-grid { grid-template-columns: 1fr; }
+      .toolbar-status { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="banner">
+    <strong>RSrender accessibility lab <small>— disposable issue #34 harness</small></strong>
+    <span id="environmentSummary"></span>
+  </header>
+  <nav class="toolbar" aria-label="Layout commands">
+    <button id="undoButton" type="button">Undo <kbd>Ctrl+Z</kbd></button>
+    <button id="alignButton" type="button">Align left to Key Element</button>
+    <button id="reportButton" type="button">Report selected position</button>
+    <button id="contrastButton" type="button" aria-pressed="false">Simulate forced-color tokens</button>
+    <button id="textScaleButton" type="button" aria-pressed="false">Simulate 200% UI text</button>
+    <button id="resetEvidenceButton" type="button">Reset evidence counters</button>
+    <output class="toolbar-status" id="selectionStatus"></output>
+  </nav>
+  <div class="workspace">
+    <section class="panel tree-panel" aria-labelledby="contentsHeading">
+      <h2 id="contentsHeading">Contents</h2>
+      <p class="policy-note" id="policyNote"></p>
+      <div id="contentsTree" class="tree" role="tree" aria-label="Page contents and render order"></div>
+      <p class="keyboard-help">Tree: Space selects; Shift+Space adds; V toggles local visibility; L toggles local lock; Alt+Up/Down reorders; Alt+Left/Right reparents.</p>
+    </section>
+
+    <section class="panel canvas-panel" aria-labelledby="canvasHeading">
+      <h2 id="canvasHeading">Synthetic page</h2>
+      <p class="keyboard-help">Canvas: arrows nudge 1 pt; Shift+arrows nudge 10 pt; Ctrl+arrows resize. Locked items are skipped in canvas focus order and remain operable in Contents.</p>
+      <div class="canvas-wrap">
+        <div class="page" id="pageCanvas" role="group" aria-label="Synthetic boring log page">
+          <div class="region header">Header</div>
+          <div class="region depth">Depth Body · reference depth 0–50 ft</div>
+          <div class="region footer">Footer</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel properties-panel" aria-labelledby="propertiesHeading">
+      <h2 id="propertiesHeading">Exact properties</h2>
+      <p class="selection-description" id="selectionDescription"></p>
+      <div class="property-grid">
+        <label for="propX">X position (pt)<input id="propX" type="number" step="1"></label>
+        <label for="propY">Y position (pt)<input id="propY" type="number" step="1"></label>
+        <label for="propW">Width (pt)<input id="propW" type="number" min="1" step="1"></label>
+        <label for="propH">Height (pt)<input id="propH" type="number" min="1" step="1"></label>
+      </div>
+    </section>
+
+    <section class="panel evidence" aria-labelledby="evidenceHeading">
+      <h2 id="evidenceHeading">Observable harness state</h2>
+      <div class="evidence-grid">
+        <article class="evidence-card">
+          <h3>Environment and media queries</h3>
+          <output id="environmentOutput"></output>
+        </article>
+        <article class="evidence-card">
+          <h3>Announcement writes</h3>
+          <output id="metricsOutput"></output>
+          <ol class="announcement-log" id="announcementLog"></ol>
+        </article>
+        <article class="evidence-card">
+          <h3>Selection and node state</h3>
+          <pre id="stateOutput"></pre>
+        </article>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="variant-switcher" aria-label="Prototype variants">
+  <button id="previousVariant" type="button" aria-label="Previous prototype variant">←</button>
+  <output id="variantLabel"></output>
+  <button id="nextVariant" type="button" aria-label="Next prototype variant">→</button>
+</div>
+<div id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(() => {
+  'use strict';
+  const variants = {
+    A: { name:'Debounced workbench', policy:'debounced', note:'Concise policy: repeated nudges announce once, 220 ms after input becomes idle.' },
+    B: { name:'Eager canvas', policy:'eager', note:'Control policy: every nudge writes to the polite live region. This intentionally exposes verbosity risk.' },
+    C: { name:'Queryable tree', policy:'queryable', note:'Queryable policy: nudges do not write live; Report selected position provides a deliberate status on request.' }
+  };
+  const query = new URLSearchParams(location.search);
+  let variant = variants[query.get('variant')] ? query.get('variant') : 'A';
+  const initialNodes = [
+    {id:'header',parentId:null,order:0,type:'group',name:'Header',x:18,y:18,w:484,h:104,localVisible:true,localLocked:false},
+    {id:'title',parentId:'header',order:0,type:'text',name:'Project title',x:34,y:40,w:270,h:34,localVisible:true,localLocked:false},
+    {id:'exploration',parentId:'header',order:1,type:'text',name:'Exploration identifier',x:322,y:40,w:160,h:34,localVisible:true,localLocked:false},
+    {id:'depth',parentId:null,order:1,type:'group',name:'Depth Body',x:18,y:132,w:484,h:420,localVisible:true,localLocked:false},
+    {id:'strata',parentId:'depth',order:0,type:'text',name:'Strata description',x:34,y:154,w:286,h:372,localVisible:true,localLocked:false},
+    {id:'nvalue',parentId:'depth',order:1,type:'track',name:'N-value layer',x:336,y:154,w:146,h:372,localVisible:true,localLocked:false},
+    {id:'axis',parentId:'depth',order:2,type:'line',name:'Shared numeric axis',x:336,y:138,w:146,h:16,localVisible:true,localLocked:true},
+    {id:'footer',parentId:null,order:2,type:'group',name:'Footer',x:18,y:562,w:484,h:38,localVisible:true,localLocked:false},
+    {id:'pageNumber',parentId:'footer',order:0,type:'text',name:'Page number',x:414,y:570,w:68,h:20,localVisible:true,localLocked:false}
+  ];
+  let nodes = structuredClone(initialNodes);
+  let selection = ['title'];
+  let keyElement = 'title';
+  let undoStack = [];
+  let simulateForced = false;
+  let simulateText200 = false;
+  let announcementTimer = null;
+  let pendingNudgeMessage = '';
+  const freshMetrics = () => ({ announcementWrites:0, nudgeWrites:0, commands:0, focusRestores:0, nudgeFocusPreserved:0, nudgeFocusLost:0, lastFocus:null });
+  let metrics = freshMetrics();
+  let announcementLog = [];
+
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+  const nodeById = id => nodes.find(node => node.id === id);
+  const childrenOf = parentId => nodes.filter(node => node.parentId === parentId).sort((a,b)=>a.order-b.order);
+  const ancestorsOf = node => { const list=[]; let parent=nodeById(node?.parentId); while(parent){list.push(parent);parent=nodeById(parent.parentId);} return list; };
+  const effective = node => { const chain=[node,...ancestorsOf(node)]; return { visible:chain.every(item=>item.localVisible), locked:chain.some(item=>item.localLocked), inheritedHidden:node.localVisible&&chain.slice(1).some(item=>!item.localVisible), inheritedLocked:!node.localLocked&&chain.slice(1).some(item=>item.localLocked) }; };
+  const selectedNodes = () => selection.map(nodeById).filter(Boolean);
+  const editableSelection = () => selectedNodes().filter(node=>!effective(node).locked);
+  const snapshot = () => ({nodes:structuredClone(nodes),selection:[...selection],keyElement});
+  const escapeHtml = value => String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+  function writeAnnouncement(message, kind='command') {
+    metrics.announcementWrites += 1;
+    if (kind === 'nudge') metrics.nudgeWrites += 1;
+    announcementLog.unshift(message);
+    announcementLog = announcementLog.slice(0,30);
+    $('#announcer').textContent = message;
+    renderEvidence();
+  }
+
+  function announceCommand(message) { writeAnnouncement(message,'command'); }
+
+  function announceNudge(message) {
+    const policy = variants[variant].policy;
+    if (policy === 'eager') { writeAnnouncement(message,'nudge'); return; }
+    if (policy === 'queryable') { pendingNudgeMessage = message; renderEvidence(); return; }
+    pendingNudgeMessage = message;
+    clearTimeout(announcementTimer);
+    announcementTimer = setTimeout(()=>{ const message=pendingNudgeMessage; pendingNudgeMessage=''; writeAnnouncement(message,'nudge'); },220);
+    renderEvidence();
+  }
+
+  function commit(label, mutate, options={}) {
+    const before=snapshot(); mutate(); undoStack.push({label,state:before}); metrics.commands+=1;
+    render(options.focusId); if (!options.nudge) announceCommand(label);
+  }
+
+  function undo() {
+    const entry=undoStack.pop(); if(!entry)return;
+    nodes=structuredClone(entry.state.nodes); selection=[...entry.state.selection]; keyElement=entry.state.keyElement;
+    metrics.commands+=1; render(); announceCommand(`Undid ${entry.label}`);
+  }
+
+  function select(id,additive=false) {
+    if(additive) selection=[...selection.filter(item=>item!==id),id]; else selection=[id];
+    keyElement=selection.at(-1)||null; render(id); announceCommand(`${selection.length} selected. Key Element ${nodeById(keyElement)?.name}.`);
+  }
+
+  function toggle(id,property) {
+    const node=nodeById(id); const word=property==='localVisible'?'visibility':'lock';
+    commit(`Changed local ${word} for ${node.name}`,()=>{node[property]=!node[property];},{focusId:id});
+  }
+
+  function nudgeOrResize(dx,dy,resize=false) {
+    const editable=editableSelection(); if(!editable.length)return;
+    const label=`${resize?'Resized':'Moved'} ${editable.length} item${editable.length===1?'':'s'} ${dx}, ${dy} points`;
+    const focusedCanvasId=document.activeElement?.dataset?.canvasId||null;
+    const before=snapshot();
+    editable.forEach(node=>{if(resize){node.w=Math.max(1,node.w+dx);node.h=Math.max(1,node.h+dy);}else{node.x+=dx;node.y+=dy;}});
+    undoStack.push({label,state:before}); metrics.commands+=1; renderGeometryOnly();
+    if(focusedCanvasId&&document.activeElement?.dataset?.canvasId===focusedCanvasId)metrics.nudgeFocusPreserved+=1;else metrics.nudgeFocusLost+=1;
+    announceNudge(`${label}. ${selectedPositionText()}`);
+  }
+
+  function selectedPositionText() {
+    const selected=selectedNodes();
+    if(selected.length!==1)return `${selected.length} items selected`;
+    const node=selected[0]; return `${node.name}: X ${node.x}, Y ${node.y}, width ${node.w}, height ${node.h} points`;
+  }
+
+  function alignLeft() {
+    const key=nodeById(keyElement), editable=editableSelection().filter(node=>node.id!==keyElement); if(!key||!editable.length)return;
+    commit(`Aligned ${editable.length} item${editable.length===1?'':'s'} left to Key Element ${key.name}`,()=>editable.forEach(node=>node.x=key.x));
+  }
+
+  function reorder(id,direction) {
+    const node=nodeById(id),siblings=childrenOf(node.parentId),index=siblings.findIndex(item=>item.id===id),other=siblings[index+direction]; if(!other)return;
+    commit(`${direction<0?'Raised':'Lowered'} ${node.name} in render order`,()=>{const order=node.order;node.order=other.order;other.order=order;},{focusId:id});
+  }
+
+  function reparent(id,direction) {
+    const node=nodeById(id),parent=nodeById(node.parentId);
+    if(direction<0){
+      if(!parent)return;
+      commit(`Moved ${node.name} out of ${parent.name}`,()=>{node.parentId=parent.parentId;node.order=parent.order+.5;normalize(node.parentId);},{focusId:id});
+    } else {
+      const siblings=childrenOf(node.parentId),index=siblings.findIndex(item=>item.id===id),target=[...siblings.slice(0,index)].reverse().find(item=>item.type==='group');
+      if(!target)return;
+      commit(`Moved ${node.name} into ${target.name}`,()=>{node.parentId=target.id;node.order=childrenOf(target.id).length;},{focusId:id});
+    }
+  }
+
+  function normalize(parentId){childrenOf(parentId).forEach((node,index)=>node.order=index);}
+
+  function applyProperty(property,value){const parsed=Number(value);if(!Number.isFinite(parsed))return;const editable=editableSelection();commit(`Set ${property} for ${editable.length} item${editable.length===1?'':'s'}`,()=>editable.forEach(node=>node[property]=['w','h'].includes(property)?Math.max(1,parsed):parsed));}
+
+  function treeMarkup(parentId=null,depth=0){return childrenOf(parentId).map(node=>{const state=effective(node),container=node.type==='group',classes=['tree-row',node.id===keyElement?'key':'',state.inheritedHidden||state.inheritedLocked?'inherited':''].filter(Boolean).join(' ');return `<div class="${classes}" role="treeitem" aria-level="${depth+1}" aria-selected="${selection.includes(node.id)}" ${container?'aria-expanded="true"':''} data-tree-id="${node.id}">
+    <button class="tree-main" style="--depth:${depth}" type="button" data-action="select" aria-label="${escapeHtml(node.name)}${node.id===keyElement?', Key Element':''}"><span aria-hidden="true">${container?'▾':'•'}</span><span class="name">${escapeHtml(node.name)}</span>${node.id===keyElement?'<span class="key-label">KEY</span>':''}</button>
+    <button class="tree-toggle ${!node.localVisible?'local-off':''} ${state.inheritedHidden?'inherited':''}" type="button" data-action="visibility" aria-label="${node.localVisible?'Hide':'Show'} ${escapeHtml(node.name)}. Effective visibility ${state.visible?'visible':'hidden'}" aria-pressed="${node.localVisible}">${state.visible?'◉':'○'}</button>
+    <button class="tree-toggle ${node.localLocked?'local-off':''} ${state.inheritedLocked?'inherited':''}" type="button" data-action="lock" aria-label="${node.localLocked?'Unlock':'Lock'} ${escapeHtml(node.name)}. Effective lock ${state.locked?'locked':'editable'}" aria-pressed="${node.localLocked}">${state.locked?'▣':'□'}</button>
+  </div>${container?treeMarkup(node.id,depth+1):''}`;}).join('');}
+
+  function canvasMarkup(){return nodes.filter(node=>node.type!=='group'&&effective(node).visible).map((node,index)=>{const state=effective(node);return `<button class="page-item ${node.id===keyElement?'key':''}" type="button" tabindex="${state.locked?'-1':'0'}" data-canvas-id="${node.id}" aria-label="${escapeHtml(node.name)}, X ${node.x}, Y ${node.y}, width ${node.w}, height ${node.h} points${node.id===keyElement?', Key Element':''}${state.locked?', locked':''}" aria-pressed="${selection.includes(node.id)}" aria-disabled="${state.locked}" style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;z-index:${index+2}">${escapeHtml(node.name)}</button>`;}).join('');}
+
+  function commonValue(property){const values=selectedNodes().map(node=>node[property]);return values.length&&values.every(value=>value===values[0])?values[0]:'';}
+
+  function renderGeometryOnly(){
+    nodes.filter(node=>node.type!=='group').forEach(node=>{
+      const item=document.querySelector(`[data-canvas-id="${node.id}"]`); if(!item)return;
+      item.style.left=`${node.x}px`;item.style.top=`${node.y}px`;item.style.width=`${node.w}px`;item.style.height=`${node.h}px`;
+      const state=effective(node);item.setAttribute('aria-label',`${node.name}, X ${node.x}, Y ${node.y}, width ${node.w}, height ${node.h} points${node.id===keyElement?', Key Element':''}${state.locked?', locked':''}`);
+    });
+    Object.entries({propX:'x',propY:'y',propW:'w',propH:'h'}).forEach(([id,property])=>{const input=$(`#${id}`);input.value=commonValue(property);input.placeholder=input.value===''&&selection.length>1?'Mixed':'';});
+    $('#undoButton').disabled=!undoStack.length;renderEvidence();
+  }
+
+  function mediaState(){return {variant,announcementPolicy:variants[variant].policy,forcedColorsActive:matchMedia('(forced-colors: active)').matches,prefersContrastMore:matchMedia('(prefers-contrast: more)').matches,prefersReducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,devicePixelRatio,innerWidth,innerHeight,visualViewportScale:visualViewport?.scale??null,rootFontPx:getComputedStyle(document.documentElement).fontSize,simulatedForcedTokens:simulateForced,simulatedText200:simulateText200,userAgent:navigator.userAgent};}
+
+  function render(focusId=null){
+    const activeId=focusId||document.activeElement?.closest?.('[data-tree-id]')?.dataset.treeId||document.activeElement?.dataset?.canvasId;
+    document.body.className=`variant-${variant}${simulateForced?' sim-forced':''}`;
+    document.documentElement.classList.toggle('sim-text-200',simulateText200);
+    $('#variantLabel').textContent=`${variant} — ${variants[variant].name}`; $('#policyNote').textContent=variants[variant].note;
+    $('#contentsTree').innerHTML=treeMarkup(); $$('#pageCanvas .page-item').forEach(item=>item.remove()); $('#pageCanvas').insertAdjacentHTML('beforeend',canvasMarkup());
+    const selected=selectedNodes(),key=nodeById(keyElement),editable=editableSelection();
+    $('#selectionStatus').textContent=`${selected.length} selected · Key: ${key?.name||'none'} · ${editable.length} editable`;
+    $('#selectionDescription').textContent=selected.length===1?`${selected[0].name}${effective(selected[0]).locked?' — effectively locked':''}`:`${selected.length} items. ${key?.name} is the Key Element.`;
+    $('#undoButton').disabled=!undoStack.length; $('#alignButton').disabled=selected.length<2||!editable.some(node=>node.id!==keyElement);
+    Object.entries({propX:'x',propY:'y',propW:'w',propH:'h'}).forEach(([id,property])=>{const input=$(`#${id}`);input.value=commonValue(property);input.placeholder=input.value===''&&selected.length>1?'Mixed':'';input.disabled=!editable.length;});
+    $('#environmentSummary').textContent=`DPR ${devicePixelRatio} · forced colors ${matchMedia('(forced-colors: active)').matches?'on':'off'}`;
+    wireRows(); renderEvidence();
+    if(activeId)requestAnimationFrame(()=>{const target=document.querySelector(`[data-tree-id="${activeId}"] .tree-main, [data-canvas-id="${activeId}"]`);if(target){target.focus();metrics.focusRestores+=1;metrics.lastFocus=activeId;renderEvidence();}});
+  }
+
+  function renderEvidence(){
+    $('#environmentOutput').textContent=JSON.stringify(mediaState(),null,2);
+    $('#metricsOutput').textContent=JSON.stringify({...metrics,pendingNudgeMessage},null,2);
+    $('#announcementLog').innerHTML=announcementLog.map(message=>`<li>${escapeHtml(message)}</li>`).join('');
+    $('#stateOutput').textContent=JSON.stringify({selection,keyElement,undoDepth:undoStack.length,nodes:nodes.map(node=>({id:node.id,parentId:node.parentId,order:node.order,localVisible:node.localVisible,localLocked:node.localLocked,effective:effective(node),box:[node.x,node.y,node.w,node.h]}))},null,2);
+  }
+
+  function wireRows(){
+    $$('.tree-row').forEach(row=>{const id=row.dataset.treeId,main=row.querySelector('[data-action="select"]');main.addEventListener('click',event=>select(id,event.shiftKey));main.addEventListener('keydown',event=>{if(event.key===' '){event.preventDefault();select(id,event.shiftKey);}if(event.key.toLowerCase()==='v'){event.preventDefault();toggle(id,'localVisible');}if(event.key.toLowerCase()==='l'){event.preventDefault();toggle(id,'localLocked');}if(event.altKey&&event.key==='ArrowUp'){event.preventDefault();reorder(id,-1);}if(event.altKey&&event.key==='ArrowDown'){event.preventDefault();reorder(id,1);}if(event.altKey&&event.key==='ArrowLeft'){event.preventDefault();reparent(id,-1);}if(event.altKey&&event.key==='ArrowRight'){event.preventDefault();reparent(id,1);}});row.querySelector('[data-action="visibility"]').addEventListener('click',()=>toggle(id,'localVisible'));row.querySelector('[data-action="lock"]').addEventListener('click',()=>toggle(id,'localLocked'));});
+    $$('.page-item').forEach(item=>{const id=item.dataset.canvasId,state=effective(nodeById(id));item.addEventListener('click',event=>{if(!state.locked)select(id,event.shiftKey);});item.addEventListener('keydown',event=>{if(state.locked)return;const arrows={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};if(!arrows[event.key])return;event.preventDefault();if(!selection.includes(id))select(id);const amount=event.shiftKey?10:1;nudgeOrResize(arrows[event.key][0]*amount,arrows[event.key][1]*amount,event.ctrlKey||event.metaKey);});});
+  }
+
+  function setVariant(next){variant=next;clearTimeout(announcementTimer);pendingNudgeMessage='';metrics=freshMetrics();announcementLog=[];const url=new URL(location.href);url.searchParams.set('variant',variant);history.replaceState(null,'',url);render();announceCommand(`Variant ${variant}, ${variants[variant].name}.`);}
+  function cycleVariant(delta){const keys=Object.keys(variants),index=keys.indexOf(variant);setVariant(keys[(index+delta+keys.length)%keys.length]);}
+
+  $('#undoButton').addEventListener('click',undo); $('#alignButton').addEventListener('click',alignLeft); $('#reportButton').addEventListener('click',()=>{pendingNudgeMessage='';writeAnnouncement(selectedPositionText(),'report');});
+  $('#contrastButton').addEventListener('click',()=>{simulateForced=!simulateForced;$('#contrastButton').setAttribute('aria-pressed',String(simulateForced));render();announceCommand(`Forced-color token simulation ${simulateForced?'on':'off'}. This is simulated, not an operating-system forced-colors observation.`);});
+  $('#textScaleButton').addEventListener('click',()=>{simulateText200=!simulateText200;$('#textScaleButton').setAttribute('aria-pressed',String(simulateText200));render();announceCommand(`Two-hundred-percent UI text simulation ${simulateText200?'on':'off'}. Log Template point geometry is unchanged.`);});
+  $('#resetEvidenceButton').addEventListener('click',()=>{clearTimeout(announcementTimer);pendingNudgeMessage='';metrics=freshMetrics();announcementLog=[];renderEvidence();});
+  Object.entries({propX:'x',propY:'y',propW:'w',propH:'h'}).forEach(([id,property])=>{
+    const input=$(`#${id}`);
+    input.addEventListener('change',event=>applyProperty(property,event.target.value));
+    input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyProperty(property,event.target.value);}});
+  });
+  $('#previousVariant').addEventListener('click',()=>cycleVariant(-1)); $('#nextVariant').addEventListener('click',()=>cycleVariant(1));
+  document.addEventListener('keydown',event=>{const editing=event.target.matches('input,textarea,select,[contenteditable="true"]');if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'&&!editing){event.preventDefault();undo();}if(!editing&&(event.target===document.body||event.target.closest('.variant-switcher'))){if(event.key==='ArrowLeft'){event.preventDefault();cycleVariant(-1);}if(event.key==='ArrowRight'){event.preventDefault();cycleVariant(1);}}});
+  addEventListener('resize',()=>renderEvidence());
+  window.__a11yHarness={getState:()=>snapshot(),getMetrics:()=>structuredClone(metrics),mediaState,reset:()=>{nodes=structuredClone(initialNodes);selection=['title'];keyElement='title';undoStack=[];metrics=freshMetrics();announcementLog=[];render();}};
+  render();
+})();
+</script>
+</body>
+</html>
