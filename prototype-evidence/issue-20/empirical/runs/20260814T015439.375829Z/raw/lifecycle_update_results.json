@@ -1,0 +1,162 @@
+[
+  {
+    "case": "dirty-close-all-clean",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {}, \"result\": {\"decision\": \"allow-close\", \"documents\": []}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-multiple-dirty",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"c\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {}, \"result\": {\"decision\": \"prompt-dirty\", \"documents\": [\"a\", \"b\"]}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-partial-disposition",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {\"a\": \"save\"}, \"result\": {\"decision\": \"prompt-dirty\", \"documents\": [\"b\"]}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-all-disposed",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {\"a\": \"save\", \"b\": \"discard\"}, \"result\": {\"decision\": \"allow-close\", \"documents\": []}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-user-cancel",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {\"a\": \"save\", \"b\": \"cancel\"}, \"result\": {\"decision\": \"cancel-close\", \"documents\": []}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-save-in-progress",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"saving\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {\"a\": \"save\"}, \"result\": {\"decision\": \"block-active-work\", \"documents\": [\"a\"]}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-export-in-progress",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"running\"}, {\"id\": \"b\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}], \"dispositions\": {\"b\": \"discard\"}, \"result\": {\"decision\": \"block-active-work\", \"documents\": [\"a\"]}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "dirty-close-save-failed",
+    "detail": "Pure multi-document close/update-restart gate exposed every unresolved or active artifact.",
+    "evidence": "{\"documents\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"failed\", \"exportState\": \"idle\"}], \"dispositions\": {\"a\": \"save\"}, \"result\": {\"decision\": \"block-save-failed\", \"documents\": [\"a\"]}}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "renderer-crash-does-not-clear-domain-dirty-state",
+    "detail": "Main/domain-owned state remained dirty when a synthetic renderer lifecycle event occurred.",
+    "evidence": "{\"event\": {\"type\": \"renderer-crashed\", \"documentId\": \"a\"}, \"state\": [{\"id\": \"a\", \"dirty\": true, \"saveState\": \"idle\", \"exportState\": \"idle\"}, {\"id\": \"b\", \"dirty\": false, \"saveState\": \"idle\", \"exportState\": \"idle\"}]}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-authority-app",
+    "detail": "Prototype configuration accepted exactly one update authority.",
+    "evidence": "{\"authorities\": [\"app\"], \"valid\": true}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-authority-it",
+    "detail": "Prototype configuration accepted exactly one update authority.",
+    "evidence": "{\"authorities\": [\"it\"], \"valid\": true}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-authority-manual",
+    "detail": "Prototype configuration accepted exactly one update authority.",
+    "evidence": "{\"authorities\": [\"manual\"], \"valid\": true}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-authority-none",
+    "detail": "Prototype configuration accepted exactly one update authority.",
+    "evidence": "{\"authorities\": [], \"valid\": false}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-authority-dual",
+    "detail": "Prototype configuration accepted exactly one update authority.",
+    "evidence": "{\"authorities\": [\"app\", \"it\"], \"valid\": false}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-hash-valid",
+    "detail": "Locally generated artifact matched bounded metadata and digest.",
+    "evidence": "{\"manifest\": {\"version\": 3, \"channel\": \"internal\", \"sha256\": \"873c772030236b021c00f445b50e1998fe659dd662ec2c4965cda2385bcd7585\", \"bytes\": 832}, \"result\": [true, \"UPDATE_ACCEPT\"]}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "update-hash-tamper",
+    "detail": "One-byte-class synthetic tamper was rejected by size/digest verification.",
+    "evidence": "{\"result\": [false, \"UPDATE_INTEGRITY\"]}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "update-downgrade-explicit-policy",
+    "detail": "Downgrade was blocked by default and accepted only under an explicit local policy flag.",
+    "evidence": "{\"blocked\": [false, \"UPDATE_DOWNGRADE\"], \"explicitlyAllowed\": [true, \"UPDATE_ACCEPT\"]}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "update-channel-mismatch",
+    "detail": "External-channel metadata was rejected by an internal-channel verifier.",
+    "evidence": "{\"result\": [false, \"UPDATE_CHANNEL\"]}",
+    "expected": null,
+    "label": "prototype-logic",
+    "passed": true
+  },
+  {
+    "case": "windows-authenticode-unsigned",
+    "detail": "Windows Authenticode classified the inert local script as NotSigned; a production release must fail closed rather than infer trust from a hash.",
+    "evidence": "{\"probe\": {\"exitCode\": 0, \"stdout\": \"{\\\"Status\\\":\\\"NotSigned\\\",\\\"StatusMessage\\\":\\\"The file C:\\\\\\\\frv\\\\\\\\RSRender\\\\\\\\.wayfinder-tmp\\\\\\\\prototypes\\\\\\\\issue-20\\\\\\\\empirical\\\\\\\\runs\\\\\\\\20260814T015439.375829Z\\\\\\\\scratch\\\\\\\\update\\\\\\\\unsigned-installer-probe.ps1 is not digitally signed. You cannot run this script on the current system. For more information about running scripts and setting execution policy, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170\\\",\\\"Signer\\\":null}\", \"stderr\": \"\"}, \"parsed\": {\"Status\": \"NotSigned\", \"StatusMessage\": \"The file C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\update\\\\unsigned-installer-probe.ps1 is not digitally signed. You cannot run this script on the current system. For more information about running scripts and setting execution policy, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170\", \"Signer\": null}}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "installer-updater-framework-behavior",
+    "detail": "Squirrel, NSIS, MSIX/App Installer, Intune, signing/timestamping, publishing, rollback, proxy, and install repair were intentionally not exercised because no isolated VM/toolchain/signing authority was in scope.",
+    "evidence": "not executed",
+    "expected": "defer",
+    "label": "not-observed",
+    "passed": true
+  }
+]

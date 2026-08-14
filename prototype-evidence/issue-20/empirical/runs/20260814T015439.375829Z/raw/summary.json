@@ -1,0 +1,32 @@
+{
+  "groups": {
+    "lifecycle_update_results": {
+      "cases": 20,
+      "passed": 20
+    },
+    "path_results": {
+      "cases": 6,
+      "passed": 6
+    },
+    "recovery_results": {
+      "cases": 4,
+      "passed": 4
+    },
+    "save_results": {
+      "cases": 14,
+      "passed": 14
+    },
+    "zip_results": {
+      "cases": 30,
+      "passed": 30
+    }
+  },
+  "runRoot": "C:\\frv\\RSRender\\.wayfinder-tmp\\prototypes\\issue-20\\empirical\\runs\\20260814T015439.375829Z",
+  "totals": {
+    "cases": 74,
+    "failed": 0,
+    "observed": 52,
+    "passed": 74,
+    "simulated": 22
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "capturedUtc": "2026-08-14T01:54:42.341643+00:00",
+  "driveProbe": {
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "{\"Name\":\"C:\\\\\",\"Format\":\"NTFS\",\"Type\":\"Fixed\",\"Free\":90685030400,\"Size\":509135024128}"
+  },
+  "installerToolProbe": {
+    "exitCode": 1,
+    "stderr": "",
+    "stdout": ""
+  },
+  "networkUsed": false,
+  "node": "v22.20.0",
+  "npm": "11.13.0",
+  "osProbe": {
+    "exitCode": 0,
+    "stderr": "Get-CimInstance : Access denied \nAt line:1 char:28\n+ ... customobject]@{Caption=(Get-CimInstance Win32_OperatingSystem).Captio ...\n+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : PermissionDenied: (root\\cimv2:Win32_OperatingSystem:String) [Get-CimInstance], CimExcept \n   ion\n    + FullyQualifiedErrorId : HRESULT 0x80041003,Microsoft.Management.Infrastructure.CimCmdlets.GetCimInstanceCommand",
+    "stdout": "{\"Caption\":null,\"Version\":\"10.0.26200.0\",\"Architecture\":\"AMD64\",\"PowerShell\":\"5.1.26100.8875\"}"
+  },
+  "platform": "Windows-10-10.0.26200-SP0",
+  "productionDependenciesInstalled": false,
+  "python": "3.10.11 (tags/v3.10.11:7d4cc5a, Apr  5 2023, 00:38:17) [MSC v.1929 64 bit (AMD64)]",
+  "pythonExecutable": "C:\\Users\\BlayneSandau\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+  "workspace": "C:\\frv\\RSRender\\.wayfinder-tmp\\prototypes\\issue-20\\empirical"
+}

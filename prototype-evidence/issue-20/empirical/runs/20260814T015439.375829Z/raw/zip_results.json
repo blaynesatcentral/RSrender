@@ -1,0 +1,242 @@
+[
+  {
+    "case": "valid-package",
+    "detail": "valid constrained ZIP",
+    "evidence": "{\"expectedCode\": \"ACCEPT\", \"actualCode\": \"ACCEPT\", \"detail\": \"\", \"result\": {\"packageId\": \"00000000-0000-4000-8000-0000000000a1\", \"parts\": [\"domain/project.json\"], \"entries\": 2, \"expandedBytes\": 386}, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "traversal",
+    "detail": "../escape.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"empty/dot component: '../escape.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "absolute",
+    "detail": "/absolute.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"absolute/backslash: '/absolute.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "backslash",
+    "detail": "assets\\escape.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"absolute/backslash: 'assets\\\\\\\\escape.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "drive",
+    "detail": "C:escape.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"drive/ADS: 'C:escape.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "unc",
+    "detail": "\\\\server\\share.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"absolute/backslash: '//server/share.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "ads",
+    "detail": "assets/file.txt:stream",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"drive/ADS: 'assets/file.txt:stream'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "reserved-device",
+    "detail": "assets/CON.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"device component: 'assets/CON.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "trailing-dot",
+    "detail": "assets/name.",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"trailing dot/space: 'assets/name.'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "trailing-space",
+    "detail": "assets/name ",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"trailing dot/space: 'assets/name '\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "dot-component",
+    "detail": "assets/../escape.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_PATH\", \"actualCode\": \"ZIP_PATH\", \"detail\": \"empty/dot component: 'assets/../escape.txt'\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "encoded-traversal",
+    "detail": "assets/%2e%2e/escape.txt",
+    "evidence": "{\"expectedCode\": \"ZIP_ENCODED_PATH\", \"actualCode\": \"ZIP_ENCODED_PATH\", \"detail\": \"assets/%2e%2e/escape.txt\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "case-normalized-collision",
+    "detail": "casefold collision",
+    "evidence": "{\"expectedCode\": \"ZIP_NORMALIZED_COLLISION\", \"actualCode\": \"ZIP_NORMALIZED_COLLISION\", \"detail\": \"parts/a.json\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "unicode-nfc-collision",
+    "detail": "NFC collision",
+    "evidence": "{\"expectedCode\": \"ZIP_NORMALIZED_COLLISION\", \"actualCode\": \"ZIP_NORMALIZED_COLLISION\", \"detail\": \"assets/e\\u0301.txt\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "duplicate-exact-name",
+    "detail": "duplicate central entries",
+    "evidence": "{\"expectedCode\": \"ZIP_DUPLICATE_NAME\", \"actualCode\": \"ZIP_DUPLICATE_NAME\", \"detail\": \"domain/project.json\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "symlink-entry",
+    "detail": "Unix symlink metadata",
+    "evidence": "{\"expectedCode\": \"ZIP_LINK_OR_SPECIAL\", \"actualCode\": \"ZIP_LINK_OR_SPECIAL\", \"detail\": \"assets/link\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "entry-count-bound",
+    "detail": "entry count above prototype limit",
+    "evidence": "{\"expectedCode\": \"ZIP_ENTRY_COUNT\", \"actualCode\": \"ZIP_ENTRY_COUNT\", \"detail\": \"14\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "compression-ratio-bound",
+    "detail": "high ratio Deflate member",
+    "evidence": "{\"expectedCode\": \"ZIP_RATIO\", \"actualCode\": \"ZIP_RATIO\", \"detail\": \"domain/zeros.bin\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "entry-size-bound",
+    "detail": "declared member above limit",
+    "evidence": "{\"expectedCode\": \"ZIP_ENTRY_SIZE\", \"actualCode\": \"ZIP_ENTRY_SIZE\", \"detail\": \"domain/large.bin\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "nested-archive",
+    "detail": "nested archive magic",
+    "evidence": "{\"expectedCode\": \"PART_NESTED_ARCHIVE\", \"actualCode\": \"PART_NESTED_ARCHIVE\", \"detail\": \"assets/nested.zip\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "manifest-invalid-utf8",
+    "detail": "invalid UTF-8",
+    "evidence": "{\"expectedCode\": \"JSON_UTF8\", \"actualCode\": \"JSON_UTF8\", \"detail\": \"'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "manifest-duplicate-json-key",
+    "detail": "duplicate root member",
+    "evidence": "{\"expectedCode\": \"JSON_DUPLICATE_KEY\", \"actualCode\": \"JSON_DUPLICATE_KEY\", \"detail\": \"formatIdentifier\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "future-format-version",
+    "detail": "future format",
+    "evidence": "{\"expectedCode\": \"MANIFEST_VERSION\", \"actualCode\": \"MANIFEST_VERSION\", \"detail\": \"3\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "future-min-reader",
+    "detail": "future reader requirement",
+    "evidence": "{\"expectedCode\": \"MANIFEST_MIN_READER\", \"actualCode\": \"MANIFEST_MIN_READER\", \"detail\": \"3\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "unknown-core-field",
+    "detail": "closed root schema",
+    "evidence": "{\"expectedCode\": \"MANIFEST_SCHEMA\", \"actualCode\": \"MANIFEST_SCHEMA\", \"detail\": \"fields=['formatIdentifier', 'formatVersion', 'minReaderVersion', 'packageId', 'packageKind', 'parts', 'unknownCore']\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "extension-kind-mismatch",
+    "detail": "manifest kind differs from selected document kind",
+    "evidence": "{\"expectedCode\": \"MANIFEST_KIND\", \"actualCode\": \"MANIFEST_KIND\", \"detail\": \"log-template\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "part-hash-mismatch",
+    "detail": "wrong digest",
+    "evidence": "{\"expectedCode\": \"PART_INTEGRITY\", \"actualCode\": \"PART_INTEGRITY\", \"detail\": \"domain/project.json\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "missing-authoritative-part",
+    "detail": "manifest refers to absent part",
+    "evidence": "{\"expectedCode\": \"PART_MISSING\", \"actualCode\": \"PART_MISSING\", \"detail\": \"domain/project.json\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "executable-part",
+    "detail": "declarative package rejects script",
+    "evidence": "{\"expectedCode\": \"PART_EXECUTABLE\", \"actualCode\": \"PART_EXECUTABLE\", \"detail\": \"scripts/run.ps1\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "local-central-header-mismatch",
+    "detail": "local member name patched; central name unchanged",
+    "evidence": "{\"expectedCode\": \"ZIP_HEADER_OR_CRC\", \"actualCode\": \"ZIP_HEADER_OR_CRC\", \"detail\": \"File name in directory 'manifest.json' and header b'manifesz.json' differ.\", \"result\": null, \"escapeCreated\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  }
+]

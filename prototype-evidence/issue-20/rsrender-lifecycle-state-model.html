@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSrender lifecycle state-model prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211f;
+      --muted: #596965;
+      --line: #cbd7d3;
+      --soft: #f1f6f4;
+      --paper: #ffffff;
+      --accent: #0a6f62;
+      --accent-dark: #074b43;
+      --accent-soft: #dff2ed;
+      --warn: #8a5200;
+      --warn-soft: #fff1d4;
+      --bad: #9b2c2c;
+      --bad-soft: #fde8e8;
+      --good: #17633d;
+      --good-soft: #e4f4ea;
+      --shadow: 0 8px 24px rgba(23, 33, 31, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #e9f0ed;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+
+    button { font: inherit; }
+
+    .shell {
+      width: min(1520px, calc(100% - 32px));
+      margin: 24px auto 56px;
+    }
+
+    .hero,
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 26px 30px;
+      border-top: 5px solid var(--accent);
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--accent-dark);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { line-height: 1.18; }
+    h1 { margin: 0 0 12px; font-size: clamp(1.7rem, 3vw, 2.55rem); }
+    h2 { margin: 0; font-size: 1.18rem; }
+    h3 { margin: 0 0 10px; font-size: 1rem; }
+
+    .question {
+      max-width: 1100px;
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .prototype-note {
+      margin: 14px 0 0;
+      color: var(--muted);
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--soft);
+      font-size: .84rem;
+      font-weight: 700;
+    }
+
+    .badge.good { color: var(--good); background: var(--good-soft); border-color: #b9ddc6; }
+    .badge.warn { color: var(--warn); background: var(--warn-soft); border-color: #ebcc8f; }
+    .badge.bad { color: var(--bad); background: var(--bad-soft); border-color: #e5b3b3; }
+
+    .section {
+      margin-top: 18px;
+      padding: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-head p { margin: 0; color: var(--muted); }
+
+    .event {
+      margin-bottom: 16px;
+      padding: 13px 15px;
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent-soft);
+    }
+
+    .event strong { display: block; margin-bottom: 2px; }
+    .event.error { border-color: var(--bad); background: var(--bad-soft); }
+    .event.warning { border-color: var(--warn); background: var(--warn-soft); }
+    .event.success { border-color: var(--good); background: var(--good-soft); }
+
+    .document-tabs,
+    .scenario-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-button {
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--paper);
+      cursor: pointer;
+    }
+
+    .tab-button[aria-selected="true"] {
+      color: #fff;
+      background: var(--accent-dark);
+      border-color: var(--accent-dark);
+    }
+
+    .tab-button.closed { color: var(--muted); text-decoration: line-through; }
+
+    .state-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, .8fr);
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .subpanel {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdfc;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .state-item {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid #dce5e2;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .state-item .label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .state-item .value {
+      display: block;
+      overflow-wrap: anywhere;
+      font-weight: 700;
+    }
+
+    .diagnostics,
+    .history,
+    .choices {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .diagnostics li,
+    .history li,
+    .choices li { margin: 6px 0; }
+
+    .history small { display: block; color: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+
+    th, td {
+      padding: 9px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+
+    .tables {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .action-groups {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .action-group {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+    }
+
+    .action-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .action-button,
+    .step-button,
+    .restart-button {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #9db0aa;
+      border-radius: 7px;
+      color: var(--ink);
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .action-button:hover,
+    .step-button:not(:disabled):hover,
+    .restart-button:hover { border-color: var(--accent); background: #f5fbf9; }
+
+    .action-button:focus-visible,
+    .step-button:focus-visible,
+    .tab-button:focus-visible,
+    .restart-button:focus-visible {
+      outline: 3px solid #8ed2c5;
+      outline-offset: 2px;
+    }
+
+    .walkthrough {
+      margin-top: 14px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdfc;
+    }
+
+    .walkthrough-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .walkthrough p { margin: 5px 0; color: var(--muted); }
+    .restart-button { width: auto; text-align: center; font-weight: 700; }
+
+    .step-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .step-button { height: 100%; }
+    .step-button strong { display: block; margin-bottom: 4px; }
+    .step-button span { display: block; color: var(--muted); font-size: .83rem; }
+    .step-button.current { border: 2px solid var(--accent); background: var(--accent-soft); }
+    .step-button.done { border-color: #b9ddc6; background: var(--good-soft); }
+    .step-button:disabled { cursor: default; opacity: .65; }
+
+    .empty {
+      padding: 18px;
+      border: 1px dashed #9db0aa;
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .prototype-assumptions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .footer-note { color: var(--muted); font-size: .88rem; }
+
+    @media (max-width: 1050px) {
+      .state-layout, .tables, .prototype-assumptions { grid-template-columns: 1fr; }
+      .action-groups { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
+      .step-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 650px) {
+      .shell { width: min(100% - 16px, 1520px); margin-top: 8px; }
+      .hero, .section { padding: 16px; }
+      .state-grid, .action-groups, .step-list { grid-template-columns: 1fr; }
+      .walkthrough-top { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Throwaway logic prototype · Wayfinder ticket #20</p>
+      <h1>RSrender document lifecycle state model</h1>
+      <p class="question"><strong>Question:</strong> Can one explicit lifecycle model keep an open `Log Project` or `Log Template`, its authoritative user file, recovery candidates, template fallback, package trust, multi-document Close/Quit, and application update/rollback independent enough that no failure silently loses work or rewrites a user file?</p>
+      <p class="prototype-note">This is an in-memory decision probe—not application UI, production code, persistence, an updater, or a file-format implementation. Every file and revision shown is synthetic.</p>
+      <div class="status-strip" id="status-strip" aria-live="polite"></div>
+    </header>
+
+    <section class="panel section" aria-labelledby="state-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="state-heading">Current lifecycle state</h2>
+          <p>Every action re-renders the complete human-readable state. Click a document tab to make it active.</p>
+        </div>
+      </div>
+      <div id="event"></div>
+      <div id="document-tabs" class="document-tabs" role="tablist" aria-label="Open and closed documents"></div>
+      <div id="active-document"></div>
+      <div class="tables">
+        <div class="subpanel">
+          <h3>Authoritative user files</h3>
+          <div id="files"></div>
+        </div>
+        <div class="subpanel">
+          <h3>Recovery candidates</h3>
+          <div id="recoveries"></div>
+        </div>
+      </div>
+      <div class="tables">
+        <div class="subpanel">
+          <h3>Application, update, and Quit coordinator</h3>
+          <div id="coordinator"></div>
+        </div>
+        <div class="subpanel">
+          <h3>Recent transition ledger</h3>
+          <ol class="history" id="history"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section" aria-labelledby="free-play-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="free-play-heading">Free play</h2>
+          <p>Every action stays clickable. Illegal transitions are rejected with a reason so the model can be challenged in any order.</p>
+        </div>
+      </div>
+      <div class="action-groups" id="free-play"></div>
+    </section>
+
+    <section class="panel section" aria-labelledby="guided-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="guided-heading">Guided scenarios</h2>
+          <p>Selecting a tab resets the in-memory model to a known starting state. Press the steps in order and watch the state above.</p>
+        </div>
+      </div>
+      <div class="scenario-tabs" id="scenario-tabs" role="tablist" aria-label="Lifecycle scenarios"></div>
+      <div id="walkthrough"></div>
+    </section>
+
+    <section class="panel section" aria-labelledby="choices-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="choices-heading">Explicit unresolved choices</h2>
+          <p>The prototype refuses to let these choices hide inside a framework default.</p>
+        </div>
+      </div>
+      <div class="prototype-assumptions">
+        <div class="subpanel">
+          <h3>Assumptions used only for this prototype</h3>
+          <ul class="choices">
+            <li>Mutating edits pause while the candidate-save pipeline is active.</li>
+            <li>Save As does not bind the document to the proposed target until post-replacement verification succeeds.</li>
+            <li>A recovery candidate opens as a separate untargeted recovered document.</li>
+            <li>An untrusted package is refused; an otherwise trusted future-version package gets metadata-only inspection.</li>
+            <li>A missing library template is non-blocking because the project uses its exact embedded effective template.</li>
+            <li>Application rollback is a restart operation that closes application documents but never touches the durable user-file catalogue.</li>
+          </ul>
+        </div>
+        <div class="subpanel">
+          <h3>Decisions still requiring evidence or policy</h3>
+          <ul class="choices">
+            <li>Which storage classes earn durable-save support and whether any may honestly be described as atomic.</li>
+            <li>Whether editing may continue against a later revision while an immutable save snapshot commits.</li>
+            <li>Recovery interval, retention, size, encryption, and whether recovery can ever satisfy a Close/Quit gate.</li>
+            <li>Exact Close/Quit choice ordering across many dirty documents and active exports.</li>
+            <li>External-change choices beyond Save As, including compare/reload and any intentional overwrite authority.</li>
+            <li>Whether Save As a separate `Log Template` creates a new stable template identity.</li>
+            <li>Whether a missing-template warning ever blocks export under firm policy.</li>
+            <li>Metadata-only affordances for incompatible packages and how untrusted/corrupt distinctions are explained.</li>
+            <li>Update authority, restart deferral, rollback window, and supported reader/file compatibility window.</li>
+            <li>One-renderer tabs, one view per tab, or one window per document.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="footer-note">No action in this page reads or writes the filesystem. Reloading the page clears everything.</p>
+    </section>
+  </main>
+
+  <script>
+    // Pure lifecycle module. It contains no DOM access, browser event handling, or persistence.
+    const LifecycleModel = (() => {
+      const SAVE_PHASES = [
+        "idle",
+        "writing candidate",
+        "validating candidate",
+        "ready to replace",
+        "replacing target",
+        "verifying committed target",
+        "failed",
+        "external-change conflict"
+      ];
+
+      const copy = value => structuredClone(value);
+      const versionNumber = value => Number(String(value).split(".").slice(0, 2).join("."));
+      const isDirty = document => document.workingRevision !== document.durableRevision;
+      const openDocuments = state => state.documents.filter(document => document.openMode !== "closed");
+      const dirtyDocuments = state => openDocuments(state).filter(isDirty);
+      const activeDocument = state => state.documents.find(document => document.id === state.activeDocumentId) || null;
+      const fileFor = (state, document) => document && document.fileId
+        ? state.files.find(file => file.id === document.fileId) || null
+        : null;
+
+      const makeTemplateState = overrides => ({
+        libraryStatus: "available",
+        activeRepresentation: "embedded effective template",
+        embeddedDigest: "template-digest-a",
+        libraryDigest: "template-digest-a",
+        comparisonComplete: false,
+        missingAcknowledged: false,
+        ...overrides
+      });
+
+      const makeSaveState = () => ({
+        mode: "none",
+        phase: "idle",
+        targetFileId: null,
+        targetName: "none",
+        candidateRevision: null,
+        baselineToken: null,
+        targetOutcome: "no candidate; target unchanged",
+        failure: "none"
+      });
+
+      const makeFile = (id, name, revision, options = {}) => ({
+        id,
+        name,
+        revision,
+        formatVersion: options.formatVersion || 2,
+        minimumReader: options.minimumReader || "2.0",
+        trust: options.trust || "trusted",
+        changeToken: options.changeToken || `token-${revision}`
+      });
+
+      const makeDocument = (id, title, file, options = {}) => ({
+        id,
+        title,
+        kind: options.kind || "Log Project",
+        openMode: options.openMode || "editable",
+        fileId: file ? file.id : null,
+        workingRevision: options.workingRevision ?? (file ? file.revision : 1),
+        durableRevision: options.durableRevision ?? (file ? file.revision : 0),
+        baselineToken: options.baselineToken || (file ? file.changeToken : null),
+        packageStatus: options.packageStatus || "compatible and trusted",
+        recoveryOrigin: options.recoveryOrigin || "none",
+        template: makeTemplateState(options.template),
+        save: makeSaveState(),
+        closeGate: "none",
+        diagnostics: options.diagnostics ? [...options.diagnostics] : []
+      });
+
+      const baseState = () => ({
+        serial: 10,
+        app: {
+          installedVersion: "2.2",
+          previousVersion: "2.1",
+          writerFormat: 2
+        },
+        update: {
+          status: "none",
+          availableVersion: "2.3",
+          pendingVersion: "none",
+          restartReason: "none",
+          userFilesTouchedByRollback: 0
+        },
+        files: [],
+        documents: [],
+        recoveries: [],
+        activeDocumentId: null,
+        quit: {
+          status: "not requested",
+          blockedDocumentIds: [],
+          discardApprovedIds: []
+        },
+        lastOpenAttempt: {
+          package: "none",
+          outcome: "none"
+        },
+        lastEvent: {
+          kind: "info",
+          title: "Prototype ready",
+          detail: "Choose a guided scenario or use any free-play action."
+        },
+        history: []
+      });
+
+      function record(state, kind, title, detail, actionType) {
+        state.lastEvent = { kind, title, detail };
+        state.history.unshift({
+          sequence: state.serial++,
+          action: actionType,
+          title,
+          detail,
+          kind
+        });
+        state.history = state.history.slice(0, 10);
+        return state;
+      }
+
+      function reject(state, action, reason) {
+        const next = copy(state);
+        return record(next, "error", "Illegal transition rejected", reason, action.type);
+      }
+
+      function createInitialState(preset = "dirty-one") {
+        const state = baseState();
+        const primary = makeFile("file-main", "North Yard Log Set.rsrp", 3);
+
+        if (preset === "dirty-one" || preset === "external-change") {
+          state.files.push(primary);
+          state.documents.push(makeDocument("doc-main", "North Yard Log Set", primary, { workingRevision: 4 }));
+          state.activeDocumentId = "doc-main";
+        } else if (preset === "untitled-dirty") {
+          state.documents.push(makeDocument("doc-untitled", "Untitled Log Project", null, { workingRevision: 2 }));
+          state.activeDocumentId = "doc-untitled";
+        } else if (preset === "recovery") {
+          state.files.push(primary);
+          state.recoveries.push({
+            id: "recovery-main",
+            fileId: primary.id,
+            documentTitle: "North Yard Log Set",
+            baseRevision: 3,
+            candidateRevision: 5,
+            state: "not yet scanned",
+            openedDocumentId: "none"
+          });
+        } else if (preset === "multi-tab") {
+          const fileA = makeFile("file-a", "Harbor Logs.rsrp", 6);
+          const fileB = makeFile("file-b", "Ridge Logs.rsrp", 2);
+          const fileC = makeFile("file-c", "Office Template.rsrt", 8);
+          state.files.push(fileA, fileB, fileC);
+          state.documents.push(
+            makeDocument("doc-a", "Harbor Logs", fileA, { workingRevision: 7 }),
+            makeDocument("doc-b", "Ridge Logs", fileB, { workingRevision: 4 }),
+            makeDocument("doc-c", "Office Template", fileC, { kind: "Log Template" })
+          );
+          state.activeDocumentId = "doc-b";
+        } else if (preset === "missing-template") {
+          state.files.push(primary);
+          state.documents.push(makeDocument("doc-main", "North Yard Log Set", primary, {
+            template: {
+              libraryStatus: "missing",
+              libraryDigest: "none",
+              activeRepresentation: "embedded effective template"
+            },
+            diagnostics: ["Library template unavailable; the exact embedded effective template remains active."]
+          }));
+          state.activeDocumentId = "doc-main";
+        } else if (preset === "package-gates") {
+          state.files.push(
+            makeFile("file-future", "Future Format Project.rsrp", 12, { formatVersion: 4, minimumReader: "3.0" }),
+            makeFile("file-untrusted", "Untrusted Package.rsrp", 1, { trust: "untrusted" })
+          );
+        } else if (preset === "update-rollback") {
+          state.files.push(primary);
+          state.documents.push(makeDocument("doc-main", "North Yard Log Set", primary, { workingRevision: 4 }));
+          state.activeDocumentId = "doc-main";
+        }
+
+        return record(state, "info", "Scenario state initialized", `Preset: ${preset}. No filesystem state was read or changed.`, "RESET");
+      }
+
+      function reduce(state, action) {
+        if (action.type === "RESET") return createInitialState(action.preset);
+
+        const next = copy(state);
+        const document = activeDocument(next);
+        const file = fileFor(next, document);
+
+        switch (action.type) {
+          case "ACTIVATE_DOCUMENT": {
+            const target = next.documents.find(item => item.id === action.documentId);
+            if (!target) return reject(state, action, "That document does not exist in this in-memory session.");
+            next.activeDocumentId = target.id;
+            return record(next, "info", "Active document changed", `${target.title} is now active.`, action.type);
+          }
+
+          case "ADD_DIRTY_PROJECT": {
+            const id = `doc-new-${next.serial}`;
+            next.documents.push(makeDocument(id, `Untitled Log Project ${next.serial}`, null, { workingRevision: 1 }));
+            next.activeDocumentId = id;
+            return record(next, "success", "Untitled Log Project created", "It has unsaved work and no authoritative target; ordinary Save is therefore illegal until Save As succeeds.", action.type);
+          }
+
+          case "EDIT_ACTIVE": {
+            if (!document) return reject(state, action, "There is no active document to edit.");
+            if (document.openMode !== "editable") return reject(state, action, `The active package is ${document.openMode}; it cannot be edited.`);
+            if (document.save.phase !== "idle" && document.save.phase !== "failed" && document.save.phase !== "external-change conflict") {
+              return reject(state, action, "This prototype freezes mutations while a candidate save is active. Whether production permits revision-ahead editing is unresolved.");
+            }
+            document.workingRevision += 1;
+            document.closeGate = "none";
+            return record(next, "success", "Working document edited", `Working revision is now ${document.workingRevision}; the authoritative user file did not change.`, action.type);
+          }
+
+          case "START_SAVE": {
+            if (!document) return reject(state, action, "There is no active document to save.");
+            if (document.openMode !== "editable") return reject(state, action, "Metadata-only, refused, or closed documents cannot be saved.");
+            if (!isDirty(document)) return reject(state, action, "The active document is already clean; there is no new revision to save.");
+            if (!file) return reject(state, action, "The document has no authoritative target. Choose Save As instead.");
+            if (!SAVE_PHASES.includes(document.save.phase) || !["idle", "failed", "external-change conflict"].includes(document.save.phase)) {
+              return reject(state, action, `A ${document.save.mode} operation is already ${document.save.phase}.`);
+            }
+            if (file.changeToken !== document.baselineToken) {
+              document.save.phase = "external-change conflict";
+              document.save.mode = "Save";
+              document.save.targetFileId = file.id;
+              document.save.targetName = file.name;
+              document.save.targetOutcome = "not attempted; external change preserved";
+              return record(next, "warning", "Save blocked by an external change", "The authoritative target no longer matches the document baseline. Last-writer-wins is not allowed; Save As remains available.", action.type);
+            }
+            document.save = {
+              mode: "Save",
+              phase: "writing candidate",
+              targetFileId: file.id,
+              targetName: file.name,
+              candidateRevision: document.workingRevision,
+              baselineToken: document.baselineToken,
+              targetOutcome: "candidate only; target unchanged",
+              failure: "none"
+            };
+            return record(next, "info", "Save candidate started", "The authoritative target remains untouched while a sibling candidate is written.", action.type);
+          }
+
+          case "START_SAVE_AS": {
+            if (!document) return reject(state, action, "There is no active document to save.");
+            if (document.openMode !== "editable") return reject(state, action, "Only an editable Log Project or Log Template may use Save As.");
+            if (!isDirty(document)) return reject(state, action, "The active document is clean; this prototype does not explore clean-copy Save As identity semantics.");
+            if (!["idle", "failed", "external-change conflict"].includes(document.save.phase)) {
+              return reject(state, action, `A ${document.save.mode} operation is already ${document.save.phase}.`);
+            }
+            const targetId = action.targetFileId || `file-save-as-${next.serial}`;
+            const targetName = action.targetName || `${document.title} — Save As.rsrp`;
+            if (next.files.some(existing => existing.id === targetId)) {
+              return reject(state, action, "The synthetic Save As target already exists. Overwrite authority is intentionally not modeled.");
+            }
+            document.save = {
+              mode: "Save As",
+              phase: "writing candidate",
+              targetFileId: targetId,
+              targetName,
+              candidateRevision: document.workingRevision,
+              baselineToken: "new target",
+              targetOutcome: "candidate only; proposed target not authoritative",
+              failure: "none"
+            };
+            return record(next, "info", "Save As candidate started", `The proposed target “${targetName}” is not yet authoritative or bound to the document.`, action.type);
+          }
+
+          case "ADVANCE_SAVE": {
+            if (!document) return reject(state, action, "There is no active document.");
+            const transitions = {
+              "writing candidate": "validating candidate",
+              "validating candidate": "ready to replace",
+              "ready to replace": "replacing target",
+              "replacing target": "verifying committed target"
+            };
+            if (transitions[document.save.phase]) {
+              const previous = document.save.phase;
+              document.save.phase = transitions[previous];
+              if (previous === "replacing target") {
+                document.save.targetOutcome = "replacement returned; committed target still requires verification";
+              }
+              return record(next, "info", "Save pipeline advanced", `${previous} → ${document.save.phase}. The document remains dirty until committed-target verification succeeds.`, action.type);
+            }
+            if (document.save.phase !== "verifying committed target") {
+              return reject(state, action, `Save cannot advance from “${document.save.phase}”.`);
+            }
+
+            let target = next.files.find(item => item.id === document.save.targetFileId);
+            if (!target) {
+              target = makeFile(document.save.targetFileId, document.save.targetName, document.save.candidateRevision, {
+                formatVersion: next.app.writerFormat,
+                minimumReader: next.app.installedVersion,
+                changeToken: `token-${next.serial}`
+              });
+              next.files.push(target);
+            } else {
+              target.revision = document.save.candidateRevision;
+              target.formatVersion = next.app.writerFormat;
+              target.minimumReader = next.app.installedVersion;
+              target.changeToken = `token-${next.serial}`;
+            }
+            const mode = document.save.mode;
+            document.fileId = target.id;
+            document.durableRevision = document.save.candidateRevision;
+            document.baselineToken = target.changeToken;
+            document.save = makeSaveState();
+            document.closeGate = "none";
+            return record(next, "success", `${mode} verified`, `Revision ${document.durableRevision} is now durable at “${target.name}”. Only now did the document become clean and bind to that target.`, action.type);
+          }
+
+          case "INJECT_SAVE_FAILURE": {
+            if (!document) return reject(state, action, "There is no active document.");
+            if (["idle", "failed", "external-change conflict"].includes(document.save.phase)) {
+              return reject(state, action, `There is no active candidate-save phase to fail; current phase is “${document.save.phase}”.`);
+            }
+            const failedAt = document.save.phase;
+            document.save.phase = "failed";
+            const uncertain = failedAt === "replacing target" || failedAt === "verifying committed target";
+            document.save.targetOutcome = uncertain
+              ? "UNCERTAIN; preserve candidate and backup, inspect target before retry"
+              : "candidate failed before replacement; target unchanged";
+            document.save.failure = uncertain
+              ? `Synthetic failure during ${failedAt}; replacement outcome is uncertain`
+              : `Synthetic failure during ${failedAt}`;
+            return record(next, "error", uncertain ? `${document.save.mode} outcome is uncertain` : `${document.save.mode} failed safely`, uncertain
+              ? `Failure occurred during or after replacement. The document stays dirty; candidate and backup evidence must be retained, and retry is blocked until the target is classified.`
+              : `The candidate failed during ${failedAt}. The prior target and document binding are unchanged, and the working document remains dirty.`, action.type);
+          }
+
+          case "CLEAR_SAVE_FAILURE": {
+            if (!document) return reject(state, action, "There is no active document.");
+            if (document.save.phase !== "failed") return reject(state, action, "The active document has no failed save to clear.");
+            if (document.save.targetOutcome.startsWith("UNCERTAIN")) {
+              return reject(state, action, "An uncertain replacement cannot be cleared or retried blindly. A later storage prototype must classify the target, candidate, and backup first.");
+            }
+            document.save = makeSaveState();
+            return record(next, "info", "Failed candidate cleared", "No authoritative file changed. Save or Save As may be tried again.", action.type);
+          }
+
+          case "MARK_EXTERNAL_CHANGE": {
+            if (!document || !file) return reject(state, action, "The active document has no authoritative file to change externally.");
+            file.revision += 1;
+            file.changeToken = `external-token-${next.serial}`;
+            return record(next, "warning", "External file change simulated", `“${file.name}” changed outside this document. Its baseline no longer matches the open working state.`, action.type);
+          }
+
+          case "REQUEST_CLOSE": {
+            if (!document) return reject(state, action, "There is no active document to close.");
+            if (document.openMode === "closed") return reject(state, action, "The active document is already closed.");
+            if (isDirty(document)) {
+              document.closeGate = "needs Save, Save As, explicit discard, or cancel";
+              return record(next, "warning", "Close blocked by unsaved work", "The document remains open. Recovery is not silently treated as a durable Save.", action.type);
+            }
+            document.openMode = "closed";
+            document.closeGate = "none";
+            return record(next, "success", "Clean document closed", `${document.title} closed without changing any user file.`, action.type);
+          }
+
+          case "CANCEL_CLOSE": {
+            if (!document || document.closeGate === "none") return reject(state, action, "There is no pending Close decision to cancel.");
+            document.closeGate = "none";
+            return record(next, "info", "Close canceled", "The document remains open and dirty.", action.type);
+          }
+
+          case "DISCARD_AND_CLOSE": {
+            if (!document || document.closeGate === "none") return reject(state, action, "Explicit discard is available only after Close finds unsaved work.");
+            document.workingRevision = document.durableRevision;
+            document.openMode = "closed";
+            document.closeGate = "none";
+            document.save = makeSaveState();
+            return record(next, "warning", "Unsaved working revision discarded", "The authoritative user file was not changed. The open working revision was explicitly abandoned.", action.type);
+          }
+
+          case "REQUEST_QUIT": {
+            const dirty = dirtyDocuments(next);
+            next.quit.status = dirty.length ? "blocked by unsaved documents" : "ready to quit";
+            next.quit.blockedDocumentIds = dirty.map(item => item.id);
+            next.quit.discardApprovedIds = [];
+            if (dirty.length) {
+              return record(next, "warning", "Quit blocked", `${dirty.length} dirty document${dirty.length === 1 ? "" : "s"} require Save, Save As, or explicit discard.`, action.type);
+            }
+            openDocuments(next).forEach(item => { item.openMode = "closed"; });
+            next.quit.status = "quit complete";
+            return record(next, "success", "Quit completed", "All documents were clean; no user file was rewritten by Quit.", action.type);
+          }
+
+          case "APPROVE_DISCARD_ACTIVE_FOR_QUIT": {
+            if (next.quit.status !== "blocked by unsaved documents") return reject(state, action, "Quit is not waiting for dirty-document decisions.");
+            if (!document || !isDirty(document)) return reject(state, action, "The active document is not a dirty Quit blocker.");
+            if (!next.quit.blockedDocumentIds.includes(document.id)) return reject(state, action, "The active document is not in the current Quit set.");
+            if (!next.quit.discardApprovedIds.includes(document.id)) next.quit.discardApprovedIds.push(document.id);
+            return record(next, "warning", "Discard approved for Quit", `${document.title} will discard only its unsaved working revision if Quit continues. Its user file stays unchanged.`, action.type);
+          }
+
+          case "CONTINUE_QUIT": {
+            if (next.quit.status !== "blocked by unsaved documents") return reject(state, action, "Quit is not currently waiting for document decisions.");
+            const unresolved = dirtyDocuments(next).filter(item => !next.quit.discardApprovedIds.includes(item.id));
+            if (unresolved.length) {
+              next.quit.blockedDocumentIds = unresolved.map(item => item.id);
+              return record(next, "warning", "Quit still blocked", `${unresolved.map(item => item.title).join(", ")} still need a durable save or explicit discard.`, action.type);
+            }
+            dirtyDocuments(next).forEach(item => {
+              item.workingRevision = item.durableRevision;
+              item.save = makeSaveState();
+            });
+            openDocuments(next).forEach(item => { item.openMode = "closed"; item.closeGate = "none"; });
+            next.quit.status = "quit complete";
+            next.quit.blockedDocumentIds = [];
+            return record(next, "success", "Quit completed after explicit dispositions", "Saved revisions remain durable; explicitly discarded working revisions were abandoned; no unrelated file was changed.", action.type);
+          }
+
+          case "SCAN_RECOVERY": {
+            const hidden = next.recoveries.filter(item => item.state === "not yet scanned");
+            if (!hidden.length) return reject(state, action, "There are no unscanned recovery candidates in this scenario.");
+            hidden.forEach(item => { item.state = "discovered and awaiting decision"; });
+            return record(next, "warning", "Newer recovery work discovered", `${hidden.length} candidate${hidden.length === 1 ? "" : "s"} can be inspected, opened separately, or discarded. No original was overwritten.`, action.type);
+          }
+
+          case "OPEN_RECOVERY_COPY": {
+            const recovery = next.recoveries.find(item => item.id === (action.recoveryId || "recovery-main"));
+            if (!recovery || !recovery.state.startsWith("discovered")) {
+              return reject(state, action, "Discover a recovery candidate before opening it.");
+            }
+            const original = next.files.find(item => item.id === recovery.fileId) || null;
+            const id = `doc-recovered-${next.serial}`;
+            const recovered = makeDocument(id, `Recovered — ${recovery.documentTitle}`, null, {
+              workingRevision: recovery.candidateRevision,
+              durableRevision: 0,
+              recoveryOrigin: recovery.id,
+              template: { activeRepresentation: "embedded effective template from recovery" }
+            });
+            next.documents.push(recovered);
+            next.activeDocumentId = id;
+            recovery.state = "opened as separate document; candidate retained";
+            recovery.openedDocumentId = id;
+            return record(next, "success", "Recovery opened separately", `Recovered revision ${recovery.candidateRevision} is an untargeted dirty document. “${original ? original.name : "the original file"}” was not overwritten.`, action.type);
+          }
+
+          case "DISCARD_RECOVERY": {
+            const recovery = next.recoveries.find(item => item.id === (action.recoveryId || "recovery-main"));
+            if (!recovery || recovery.state === "not yet scanned" || recovery.state === "discarded") {
+              return reject(state, action, "Only a discovered or already-opened recovery candidate can be discarded.");
+            }
+            recovery.state = "discarded";
+            return record(next, "warning", "Recovery candidate discarded", "The recovery candidate was removed from consideration. Any separately opened recovered document remains independent and dirty.", action.type);
+          }
+
+          case "MARK_TEMPLATE_MISSING": {
+            if (!document || document.openMode !== "editable") return reject(state, action, "An editable Log Project must be active.");
+            document.template.libraryStatus = "missing";
+            document.template.libraryDigest = "none";
+            document.template.activeRepresentation = "embedded effective template";
+            if (!document.diagnostics.some(item => item.startsWith("Library template unavailable"))) {
+              document.diagnostics.push("Library template unavailable; the exact embedded effective template remains active.");
+            }
+            return record(next, "warning", "Library template unavailable", "Rendering continues from the embedded effective template. No display-name substitution occurred.", action.type);
+          }
+
+          case "CONTINUE_WITH_EMBEDDED_TEMPLATE": {
+            if (!document || document.template.libraryStatus !== "missing") return reject(state, action, "The active document does not currently have a missing library template.");
+            document.template.missingAcknowledged = true;
+            return record(next, "success", "Embedded effective template confirmed", "The project remains self-contained and clean. Acknowledgment did not update or replace the template.", action.type);
+          }
+
+          case "LOCATE_CHANGED_TEMPLATE": {
+            if (!document || document.template.libraryStatus !== "missing") return reject(state, action, "This transition starts from a missing template reference.");
+            document.template.libraryStatus = "same identity, different digest";
+            document.template.libraryDigest = "template-digest-b";
+            document.template.comparisonComplete = false;
+            return record(next, "warning", "Different library template found", "The project still uses its embedded representation. Matching identity is not authority to adopt changed content.", action.type);
+          }
+
+          case "COMPARE_TEMPLATE": {
+            if (!document || document.template.libraryStatus !== "same identity, different digest") {
+              return reject(state, action, "There is no changed same-identity template to compare.");
+            }
+            document.template.comparisonComplete = true;
+            return record(next, "info", "Template comparison completed", "Adoption is now an explicit available action; no project content has changed yet.", action.type);
+          }
+
+          case "ADOPT_LIBRARY_TEMPLATE": {
+            if (!document || !document.template.comparisonComplete) return reject(state, action, "Compare the changed library template before adopting it.");
+            document.template.embeddedDigest = document.template.libraryDigest;
+            document.template.libraryStatus = "available";
+            document.template.activeRepresentation = "deliberately adopted library template";
+            document.template.comparisonComplete = false;
+            document.workingRevision += 1;
+            document.diagnostics = document.diagnostics.filter(item => !item.startsWith("Library template unavailable"));
+            return record(next, "success", "Changed template adopted deliberately", "The working Log Project changed and is now dirty. The prior authoritative project file remains unchanged until Save succeeds.", action.type);
+          }
+
+          case "OPEN_FUTURE_PACKAGE": {
+            const future = next.files.find(item => item.id === "file-future") || makeFile("file-future", "Future Format Project.rsrp", 12, { formatVersion: 4, minimumReader: "3.0" });
+            if (!next.files.some(item => item.id === future.id)) next.files.push(future);
+            if (future.trust !== "trusted") return reject(state, action, "This package is not trusted enough for metadata inspection.");
+            const id = `doc-metadata-${next.serial}`;
+            next.documents.push(makeDocument(id, "Future Format Project", future, {
+              openMode: "metadata-only",
+              packageStatus: `incompatible: requires reader ${future.minimumReader}`,
+              diagnostics: ["Editing, export, Save, and Save As are unavailable in metadata-only mode."]
+            }));
+            next.activeDocumentId = id;
+            next.lastOpenAttempt = { package: future.name, outcome: "metadata-only inspection" };
+            return record(next, "warning", "Future package opened as metadata only", "The package was not migrated, edited, exported, or rewritten.", action.type);
+          }
+
+          case "OPEN_UNTRUSTED_PACKAGE": {
+            const untrusted = next.files.find(item => item.id === "file-untrusted") || makeFile("file-untrusted", "Untrusted Package.rsrp", 1, { trust: "untrusted" });
+            if (!next.files.some(item => item.id === untrusted.id)) next.files.push(untrusted);
+            next.lastOpenAttempt = { package: untrusted.name, outcome: "refused before domain open" };
+            return record(next, "error", "Untrusted package refused", "No editable or metadata document was created. The package and every existing user file remain untouched.", action.type);
+          }
+
+          case "DOWNLOAD_UPDATE": {
+            if (next.update.status !== "none" && next.update.status !== "rolled back") return reject(state, action, `Update state is already “${next.update.status}”.`);
+            next.update.pendingVersion = next.update.availableVersion;
+            next.update.status = "downloaded; restart not requested";
+            return record(next, "info", "Update downloaded", "A pending application update does not yet affect open documents or user files.", action.type);
+          }
+
+          case "REQUEST_UPDATE_RESTART": {
+            if (next.update.pendingVersion === "none") return reject(state, action, "There is no downloaded update waiting to install.");
+            const dirty = dirtyDocuments(next);
+            if (dirty.length) {
+              next.update.status = "restart blocked by dirty documents";
+              next.update.restartReason = dirty.map(item => item.title).join(", ");
+              return record(next, "warning", "Update restart blocked", `${dirty.length} dirty document${dirty.length === 1 ? "" : "s"} must receive an explicit lifecycle disposition.`, action.type);
+            }
+            next.update.status = "ready to install on restart";
+            next.update.restartReason = "all documents clean";
+            return record(next, "success", "Update restart permitted", "All open documents are clean. The update may restart the application without changing user files.", action.type);
+          }
+
+          case "APPLY_UPDATE": {
+            if (next.update.status !== "ready to install on restart") return reject(state, action, "The update may install only after restart is explicitly permitted.");
+            next.app.previousVersion = next.app.installedVersion;
+            next.app.installedVersion = next.update.pendingVersion;
+            next.app.writerFormat = 3;
+            next.update.status = "installed";
+            next.update.pendingVersion = "none";
+            return record(next, "success", "Application update installed", `RSrender ${next.app.installedVersion} is active. User-file revisions did not change during installation.`, action.type);
+          }
+
+          case "ROLLBACK_APP": {
+            if (dirtyDocuments(next).length) return reject(state, action, "Application rollback is a restart and is blocked while any document is dirty.");
+            const targetVersion = next.app.previousVersion;
+            if (!targetVersion || targetVersion === next.app.installedVersion) return reject(state, action, "There is no distinct previous application version to restore.");
+            next.documents = [];
+            next.activeDocumentId = null;
+            next.app.installedVersion = targetVersion;
+            next.app.writerFormat = 2;
+            next.update.status = "rolled back";
+            next.update.userFilesTouchedByRollback = 0;
+            next.quit = { status: "not requested", blockedDocumentIds: [], discardApprovedIds: [] };
+            return record(next, "warning", "Application rolled back; user files did not", `The installed application is now ${targetVersion}. Open document sessions ended, but every authoritative file kept its exact revision, format, and minimum-reader requirement.`, action.type);
+          }
+
+          case "OPEN_MAIN_FILE": {
+            const target = next.files.find(item => item.id === "file-main");
+            if (!target) return reject(state, action, "The synthetic main user file does not exist.");
+            if (target.trust !== "trusted") return reject(state, action, "The file is not trusted enough to open.");
+            const compatible = versionNumber(next.app.installedVersion) >= versionNumber(target.minimumReader);
+            const id = `doc-reopen-${next.serial}`;
+            next.documents.push(makeDocument(id, "North Yard Log Set", target, {
+              openMode: compatible ? "editable" : "metadata-only",
+              packageStatus: compatible ? "compatible and trusted" : `incompatible: requires reader ${target.minimumReader}`,
+              diagnostics: compatible ? [] : ["The rolled-back application refuses editing, export, and Save for this newer user file."]
+            }));
+            next.activeDocumentId = id;
+            return record(next, compatible ? "success" : "warning", compatible ? "User file reopened" : "Newer user file refused non-destructively", compatible
+              ? "The installed application can read this file."
+              : `The user file still has revision ${target.revision} and format ${target.formatVersion}; the older application offers metadata only and does not down-save it.`, action.type);
+          }
+
+          default:
+            return reject(state, action, `Unknown action “${action.type}”.`);
+        }
+      }
+
+      function documentView(state) {
+        const document = activeDocument(state);
+        if (!document) return null;
+        const file = fileFor(state, document);
+        return {
+          ...document,
+          dirty: isDirty(document),
+          authoritativeFile: file,
+          baselineMatchesFile: file ? file.changeToken === document.baselineToken : false
+        };
+      }
+
+      return Object.freeze({
+        createInitialState,
+        reduce,
+        selectors: Object.freeze({ activeDocument, documentView, openDocuments, dirtyDocuments, isDirty, fileFor })
+      });
+    })();
+
+    // Throwaway DOM shell. It calls the pure module but the module never calls back into this page.
+    (() => {
+      const scenarioDefinitions = [
+        {
+          id: "happy-save",
+          label: "Happy Save",
+          preset: "dirty-one",
+          description: "A dirty Log Project writes, validates, replaces, and verifies a candidate. Watch dirty state remain true until the final verification.",
+          steps: [
+            step("Start Save", "Authoritative target remains untouched.", { type: "START_SAVE" }),
+            step("Candidate written", "Move to full candidate validation.", { type: "ADVANCE_SAVE" }),
+            step("Candidate validated", "Candidate becomes ready to replace.", { type: "ADVANCE_SAVE" }),
+            step("Replace target", "Begin the platform replacement phase.", { type: "ADVANCE_SAVE" }),
+            step("Replacement returned", "Reopen and verify the committed target.", { type: "ADVANCE_SAVE" }),
+            step("Verification succeeds", "Only now is the document clean.", { type: "ADVANCE_SAVE" })
+          ]
+        },
+        {
+          id: "save-as-failure",
+          label: "Save As failure",
+          preset: "untitled-dirty",
+          description: "An untitled project proposes a new target, then fails. The proposed path must not become authoritative until a later retry is fully verified.",
+          steps: [
+            step("Start Save As", "Propose a target without binding it.", { type: "START_SAVE_AS", targetFileId: "file-new", targetName: "Recovered Design.rsrp" }),
+            step("Candidate written", "Validation begins.", { type: "ADVANCE_SAVE" }),
+            step("Inject validation failure", "Target must still not exist.", { type: "INJECT_SAVE_FAILURE" }),
+            step("Clear failed candidate", "Working document stays dirty.", { type: "CLEAR_SAVE_FAILURE" }),
+            step("Retry Save As", "Propose the same human name as a fresh candidate.", { type: "START_SAVE_AS", targetFileId: "file-new-retry", targetName: "Recovered Design.rsrp" }),
+            step("Write retry", "Advance to validation.", { type: "ADVANCE_SAVE" }),
+            step("Validate retry", "Advance to replacement readiness.", { type: "ADVANCE_SAVE" }),
+            step("Begin replacement", "Still not bound.", { type: "ADVANCE_SAVE" }),
+            step("Verify replacement", "Advance to committed-target verification.", { type: "ADVANCE_SAVE" }),
+            step("Finish Save As", "Bind only after verification.", { type: "ADVANCE_SAVE" })
+          ]
+        },
+        {
+          id: "external-change",
+          label: "External change",
+          preset: "external-change",
+          description: "The target changes after the document baseline was opened. Ordinary Save must detect conflict; this walkthrough resolves only by Save As, leaving the external file untouched.",
+          steps: [
+            step("Simulate external edit", "Target token diverges from the open baseline.", { type: "MARK_EXTERNAL_CHANGE" }),
+            step("Attempt ordinary Save", "Expect a conflict, not last-writer-wins.", { type: "START_SAVE" }),
+            step("Choose Save As", "Preserve both versions.", { type: "START_SAVE_AS", targetFileId: "file-conflict-copy", targetName: "North Yard — conflict copy.rsrp" }),
+            step("Write candidate", "Advance to validation.", { type: "ADVANCE_SAVE" }),
+            step("Validate candidate", "Advance to replacement readiness.", { type: "ADVANCE_SAVE" }),
+            step("Begin replacement", "The external original remains unchanged.", { type: "ADVANCE_SAVE" }),
+            step("Verify replacement", "Advance to final verification.", { type: "ADVANCE_SAVE" }),
+            step("Finish Save As", "Bind to the separate target.", { type: "ADVANCE_SAVE" })
+          ]
+        },
+        {
+          id: "recovery",
+          label: "Recovery restore/discard",
+          preset: "recovery",
+          description: "Startup discovers a newer recovery candidate. Opening it creates a separate untargeted document; discarding the candidate never overwrites the original or closes the recovered copy.",
+          steps: [
+            step("Scan recovery area", "Discover newer divergent work.", { type: "SCAN_RECOVERY" }),
+            step("Open recovered copy", "Create a separate dirty document.", { type: "OPEN_RECOVERY_COPY", recoveryId: "recovery-main" }),
+            step("Discard recovery candidate", "The separately opened copy remains.", { type: "DISCARD_RECOVERY", recoveryId: "recovery-main" })
+          ]
+        },
+        {
+          id: "multi-tab",
+          label: "Multi-tab Close/Quit",
+          preset: "multi-tab",
+          description: "Two dirty projects and one clean template share one application lifecycle coordinator. Close and Quit must collect explicit dispositions without letting one tab decide for another.",
+          steps: [
+            step("Close active dirty project", "Close is blocked for Ridge Logs.", { type: "REQUEST_CLOSE" }),
+            step("Cancel Close", "Keep Ridge Logs open and dirty.", { type: "CANCEL_CLOSE" }),
+            step("Request Quit", "Both dirty projects enter the app-wide gate.", { type: "REQUEST_QUIT" }),
+            step("Approve discard for Ridge", "Approval applies only to the active document.", { type: "APPROVE_DISCARD_ACTIVE_FOR_QUIT" }),
+            step("Switch to Harbor", "The other dirty document still needs a decision.", { type: "ACTIVATE_DOCUMENT", documentId: "doc-a" }),
+            step("Save Harbor", "Start its candidate pipeline.", { type: "START_SAVE" }),
+            step("Write Harbor candidate", "Advance to validation.", { type: "ADVANCE_SAVE" }),
+            step("Validate Harbor candidate", "Advance to replacement readiness.", { type: "ADVANCE_SAVE" }),
+            step("Replace Harbor target", "Begin replacement.", { type: "ADVANCE_SAVE" }),
+            step("Verify Harbor target", "Advance to committed verification.", { type: "ADVANCE_SAVE" }),
+            step("Finish Harbor Save", "Harbor is now clean.", { type: "ADVANCE_SAVE" }),
+            step("Continue Quit", "Save Harbor, discard Ridge, close clean template.", { type: "CONTINUE_QUIT" })
+          ]
+        },
+        {
+          id: "missing-template",
+          label: "Missing template",
+          preset: "missing-template",
+          description: "A Log Project has no matching library template but contains the exact embedded effective representation. Finding a changed same-identity template does not adopt it without comparison and intent.",
+          steps: [
+            step("Continue with embedded template", "Acknowledge the non-blocking condition.", { type: "CONTINUE_WITH_EMBEDDED_TEMPLATE" }),
+            step("Locate changed library template", "Same identity, different digest.", { type: "LOCATE_CHANGED_TEMPLATE" }),
+            step("Compare template", "No project change yet.", { type: "COMPARE_TEMPLATE" }),
+            step("Adopt changed template", "The project becomes dirty deliberately.", { type: "ADOPT_LIBRARY_TEMPLATE" })
+          ]
+        },
+        {
+          id: "package-gates",
+          label: "Incompatible / untrusted",
+          preset: "package-gates",
+          description: "Compatibility and trust are separate gates. A trusted future-version package permits bounded metadata inspection; an untrusted package is refused before a domain document opens.",
+          steps: [
+            step("Open future-version package", "Expect metadata-only inspection.", { type: "OPEN_FUTURE_PACKAGE" }),
+            step("Attempt to edit it", "Expect an illegal-transition message.", { type: "EDIT_ACTIVE" }),
+            step("Close metadata view", "Closing cannot rewrite the package.", { type: "REQUEST_CLOSE" }),
+            step("Open untrusted package", "Expect refusal and no new document.", { type: "OPEN_UNTRUSTED_PACKAGE" })
+          ]
+        },
+        {
+          id: "update-rollback",
+          label: "Update rollback",
+          preset: "update-rollback",
+          description: "An update restart waits for dirty work. The newer app then saves a newer file format. Rolling the app back closes sessions but leaves that user file untouched; the older app refuses it non-destructively.",
+          steps: [
+            step("Download app 2.3", "User files do not change.", { type: "DOWNLOAD_UPDATE" }),
+            step("Request restart", "Dirty work blocks restart.", { type: "REQUEST_UPDATE_RESTART" }),
+            step("Start Save", "Save the dirty project first.", { type: "START_SAVE" }),
+            step("Write candidate", "Advance to validation.", { type: "ADVANCE_SAVE" }),
+            step("Validate candidate", "Advance to replacement readiness.", { type: "ADVANCE_SAVE" }),
+            step("Replace target", "Begin replacement.", { type: "ADVANCE_SAVE" }),
+            step("Verify target", "Advance to committed verification.", { type: "ADVANCE_SAVE" }),
+            step("Finish Save", "The project is now clean.", { type: "ADVANCE_SAVE" }),
+            step("Request restart again", "Now the update may install.", { type: "REQUEST_UPDATE_RESTART" }),
+            step("Install app 2.3", "Application state changes; file state does not.", { type: "APPLY_UPDATE" }),
+            step("Edit under app 2.3", "Create a newer working revision.", { type: "EDIT_ACTIVE" }),
+            step("Start newer-format Save", "The current writer format is 3.", { type: "START_SAVE" }),
+            step("Write newer candidate", "Advance to validation.", { type: "ADVANCE_SAVE" }),
+            step("Validate newer candidate", "Advance to replacement readiness.", { type: "ADVANCE_SAVE" }),
+            step("Replace with newer format", "Begin replacement.", { type: "ADVANCE_SAVE" }),
+            step("Verify newer target", "Advance to committed verification.", { type: "ADVANCE_SAVE" }),
+            step("Finish newer-format Save", "The file now requires app 2.3.", { type: "ADVANCE_SAVE" }),
+            step("Roll application back", "Files must remain byte-logically untouched.", { type: "ROLLBACK_APP" }),
+            step("Open newer user file", "Older app must refuse edit/export/Save.", { type: "OPEN_MAIN_FILE" })
+          ]
+        }
+      ];
+
+      function step(label, watch, action) { return { label, watch, action }; }
+
+      const freePlayGroups = [
+        {
+          title: "Document and save",
+          actions: [
+            ["Create untitled Log Project", { type: "ADD_DIRTY_PROJECT" }],
+            ["Edit active document", { type: "EDIT_ACTIVE" }],
+            ["Start ordinary Save", { type: "START_SAVE" }],
+            ["Start Save As", { type: "START_SAVE_AS" }],
+            ["Advance one save phase", { type: "ADVANCE_SAVE" }],
+            ["Inject save failure", { type: "INJECT_SAVE_FAILURE" }],
+            ["Clear save failure", { type: "CLEAR_SAVE_FAILURE" }],
+            ["Simulate external target change", { type: "MARK_EXTERNAL_CHANGE" }]
+          ]
+        },
+        {
+          title: "Close, Quit, and recovery",
+          actions: [
+            ["Request Close active", { type: "REQUEST_CLOSE" }],
+            ["Cancel Close", { type: "CANCEL_CLOSE" }],
+            ["Discard work and Close", { type: "DISCARD_AND_CLOSE" }],
+            ["Request application Quit", { type: "REQUEST_QUIT" }],
+            ["Approve active discard for Quit", { type: "APPROVE_DISCARD_ACTIVE_FOR_QUIT" }],
+            ["Continue Quit", { type: "CONTINUE_QUIT" }],
+            ["Discover recovery candidates", { type: "SCAN_RECOVERY" }],
+            ["Open recovery separately", { type: "OPEN_RECOVERY_COPY" }],
+            ["Discard recovery candidate", { type: "DISCARD_RECOVERY" }]
+          ]
+        },
+        {
+          title: "Template and package gates",
+          actions: [
+            ["Mark library template missing", { type: "MARK_TEMPLATE_MISSING" }],
+            ["Continue with embedded template", { type: "CONTINUE_WITH_EMBEDDED_TEMPLATE" }],
+            ["Locate changed same-ID template", { type: "LOCATE_CHANGED_TEMPLATE" }],
+            ["Compare changed template", { type: "COMPARE_TEMPLATE" }],
+            ["Adopt changed template", { type: "ADOPT_LIBRARY_TEMPLATE" }],
+            ["Open future-version package", { type: "OPEN_FUTURE_PACKAGE" }],
+            ["Open untrusted package", { type: "OPEN_UNTRUSTED_PACKAGE" }],
+            ["Open main user file", { type: "OPEN_MAIN_FILE" }]
+          ]
+        },
+        {
+          title: "Application update",
+          actions: [
+            ["Download update", { type: "DOWNLOAD_UPDATE" }],
+            ["Request update restart", { type: "REQUEST_UPDATE_RESTART" }],
+            ["Apply downloaded update", { type: "APPLY_UPDATE" }],
+            ["Roll application back", { type: "ROLLBACK_APP" }]
+          ]
+        }
+      ];
+
+      let currentScenarioIndex = 0;
+      let currentStepIndex = 0;
+      let state = LifecycleModel.createInitialState(scenarioDefinitions[0].preset);
+
+      const escapeHtml = value => String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+      function dispatch(action, guided = false) {
+        state = LifecycleModel.reduce(state, action);
+        if (guided) currentStepIndex += 1;
+        render();
+      }
+
+      function resetScenario(index) {
+        currentScenarioIndex = index;
+        currentStepIndex = 0;
+        state = LifecycleModel.createInitialState(scenarioDefinitions[index].preset);
+        render();
+      }
+
+      function stateItem(label, value) {
+        return `<div class="state-item"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value)}</span></div>`;
+      }
+
+      function renderStatus() {
+        const open = LifecycleModel.selectors.openDocuments(state);
+        const dirty = LifecycleModel.selectors.dirtyDocuments(state);
+        document.getElementById("status-strip").innerHTML = [
+          `<span class="badge">Installed app ${escapeHtml(state.app.installedVersion)}</span>`,
+          `<span class="badge">Writer format ${escapeHtml(state.app.writerFormat)}</span>`,
+          `<span class="badge ${dirty.length ? "warn" : "good"}">${dirty.length} dirty / ${open.length} open</span>`,
+          `<span class="badge ${state.quit.status.includes("blocked") ? "bad" : ""}">Quit: ${escapeHtml(state.quit.status)}</span>`,
+          `<span class="badge ${state.update.status.includes("blocked") ? "bad" : ""}">Update: ${escapeHtml(state.update.status)}</span>`
+        ].join("");
+      }
+
+      function renderEvent() {
+        const event = state.lastEvent;
+        document.getElementById("event").innerHTML = `<div class="event ${escapeHtml(event.kind)}" role="status" aria-live="polite"><strong>${escapeHtml(event.title)}</strong>${escapeHtml(event.detail)}</div>`;
+      }
+
+      function renderDocumentTabs() {
+        const holder = document.getElementById("document-tabs");
+        if (!state.documents.length) {
+          holder.innerHTML = `<div class="empty">No document sessions are present. Durable files and recovery candidates may still exist.</div>`;
+          return;
+        }
+        holder.innerHTML = state.documents.map(item => {
+          const dirtyMark = LifecycleModel.selectors.isDirty(item) ? " • unsaved" : "";
+          return `<button class="tab-button ${item.openMode === "closed" ? "closed" : ""}" role="tab" aria-selected="${item.id === state.activeDocumentId}" data-document-id="${escapeHtml(item.id)}">${escapeHtml(item.title + dirtyMark)}</button>`;
+        }).join("");
+        holder.querySelectorAll("button").forEach(button => {
+          button.addEventListener("click", () => dispatch({ type: "ACTIVATE_DOCUMENT", documentId: button.dataset.documentId }));
+        });
+      }
+
+      function documentDiagnostics(view) {
+        const diagnostics = [...view.diagnostics];
+        if (view.dirty) diagnostics.push("Unsaved working revision: Close, Quit, restart, and rollback require an explicit disposition.");
+        if (view.save.phase === "external-change conflict") diagnostics.push("External target conflict: ordinary Save is blocked.");
+        if (view.save.phase === "failed") diagnostics.push(view.save.failure);
+        if (view.authoritativeFile && !view.baselineMatchesFile) diagnostics.push("Open baseline differs from the authoritative file's current change token.");
+        if (!view.authoritativeFile) diagnostics.push("No authoritative target is bound; use Save As to make the working revision durable.");
+        return diagnostics;
+      }
+
+      function renderActiveDocument() {
+        const holder = document.getElementById("active-document");
+        const view = LifecycleModel.selectors.documentView(state);
+        if (!view) {
+          holder.innerHTML = `<div class="empty" style="margin-top:14px">No active document. Package-open and recovery actions can create one.</div>`;
+          return;
+        }
+        const file = view.authoritativeFile;
+        const diagnostics = documentDiagnostics(view);
+        holder.innerHTML = `
+          <div class="state-layout">
+            <div class="subpanel">
+              <h3>${escapeHtml(view.title)}</h3>
+              <div class="state-grid">
+                ${stateItem("Domain kind", view.kind)}
+                ${stateItem("Open mode", view.openMode)}
+                ${stateItem("Dirty", view.dirty ? "yes — unsaved work" : "no — matches durable revision")}
+                ${stateItem("Working revision", view.workingRevision)}
+                ${stateItem("Durable revision", view.durableRevision)}
+                ${stateItem("Authoritative file", file ? file.name : "none")}
+                ${stateItem("Baseline vs file", file ? (view.baselineMatchesFile ? "matches" : "DIFFERS") : "not applicable")}
+                ${stateItem("Save operation", view.save.mode)}
+                ${stateItem("Save phase", view.save.phase)}
+                ${stateItem("Candidate target", view.save.targetName)}
+                ${stateItem("Target outcome", view.save.targetOutcome)}
+                ${stateItem("Close gate", view.closeGate)}
+                ${stateItem("Package gate", view.packageStatus)}
+                ${stateItem("Template library", view.template.libraryStatus)}
+                ${stateItem("Active template", view.template.activeRepresentation)}
+                ${stateItem("Embedded template digest", view.template.embeddedDigest)}
+                ${stateItem("Library template digest", view.template.libraryDigest)}
+                ${stateItem("Template comparison", view.template.comparisonComplete ? "complete" : "not complete")}
+                ${stateItem("Recovery origin", view.recoveryOrigin)}
+              </div>
+            </div>
+            <div class="subpanel">
+              <h3>Current document findings</h3>
+              ${diagnostics.length
+                ? `<ul class="diagnostics">${diagnostics.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+                : `<div class="empty">No lifecycle findings for this document.</div>`}
+            </div>
+          </div>`;
+      }
+
+      function renderFiles() {
+        const holder = document.getElementById("files");
+        if (!state.files.length) {
+          holder.innerHTML = `<div class="empty">No synthetic user files exist.</div>`;
+          return;
+        }
+        holder.innerHTML = `<table><thead><tr><th>File</th><th>Revision</th><th>Format / reader</th><th>Trust</th></tr></thead><tbody>${state.files.map(file => `
+          <tr>
+            <td>${escapeHtml(file.name)}<br><small>Change token: ${escapeHtml(file.changeToken)}</small></td>
+            <td>${escapeHtml(file.revision)}</td>
+            <td>${escapeHtml(file.formatVersion)} / ${escapeHtml(file.minimumReader)}</td>
+            <td>${escapeHtml(file.trust)}</td>
+          </tr>`).join("")}</tbody></table>`;
+      }
+
+      function renderRecoveries() {
+        const holder = document.getElementById("recoveries");
+        if (!state.recoveries.length) {
+          holder.innerHTML = `<div class="empty">No recovery candidates exist in this scenario.</div>`;
+          return;
+        }
+        holder.innerHTML = `<table><thead><tr><th>Document</th><th>Revision</th><th>State</th></tr></thead><tbody>${state.recoveries.map(item => `
+          <tr>
+            <td>${escapeHtml(item.documentTitle)}</td>
+            <td>base ${escapeHtml(item.baseRevision)} → candidate ${escapeHtml(item.candidateRevision)}</td>
+            <td>${escapeHtml(item.state)}${item.openedDocumentId !== "none" ? `<br><small>Opened: ${escapeHtml(item.openedDocumentId)}</small>` : ""}</td>
+          </tr>`).join("")}</tbody></table>`;
+      }
+
+      function documentNames(ids) {
+        return ids.map(id => state.documents.find(item => item.id === id)?.title || id).join(", ") || "none";
+      }
+
+      function renderCoordinator() {
+        document.getElementById("coordinator").innerHTML = `<div class="state-grid">
+          ${stateItem("Installed version", state.app.installedVersion)}
+          ${stateItem("Previous version", state.app.previousVersion)}
+          ${stateItem("Update state", state.update.status)}
+          ${stateItem("Pending version", state.update.pendingVersion)}
+          ${stateItem("Restart reason", state.update.restartReason)}
+          ${stateItem("Files touched by rollback", state.update.userFilesTouchedByRollback)}
+          ${stateItem("Quit state", state.quit.status)}
+          ${stateItem("Quit blockers", documentNames(state.quit.blockedDocumentIds))}
+          ${stateItem("Discard approved", documentNames(state.quit.discardApprovedIds))}
+          ${stateItem("Last package", state.lastOpenAttempt.package)}
+          ${stateItem("Open outcome", state.lastOpenAttempt.outcome)}
+        </div>`;
+      }
+
+      function renderHistory() {
+        const holder = document.getElementById("history");
+        holder.innerHTML = state.history.length
+          ? state.history.map(item => `<li><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.action)} · ${escapeHtml(item.detail)}</small></li>`).join("")
+          : `<li>No transitions yet.</li>`;
+      }
+
+      function renderFreePlay() {
+        const holder = document.getElementById("free-play");
+        holder.innerHTML = freePlayGroups.map((group, groupIndex) => `<div class="action-group"><h3>${escapeHtml(group.title)}</h3><div class="action-list">${group.actions.map((entry, actionIndex) => `<button class="action-button" data-group="${groupIndex}" data-action="${actionIndex}">${escapeHtml(entry[0])}</button>`).join("")}</div></div>`).join("");
+        holder.querySelectorAll("button").forEach(button => {
+          button.addEventListener("click", () => {
+            const action = freePlayGroups[Number(button.dataset.group)].actions[Number(button.dataset.action)][1];
+            dispatch(action);
+          });
+        });
+      }
+
+      function renderScenarioTabs() {
+        const holder = document.getElementById("scenario-tabs");
+        holder.innerHTML = scenarioDefinitions.map((scenario, index) => `<button class="tab-button" role="tab" aria-selected="${index === currentScenarioIndex}" aria-controls="walkthrough" data-scenario="${index}">${escapeHtml(scenario.label)}</button>`).join("");
+        holder.querySelectorAll("button").forEach(button => {
+          button.addEventListener("click", () => resetScenario(Number(button.dataset.scenario)));
+          button.addEventListener("keydown", event => {
+            if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+            event.preventDefault();
+            const delta = event.key === "ArrowRight" ? 1 : -1;
+            const nextIndex = (Number(button.dataset.scenario) + delta + scenarioDefinitions.length) % scenarioDefinitions.length;
+            resetScenario(nextIndex);
+            holder.querySelector(`[data-scenario="${nextIndex}"]`)?.focus();
+          });
+        });
+      }
+
+      function renderWalkthrough() {
+        const scenario = scenarioDefinitions[currentScenarioIndex];
+        document.getElementById("walkthrough").innerHTML = `<div class="walkthrough" role="tabpanel">
+          <div class="walkthrough-top">
+            <div>
+              <h3>${escapeHtml(scenario.label)}</h3>
+              <p>${escapeHtml(scenario.description)}</p>
+              <p><strong>Progress:</strong> ${Math.min(currentStepIndex, scenario.steps.length)} of ${scenario.steps.length} actions pressed.</p>
+            </div>
+            <button class="restart-button" id="restart-scenario">Restart this walkthrough</button>
+          </div>
+          <ol class="step-list">${scenario.steps.map((item, index) => {
+            const status = index < currentStepIndex ? "done" : index === currentStepIndex ? "current" : "future";
+            return `<li><button class="step-button ${status}" data-step="${index}" ${index !== currentStepIndex ? "disabled" : ""}><strong>${index + 1}. ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.watch)}</span></button></li>`;
+          }).join("")}</ol>
+        </div>`;
+        document.getElementById("restart-scenario").addEventListener("click", () => resetScenario(currentScenarioIndex));
+        const current = document.querySelector(`.step-button[data-step="${currentStepIndex}"]`);
+        if (current) current.addEventListener("click", () => dispatch(scenario.steps[currentStepIndex].action, true));
+      }
+
+      function render() {
+        renderStatus();
+        renderEvent();
+        renderDocumentTabs();
+        renderActiveDocument();
+        renderFiles();
+        renderRecoveries();
+        renderCoordinator();
+        renderHistory();
+        renderFreePlay();
+        renderScenarioTabs();
+        renderWalkthrough();
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>

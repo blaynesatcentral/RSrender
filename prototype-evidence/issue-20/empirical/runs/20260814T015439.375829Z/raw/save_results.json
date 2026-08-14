@@ -1,0 +1,114 @@
+[
+  {
+    "case": "interrupt-before-candidate",
+    "detail": "No candidate was created; durable target remained old-valid.",
+    "evidence": "{\"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": false, \"candidateBytes\": null, \"candidateValid\": false, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "abrupt-process-partial-write",
+    "detail": "old-valid target; candidate may exist and must be classified",
+    "evidence": "{\"exitCode\": 81, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 75, \"candidateValid\": false, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": "old-valid target; candidate may exist and must be classified",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "abrupt-process-full-before-fsync",
+    "detail": "old-valid target; candidate may exist and must be classified",
+    "evidence": "{\"exitCode\": 82, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 151, \"candidateValid\": true, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": "old-valid target; candidate may exist and must be classified",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "abrupt-process-after-fsync",
+    "detail": "old-valid target; candidate may exist and must be classified",
+    "evidence": "{\"exitCode\": 83, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 151, \"candidateValid\": true, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": "old-valid target; candidate may exist and must be classified",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "abrupt-process-after-validation",
+    "detail": "old-valid target; candidate may exist and must be classified",
+    "evidence": "{\"exitCode\": 84, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 151, \"candidateValid\": true, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": "old-valid target; candidate may exist and must be classified",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "abrupt-process-after-replace-before-ack",
+    "detail": "new-valid target plus old-valid backup despite no acknowledgment",
+    "evidence": "{\"exitCode\": 85, \"targetState\": \"new-valid\", \"targetSha256\": \"bc4f4c85ab528477c26cb7f46101bdd84b93826025a69c5be36a4dc4ae7170d3\", \"candidateExists\": false, \"candidateBytes\": null, \"candidateValid\": false, \"backupExists\": true, \"backupIsOld\": true}",
+    "expected": "new-valid target plus old-valid backup despite no acknowledgment",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "validation-failure-does-not-replace",
+    "detail": "Truncated candidate was rejected before replace; target remained old-valid.",
+    "evidence": "{\"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 75, \"candidateValid\": false, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "replace-while-target-exclusively-open",
+    "detail": "ReplaceFileW failed non-silently while a zero-share handle held the target; original remained valid.",
+    "evidence": "{\"error\": {\"winerror\": 32, \"message\": \"[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\\\\\frv\\\\\\\\RSRender\\\\\\\\.wayfinder-tmp\\\\\\\\prototypes\\\\\\\\issue-20\\\\\\\\empirical\\\\\\\\runs\\\\\\\\20260814T015439.375829Z\\\\\\\\scratch\\\\\\\\save\\\\\\\\exclusive-lock\\\\\\\\document.rsproject'\"}, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 154, \"candidateValid\": true, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "replace-readonly-target",
+    "detail": "Read-only target produced a non-silent ReplaceFileW failure and remained old-valid.",
+    "evidence": "{\"error\": {\"winerror\": 5, \"message\": \"[Errno 5] Access is denied.: 'C:\\\\\\\\frv\\\\\\\\RSRender\\\\\\\\.wayfinder-tmp\\\\\\\\prototypes\\\\\\\\issue-20\\\\\\\\empirical\\\\\\\\runs\\\\\\\\20260814T015439.375829Z\\\\\\\\scratch\\\\\\\\save\\\\\\\\readonly-target\\\\\\\\document.rsproject'\"}, \"targetState\": \"old-valid\", \"targetSha256\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"candidateExists\": true, \"candidateBytes\": 156, \"candidateValid\": true, \"backupExists\": false, \"backupIsOld\": false}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "external-change-baseline-conflict",
+    "detail": "Pre-replace digest check detected an external change and retained both target and candidate.",
+    "evidence": "{\"baseline\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"actual\": \"324ff517f2e4f99b656f0f06c694505838113a550247b16b45ccebc16b8d6702\"}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "cross-process-check-then-replace-race",
+    "detail": "Both writers checked the same baseline before either replace; both later replaced successfully and writer B silently won. Baseline comparison alone is not a cross-process guard.",
+    "evidence": "{\"outcomes\": [{\"checked\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"expected\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"outcome\": \"replaced\"}, {\"checked\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"expected\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"outcome\": \"replaced\"}], \"final\": {\"documentId\": \"00000000-0000-4000-8000-0000000000a1\", \"formatIdentifier\": \"org.rsrender.prototype.package\", \"formatVersion\": 2, \"revision\": 2, \"value\": \"writer-b\"}}",
+    "expected": "demonstrate lost update",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "cross-process-exclusive-lock-and-recheck",
+    "detail": "An exclusive lock plus digest recheck allowed one writer and classified the second as conflict.",
+    "evidence": "{\"outcomes\": [{\"expected\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"checked\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"outcome\": \"replaced\"}, {\"expected\": \"6b810627a50718aeccb028279263bae40605d0bd7eee18bd8c124b4f9d9742b0\", \"checked\": \"324ff517f2e4f99b656f0f06c694505838113a550247b16b45ccebc16b8d6702\", \"outcome\": \"conflict\"}], \"final\": {\"documentId\": \"00000000-0000-4000-8000-0000000000a1\", \"formatIdentifier\": \"org.rsrender.prototype.package\", \"formatVersion\": 2, \"revision\": 2, \"value\": \"writer-a\"}}",
+    "expected": "one replace and one conflict",
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "power-loss-during-replace",
+    "detail": "Power interruption inside the kernel replace operation was not reproducible safely on this workstation; remains an isolated-VM test.",
+    "evidence": "not executed",
+    "expected": "defer",
+    "label": "not-observed",
+    "passed": true
+  },
+  {
+    "case": "non-NTFS-storage-classes",
+    "detail": "SMB, sync-folder, exFAT/removable, quota, and real disk-full behavior were not available in this bounded run.",
+    "evidence": "not executed",
+    "expected": "defer",
+    "label": "not-observed",
+    "passed": true
+  }
+]

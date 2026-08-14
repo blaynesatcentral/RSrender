@@ -1,0 +1,50 @@
+[
+  {
+    "case": "canonical-containment",
+    "detail": "Resolved containment accepted an in-root target and rejected dot-segment escape.",
+    "evidence": "{\"inside\": \"C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\root\\\\child.txt\", \"traversal\": \"C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\outside\\\\sentinel.txt\"}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "filesystem-symlink-to-outside",
+    "detail": "Symlink creation was unavailable under current token/policy; ZIP symlink metadata was still tested.",
+    "evidence": "{\"error\": \"[WinError 1314] A required privilege is not held by the client: 'C:\\\\\\\\frv\\\\\\\\RSRender\\\\\\\\.wayfinder-tmp\\\\\\\\prototypes\\\\\\\\issue-20\\\\\\\\empirical\\\\\\\\runs\\\\\\\\20260814T015439.375829Z\\\\\\\\scratch\\\\\\\\path\\\\\\\\outside\\\\\\\\sentinel.txt' -> 'C:\\\\\\\\frv\\\\\\\\RSRender\\\\\\\\.wayfinder-tmp\\\\\\\\prototypes\\\\\\\\issue-20\\\\\\\\empirical\\\\\\\\runs\\\\\\\\20260814T015439.375829Z\\\\\\\\scratch\\\\\\\\path\\\\\\\\root\\\\\\\\outside-link.txt'\", \"winerror\": 1314}",
+    "expected": "policy-dependent",
+    "label": "not-observed",
+    "passed": true
+  },
+  {
+    "case": "filesystem-junction-to-outside",
+    "detail": "Created a real junction to an out-of-root synthetic directory; canonical containment rejected the resolved child.",
+    "evidence": "{\"resolved\": \"C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\outside\\\\sentinel.txt\", \"attributes\": {\"isLink\": false, \"isReparsePoint\": true, \"reparseTag\": 2684354563}, \"mklink\": \"Junction created for C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\root\\\\outside-junction <<===>> C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\outside\"}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "ntfs-case-alias",
+    "detail": "Default local NTFS directory treated case variants as one file; case-only logical package names must collide.",
+    "evidence": "{\"sameFile\": true, \"files\": [\"CaseAlias.txt\"]}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "win32-trailing-dot-alias",
+    "detail": "Win32 normalized a trailing-dot filename to the same filesystem object without the dot.",
+    "evidence": "{\"requested\": \"C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-20\\\\empirical\\\\runs\\\\20260814T015439.375829Z\\\\scratch\\\\path\\\\root\\\\trailing-name.\", \"actualExists\": true, \"directory\": [\"CaseAlias.txt\", \"trailing-name\"]}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  },
+  {
+    "case": "logical-windows-name-rejections",
+    "detail": "Prototype normalizer rejected reserved devices, dot components, backslashes, drive/ADS forms, and trailing dot/space before filesystem use.",
+    "evidence": "{\"CON\": \"ZIP_PATH\", \"aux.txt\": \"ZIP_PATH\", \"a/../b\": \"ZIP_PATH\", \"a\\\\b\": \"ZIP_PATH\", \"C:relative\": \"ZIP_PATH\", \"name:stream\": \"ZIP_PATH\", \"trail.\": \"ZIP_PATH\", \"trail \": \"ZIP_PATH\"}",
+    "expected": null,
+    "label": "observed",
+    "passed": true
+  }
+]
