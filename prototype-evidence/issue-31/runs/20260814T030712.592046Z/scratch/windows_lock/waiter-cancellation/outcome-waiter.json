@@ -1,0 +1,11 @@
+{
+  "acquire": "cancelled",
+  "lastAcquireError": {
+    "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\windows_lock\\\\waiter-cancellation\\\\document.commit.lock'",
+    "winerror": 32
+  },
+  "outcome": "cancelled",
+  "ownerId": "waiter",
+  "ownerNonce": "5dccf072149a4e73bfba5eca99cb8864",
+  "waitMs": 47
+}

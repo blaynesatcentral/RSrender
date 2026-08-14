@@ -1,0 +1,146 @@
+{
+  "group": "per_document",
+  "results": [
+    {
+      "detail": {
+        "outcomes": [
+          {
+            "acquire": "acquired",
+            "checkedInsideAuthority": "a7d4e3cd443c38d71bf80b56f748727493a9c1bb9a4956b867dc131898cc55b0",
+            "committed": {
+              "documentId": "00000000-0000-4000-8000-000000000031",
+              "formatVersion": 1,
+              "revision": 2,
+              "value": "new-a"
+            },
+            "expectedBaseline": "a7d4e3cd443c38d71bf80b56f748727493a9c1bb9a4956b867dc131898cc55b0",
+            "lastAcquireError": null,
+            "lockPathRemovedOrReowned": true,
+            "markerPresentWhenOutcomeFinalized": false,
+            "outcome": "committed",
+            "ownedMarkerRemovedBeforeRelease": true,
+            "ownerId": "owner-a",
+            "ownerNonce": "2d1b8437d86e4eba87fc5ca582119b0d",
+            "priorMarker": null,
+            "waitMs": 0
+          },
+          {
+            "acquire": "acquired",
+            "checkedInsideAuthority": "e14e90f8caa832b55ebcce3be0df9ec3f2f6d00247105cc7a68050a34d15da9a",
+            "committed": {
+              "documentId": "00000000-0000-4000-8000-000000000031",
+              "formatVersion": 1,
+              "revision": 2,
+              "value": "new-b"
+            },
+            "expectedBaseline": "e14e90f8caa832b55ebcce3be0df9ec3f2f6d00247105cc7a68050a34d15da9a",
+            "lastAcquireError": null,
+            "lockPathRemovedOrReowned": true,
+            "markerPresentWhenOutcomeFinalized": false,
+            "outcome": "committed",
+            "ownedMarkerRemovedBeforeRelease": true,
+            "ownerId": "owner-b",
+            "ownerNonce": "032eab943c6e47e582dc8860c1bac7e0",
+            "priorMarker": null,
+            "waitMs": 0
+          }
+        ]
+      },
+      "evidence": "observed",
+      "id": "different-documents-owned-concurrently",
+      "implication": "Per-document authority permits independent documents to commit concurrently; application-global save serialization is unnecessary.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "final": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 2,
+          "value": "owner-b"
+        },
+        "from": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "handoff": {
+            "baseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "fromOwner": "owner-a",
+            "toOwner": "owner-b",
+            "transferNonce": "5c114127826441adb6c97898fbc2a3eb"
+          },
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "handoff-ready",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "owner-a",
+          "ownerNonce": "efddf6058edc4255ac955ce2883db3b2",
+          "priorMarker": null,
+          "waitMs": 0
+        },
+        "to": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 2,
+            "value": "owner-b"
+          },
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "handoffValidatedInsideAuthority": true,
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "owner-b",
+          "ownerNonce": "c2ea70972bfc4d1fadd0c5c466356483",
+          "priorMarker": null,
+          "waitMs": 0
+        }
+      },
+      "evidence": "observed",
+      "id": "explicit-handoff-token-and-baseline",
+      "implication": "Handoff is an explicit routing transition; the receiver still acquires commit authority and validates both token and target baseline inside it.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "acquire": "acquired",
+        "checkedInsideAuthority": "a09aef596fbd74126a60d6c4ca0dd639b867b51a99c0ea70e4143c9df28d36d2",
+        "expectedBaseline": "a09aef596fbd74126a60d6c4ca0dd639b867b51a99c0ea70e4143c9df28d36d2",
+        "handoffValidatedInsideAuthority": false,
+        "lastAcquireError": null,
+        "lockPathRemovedOrReowned": true,
+        "markerPresentWhenOutcomeFinalized": false,
+        "outcome": "handoff-token-conflict",
+        "ownedMarkerRemovedBeforeRelease": true,
+        "ownerId": "owner-c",
+        "ownerNonce": "a99f8487d08e404d9408bf02c532dbc8",
+        "priorMarker": null,
+        "waitMs": 0
+      },
+      "evidence": "observed",
+      "id": "handoff-token-mismatch-is-stable-conflict",
+      "implication": "A handoff token is scoped to document, receiver, and baseline; mismatch does not mutate the target.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "currentProcessPid": 22064,
+        "decision": "OWNER_IDENTITY_AMBIGUOUS",
+        "marker": {
+          "ownerNonce": "prior-process-start",
+          "pid": 22064
+        }
+      },
+      "evidence": "simulated",
+      "id": "pid-alone-never-identifies-document-owner",
+      "implication": "A reused or still-live PID cannot distinguish process start/session identity; PID is diagnostic only, never authority.",
+      "passed": true
+    }
+  ]
+}

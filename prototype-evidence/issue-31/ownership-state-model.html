@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSrender ownership prototype — issue #31</title>
+  <style>
+    :root { color-scheme: light; --ink:#203036; --muted:#60747b; --line:#cfdadc; --panel:#f6f9f9; --accent:#176a73; --good:#176a44; --warn:#9a5a00; --bad:#9b2c2c; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:15px/1.45 system-ui,Segoe UI,sans-serif; color:var(--ink); background:#edf3f3; }
+    main { width:min(1180px, calc(100% - 32px)); margin:28px auto 60px; }
+    h1 { margin:0 0 6px; font-size:28px; }
+    h2 { margin:0 0 14px; font-size:19px; }
+    h3 { margin:16px 0 9px; font-size:15px; }
+    p { margin:6px 0 12px; }
+    .notice { border-left:5px solid var(--accent); background:white; padding:14px 16px; margin:18px 0; box-shadow:0 1px 3px #0001; }
+    .grid { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; align-items:start; }
+    .card { background:white; border:1px solid var(--line); border-radius:8px; padding:16px; box-shadow:0 1px 3px #0001; margin-bottom:16px; }
+    .state { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .state div { background:var(--panel); border-radius:6px; padding:9px 11px; min-height:64px; }
+    .state strong { display:block; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .full { grid-column:1/-1; }
+    button { font:inherit; border:1px solid #9db0b4; border-radius:5px; padding:8px 10px; margin:3px 3px 3px 0; background:white; color:var(--ink); cursor:pointer; }
+    button:hover { border-color:var(--accent); color:var(--accent); }
+    button.primary { background:var(--accent); border-color:var(--accent); color:white; }
+    button:disabled { opacity:.42; cursor:not-allowed; }
+    .tabs { display:flex; flex-wrap:wrap; gap:5px; border-bottom:1px solid var(--line); margin-bottom:14px; }
+    .tabs button { border-radius:5px 5px 0 0; margin:0; border-bottom:0; }
+    .tabs button.active { background:var(--accent); color:white; }
+    .step { display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:start; border-top:1px solid #e1e8e9; padding:9px 0; }
+    .step:first-of-type { border-top:0; }
+    .step small { color:var(--muted); display:block; margin-top:3px; }
+    .event { border-left:4px solid var(--accent); padding:9px 11px; background:#f0f7f7; }
+    .event.warning { border-color:var(--warn); background:#fff7e9; }
+    .event.error { border-color:var(--bad); background:#fff0f0; }
+    .event.success { border-color:var(--good); background:#edf8f2; }
+    code { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.92em; }
+    ul { padding-left:21px; }
+    @media (max-width:850px) { .grid { grid-template-columns:1fr; } .state { grid-template-columns:1fr; } .full { grid-column:auto; } .step { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Document ownership and commit authority</h1>
+  <p><strong>Throwaway prototype — issue #31.</strong> Click through how one application broker, per-document ownership, and a Windows commit authority interact. This page simulates logic only; the adjacent empirical harness records the local filesystem observations.</p>
+  <div class="notice"><strong>Question:</strong> can RSrender route all commands through one application, hand one document between sessions, survive an owner crash, and still guarantee that every writer rechecks the authoritative baseline <em>after</em> it obtains storage commit authority? The intended answer is a layered model—not one magic lock.</div>
+
+  <div class="grid">
+    <section>
+      <div class="card">
+        <h2>Current state</h2>
+        <div id="state" class="state"></div>
+        <h3>Last result</h3>
+        <div id="event" class="event"></div>
+      </div>
+
+      <div class="card">
+        <h2>Free play</h2>
+        <p>Buttons are always available. Illegal transitions are rejected without changing state.</p>
+        <div id="freePlay"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="card">
+        <h2>Guided walkthroughs</h2>
+        <div id="tabs" class="tabs"></div>
+        <div id="scenario"></div>
+      </div>
+      <div class="card">
+        <h2>What each layer means</h2>
+        <ul>
+          <li><strong>Application broker:</strong> one lifecycle/file command route. It does not make outside editors disappear.</li>
+          <li><strong>Document owner:</strong> a stable session and generation for routing and deliberate handoff. A PID or marker is not authority.</li>
+          <li><strong>Commit authority:</strong> a storage-specific exclusive critical section. A writer still rechecks the baseline inside it.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+// Portable pure state module. It does not reference the DOM.
+const OwnershipModel = (() => {
+  const writers = () => ({
+    A: { id:"A", baseline:"r1", candidate:"A's revision 2", state:"candidate ready" },
+    B: { id:"B", baseline:"r1", candidate:"B's revision 2", state:"candidate ready" }
+  });
+
+  function initial(preset="default") {
+    const base = {
+      serial:1,
+      broker:{ status:"active", session:"app-session-1", queue:[] },
+      target:{ revision:1, digest:"r1", value:"durable revision 1" },
+      writers:writers(),
+      owner:{ state:"unowned", writer:null, session:null, generation:0, handoff:null },
+      authority:{ state:"free", heldBy:null, checkedBaseline:null, marker:"none" },
+      last:{ level:"info", title:"Ready", detail:"No document owner or commit authority is active." }
+    };
+    if (preset === "owned-a") return reduce(base, {type:"ASSIGN", writer:"A"});
+    if (preset === "stale-marker") {
+      base.authority.marker = "stale marker: PID 4242 / old nonce";
+      base.last = {level:"warning", title:"Diagnostic marker remains", detail:"No OS authority is held. PID/age cannot grant or break authority."};
+    }
+    return base;
+  }
+
+  function clone(state) { return JSON.parse(JSON.stringify(state)); }
+  function result(state, level, title, detail) { state.serial += 1; state.last={level,title,detail}; return state; }
+  function reject(state, detail) { const next=clone(state); return result(next,"error","Transition rejected",detail); }
+
+  function reduce(state, action) {
+    const next=clone(state);
+    const writer = action.writer ? next.writers[action.writer] : null;
+    switch (action.type) {
+      case "RESET": return initial(action.preset || "default");
+      case "ROUTE":
+        if (next.broker.status !== "active") return reject(state,"The application broker is not active.");
+        next.broker.queue.push(action.writer);
+        return result(next,"info",`Writer ${action.writer} routed`,`The command is queued through the sole broker; it has not gained document ownership or commit authority.`);
+      case "ASSIGN":
+        if (next.broker.status !== "active") return reject(state,"Restart the application broker before assigning an owner.");
+        if (next.owner.state !== "unowned" && next.owner.state !== "owner lost") return reject(state,`Writer ${next.owner.writer} already owns this document.`);
+        next.owner={state:"owned",writer:action.writer,session:`owner-${action.writer}-${next.serial}`,generation:next.owner.generation+1,handoff:null};
+        next.broker.queue=next.broker.queue.filter(id=>id!==action.writer);
+        return result(next,"success",`Writer ${action.writer} owns the document`,`Ownership routes domain commands; it is not permission to overwrite the file.`);
+      case "REQUEST_HANDOFF":
+        if (next.owner.state!=="owned" || next.owner.writer===action.writer) return reject(state,"A different current owner must request handoff to this writer.");
+        if (next.authority.state!=="free") return reject(state,"Release commit authority before starting ownership handoff.");
+        next.owner.state="handoff pending";
+        next.owner.handoff={from:next.owner.writer,to:action.writer,baseline:next.target.digest,token:`transfer-${next.serial}`};
+        return result(next,"warning","Handoff pending",`Writer ${next.owner.writer} still owns the document until ${action.writer} accepts the scoped token.`);
+      case "ACCEPT_HANDOFF":
+        if (next.owner.state!=="handoff pending" || next.owner.handoff.to!==action.writer) return reject(state,"The handoff token is absent or scoped to another receiver.");
+        next.owner={state:"owned",writer:action.writer,session:`owner-${action.writer}-${next.serial}`,generation:next.owner.generation+1,handoff:null};
+        return result(next,"success",`Ownership handed to ${action.writer}`,"The receiver must still acquire commit authority and recheck its baseline.");
+      case "ACQUIRE":
+        if (next.owner.state!=="owned" || next.owner.writer!==action.writer) return reject(state,`Writer ${action.writer} is not the current document owner.`);
+        if (next.authority.state!=="free") { writer.state="waiting for commit authority"; return result(next,"warning",`Writer ${action.writer} is waiting`,"Waiting does not reserve the old baseline. Recheck is still mandatory after acquisition."); }
+        next.authority={state:"held",heldBy:action.writer,checkedBaseline:null,marker:`diagnostic ${next.owner.session}`};
+        writer.state="commit authority held; baseline not checked";
+        return result(next,"success",`Writer ${action.writer} holds commit authority`,"This is only the critical section. Commit is illegal until the target is rechecked inside it.");
+      case "RECHECK":
+        if (next.authority.state!=="held" || next.authority.heldBy!==action.writer) return reject(state,"This writer does not hold commit authority.");
+        next.authority.checkedBaseline=writer.baseline;
+        if (writer.baseline!==next.target.digest) {
+          writer.state="EXTERNAL_BASELINE_CHANGED";
+          next.authority.state="conflict";
+          return result(next,"warning","External baseline conflict",`${writer.baseline} was expected but ${next.target.digest} is authoritative. No commit is allowed.`);
+        }
+        writer.state="baseline verified inside authority";
+        return result(next,"success","Baseline verified",`${writer.baseline} still matches. Commit is now legal for this immutable candidate.`);
+      case "COMMIT":
+        if (next.authority.state!=="held" || next.authority.heldBy!==action.writer || next.authority.checkedBaseline!==next.target.digest) return reject(state,"Acquire authority and verify the current baseline before commit.");
+        next.target={revision:next.target.revision+1,digest:`r${next.target.revision+1}`,value:writer.candidate};
+        writer.state="committed";
+        next.authority={state:"free",heldBy:null,checkedBaseline:null,marker:"none"};
+        return result(next,"success",`Writer ${action.writer} committed`,`The target advanced to ${next.target.digest}; every other writer's old baseline is now stale.`);
+      case "RELEASE":
+        if (next.authority.heldBy!==action.writer) return reject(state,"This writer does not hold authority to release.");
+        next.authority={state:"free",heldBy:null,checkedBaseline:null,marker:"none"};
+        return result(next,"info","Commit authority released","No file content changed.");
+      case "EXTERNAL_EDIT":
+        next.target={revision:next.target.revision+1,digest:`external-r${next.target.revision+1}`,value:"changed outside RSrender"};
+        return result(next,"warning","External edit observed","Ownership did not prevent an outside writer. The next holder must detect this inside authority.");
+      case "CRASH":
+        if (next.owner.state!=="owned") return reject(state,"There is no live owner to crash.");
+        const lost=next.owner.writer;
+        next.owner.state="owner lost";
+        next.authority={state:"free",heldBy:null,checkedBaseline:null,marker:`stale diagnostic for ${next.owner.session}`};
+        next.broker.status="stopped";
+        return result(next,"warning",`Owner ${lost} and broker stopped","The OS authority is released, but diagnostic metadata may remain. The durable target did not change.`);
+      case "RESTART":
+        if (next.broker.status==="active") return reject(state,"The application broker is already active.");
+        next.broker={status:"active",session:`app-session-${next.serial}`,queue:[]};
+        next.owner={state:"unowned",writer:null,session:null,generation:next.owner.generation,handoff:null};
+        return result(next,"success","Application broker restarted","Durable baseline is reconstructed from the target. A new owner session may now be assigned.");
+      case "CANCEL_WAIT":
+        if (!writer || writer.state!=="waiting for commit authority") return reject(state,"This writer is not waiting.");
+        writer.state="candidate ready; wait cancelled";
+        return result(next,"info",`Writer ${action.writer} canceled waiting`,"Its candidate remains intact; ownership and target are unchanged.");
+      case "MARK_PID_REUSE":
+        next.authority.marker=`ambiguous live PID ${action.pid || 4242} / prior nonce`;
+        return result(next,"warning","PID marker is ambiguous","PID, timestamp, and marker age are diagnostic only. No TTL break or ownership inference is allowed.");
+      default: return reject(state,`Unknown action ${action.type}.`);
+    }
+  }
+  return {initial,reduce};
+})();
+
+const actions = [
+  ["Route A",{type:"ROUTE",writer:"A"}], ["Route B",{type:"ROUTE",writer:"B"}],
+  ["Assign A",{type:"ASSIGN",writer:"A"}], ["Assign B",{type:"ASSIGN",writer:"B"}],
+  ["Request handoff to B",{type:"REQUEST_HANDOFF",writer:"B"}], ["Accept as B",{type:"ACCEPT_HANDOFF",writer:"B"}],
+  ["A acquires authority",{type:"ACQUIRE",writer:"A"}], ["B acquires authority",{type:"ACQUIRE",writer:"B"}],
+  ["A rechecks baseline",{type:"RECHECK",writer:"A"}], ["B rechecks baseline",{type:"RECHECK",writer:"B"}],
+  ["A commits",{type:"COMMIT",writer:"A"}], ["B commits",{type:"COMMIT",writer:"B"}],
+  ["External edit",{type:"EXTERNAL_EDIT"}], ["Crash current owner",{type:"CRASH"}], ["Restart broker",{type:"RESTART"}],
+  ["Cancel B wait",{type:"CANCEL_WAIT",writer:"B"}], ["Show PID-reuse ambiguity",{type:"MARK_PID_REUSE"}], ["Reset",{type:"RESET"}]
+];
+
+const scenarios = [
+  {name:"Two writers", preset:"default", description:"One broker routes both candidates. A commits first; B can acquire later but its inside-authority recheck must produce a conflict.", steps:[
+    ["Route A",{type:"ROUTE",writer:"A"},"Routing is not ownership."], ["Route B",{type:"ROUTE",writer:"B"},"Both requests can coexist."],
+    ["Assign A",{type:"ASSIGN",writer:"A"},"A becomes the document owner."], ["Acquire",{type:"ACQUIRE",writer:"A"},"Still cannot commit."],
+    ["Recheck",{type:"RECHECK",writer:"A"},"The check occurs inside authority."], ["Commit A",{type:"COMMIT",writer:"A"},"Target advances."],
+    ["Handoff request",{type:"REQUEST_HANDOFF",writer:"B"},"Handoff is explicit."], ["Accept B",{type:"ACCEPT_HANDOFF",writer:"B"},"B owns routing."],
+    ["Acquire B",{type:"ACQUIRE",writer:"B"},"Authority may be acquired."], ["Recheck B",{type:"RECHECK",writer:"B"},"B's r1 baseline is stale; no overwrite."]
+  ]},
+  {name:"Crash / restart", preset:"owned-a", description:"A crash releases commit authority but leaves a stale diagnostic marker. Restart creates a new broker/owner session; it never trusts the PID marker.", steps:[
+    ["Acquire A",{type:"ACQUIRE",writer:"A"},"A holds authority."], ["Crash",{type:"CRASH"},"Authority is released; metadata may remain."],
+    ["Mark PID ambiguity",{type:"MARK_PID_REUSE",pid:4242},"Even a live/reused PID is not authority."], ["Restart",{type:"RESTART"},"Read durable target again."],
+    ["Assign B",{type:"ASSIGN",writer:"B"},"Fresh owner generation."], ["Acquire B",{type:"ACQUIRE",writer:"B"},"OS authority controls access."],
+    ["Recheck B",{type:"RECHECK",writer:"B"},"Baseline is verified after restart."], ["Commit B",{type:"COMMIT",writer:"B"},"Safe commit."]
+  ]},
+  {name:"Delayed / cancel", preset:"owned-a", description:"A delayed owner holds authority. B cannot commit merely because it waited; cancellation changes no file state.", steps:[
+    ["A acquires",{type:"ACQUIRE",writer:"A"},"A holds the critical section."], ["Handoff request to B",{type:"REQUEST_HANDOFF",writer:"B"},"This is rejected while A owns/holds; release/transfer sequencing must be explicit."],
+    ["B tries authority",{type:"ACQUIRE",writer:"B"},"B is rejected because it is not owner."], ["Release A",{type:"RELEASE",writer:"A"},"No target change."],
+    ["Request handoff",{type:"REQUEST_HANDOFF",writer:"B"},"Prepare transfer."], ["Accept B",{type:"ACCEPT_HANDOFF",writer:"B"},"B becomes owner."],
+    ["Acquire B",{type:"ACQUIRE",writer:"B"},"B obtains authority."], ["External edit",{type:"EXTERNAL_EDIT"},"Simulate a non-cooperating writer."],
+    ["Recheck B",{type:"RECHECK",writer:"B"},"Conflict, never last-writer-wins."]
+  ]},
+  {name:"Stale marker", preset:"stale-marker", description:"A marker is useful support evidence, but it cannot grant, deny, or be broken by time/PID heuristics.", steps:[
+    ["Show PID ambiguity",{type:"MARK_PID_REUSE",pid:4242},"The PID could be live or reused."], ["Assign A",{type:"ASSIGN",writer:"A"},"Domain ownership is new."],
+    ["Acquire authority",{type:"ACQUIRE",writer:"A"},"The actual storage primitive decides availability."], ["Recheck",{type:"RECHECK",writer:"A"},"Target baseline still rules."], ["Commit",{type:"COMMIT",writer:"A"},"Matching diagnostic metadata is cleaned on normal release."]
+  ]}
+];
+
+let state=OwnershipModel.initial();
+let activeScenario=0;
+function dispatch(action){ state=OwnershipModel.reduce(state,action); render(); }
+function render(){
+  const owner=state.owner.writer ? `${state.owner.writer} · ${state.owner.state} · generation ${state.owner.generation}` : state.owner.state;
+  document.getElementById("state").innerHTML=`
+    <div><strong>Application broker</strong>${state.broker.status}<br><code>${state.broker.session}</code><br>Queue: ${state.broker.queue.join(", ")||"empty"}</div>
+    <div><strong>Document owner</strong>${owner}<br><code>${state.owner.session||"no owner session"}</code></div>
+    <div><strong>Authoritative target</strong>${state.target.digest} · revision ${state.target.revision}<br>${state.target.value}</div>
+    <div><strong>Commit authority</strong>${state.authority.state}<br>Holder: ${state.authority.heldBy||"none"}<br>Checked: ${state.authority.checkedBaseline||"not checked"}</div>
+    <div><strong>Writer A</strong>Baseline ${state.writers.A.baseline}<br>${state.writers.A.state}</div>
+    <div><strong>Writer B</strong>Baseline ${state.writers.B.baseline}<br>${state.writers.B.state}</div>
+    <div class="full"><strong>Diagnostic marker / handoff</strong>${state.authority.marker}<br>${state.owner.handoff ? `Handoff ${state.owner.handoff.from} → ${state.owner.handoff.to}, ${state.owner.handoff.token}, baseline ${state.owner.handoff.baseline}` : "No handoff pending"}</div>`;
+  const e=state.last; const node=document.getElementById("event"); node.className=`event ${e.level}`; node.innerHTML=`<strong>${e.title}</strong><br>${e.detail}`;
+}
+function renderControls(){
+  const free=document.getElementById("freePlay"); actions.forEach(([label,action])=>{const b=document.createElement("button"); b.textContent=label; b.onclick=()=>dispatch(action); free.appendChild(b);});
+  const tabs=document.getElementById("tabs"); scenarios.forEach((scenario,index)=>{const b=document.createElement("button"); b.textContent=scenario.name; b.onclick=()=>selectScenario(index); tabs.appendChild(b);});
+  selectScenario(0);
+}
+function selectScenario(index){
+  activeScenario=index; state=OwnershipModel.initial(scenarios[index].preset); render();
+  [...document.querySelectorAll("#tabs button")].forEach((b,i)=>b.classList.toggle("active",i===index));
+  const s=scenarios[index]; const area=document.getElementById("scenario"); area.innerHTML=`<p>${s.description}</p>`;
+  s.steps.forEach(([label,action,watch],i)=>{const row=document.createElement("div"); row.className="step"; const b=document.createElement("button"); b.textContent=`${i+1}. ${label}`; b.onclick=()=>dispatch(action); const info=document.createElement("div"); info.innerHTML=`<strong>Watch</strong><small>${watch}</small>`; row.append(b,info); area.appendChild(row);});
+  const reset=document.createElement("button"); reset.className="primary"; reset.textContent="Restart this walkthrough"; reset.onclick=()=>selectScenario(index); area.appendChild(reset);
+}
+renderControls(); render();
+</script>
+</body>
+</html>

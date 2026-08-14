@@ -1,0 +1,19 @@
+{
+  "architecture": "AMD64",
+  "capturedUtc": "2026-08-14T03:07:12.599254+00:00",
+  "dependenciesInstalled": false,
+  "networkUsed": false,
+  "pid": 22064,
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.10.11",
+  "scope": "inert files on this workstation's local volume only",
+  "windowsApiVersion": "10.0.26200",
+  "workspaceVolume": {
+    "error": null,
+    "filesystem": "NTFS",
+    "observed": true,
+    "root": "C:\\",
+    "serial": 1220190822,
+    "volumeName": "OS"
+  }
+}

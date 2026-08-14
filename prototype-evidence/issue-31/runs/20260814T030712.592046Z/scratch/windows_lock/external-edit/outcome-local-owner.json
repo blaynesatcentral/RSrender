@@ -1,0 +1,14 @@
+{
+  "acquire": "acquired",
+  "checkedInsideAuthority": "80416c0daa96f09acf7391b52297c7fd438815386c838bf2b9d2a9e36e25b652",
+  "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+  "lastAcquireError": null,
+  "lockPathRemovedOrReowned": true,
+  "markerPresentWhenOutcomeFinalized": false,
+  "outcome": "external-baseline-conflict",
+  "ownedMarkerRemovedBeforeRelease": true,
+  "ownerId": "local-owner",
+  "ownerNonce": "0810cdaf70844fcdbfe768540f3a7d1b",
+  "priorMarker": null,
+  "waitMs": 0
+}

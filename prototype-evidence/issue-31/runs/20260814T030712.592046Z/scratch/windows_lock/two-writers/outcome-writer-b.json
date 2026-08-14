@@ -1,0 +1,17 @@
+{
+  "acquire": "acquired",
+  "checkedInsideAuthority": "8d479edf31b4dd80f102f32a3ce609c74f192f7e00678c65a2ca078ab667db74",
+  "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+  "lastAcquireError": {
+    "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\windows_lock\\\\two-writers\\\\document.commit.lock'",
+    "winerror": 32
+  },
+  "lockPathRemovedOrReowned": true,
+  "markerPresentWhenOutcomeFinalized": false,
+  "outcome": "external-baseline-conflict",
+  "ownedMarkerRemovedBeforeRelease": true,
+  "ownerId": "writer-b",
+  "ownerNonce": "f2f0614927014b9ca38f6b664d12dbb8",
+  "priorMarker": null,
+  "waitMs": 281
+}

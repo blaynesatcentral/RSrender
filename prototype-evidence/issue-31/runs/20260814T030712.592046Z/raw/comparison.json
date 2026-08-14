@@ -1,0 +1,50 @@
+{
+  "group": "comparison",
+  "results": [
+    {
+      "detail": {
+        "decision": "insufficient-alone",
+        "failure": "another process, external editor, or bypass path can write outside the broker"
+      },
+      "evidence": "simulated",
+      "id": "single-app-routing-alone",
+      "implication": "Use one application broker for command/lifecycle routing, but retain a filesystem commit authority and inside-authority baseline check.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "decision": "insufficient-alone",
+        "failure": "memory/marker/PID ownership is advisory across crashes and processes"
+      },
+      "evidence": "simulated",
+      "id": "per-document-owner-record-alone",
+      "implication": "Use stable owner session IDs and generations for routing/handoff; never treat metadata as an OS lease.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "decision": "insufficient-alone",
+        "failure": "does not coordinate domain commands or prove remote storage semantics"
+      },
+      "evidence": "simulated",
+      "id": "windows-zero-share-alone",
+      "implication": "Use the Windows handle as a bounded local commit critical section, not as the whole document lifecycle model.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "decision": "carry forward",
+        "layers": [
+          "single application lifecycle/file broker",
+          "per-document owner session and explicit handoff",
+          "storage-specific commit authority",
+          "baseline recheck inside authority"
+        ]
+      },
+      "evidence": "simulated",
+      "id": "hybrid-candidate",
+      "implication": "The layers address different scopes and form the ADR candidate; production selection remains gated by Electron and target-storage prototypes.",
+      "passed": true
+    }
+  ]
+}

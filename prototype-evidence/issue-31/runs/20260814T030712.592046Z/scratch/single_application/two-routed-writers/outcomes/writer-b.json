@@ -1,0 +1,6 @@
+{
+  "checkedInsideOwner": "8d479edf31b4dd80f102f32a3ce609c74f192f7e00678c65a2ca078ab667db74",
+  "expected": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+  "outcome": "external-baseline-conflict",
+  "requestId": "writer-b"
+}

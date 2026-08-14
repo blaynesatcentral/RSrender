@@ -1,0 +1,299 @@
+{
+  "group": "windows_lock",
+  "results": [
+    {
+      "detail": {
+        "final": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 2,
+          "value": "a"
+        },
+        "outcomes": [
+          {
+            "acquire": "acquired",
+            "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+            "committed": {
+              "documentId": "00000000-0000-4000-8000-000000000031",
+              "formatVersion": 1,
+              "revision": 2,
+              "value": "a"
+            },
+            "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+            "lastAcquireError": null,
+            "lockPathRemovedOrReowned": true,
+            "markerPresentWhenOutcomeFinalized": false,
+            "outcome": "committed",
+            "ownedMarkerRemovedBeforeRelease": true,
+            "ownerId": "writer-a",
+            "ownerNonce": "aace318a515c4a36910ceaab9f9dcbcf",
+            "priorMarker": null,
+            "waitMs": 0
+          },
+          {
+            "acquire": "acquired",
+            "checkedInsideAuthority": "8d479edf31b4dd80f102f32a3ce609c74f192f7e00678c65a2ca078ab667db74",
+            "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+            "lastAcquireError": {
+              "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\windows_lock\\\\two-writers\\\\document.commit.lock'",
+              "winerror": 32
+            },
+            "lockPathRemovedOrReowned": true,
+            "markerPresentWhenOutcomeFinalized": false,
+            "outcome": "external-baseline-conflict",
+            "ownedMarkerRemovedBeforeRelease": true,
+            "ownerId": "writer-b",
+            "ownerNonce": "f2f0614927014b9ca38f6b664d12dbb8",
+            "priorMarker": null,
+            "waitMs": 281
+          }
+        ]
+      },
+      "evidence": "observed",
+      "id": "two-writers-lock-and-inside-recheck",
+      "implication": "An exclusive zero-share handle serialized local writers; the inside-authority baseline recheck classified the loser as conflict.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "staleMarker": {
+          "createdUtc": "2026-08-14T03:07:15.975502+00:00",
+          "ownerId": "crashed-owner",
+          "ownerNonce": "crashed-nonce",
+          "pid": 27688
+        },
+        "successor": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 2,
+            "value": "successor"
+          },
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "successor",
+          "ownerNonce": "successor-nonce",
+          "priorMarker": {
+            "createdUtc": "2026-08-14T03:07:15.975502+00:00",
+            "ownerId": "crashed-owner",
+            "ownerNonce": "crashed-nonce",
+            "pid": 27688
+          },
+          "waitMs": 15
+        },
+        "terminatedExit": 1
+      },
+      "evidence": "observed",
+      "id": "owner-crash-releases-os-authority",
+      "implication": "Windows released the zero-share handle when the owner process terminated. The marker survived only as diagnostic stale metadata and was not broken by TTL/PID logic.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "acquire": "acquired",
+        "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+        "committed": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 2,
+          "value": "new-owner"
+        },
+        "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+        "lastAcquireError": null,
+        "lockPathRemovedOrReowned": true,
+        "markerPresentWhenOutcomeFinalized": false,
+        "outcome": "committed",
+        "ownedMarkerRemovedBeforeRelease": true,
+        "ownerId": "new-owner",
+        "ownerNonce": "5f0c6ce3efca4f13ac94a29a4045c6b0",
+        "priorMarker": {
+          "createdUtc": "2000-01-01T00:00:00Z",
+          "ownerId": "old-owner",
+          "ownerNonce": "old-start",
+          "pid": 22064
+        },
+        "waitMs": 0
+      },
+      "evidence": "observed",
+      "id": "live-pid-stale-marker-does-not-override-os-authority",
+      "implication": "Even a marker naming a currently live PID was not authority. Successful OS-handle acquisition plus inside-authority recheck governed commit.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "owner": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 2,
+            "value": "slow"
+          },
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "slow-owner",
+          "ownerNonce": "383ec75594614416a6a24f4a81cb6851",
+          "priorMarker": null,
+          "waitMs": 0
+        },
+        "waiter": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "5e85ca3698a14b8145b028f23e1fa0d32c6acfd8a3541ba0cb835ed3080e5ef5",
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "lastAcquireError": {
+            "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\windows_lock\\\\delayed-owner\\\\document.commit.lock'",
+            "winerror": 32
+          },
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "external-baseline-conflict",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "waiter",
+          "ownerNonce": "5cc3c6a024f046a796c1cf1eda8af68c",
+          "priorMarker": null,
+          "waitMs": 281
+        }
+      },
+      "evidence": "observed",
+      "id": "delayed-owner-waiter-becomes-conflict",
+      "implication": "Waiting for authority does not preserve a stale commit right; the waiter must recheck after acquisition and become conflict.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "cancelledCandidateRetained": true,
+        "holder": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 2,
+            "value": "holder"
+          },
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "holder",
+          "ownerNonce": "e7194a3a060043868fe223a40bb993eb",
+          "priorMarker": null,
+          "waitMs": 0
+        },
+        "waiter": {
+          "acquire": "cancelled",
+          "lastAcquireError": {
+            "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\windows_lock\\\\waiter-cancellation\\\\document.commit.lock'",
+            "winerror": 32
+          },
+          "outcome": "cancelled",
+          "ownerId": "waiter",
+          "ownerNonce": "5dccf072149a4e73bfba5eca99cb8864",
+          "waitMs": 47
+        }
+      },
+      "evidence": "observed",
+      "id": "waiter-cancellation-is-non-mutating",
+      "implication": "Cancellation stops waiting without granting authority, deleting the candidate, or mutating the authoritative target.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "acquire": "acquired",
+        "checkedInsideAuthority": "80416c0daa96f09acf7391b52297c7fd438815386c838bf2b9d2a9e36e25b652",
+        "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+        "lastAcquireError": null,
+        "lockPathRemovedOrReowned": true,
+        "markerPresentWhenOutcomeFinalized": false,
+        "outcome": "external-baseline-conflict",
+        "ownedMarkerRemovedBeforeRelease": true,
+        "ownerId": "local-owner",
+        "ownerNonce": "0810cdaf70844fcdbfe768540f3a7d1b",
+        "priorMarker": null,
+        "waitMs": 0
+      },
+      "evidence": "observed",
+      "id": "external-edit-detected-inside-authority",
+      "implication": "Authority serializes cooperating writers but does not make the baseline current; the inside-authority check is always required.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "final": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 3,
+          "value": "revision-3"
+        },
+        "first": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 2,
+            "value": "revision-2"
+          },
+          "expectedBaseline": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "owner-1",
+          "ownerNonce": "afa69a3c35ed4f9ca72e110023a510e2",
+          "priorMarker": null,
+          "waitMs": 0
+        },
+        "markerRemovedAfterFirst": true,
+        "second": {
+          "acquire": "acquired",
+          "checkedInsideAuthority": "1ec755fe32f39d45b44d550b84ded603e7586263be374e9ff8c9d86a65339af9",
+          "committed": {
+            "documentId": "00000000-0000-4000-8000-000000000031",
+            "formatVersion": 1,
+            "revision": 3,
+            "value": "revision-3"
+          },
+          "expectedBaseline": "1ec755fe32f39d45b44d550b84ded603e7586263be374e9ff8c9d86a65339af9",
+          "lastAcquireError": null,
+          "lockPathRemovedOrReowned": true,
+          "markerPresentWhenOutcomeFinalized": false,
+          "outcome": "committed",
+          "ownedMarkerRemovedBeforeRelease": true,
+          "ownerId": "owner-2",
+          "ownerNonce": "5d50705ac3c1416584cfd4007193680e",
+          "priorMarker": null,
+          "waitMs": 0
+        }
+      },
+      "evidence": "observed",
+      "id": "normal-cleanup-and-restart-from-durable-baseline",
+      "implication": "Normal release cleans matching diagnostic metadata; a restarted owner reconstructs baseline from the durable target rather than trusting prior process state.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "executed": false,
+        "reason": "No authorized SMB/cross-machine environment was in scope."
+      },
+      "evidence": "open",
+      "id": "smb-and-cross-machine-authority",
+      "implication": "Zero-share local behavior must not be promoted to SMB lease/locking semantics without an authorized target environment.",
+      "passed": true
+    }
+  ]
+}

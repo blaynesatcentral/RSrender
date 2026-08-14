@@ -1,0 +1,89 @@
+{
+  "group": "single_application",
+  "results": [
+    {
+      "detail": {
+        "broker": {
+          "outcome": "completed",
+          "processed": [
+            {
+              "checkedInsideOwner": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+              "committed": {
+                "documentId": "00000000-0000-4000-8000-000000000031",
+                "formatVersion": 1,
+                "revision": 2,
+                "value": "a"
+              },
+              "expected": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+              "outcome": "committed",
+              "requestId": "writer-a"
+            },
+            {
+              "checkedInsideOwner": "8d479edf31b4dd80f102f32a3ce609c74f192f7e00678c65a2ca078ab667db74",
+              "expected": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+              "outcome": "external-baseline-conflict",
+              "requestId": "writer-b"
+            }
+          ]
+        },
+        "final": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 2,
+          "value": "a"
+        }
+      },
+      "evidence": "observed",
+      "id": "one-broker-routes-two-writers",
+      "implication": "One live broker serialized both requests and rechecked each baseline; the second stale request became a stable conflict.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "acquire": "busy-timeout",
+        "error": {
+          "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\single_application\\\\two-routed-writers\\\\application.instance.lock'",
+          "winerror": 32
+        },
+        "outcome": "single-application-busy",
+        "waitMs": 203
+      },
+      "evidence": "observed",
+      "id": "second-broker-denied-while-owner-live",
+      "implication": "Single-application routing needs an actual process authority; an in-memory singleton flag would not prove this boundary.",
+      "passed": true
+    },
+    {
+      "detail": {
+        "final": {
+          "documentId": "00000000-0000-4000-8000-000000000031",
+          "formatVersion": 1,
+          "revision": 2,
+          "value": "after-restart"
+        },
+        "restart": {
+          "outcome": "completed",
+          "processed": [
+            {
+              "checkedInsideOwner": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+              "committed": {
+                "documentId": "00000000-0000-4000-8000-000000000031",
+                "formatVersion": 1,
+                "revision": 2,
+                "value": "after-restart"
+              },
+              "expected": "45a281536847e80213653dfe16478556b6a5db557f968ced1e85d7a3e81c2d2e",
+              "outcome": "committed",
+              "requestId": "writer"
+            }
+          ]
+        },
+        "terminatedExit": 1
+      },
+      "evidence": "observed",
+      "id": "broker-crash-restart-replays-pending-request",
+      "implication": "A persistent request survived broker loss and a restarted sole broker rechecked the file before commit. Production still needs authenticated/idempotent command journaling.",
+      "passed": true
+    }
+  ]
+}

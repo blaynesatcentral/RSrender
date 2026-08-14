@@ -1,0 +1,20 @@
+{
+  "acquire": "acquired",
+  "checkedInsideAuthority": "e14e90f8caa832b55ebcce3be0df9ec3f2f6d00247105cc7a68050a34d15da9a",
+  "committed": {
+    "documentId": "00000000-0000-4000-8000-000000000031",
+    "formatVersion": 1,
+    "revision": 2,
+    "value": "new-b"
+  },
+  "expectedBaseline": "e14e90f8caa832b55ebcce3be0df9ec3f2f6d00247105cc7a68050a34d15da9a",
+  "lastAcquireError": null,
+  "lockPathRemovedOrReowned": true,
+  "markerPresentWhenOutcomeFinalized": false,
+  "outcome": "committed",
+  "ownedMarkerRemovedBeforeRelease": true,
+  "ownerId": "owner-b",
+  "ownerNonce": "032eab943c6e47e582dc8860c1bac7e0",
+  "priorMarker": null,
+  "waitMs": 0
+}

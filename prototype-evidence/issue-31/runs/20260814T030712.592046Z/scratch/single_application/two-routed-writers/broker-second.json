@@ -1,0 +1,9 @@
+{
+  "acquire": "busy-timeout",
+  "error": {
+    "message": "[Errno 32] The process cannot access the file because it is being used by another process.: 'C:\\\\frv\\\\RSRender\\\\.wayfinder-tmp\\\\prototypes\\\\issue-31\\\\runs\\\\20260814T030712.592046Z\\\\scratch\\\\single_application\\\\two-routed-writers\\\\application.instance.lock'",
+    "winerror": 32
+  },
+  "outcome": "single-application-busy",
+  "waitMs": 203
+}

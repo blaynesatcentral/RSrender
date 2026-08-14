@@ -1,0 +1,15 @@
+{
+  "acquire": "acquired",
+  "checkedInsideAuthority": "a09aef596fbd74126a60d6c4ca0dd639b867b51a99c0ea70e4143c9df28d36d2",
+  "expectedBaseline": "a09aef596fbd74126a60d6c4ca0dd639b867b51a99c0ea70e4143c9df28d36d2",
+  "handoffValidatedInsideAuthority": false,
+  "lastAcquireError": null,
+  "lockPathRemovedOrReowned": true,
+  "markerPresentWhenOutcomeFinalized": false,
+  "outcome": "handoff-token-conflict",
+  "ownedMarkerRemovedBeforeRelease": true,
+  "ownerId": "owner-c",
+  "ownerNonce": "a99f8487d08e404d9408bf02c532dbc8",
+  "priorMarker": null,
+  "waitMs": 0
+}
