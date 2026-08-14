@@ -19,6 +19,7 @@ coverage/
 .cache/
 .tmp/
 tmp/
+.wayfinder-tmp/
 
 # Python
 __pycache__/
@@ -43,3 +44,11 @@ test-results/
 !docs/**/*.png
 !docs/**/*.jpg
 !docs/**/*.jpeg
+
+# Local client-bearing template references (never publish from this public repo)
+TEMPLATE-GO-BYS.local.md
+
+# Local third-party branding reference selected for review; text provenance may publish,
+# but the extracted Electron executable icon and derivative are not cleared assets.
+docs/planning/assets/icon-candidates/electron-43-default/electron-default-candidate.ico
+docs/planning/assets/icon-candidates/electron-43-default/electron-default-candidate.png

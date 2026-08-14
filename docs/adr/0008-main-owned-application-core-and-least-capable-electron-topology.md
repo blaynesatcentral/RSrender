@@ -1,0 +1,28 @@
+---
+status: accepted
+---
+
+# Use a main-owned Application Core and least-capable Electron process topology
+
+RSrender v0.9 will use one primary Electron main-process Application Core per qualified application instance, a short-lived sandboxed Auth Entry renderer, sandboxed document renderers, the separate sandboxed Chromium Layout Host selected by ADR 0007, and fresh transient Electron `utilityProcess` children for bounded pure-JavaScript jobs. The Application Core is the only long-lived privileged authority: it owns application/document lifecycle, Document Identity and Owner generation, authoritative immutable working state and history, typed command/query routing, opaque capabilities, dialogs/file grants, storage commit authority, recovery coordination, session-only credential/source transport, job supervision, and publication authority.
+
+The packaged application acquires Electron single-instance authority before opening files or document windows. A losing secondary may forward only a bounded untrusted activation/open request to the primary and then exits without parsing or writing; primary routes it through normal validated Open intake. This application-routing authority is distinct from ADR 0002's Document Owner and storage commit authority.
+
+Document renderers are replaceable semantic HTML/SVG projections with context isolation, sandboxing, no Node integration, no renderer network, denied navigation/windows/permissions, and a command-shaped packaged preload. The preload exposes neither Electron nor generic IPC. Main validates sender/frame/origin, document identity, ownership generation, capability, sequence/replay state, runtime schema, revision, and command availability for every privileged call.
+
+Transient utilities receive one immutable versioned job DTO, only bounded job bytes through main-brokered ports, a minimal explicit environment, budgets/cancellation, and an output sink or result port rather than a destination path. They receive no credentials, source transport, reusable user paths, document capability, or publication authority. Main independently validates one returned candidate/result or typed failure before it can affect application state. Utilities are created per job rather than retained in a shared pool.
+
+## Consequences
+
+- Renderer, preload, Layout Host, and utility state cannot become authoritative document, dirty, file-binding, source-acceptance, recovery, or publication state. A crash loses only replaceable projection/derived/job state.
+- Direct manipulation follows begin/preview/commit-or-cancel; a committed mutation is one runtime-validated named command and one history boundary. Queries and revision-tagged projections never mutate or reconcile by trusting renderer state.
+- Opaque capabilities rotate on navigation, crash, document close, ownership handoff, or renderer replacement. Stale, replayed, child-frame, cross-tab, and cross-document calls fail without revealing target state.
+- Capabilities are route-scoped (`application/start`, `auth-entry`, `document`, or `recovery-review`), never generic or backed by a dummy document. Auth Entry can submit one bounded password/code message but cannot receive tokens, projections, paths, or source/file authority.
+- Electron does not guarantee one OS renderer process per document from origin choice alone. The packaged build requests the intended isolation and asserts actual process/site assignment; it does not infer it from a development observation.
+- A Node utility process is **not an OS security sandbox** and retains same-user filesystem/network risk. It is selected only for owned pure-JavaScript package/layout jobs with minimized inputs and authority. Packaged utility success/crash/restart/cancellation and child cleanup remain #37/#42 release gates.
+- Untrusted native image, font, hatch, PDF, SVG, or other native-decoded input is unavailable and rejected until a separately hardened decoder boundary passes packaged filesystem/network denial, exploit/crash/resource containment, and cleanup tests. A renderer, Layout Host, or Node utility is not that boundary.
+- A shared long-lived utility pool is rejected for v0.9. It may be reconsidered only if #42 proves the accepted workload requires it and #37 revalidates the enlarged state lifetime and blast radius.
+- Package/source mappers and scene workers never receive raw user paths or credentials; this minimizes capability but does not claim OS containment. Main remains the only component that can acquire ADR 0002 storage authority and execute ADR 0001 validated replacement.
+- The topology remains unreleased until #37 repeats packaged renderer crash/rebind, utility positive/crash/restart, stale-capability rejection, cancellation, and zero-orphan cleanup. The ADR selects ownership and least capability; it does not convert partial prototype evidence into a test pass.
+
+The complete process, IPC, component, job, and testing contracts are normative in the [RSrender architecture specification](../planning/specifications/rsrender-architecture.md). This ADR composes with [ADR 0001](0001-renderer-independent-lifecycle-and-verified-save.md), [ADR 0002](0002-layer-document-ownership-and-storage-commit-authority.md), [ADR 0004](0004-session-only-rslog-authentication.md), and [ADR 0007](0007-single-chromium-layout-authority-and-resolved-projections.md). Evidence: [Electron security/deployment research](../planning/research/electron-security-deployment-update-recovery.md), [issue #32](https://github.com/blaynesatcentral/RSrender/issues/32), [issue #33](https://github.com/blaynesatcentral/RSrender/issues/33), and [issue #37](https://github.com/blaynesatcentral/RSrender/issues/37).

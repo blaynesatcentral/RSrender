@@ -1,14 +1,14 @@
 # RSrender
 
-RSrender is a planning-stage open-source project for producing precise, readable boring logs from RSLog data without relying on RSLog's report-template designer.
+RSrender is an internal-development project for producing precise, readable boring logs from RSLog data without relying on RSLog's report-template designer.
 
 The intended product combines deterministic PDF rendering with a layout-design experience inspired by ArcGIS Pro: physical page dimensions, rulers and guides, snapping, layers, exact typography and line weights, reliable overflow behavior, and geotechnical plots that share a real axis.
 
 ## Status
 
-Planning only. No renderer or architectural stack has been selected yet.
+Wayfinder planning is complete. The decision-complete v0.9 product, domain, UX, architecture, acceptance, and implementation-roadmap package is indexed in [`docs/planning`](docs/planning), with the ubiquitous language in [`CONTEXT.md`](CONTEXT.md) and hard-to-reverse decisions under [`docs/adr`](docs/adr).
 
-Planning artifacts belong in [`docs/planning`](docs/planning). Implementation should begin only after the project scope, data boundary, document model, rendering model, and delivery milestones have been decided there.
+Production implementation began with BLD-001. The exact internal-use dependency graph is admitted and locked; the TypeScript/Electron workspace, package boundaries, clean build, tests, dependency checks, and deterministic packaging baseline are active. The build frontier is BLD-001 through BLD-013 in the [phased roadmap](docs/planning/specifications/rsrender-phased-implementation-roadmap.md). Open capability, evidence, organizational, and any future external-distribution gates remain tracked in GitHub; they do not reopen settled product behavior.
 
 ## Initial problem statement
 

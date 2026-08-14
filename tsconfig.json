@@ -1,0 +1,16 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/contracts" },
+    { "path": "./packages/domain" },
+    { "path": "./packages/application" },
+    { "path": "./packages/scene" },
+    { "path": "./packages/package-contract" },
+    { "path": "./packages/source-contract" },
+    { "path": "./packages/platform-electron-main" },
+    { "path": "./packages/platform-zipjs" },
+    { "path": "./packages/layout-host" },
+    { "path": "./packages/renderer-ui" },
+    { "path": "./packages/test-support" }
+  ]
+}

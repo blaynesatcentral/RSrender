@@ -1,0 +1,9 @@
+.git
+.wayfinder-tmp
+artifacts
+coverage
+dist
+node_modules
+package-lock.json
+CES Boring Log WTP-4 (design render).jpg
+CES Boring Log WTP-4 (design render).pdf
