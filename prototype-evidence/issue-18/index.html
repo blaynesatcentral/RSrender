@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSrender issue 18 interaction prototype</title>
+  <!--
+    THROWAWAY PROTOTYPE — NOT APPLICATION CODE.
+    Three variants of the RSrender layout workspace, switchable via ?variant=A|B|C,
+    on one standalone route. Synthetic clean-room visuals and in-memory state only.
+  -->
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #637080;
+      --line: #c7d0d9;
+      --panel: #f7f9fb;
+      --page: #fffef8;
+      --accent: #075985;
+      --accent-soft: #e0f2fe;
+      --key: #b45309;
+      --danger: #b42318;
+      --focus: #7c3aed;
+      --shadow: 0 12px 30px rgba(23, 33, 43, .16);
+      font: 14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; color: var(--ink); background: #dde4ea; }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .prototype-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      min-height: 42px; padding: 7px 14px; color: white; background: #17212b;
+    }
+    .prototype-banner strong { letter-spacing: .02em; }
+    .prototype-banner small { color: #c7d0d9; }
+    .toolbar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px;
+      padding: 7px 10px; border-bottom: 1px solid var(--line); background: white;
+    }
+    .toolbar .separator { width: 1px; height: 26px; background: var(--line); margin: 0 3px; }
+    .button, .icon-button {
+      border: 1px solid #aeb9c4; border-radius: 5px; background: white; cursor: pointer;
+    }
+    .button { min-height: 32px; padding: 5px 9px; }
+    .icon-button { width: 30px; height: 30px; padding: 0; }
+    .button:hover, .icon-button:hover { background: #edf4f8; }
+    .button:disabled, .icon-button:disabled { opacity: .42; cursor: not-allowed; }
+    .button.key-command { border-color: var(--key); color: #7c2d12; }
+    .selection-readout { margin-left: auto; color: var(--muted); font-size: 12px; }
+    #app { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+    .workspace { min-height: 0; display: grid; }
+
+    /* The three shells disagree about information hierarchy, not just colour. */
+    .variant-A .workspace { grid-template-columns: 280px minmax(480px, 1fr) 290px; }
+    .variant-A .tree-panel { grid-column: 1; grid-row: 1; }
+    .variant-A .canvas-panel { grid-column: 2; grid-row: 1; }
+    .variant-A .inspector-panel { grid-column: 3; grid-row: 1; }
+
+    .variant-B .workspace { grid-template-columns: minmax(0, 1fr); position: relative; }
+    .variant-B .canvas-panel { grid-column: 1; grid-row: 1; }
+    .variant-B .tree-panel {
+      position: absolute; z-index: 5; left: 14px; top: 14px; bottom: 90px; width: 270px;
+      border: 1px solid #9ba8b5; border-radius: 9px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    .variant-B .inspector-panel {
+      position: absolute; z-index: 5; left: 300px; right: 14px; bottom: 14px; height: 106px;
+      border: 1px solid #9ba8b5; border-radius: 9px; box-shadow: var(--shadow); overflow: auto;
+    }
+    .variant-B .inspector-panel .panel-body { display: flex; align-items: end; gap: 10px; padding: 8px 12px; }
+    .variant-B .inspector-panel .property-grid { display: grid; grid-template-columns: repeat(4, 90px); gap: 7px; }
+    .variant-B .inspector-panel .state-details { margin-left: auto; max-width: 330px; }
+
+    .variant-C .workspace { grid-template-columns: minmax(340px, .85fr) minmax(520px, 1.15fr); grid-template-rows: minmax(0, 1fr) 190px; }
+    .variant-C .tree-panel { grid-column: 1; grid-row: 1 / span 2; }
+    .variant-C .canvas-panel { grid-column: 2; grid-row: 1; }
+    .variant-C .inspector-panel { grid-column: 2; grid-row: 2; }
+    .variant-C .tree-row { min-height: 38px; }
+    .variant-C .tree-help { display: block; }
+    .variant-C .inspector-panel .panel-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .panel { min-width: 0; min-height: 0; border-right: 1px solid var(--line); background: var(--panel); }
+    .panel-heading {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      min-height: 38px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: #eef2f5;
+    }
+    .panel-heading h2 { margin: 0; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; }
+    .panel-heading output { font-size: 11px; color: var(--muted); }
+    .panel-body { min-height: 0; padding: 10px; }
+    .tree-panel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+    #contentsTree { min-height: 0; overflow: auto; padding: 6px; }
+    .tree-row {
+      display: grid; grid-template-columns: 24px minmax(0, 1fr) 30px 30px; align-items: center;
+      min-height: 32px; border: 1px solid transparent; border-radius: 5px; margin: 1px 0;
+    }
+    .tree-row[aria-selected="true"] { background: var(--accent-soft); border-color: #7dd3fc; }
+    .tree-row.is-key { box-shadow: inset 4px 0 var(--key); }
+    .tree-row.is-inherited-hidden, .tree-row.is-inherited-locked { color: #7b8794; }
+    .tree-row.drag-over { border-color: var(--focus); background: #ede9fe; }
+    .tree-main {
+      min-width: 0; display: flex; align-items: center; gap: 7px; border: 0; background: transparent;
+      text-align: left; cursor: default; padding: 5px 5px 5px calc(4px + var(--depth, 0) * 17px);
+    }
+    .drag-handle { display: grid; place-items: center; height: 100%; color: #768390; cursor: grab; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+    .tree-main .kind { width: 18px; flex: 0 0 18px; text-align: center; color: var(--muted); }
+    .tree-main .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-main .key-tag { margin-left: auto; color: var(--key); font-size: 10px; font-weight: 700; }
+    .tree-toggle { border: 0; background: transparent; border-radius: 4px; cursor: pointer; }
+    .tree-toggle.local-off { color: var(--danger); background: #fee4e2; }
+    .tree-toggle.inherited { color: #7b8794; text-decoration: line-through; }
+    .tree-help { display: none; margin: 0; padding: 8px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+
+    .canvas-panel { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: #cbd4dc; }
+    .canvas-scroll { min-height: 0; overflow: auto; padding: 26px 60px 90px; }
+    .page-shell { width: 612px; height: 792px; margin: 0 auto; position: relative; }
+    #pageCanvas {
+      position: absolute; inset: 0; background: var(--page); box-shadow: 0 3px 18px rgba(0, 0, 0, .24);
+      border: 1px solid #98a5b1; overflow: hidden; user-select: none;
+    }
+    .region-band { position: absolute; left: 20px; right: 20px; border: 1px dashed #9ca8b4; color: #778391; font-size: 10px; padding: 3px; pointer-events: none; }
+    .region-header { top: 20px; height: 100px; }
+    .region-depth { top: 130px; height: 590px; }
+    .region-footer { top: 730px; height: 42px; }
+    .page-element {
+      position: absolute; margin: 0; padding: 2px; border: 1px solid #556575; border-radius: 1px;
+      background: rgba(255,255,255,.82); color: #18222c; overflow: hidden; text-align: left;
+      cursor: move; transform-origin: center; font-size: 11px;
+    }
+    .page-element:hover { box-shadow: 0 0 0 2px rgba(7, 89, 133, .25); }
+    .page-element[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; z-index: 20 !important; }
+    .page-element.is-key { outline: 3px double var(--key); outline-offset: 3px; }
+    .page-element.is-locked { cursor: not-allowed; border-style: dashed; }
+    .page-element.type-text { display: flex; align-items: center; justify-content: center; font-weight: 600; }
+    .page-element.type-track { background: repeating-linear-gradient(to bottom, #f8fafc 0 29px, #d4dce4 30px); }
+    .page-element.type-shape { background: rgba(207, 232, 218, .75); }
+    .page-element.type-line { border-width: 0 0 2px; background: transparent; }
+    .handle { position: absolute; width: 9px; height: 9px; right: -6px; bottom: -6px; background: white; border: 2px solid var(--accent); }
+    .page-element.is-key .handle { border-color: var(--key); }
+    .stress-primitive { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: rgba(7, 89, 133, .4); pointer-events: none; }
+    .canvas-note { position: absolute; left: 0; top: -22px; color: #435160; font-size: 11px; }
+
+    .inspector-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); border-right: 0; }
+    .inspector-panel .panel-body { overflow: auto; }
+    .selection-summary { margin: 0 0 10px; padding: 8px; border-left: 3px solid var(--accent); background: #eaf2f7; }
+    .selection-summary.key { border-left-color: var(--key); }
+    .property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .property-grid label { display: grid; gap: 3px; color: var(--muted); font-size: 11px; }
+    .property-grid input, .property-grid select { width: 100%; min-height: 31px; border: 1px solid #aeb9c4; border-radius: 4px; padding: 4px 6px; background: white; color: var(--ink); }
+    .mixed-note { grid-column: 1 / -1; color: #7c2d12; font-size: 11px; }
+    .state-details { margin-top: 12px; }
+    .state-details summary { cursor: pointer; color: var(--accent); }
+    #stateOutput { max-height: 180px; overflow: auto; white-space: pre-wrap; font: 10px/1.35 ui-monospace, monospace; color: #405060; }
+    .command-log { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 11px; }
+    .benchmark { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    #benchmarkOutput { display: block; margin-top: 6px; white-space: pre-wrap; font: 10px/1.35 ui-monospace, monospace; }
+
+    .variant-switcher {
+      position: fixed; z-index: 100; left: 50%; bottom: 14px; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 999px;
+      color: white; background: rgba(23, 33, 43, .96); box-shadow: var(--shadow);
+    }
+    .variant-switcher button { width: 34px; height: 34px; border: 1px solid #8492a0; border-radius: 50%; color: white; background: #2b3a48; cursor: pointer; }
+    .variant-switcher output { min-width: 180px; text-align: center; font-size: 12px; }
+    .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 980px) {
+      .variant-A .workspace, .variant-C .workspace { grid-template-columns: 240px minmax(500px, 1fr); }
+      .variant-A .inspector-panel { position: absolute; z-index: 6; width: 285px; right: 12px; top: 104px; bottom: 70px; box-shadow: var(--shadow); }
+      .variant-C .inspector-panel { display: none; }
+    }
+  </style>
+</head>
+<body>
+<main id="app">
+  <header class="prototype-banner">
+    <strong>RSrender interaction lab <small>— disposable issue #18 prototype</small></strong>
+    <span id="variantPurpose"></span>
+  </header>
+  <nav class="toolbar" aria-label="Layout commands">
+    <button class="button" id="undoButton" type="button">Undo <kbd>Ctrl+Z</kbd></button>
+    <button class="button" id="redoButton" type="button">Redo <kbd>Ctrl+Y</kbd></button>
+    <span class="separator" aria-hidden="true"></span>
+    <button class="button key-command align" data-align="left" type="button">Align left</button>
+    <button class="button key-command align" data-align="center" type="button">Center X</button>
+    <button class="button key-command align" data-align="right" type="button">Align right</button>
+    <button class="button key-command align" data-align="top" type="button">Align top</button>
+    <button class="button key-command align" data-align="middle" type="button">Center Y</button>
+    <button class="button key-command align" data-align="bottom" type="button">Align bottom</button>
+    <span class="separator" aria-hidden="true"></span>
+    <button class="button" id="deleteButton" type="button">Delete</button>
+    <output class="selection-readout" id="selectionReadout" aria-live="polite"></output>
+  </nav>
+  <section class="workspace">
+    <aside class="panel tree-panel" aria-labelledby="contentsHeading">
+      <header class="panel-heading">
+        <h2 id="contentsHeading">Contents</h2>
+        <output id="treeStatus"></output>
+      </header>
+      <div id="contentsTree" role="tree" aria-label="Page contents and render order"></div>
+      <p class="tree-help">Tree keys: Shift selects; Alt+Up/Down reorders; Alt+Right nests into the preceding group; Alt+Left moves out. V/L toggle local visibility/lock.</p>
+    </aside>
+
+    <section class="canvas-panel" aria-labelledby="canvasHeading">
+      <header class="panel-heading">
+        <h2 id="canvasHeading">Page canvas</h2>
+        <output id="canvasStatus">Letter · 100% · points</output>
+      </header>
+      <div class="canvas-scroll">
+        <div class="page-shell">
+          <span class="canvas-note">Arrows nudge · Shift = 10 pt · Ctrl+arrows resize · drag commits once</span>
+          <div id="pageCanvas" role="group" aria-label="Synthetic boring log page">
+            <div class="region-band region-header">Header</div>
+            <div class="region-band region-depth">Depth Body · reference depth 0–50 ft</div>
+            <div class="region-band region-footer">Footer</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel inspector-panel" aria-labelledby="inspectorHeading">
+      <header class="panel-heading">
+        <h2 id="inspectorHeading">Selection properties</h2>
+        <output id="historyStatus"></output>
+      </header>
+      <div class="panel-body">
+        <p class="selection-summary" id="selectionSummary">Select an item in Contents or on the page.</p>
+        <div class="property-grid">
+          <label>X (pt)<input id="propX" type="number" step="1"></label>
+          <label>Y (pt)<input id="propY" type="number" step="1"></label>
+          <label>Width (pt)<input id="propW" type="number" min="1" step="1"></label>
+          <label>Height (pt)<input id="propH" type="number" min="1" step="1"></label>
+          <label>Fill
+            <select id="propFill">
+              <option value="">— Mixed —</option>
+              <option value="#ffffff">White</option>
+              <option value="#dbeafe">Blue tint</option>
+              <option value="#dcfce7">Green tint</option>
+              <option value="#fef3c7">Amber tint</option>
+            </select>
+          </label>
+          <label>Font size (pt)<input id="propFont" type="number" min="5" max="72" step="1"></label>
+          <span class="mixed-note" id="mixedNote"></span>
+        </div>
+        <details class="state-details">
+          <summary>Prototype state and command log</summary>
+          <pre id="stateOutput"></pre>
+          <ol class="command-log" id="commandLog"></ol>
+        </details>
+        <div class="benchmark">
+          <button class="button" id="benchmarkButton" type="button">Run repeatable latency probe</button>
+          <output id="benchmarkOutput">Not run. This reports synthetic render-to-frame evidence, not end-user input latency.</output>
+        </div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<div class="variant-switcher" aria-label="Prototype variants">
+  <button id="previousVariant" type="button" aria-label="Previous prototype variant">←</button>
+  <output id="variantLabel"></output>
+  <button id="nextVariant" type="button" aria-label="Next prototype variant">→</button>
+</div>
+<div id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const variants = {
+    A: { name: 'Workbench', purpose: 'Persistent Contents · page · properties' },
+    B: { name: 'Canvas first', purpose: 'Floating Contents · bottom properties strip' },
+    C: { name: 'Tree first', purpose: 'Keyboard-dominant hierarchy · secondary preview' }
+  };
+  const query = new URLSearchParams(location.search);
+  let variant = variants[query.get('variant')] ? query.get('variant') : 'A';
+
+  const initialNodes = [
+    { id:'page', parentId:null, order:0, type:'page', name:'Page 1 — Boring Log', x:0, y:0, w:612, h:792, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'header', parentId:'page', order:0, type:'group', name:'Header', x:20, y:20, w:572, h:100, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'title', parentId:'header', order:0, type:'text', name:'Project title', x:34, y:38, w:330, h:28, localVisible:true, localLocked:false, fill:'#dbeafe', fontSize:14 },
+    { id:'exploration', parentId:'header', order:1, type:'text', name:'Exploration identifier', x:400, y:38, w:170, h:28, localVisible:true, localLocked:false, fill:'#fef3c7', fontSize:11 },
+    { id:'client', parentId:'header', order:2, type:'text', name:'Client and location', x:34, y:78, w:536, h:24, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:9 },
+    { id:'depth', parentId:'page', order:1, type:'group', name:'Depth Body', x:20, y:130, w:572, h:590, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'intervals', parentId:'depth', order:0, type:'group', name:'Intervals and description', x:34, y:148, w:330, h:548, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'depthAxis', parentId:'intervals', order:0, type:'track', name:'Depth axis', x:34, y:148, w:48, h:548, localVisible:true, localLocked:true, fill:'#ffffff', fontSize:8 },
+    { id:'strata', parentId:'intervals', order:1, type:'shape', name:'Strata description', x:88, y:148, w:276, h:548, localVisible:true, localLocked:false, fill:'#dcfce7', fontSize:9 },
+    { id:'samples', parentId:'depth', order:1, type:'group', name:'Samples', x:370, y:148, w:74, h:548, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'sampleTrack', parentId:'samples', order:0, type:'track', name:'Sample intervals', x:370, y:148, w:74, h:548, localVisible:true, localLocked:false, fill:'#fef3c7', fontSize:8 },
+    { id:'data', parentId:'depth', order:2, type:'group', name:'Data Track', x:450, y:148, w:120, h:548, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'axis', parentId:'data', order:0, type:'line', name:'Shared numeric axis', x:450, y:160, w:120, h:14, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:8 },
+    { id:'nvalue', parentId:'data', order:1, type:'track', name:'N-value layer', x:450, y:174, w:120, h:522, localVisible:true, localLocked:false, fill:'#dbeafe', fontSize:8 },
+    { id:'footer', parentId:'page', order:2, type:'group', name:'Footer', x:20, y:730, w:572, h:42, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:10 },
+    { id:'pageNumber', parentId:'footer', order:0, type:'text', name:'Page number', x:500, y:738, w:70, h:20, localVisible:true, localLocked:false, fill:'#ffffff', fontSize:9 }
+  ];
+
+  let nodes = structuredClone(initialNodes);
+  let selection = ['title'];
+  let keyElement = 'title';
+  let undoStack = [];
+  let redoStack = [];
+  let commandLabels = [];
+  let draggedTreeId = null;
+  let pointerSession = null;
+
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+  const getNode = id => nodes.find(n => n.id === id);
+  const isContainer = node => node && (node.type === 'group' || node.type === 'page');
+  const childrenOf = id => nodes.filter(n => n.parentId === id).sort((a,b) => a.order - b.order);
+  const ancestorsOf = node => {
+    const result = [];
+    let current = node && getNode(node.parentId);
+    while (current) { result.push(current); current = getNode(current.parentId); }
+    return result;
+  };
+  const effective = node => {
+    const chain = [node, ...ancestorsOf(node)];
+    return {
+      visible: chain.every(n => n.localVisible),
+      locked: chain.some(n => n.localLocked),
+      inheritedHidden: node.localVisible && chain.slice(1).some(n => !n.localVisible),
+      inheritedLocked: !node.localLocked && chain.slice(1).some(n => n.localLocked)
+    };
+  };
+  const descendantsOf = id => {
+    const result = [];
+    const visit = parent => childrenOf(parent).forEach(child => { result.push(child); visit(child.id); });
+    visit(id);
+    return result;
+  };
+  const paintNodes = () => nodes.filter(n => !isContainer(n) && effective(n).visible);
+  const selectedNodes = () => selection.map(getNode).filter(Boolean);
+  const editableSelection = () => selectedNodes().filter(n => !effective(n).locked);
+  const snapshot = () => ({ nodes: structuredClone(nodes), selection:[...selection], keyElement });
+  const restore = snap => { nodes = structuredClone(snap.nodes); selection = [...snap.selection]; keyElement = snap.keyElement; };
+
+  function announce(message) {
+    $('#announcer').textContent = '';
+    requestAnimationFrame(() => { $('#announcer').textContent = message; });
+  }
+
+  function pushHistory(label, before) {
+    undoStack.push({ label, state: before });
+    redoStack = [];
+    commandLabels.unshift(label);
+    commandLabels = commandLabels.slice(0, 6);
+  }
+
+  function commit(label, mutator, focusId) {
+    const before = snapshot();
+    mutator();
+    pushHistory(label, before);
+    render();
+    announce(label);
+    if (focusId) requestAnimationFrame(() => document.querySelector(`[data-node-id="${focusId}"] .tree-main`)?.focus());
+  }
+
+  function undo() {
+    const entry = undoStack.pop();
+    if (!entry) return;
+    redoStack.push({ label: entry.label, state: snapshot() });
+    restore(entry.state);
+    commandLabels.unshift(`Undo: ${entry.label}`);
+    render(); announce(`Undid ${entry.label}`);
+  }
+
+  function redo() {
+    const entry = redoStack.pop();
+    if (!entry) return;
+    undoStack.push({ label: entry.label, state: snapshot() });
+    restore(entry.state);
+    commandLabels.unshift(`Redo: ${entry.label}`);
+    render(); announce(`Redid ${entry.label}`);
+  }
+
+  function selectNode(id, additive=false, toggle=false) {
+    if (!getNode(id)) return;
+    if (toggle && selection.includes(id)) selection = selection.filter(x => x !== id);
+    else if (additive || toggle) selection = [...selection.filter(x => x !== id), id];
+    else selection = [id];
+    keyElement = selection.at(-1) || null;
+    render();
+    announce(selection.length ? `${selection.length} selected. Key Element ${getNode(keyElement)?.name}.` : 'Selection cleared.');
+  }
+
+  function toggleLocal(id, property) {
+    const node = getNode(id);
+    const label = `${property === 'localVisible' ? 'Visibility' : 'Lock'} ${node.name}`;
+    commit(label, () => { node[property] = !node[property]; }, id);
+  }
+
+  function align(kind) {
+    const key = getNode(keyElement);
+    const editable = editableSelection().filter(n => n.id !== keyElement);
+    if (!key || selection.length < 2 || editable.length === 0) return;
+    commit(`Align ${kind} to Key Element ${key.name} (${editable.length} moved)`, () => {
+      editable.forEach(n => {
+        if (kind === 'left') n.x = key.x;
+        if (kind === 'center') n.x = key.x + (key.w - n.w) / 2;
+        if (kind === 'right') n.x = key.x + key.w - n.w;
+        if (kind === 'top') n.y = key.y;
+        if (kind === 'middle') n.y = key.y + (key.h - n.h) / 2;
+        if (kind === 'bottom') n.y = key.y + key.h - n.h;
+      });
+    });
+  }
+
+  function nudgeOrResize(dx, dy, resize=false) {
+    const editable = editableSelection();
+    if (!editable.length) return;
+    commit(`${resize ? 'Resize' : 'Nudge'} ${editable.length} item${editable.length === 1 ? '' : 's'} by ${dx},${dy} pt`, () => {
+      editable.forEach(n => {
+        if (resize) { n.w = Math.max(1, n.w + dx); n.h = Math.max(1, n.h + dy); }
+        else { n.x += dx; n.y += dy; }
+      });
+    });
+  }
+
+  function deleteSelection() {
+    const editable = editableSelection();
+    if (!editable.length) return;
+    const ids = new Set(editable.flatMap(n => [n.id, ...descendantsOf(n.id).map(d => d.id)]));
+    commit(`Delete ${editable.length} selected item${editable.length === 1 ? '' : 's'}`, () => {
+      nodes = nodes.filter(n => !ids.has(n.id));
+      selection = selection.filter(id => !ids.has(id));
+      keyElement = selection.at(-1) || null;
+    });
+  }
+
+  function reorderSibling(id, direction) {
+    const node = getNode(id);
+    const siblings = childrenOf(node.parentId);
+    const index = siblings.findIndex(n => n.id === id);
+    const other = siblings[index + direction];
+    if (!other) return;
+    commit(`${direction < 0 ? 'Raise' : 'Lower'} ${node.name} in render order`, () => {
+      const order = node.order; node.order = other.order; other.order = order;
+    }, id);
+  }
+
+  function indentNode(id) {
+    const node = getNode(id);
+    const siblings = childrenOf(node.parentId);
+    const index = siblings.findIndex(n => n.id === id);
+    const target = [...siblings.slice(0, index)].reverse().find(isContainer);
+    if (!target) return;
+    commit(`Reparent ${node.name} into ${target.name}`, () => {
+      node.parentId = target.id; node.order = childrenOf(target.id).length;
+    }, id);
+  }
+
+  function outdentNode(id) {
+    const node = getNode(id);
+    const parent = getNode(node.parentId);
+    if (!parent || parent.type === 'page') return;
+    commit(`Move ${node.name} out of ${parent.name}`, () => {
+      node.parentId = parent.parentId;
+      node.order = parent.order + .5;
+      normalizeOrders(node.parentId);
+    }, id);
+  }
+
+  function normalizeOrders(parentId) { childrenOf(parentId).forEach((n, i) => { n.order = i; }); }
+
+  function dropTree(sourceId, targetId) {
+    const source = getNode(sourceId), target = getNode(targetId);
+    if (!source || !target || source.id === target.id || descendantsOf(source.id).some(n => n.id === target.id) || source.id === 'page') return;
+    commit(isContainer(target) ? `Drop ${source.name} into ${target.name}` : `Drop ${source.name} before ${target.name}`, () => {
+      if (isContainer(target)) {
+        source.parentId = target.id;
+        source.order = childrenOf(target.id).filter(n => n.id !== source.id).length;
+      } else {
+        source.parentId = target.parentId;
+        const siblings = childrenOf(target.parentId).filter(n => n.id !== source.id);
+        const targetIndex = siblings.findIndex(n => n.id === target.id);
+        siblings.splice(targetIndex, 0, source);
+        siblings.forEach((n, i) => { n.order = i; });
+      }
+    }, source.id);
+  }
+
+  function applyProperty(property, raw) {
+    const editable = editableSelection();
+    if (!editable.length || raw === '') return;
+    const numeric = ['x','y','w','h','fontSize'].includes(property);
+    const value = numeric ? Number(raw) : raw;
+    if (numeric && !Number.isFinite(value)) return;
+    commit(`Set ${property} on ${editable.length} item${editable.length === 1 ? '' : 's'}`, () => {
+      editable.forEach(n => { n[property] = ['w','h'].includes(property) ? Math.max(1, value) : value; });
+    });
+  }
+
+  function mixedValue(property) {
+    const values = selectedNodes().map(n => n[property]);
+    if (!values.length) return { value:'', mixed:false };
+    const first = values[0];
+    return { value: values.every(v => v === first) ? first : '', mixed: values.some(v => v !== first) };
+  }
+
+  function treeMarkup(parentId='page', depth=0) {
+    return childrenOf(parentId).map(node => {
+      const e = effective(node);
+      const group = isContainer(node);
+      const kind = group ? '▾' : ({text:'T',track:'↕',shape:'▧',line:'—'}[node.type] || '•');
+      const classes = ['tree-row', node.id === keyElement ? 'is-key' : '', e.inheritedHidden ? 'is-inherited-hidden' : '', e.inheritedLocked ? 'is-inherited-locked' : ''].filter(Boolean).join(' ');
+      return `<div class="${classes}" role="treeitem" aria-level="${depth+1}" aria-selected="${selection.includes(node.id)}" ${group ? 'aria-expanded="true"' : ''} data-node-id="${node.id}" draggable="${node.id !== 'page'}">
+        <span class="drag-handle" aria-hidden="true" title="Drag to reorder or reparent">⠿</span>
+        <button class="tree-main" type="button" style="--depth:${depth}" data-action="select" aria-label="${escapeHtml(node.name)}${node.id === keyElement ? ', Key Element' : ''}">
+          <span class="kind" aria-hidden="true">${kind}</span><span class="name">${escapeHtml(node.name)}</span>${node.id === keyElement ? '<span class="key-tag">KEY</span>' : ''}
+        </button>
+        <button class="tree-toggle ${!node.localVisible ? 'local-off' : ''} ${e.inheritedHidden ? 'inherited' : ''}" type="button" data-action="visibility" aria-label="${node.localVisible ? 'Hide' : 'Show'} ${escapeHtml(node.name)}. Effective visibility ${e.visible ? 'visible' : 'hidden'}" aria-pressed="${node.localVisible}">${e.visible ? '◉' : '○'}</button>
+        <button class="tree-toggle ${node.localLocked ? 'local-off' : ''} ${e.inheritedLocked ? 'inherited' : ''}" type="button" data-action="lock" aria-label="${node.localLocked ? 'Unlock' : 'Lock'} ${escapeHtml(node.name)}. Effective lock ${e.locked ? 'locked' : 'editable'}" aria-pressed="${node.localLocked}">${e.locked ? '▣' : '□'}</button>
+      </div>${group ? treeMarkup(node.id, depth+1) : ''}`;
+    }).join('');
+  }
+
+  function canvasMarkup() {
+    return paintNodes().map((node, index) => {
+      const e = effective(node);
+      const z = ancestorsOf(node).reduce((sum, n) => sum + n.order * 10, 0) + node.order + index;
+      const label = `${node.name}, ${node.x} by ${node.y} points, ${node.w} by ${node.h} points${node.id === keyElement ? ', Key Element' : ''}${e.locked ? ', locked' : ''}`;
+      return `<button class="page-element type-${node.type} ${node.id === keyElement ? 'is-key' : ''} ${e.locked ? 'is-locked' : ''}" type="button" tabindex="${e.locked ? '-1' : '0'}" data-canvas-id="${node.id}" aria-label="${escapeHtml(label)}" aria-pressed="${selection.includes(node.id)}" aria-disabled="${e.locked}" style="left:${node.x}px;top:${node.y}px;width:${node.w}px;height:${node.h}px;background-color:${node.fill};font-size:${node.fontSize}px;z-index:${z}">${escapeHtml(node.name)}${selection.includes(node.id) && !e.locked ? '<span class="handle" aria-hidden="true"></span>' : ''}</button>`;
+    }).join('');
+  }
+
+  function escapeHtml(value) { return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+  function render() {
+    document.body.className = `variant-${variant}`;
+    $('#variantPurpose').textContent = variants[variant].purpose;
+    $('#variantLabel').textContent = `${variant} — ${variants[variant].name}`;
+    $('#contentsTree').innerHTML = treeMarkup();
+    $$('#pageCanvas .page-element').forEach(el => el.remove());
+    $('#pageCanvas').insertAdjacentHTML('beforeend', canvasMarkup());
+
+    const selected = selectedNodes();
+    const editable = editableSelection();
+    const key = getNode(keyElement);
+    $('#selectionReadout').textContent = selected.length ? `${selected.length} selected · Key: ${key?.name} · ${editable.length} editable` : 'No selection';
+    $('#treeStatus').textContent = `${nodes.length - 1} items`;
+    $('#historyStatus').textContent = `${undoStack.length} undo · ${redoStack.length} redo`;
+    $('#undoButton').disabled = !undoStack.length;
+    $('#redoButton').disabled = !redoStack.length;
+    $('#deleteButton').disabled = !editable.length;
+    $$('.align').forEach(button => button.disabled = selected.length < 2 || editable.filter(n => n.id !== keyElement).length === 0);
+
+    const summary = $('#selectionSummary');
+    summary.classList.toggle('key', selected.length > 1);
+    summary.textContent = !selected.length ? 'Select an item in Contents or on the page.' : selected.length === 1 ? `${selected[0].name}${effective(selected[0]).locked ? ' — effectively locked' : ''}` : `${selected.length} items. ${key?.name} is the Key Element and remains fixed during alignment.`;
+    const propertyMap = { propX:'x', propY:'y', propW:'w', propH:'h', propFill:'fill', propFont:'fontSize' };
+    const mixed = [];
+    Object.entries(propertyMap).forEach(([id, property]) => {
+      const control = $(`#${id}`);
+      const result = mixedValue(property);
+      control.value = result.value;
+      control.placeholder = result.mixed ? 'Mixed' : '';
+      control.disabled = !editable.length;
+      if (result.mixed) mixed.push(property);
+    });
+    $('#mixedNote').textContent = mixed.length ? `Mixed values: ${mixed.join(', ')}. Entering a value applies one undoable command to ${editable.length} editable item${editable.length === 1 ? '' : 's'}.` : '';
+
+    $('#stateOutput').textContent = JSON.stringify({ variant, selection, keyElement, undoDepth:undoStack.length, redoDepth:redoStack.length, nodes:nodes.map(n => ({ id:n.id, parent:n.parentId, order:n.order, localVisible:n.localVisible, localLocked:n.localLocked, effective:effective(n), box:[n.x,n.y,n.w,n.h] })) }, null, 2);
+    $('#commandLog').innerHTML = commandLabels.map(label => `<li>${escapeHtml(label)}</li>`).join('');
+    wireDynamicEvents();
+  }
+
+  function wireDynamicEvents() {
+    $$('.tree-row').forEach(row => {
+      const id = row.dataset.nodeId;
+      row.querySelector('[data-action="select"]').addEventListener('click', event => selectNode(id, event.shiftKey, event.ctrlKey || event.metaKey));
+      row.querySelector('[data-action="select"]').addEventListener('keydown', event => handleTreeKey(event, id));
+      row.querySelector('[data-action="visibility"]').addEventListener('click', () => toggleLocal(id, 'localVisible'));
+      row.querySelector('[data-action="lock"]').addEventListener('click', () => toggleLocal(id, 'localLocked'));
+      row.addEventListener('dragstart', event => { draggedTreeId = id; event.dataTransfer.setData('text/plain', id); event.dataTransfer.effectAllowed = 'move'; });
+      row.addEventListener('dragover', event => { event.preventDefault(); row.classList.add('drag-over'); });
+      row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+      row.addEventListener('drop', event => { event.preventDefault(); row.classList.remove('drag-over'); dropTree(event.dataTransfer.getData('text/plain') || draggedTreeId, id); draggedTreeId = null; });
+      const handle = row.querySelector('.drag-handle');
+      handle.addEventListener('pointerdown', event => beginTreePointerDrag(event, id, handle));
+    });
+    $$('.page-element').forEach(element => {
+      const id = element.dataset.canvasId;
+      element.addEventListener('click', event => { if (!effective(getNode(id)).locked && !pointerSession?.moved) selectNode(id, event.shiftKey, event.ctrlKey || event.metaKey); });
+      element.addEventListener('keydown', event => { if (!effective(getNode(id)).locked) handleCanvasKey(event, id); });
+      element.addEventListener('pointerdown', event => beginPointerDrag(event, id, element));
+    });
+  }
+
+  function beginTreePointerDrag(event, id, handle) {
+    if (event.button !== 0 || id === 'page') return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    let targetId = null;
+    const move = ev => {
+      document.querySelectorAll('.tree-row.drag-over').forEach(row => row.classList.remove('drag-over'));
+      const target = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.tree-row');
+      if (target && target.dataset.nodeId !== id) { targetId = target.dataset.nodeId; target.classList.add('drag-over'); }
+      else targetId = null;
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      document.querySelectorAll('.tree-row.drag-over').forEach(row => row.classList.remove('drag-over'));
+      if (targetId) dropTree(id, targetId);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up, { once:true });
+  }
+
+  function handleTreeKey(event, id) {
+    if (event.key.toLowerCase() === 'v') { event.preventDefault(); toggleLocal(id, 'localVisible'); }
+    if (event.key.toLowerCase() === 'l') { event.preventDefault(); toggleLocal(id, 'localLocked'); }
+    if (event.altKey && event.key === 'ArrowUp') { event.preventDefault(); reorderSibling(id, -1); }
+    if (event.altKey && event.key === 'ArrowDown') { event.preventDefault(); reorderSibling(id, 1); }
+    if (event.altKey && event.key === 'ArrowRight') { event.preventDefault(); indentNode(id); }
+    if (event.altKey && event.key === 'ArrowLeft') { event.preventDefault(); outdentNode(id); }
+    if (event.key === ' ' && !event.altKey) { event.preventDefault(); selectNode(id, event.shiftKey, event.ctrlKey || event.metaKey); }
+  }
+
+  function handleCanvasKey(event, id) {
+    if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); selectNode(id, event.shiftKey, event.ctrlKey || event.metaKey); return; }
+    if (event.key === 'Delete') { event.preventDefault(); deleteSelection(); return; }
+    const arrows = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+    if (!arrows[event.key]) return;
+    event.preventDefault();
+    if (!selection.includes(id)) selectNode(id);
+    const amount = event.shiftKey ? 10 : 1;
+    nudgeOrResize(arrows[event.key][0] * amount, arrows[event.key][1] * amount, event.ctrlKey || event.metaKey);
+  }
+
+  function beginPointerDrag(event, id, element) {
+    if (event.button !== 0 || effective(getNode(id)).locked) return;
+    if (!selection.includes(id)) selectNode(id, event.shiftKey);
+    const editable = editableSelection();
+    if (!editable.length) return;
+    pointerSession = { startX:event.clientX, startY:event.clientY, before:snapshot(), boxes:new Map(editable.map(n => [n.id, {x:n.x,y:n.y}])), moved:false };
+    element.setPointerCapture(event.pointerId);
+    const move = ev => {
+      const dx = ev.clientX - pointerSession.startX, dy = ev.clientY - pointerSession.startY;
+      if (Math.abs(dx) + Math.abs(dy) > 2) pointerSession.moved = true;
+      editable.forEach(n => {
+        const box = pointerSession.boxes.get(n.id);
+        n.x = Math.round(box.x + dx); n.y = Math.round(box.y + dy);
+        const liveElement = document.querySelector(`[data-canvas-id="${n.id}"]`);
+        if (liveElement) { liveElement.style.left = `${n.x}px`; liveElement.style.top = `${n.y}px`; }
+      });
+    };
+    const up = ev => {
+      element.removeEventListener('pointermove', move); element.removeEventListener('pointerup', up);
+      if (pointerSession?.moved) {
+        pushHistory(`Drag ${editable.length} item${editable.length === 1 ? '' : 's'} once`, pointerSession.before);
+        announce(`Drag committed as one command for ${editable.length} item${editable.length === 1 ? '' : 's'}.`);
+      }
+      const moved = pointerSession?.moved;
+      pointerSession = null;
+      if (moved) render();
+    };
+    element.addEventListener('pointermove', move); element.addEventListener('pointerup', up, { once:true });
+  }
+
+  function setVariant(next) {
+    variant = next;
+    const url = new URL(location.href); url.searchParams.set('variant', variant); history.replaceState(null, '', url);
+    render(); announce(`Prototype variant ${variant}, ${variants[variant].name}.`);
+  }
+
+  function cycleVariant(delta) {
+    const keys = Object.keys(variants); setVariant(keys[(keys.indexOf(variant) + delta + keys.length) % keys.length]);
+  }
+
+  function percentile(values, p) { const sorted=[...values].sort((a,b)=>a-b); return sorted[Math.min(sorted.length-1, Math.floor(sorted.length*p))]; }
+  async function runLatencyProbe(iterations=30, stressPrimitiveCount=2000) {
+    const savedSelection = [...selection], savedKey = keyElement;
+    const selectionTimes = [];
+    for (let i=0; i<60; i++) {
+      const start = performance.now();
+      selection = i % 2 ? ['title', 'exploration'] : ['title'];
+      keyElement = selection.at(-1);
+      render();
+      selectionTimes.push(performance.now() - start);
+    }
+    selection = savedSelection; keyElement = savedKey; render();
+    const frameTimes = [];
+    const computeStart = performance.now();
+    for (let i=0; i<2000; i++) nodes.forEach(effective);
+    const computeMs = performance.now() - computeStart;
+    const stressLayer = document.createElement('div');
+    stressLayer.setAttribute('aria-hidden','true');
+    const buildStart = performance.now();
+    stressLayer.innerHTML = Array.from({length:stressPrimitiveCount}, (_,i) => `<i class="stress-primitive" style="left:${(i*17)%608}px;top:${(i*31)%788}px"></i>`).join('');
+    $('#pageCanvas').append(stressLayer);
+    const stressBuildMs = performance.now() - buildStart;
+    const primitives = [...stressLayer.children];
+    for (let i=0; i<iterations; i++) {
+      const start = performance.now();
+      const offset = i % 2;
+      primitives.forEach((primitive, index) => { primitive.style.transform = `translateX(${(index + offset) % 2}px)`; });
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      frameTimes.push(performance.now() - start);
+    }
+    stressLayer.remove(); render();
+    const result = {
+      kind:'observed synthetic in-browser probes; not physical pointer, assistive-technology, or end-user input latency',
+      variant,
+      iterations,
+      nodeCount:nodes.length,
+      paintedElementCount:paintNodes().length,
+      selectionRenderIterations:selectionTimes.length,
+      selectionRenderP50Ms:+percentile(selectionTimes,.50).toFixed(2),
+      selectionRenderP95Ms:+percentile(selectionTimes,.95).toFixed(2),
+      selectionRenderMaxMs:+Math.max(...selectionTimes).toFixed(2),
+      effectiveStateComputations:nodes.length * 2000,
+      effectiveComputeTotalMs:+computeMs.toFixed(2),
+      stressPrimitiveCount,
+      stressBuildMs:+stressBuildMs.toFixed(2),
+      stressFrameP50Ms:+percentile(frameTimes,.50).toFixed(2),
+      stressFrameP95Ms:+percentile(frameTimes,.95).toFixed(2),
+      stressFrameMaxMs:+Math.max(...frameTimes).toFixed(2),
+      userAgent:navigator.userAgent,
+      devicePixelRatio,
+      timestamp:new Date().toISOString()
+    };
+    $('#benchmarkOutput').textContent = JSON.stringify(result, null, 2);
+    announce(`Latency probe complete. Two-thousand-primitive P95 ${result.stressFrameP95Ms} milliseconds.`);
+    return result;
+  }
+
+  $('#undoButton').addEventListener('click', undo);
+  $('#redoButton').addEventListener('click', redo);
+  $('#deleteButton').addEventListener('click', deleteSelection);
+  $$('.align').forEach(button => button.addEventListener('click', () => align(button.dataset.align)));
+  $('#previousVariant').addEventListener('click', () => cycleVariant(-1));
+  $('#nextVariant').addEventListener('click', () => cycleVariant(1));
+  $('#benchmarkButton').addEventListener('click', () => runLatencyProbe());
+  Object.entries({ propX:'x', propY:'y', propW:'w', propH:'h', propFill:'fill', propFont:'fontSize' }).forEach(([id, property]) => $(`#${id}`).addEventListener('change', event => applyProperty(property, event.target.value)));
+  document.addEventListener('keydown', event => {
+    const editing = event.target.matches('input, textarea, select, [contenteditable="true"]');
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !editing) { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y' && !editing) { event.preventDefault(); redo(); return; }
+    if (event.key === 'Delete' && !editing && !event.target.closest('.page-element')) { event.preventDefault(); deleteSelection(); return; }
+    if (!editing && (event.target === document.body || event.target.closest('.variant-switcher'))) {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); cycleVariant(-1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); cycleVariant(1); }
+    }
+  });
+
+  window.__prototype = {
+    runLatencyProbe,
+    getState: () => snapshot(),
+    reset: () => { nodes=structuredClone(initialNodes); selection=['title']; keyElement='title'; undoStack=[]; redoStack=[]; commandLabels=[]; render(); },
+    setVariant,
+    select: (ids) => { selection=[...ids]; keyElement=selection.at(-1)||null; render(); },
+    align,
+    effective: id => effective(getNode(id))
+  };
+  render();
+})();
+</script>
+</body>
+</html>
