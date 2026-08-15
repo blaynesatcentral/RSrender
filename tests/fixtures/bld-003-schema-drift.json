@@ -1,0 +1,38 @@
+{
+  "command:example.noop": {
+    "contractVersion": "literal:number:1",
+    "messageType": "literal:string:command",
+    "kind": "literal:string:example.noop",
+    "requestId": "nonempty-string",
+    "scope": "literal:string:application",
+    "payload": "nonempty-string"
+  },
+  "query:example.contract-version": {
+    "contractVersion": "literal:number:1",
+    "messageType": "literal:string:query",
+    "kind": "literal:string:example.contract-version",
+    "requestId": "nonempty-string",
+    "scope": "literal:string:application"
+  },
+  "command-result:example.noop.completed": {
+    "contractVersion": "literal:number:1",
+    "messageType": "literal:string:command-result",
+    "kind": "literal:string:example.noop.completed",
+    "requestId": "nonempty-string",
+    "changed": "literal:boolean:false"
+  },
+  "query-result:example.contract-version.result": {
+    "contractVersion": "literal:number:1",
+    "messageType": "literal:string:query-result",
+    "kind": "literal:string:example.contract-version.result",
+    "requestId": "nonempty-string",
+    "value": "literal:number:1"
+  },
+  "event:example.observed": {
+    "contractVersion": "literal:number:1",
+    "messageType": "literal:string:event",
+    "kind": "literal:string:example.observed",
+    "eventSequence": "nonnegative-safe-integer",
+    "changed": "literal:boolean:false"
+  }
+}

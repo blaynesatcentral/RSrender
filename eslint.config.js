@@ -3,7 +3,14 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".wayfinder-tmp/**", "artifacts/**", "coverage/**", "**/dist/**", "node_modules/**"],
+    ignores: [
+      ".tmp/**",
+      ".wayfinder-tmp/**",
+      "artifacts/**",
+      "coverage/**",
+      "**/dist/**",
+      "node_modules/**",
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({

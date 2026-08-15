@@ -1,0 +1,171 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-005",
+  "issue": 49,
+  "implementationResult": "PASS",
+  "closureReadiness": "READY",
+  "acceptanceRowResult": "METHOD_NOT_RUN",
+  "evidencePurpose": "writer-validator-test",
+  "authority": [
+    "issue-26",
+    "acceptance-strategy-section-2.1",
+    "acceptance-strategy-section-8.1",
+    "product-specification-section-21",
+    "architecture-section-13",
+    "OA-GOLD-001"
+  ],
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "schemaVersion": "rsrender.evidence-manifest.v1",
+    "osFamily": "Windows-sanitized",
+    "locale": "invariant-test-input",
+    "timeZone": "UTC-test-input",
+    "startUtc": "2026-08-15T00:30:00Z",
+    "endUtc": "2026-08-15T00:36:15.6933104Z"
+  },
+  "observations": {
+    "resultStatesCovered": [
+      "METHOD_NOT_RUN",
+      "BLOCKED",
+      "PASS",
+      "FAIL",
+      "INVALID",
+      "APPROVED",
+      "NOT_APPROVED"
+    ],
+    "scopedTestsPerProcess": 9,
+    "freshProcesses": 3,
+    "identicalRepetitionsPerProcess": 2,
+    "scopedTestsAcrossFreshProcesses": 54,
+    "scopedPassedAcrossFreshProcesses": 54,
+    "innerDigestProcessesPerScopedExecution": 6,
+    "rootTests": 39,
+    "rootPassed": 39,
+    "privacyFieldVectors": 7,
+    "privacyValueVectors": 2,
+    "missingFieldFamilyVectors": 14,
+    "resultSemanticMisuseVectors": 7,
+    "productRowsExecuted": 0,
+    "productRowsChanged": 0,
+    "organizationalApprovalsInferred": 0,
+    "releaseClaimsMade": 0,
+    "restrictedEvidenceCollected": 0
+  },
+  "sample": {
+    "path": "tests/fixtures/bld-005-evidence-manifest-sample.json",
+    "manifestId": "test-bld005-method-not-run",
+    "matrixRowId": "TEST-BLD005-METHOD_NOT_RUN",
+    "resultState": "METHOD_NOT_RUN",
+    "releaseContribution": "none",
+    "inventoryDigest": "sha256:d80e4ac993449d76fce7bc2456b517d86857803b560f4bae093640bfdac6ca7a",
+    "privacyClass": "repository-safe-synthetic",
+    "rawLocation": "not-collected",
+    "nonclaims": [
+      "not-product-row-evidence",
+      "not-an-acceptance-or-release-claim",
+      "not-an-actual-organizational-decision",
+      "not-representative"
+    ]
+  },
+  "verification": [
+    {
+      "command": "pinned-node node_modules/typescript/bin/tsc -b packages/test-support --pretty false",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-node node_modules/eslint/bin/eslint.js packages/test-support/src/evidence-manifest.ts packages/test-support/src/index.ts tests/helpers/bld-005-evidence-fixture.mjs tests/helpers/bld-005-digest-process.mjs tests/bld-005-evidence-manifest.test.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-node --test tests/bld-005-evidence-manifest.test.mjs; 3 fresh processes x 2 repetitions",
+      "result": "PASS-54-of-54"
+    },
+    {
+      "command": "pinned-npm run format:check",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-npm run lint",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-npm test",
+      "result": "PASS-39-of-39"
+    },
+    {
+      "command": "pinned-npm run architecture:check",
+      "result": "PASS-11-packages"
+    },
+    {
+      "command": "pinned-npm run package:check",
+      "result": "PASS-11-packages"
+    }
+  ],
+  "inventory": {
+    "algorithm": "sha256",
+    "ordering": "repository-relative-path-ascending-with-LF",
+    "digest": "sha256:db4a108c351003c975cf753054c986c7cf9762b719f81a012466d95ee0b515a9",
+    "files": [
+      {
+        "path": "package-lock.json",
+        "digest": "sha256:d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af"
+      },
+      {
+        "path": "packages/test-support/src/evidence-manifest.ts",
+        "digest": "sha256:04649d1f1d804074ec42d351d92f6f3eade0e46a4ee16d2ec1c47bd36e3359dd"
+      },
+      {
+        "path": "packages/test-support/src/index.ts",
+        "digest": "sha256:9a1c4b00a17015c02dd18db4a2f0655ca6b15b0cfa2856712da37e2a61ecb5ca"
+      },
+      {
+        "path": "tests/bld-005-evidence-manifest.test.mjs",
+        "digest": "sha256:d03a7e29de123b5c4768f20f6445961fe70bfc19aa482a3fe8d5a3a0c72154c4"
+      },
+      {
+        "path": "tests/fixtures/bld-005-evidence-manifest-sample.json",
+        "digest": "sha256:2e4f1887c762516119b45374bd3a1faad777a782e8b9ffe86e38e88e6176ae7f"
+      },
+      {
+        "path": "tests/helpers/bld-005-digest-process.mjs",
+        "digest": "sha256:c9f440be825ff437f63734b78472d7ff07d9f128c8713036145fb484c9ac01ec"
+      },
+      {
+        "path": "tests/helpers/bld-005-evidence-fixture.mjs",
+        "digest": "sha256:a3612e5c9a9d77ca14dc25883d77c12da2a45462d0fe9e523f5dffc1ee30f857"
+      }
+    ]
+  },
+  "privacy": {
+    "class": "repository-safe-independently-authored-synthetic",
+    "prohibitedContent": false,
+    "hostUserTenantSerialSecretOrInternalPath": false,
+    "rawRestrictedEvidence": false,
+    "rawLocation": "not-collected",
+    "retention": "repository-safe ticket test and normalized evidence",
+    "deletion": "normal repository history"
+  },
+  "nonclaims": [
+    "BLD-005 validates evidence-manifest mechanics only; it does not execute or pass an acceptance row.",
+    "Synthetic APPROVED/NOT_APPROVED vectors exercise schema semantics and are not organizational decisions.",
+    "Technical PASS cannot substitute for APPROVED, and APPROVED cannot substitute for technical PASS.",
+    "No aggregate release-readiness result was calculated or asserted.",
+    "No restricted, production, client-bearing, raw-custody, telemetry, or product UI evidence entered scope."
+  ],
+  "rerunTriggers": [
+    "Evidence schema, result-state semantics, canonicalization, digest, privacy, custody, retention, or invalidation rules change.",
+    "Acceptance strategy, product §21, architecture §13, or OA-GOLD-001 changes.",
+    "Runtime/compiler/dependency lock or repository-safe sample changes."
+  ],
+  "limitations": [
+    "The durable sample uses synthetic digest vectors and is writer/validator test evidence, not a claim about the hashed software components.",
+    "No real acceptance row, organizational authority, application binary, packaged environment, or restricted artifact is represented."
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "schema": "rsrender.bld006.empty-shell-evidence.v0",
+  "ticket": "BLD-006 / GitHub #50",
+  "generatedAtUtc": "2026-08-15T00:23:19.234Z",
+  "result": "PASS",
+  "scope": "empty packaged Electron security shell baseline",
+  "trace": [
+    "PI-16",
+    "PI-20",
+    "ADR-0007",
+    "ADR-0008",
+    "P06-harness-seam"
+  ],
+  "packageResult": {
+    "schema": "rsrender.bld006.package-result.v0",
+    "result": "PASS",
+    "packagingProfile": {
+      "schema": "rsrender.bld006.packaging-profile.v0",
+      "applicationName": "RSrenderShell",
+      "executableName": "RSrenderShell",
+      "applicationVersion": "0.0.0",
+      "electronVersion": "43.4.0",
+      "packagerVersion": "20.0.4",
+      "platform": "win32",
+      "architecture": "x64",
+      "asar": true,
+      "prune": false,
+      "icon": "none-app-supplied",
+      "executableResourcePolicy": "restore exact admitted Electron executable after packager metadata edit; no app metadata, icon, or signing in BLD-006",
+      "sourceMap": "compiled TypeScript plus generated inert HTML constant"
+    },
+    "electronZipSha256": "ef0709cfa719739acce73de6f9b684304baf38c6454376638a70d34a7cecffe0",
+    "admittedElectronExecutableSha256": "bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "output": {
+      "executable": "RSrenderShell-win32-x64/RSrenderShell.exe",
+      "executableBytes": 225533440,
+      "appAsar": "RSrenderShell-win32-x64/resources/app.asar",
+      "appAsarBytes": 72695
+    }
+  },
+  "packagedResult": {
+    "schema": "rsrender.bld006.packaged-probe.v0",
+    "result": "PASS",
+    "scope": "empty packaged Electron security shell only",
+    "versions": {
+      "electron": "43.4.0",
+      "chromium": "150.0.7871.224",
+      "node": "24.18.1"
+    },
+    "environment": {
+      "platform": "win32",
+      "architecture": "x64",
+      "osRelease": "10.0.26200",
+      "packaged": true
+    },
+    "securityProfile": {
+      "schema": "rsrender.empty-shell-security-profile.v0",
+      "electronVersion": "43.4.0",
+      "partition": "rsrender-shell",
+      "persistence": "memory-only",
+      "preload": "absent",
+      "ipcChannels": [],
+      "rendererCapabilities": [],
+      "webPreferences": {
+        "sandbox": true,
+        "contextIsolation": true,
+        "nodeIntegration": false,
+        "nodeIntegrationInWorker": false,
+        "nodeIntegrationInSubFrames": false,
+        "webSecurity": true,
+        "allowRunningInsecureContent": false,
+        "experimentalFeatures": false,
+        "devTools": false,
+        "webviewTag": false,
+        "safeDialogs": true,
+        "navigateOnDragDrop": false,
+        "spellcheck": false
+      },
+      "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "navigation": "exact-shell-url-only",
+      "windows": "deny-all",
+      "permissions": "deny-all",
+      "downloads": "deny-all",
+      "rendererNetwork": "deny-all"
+    },
+    "counters": {
+      "navigation": 1,
+      "popup": 1,
+      "permissionCheck": 6,
+      "permissionRequest": 1,
+      "download": 0,
+      "webview": 0,
+      "network": 0,
+      "remoteCompleted": 0
+    },
+    "phases": [
+      "app-ready",
+      "renderer-created",
+      "renderer-loaded",
+      "probes-complete",
+      "renderer-destroyed",
+      "session-cleared"
+    ],
+    "counts": {
+      "passed": 13,
+      "total": 13
+    },
+    "nonClaims": [
+      "Not a complete P06 or issue #37 result",
+      "Not renderer crash/rebind evidence",
+      "Not utility-process or native-decoder containment evidence",
+      "Not signing, installer, update, release, or commercial approval"
+    ]
+  },
+  "observations": [
+    {
+      "id": "PACKAGED_RUNTIME",
+      "pass": true,
+      "detail": "packaged=true; electron=43.4.0",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "EFFECTIVE_WEB_PREFERENCES",
+      "pass": true,
+      "detail": "sandbox=true; contextIsolation=true; nodeIntegration=false; nodeIntegrationInSubFrames=false; webSecurity=true; allowRunningInsecureContent=false; experimentalFeatures=false; webviewTag=false; safeDialogs=true",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "NO_PRELOAD",
+      "pass": true,
+      "detail": "effectivePreload=absent; configured=absent",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "NO_NODE_ELECTRON_GLOBALS",
+      "pass": true,
+      "detail": "requireType=undefined; processType=undefined; electronType=undefined; ipcRendererType=undefined; rsrenderType=undefined",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "INERT_RENDERER",
+      "pass": true,
+      "detail": "static packaged text only",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "NO_RENDERER_CAPABILITY",
+      "pass": true,
+      "detail": "preload methods=0; IPC channels=0; renderer capabilities=0",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "NAVIGATION_DENIED",
+      "pass": true,
+      "detail": "denials=1; currentUrlIsShell=true",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "POPUP_DENIED",
+      "pass": true,
+      "detail": "denials=1; windows=1",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "PERMISSION_DENIED",
+      "pass": true,
+      "detail": "result=denied; checks=5; requests=1",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "RENDERER_NETWORK_DENIED",
+      "pass": true,
+      "detail": "result=denied; policyDenials=0; remoteCompleted=0",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "NONPERSISTENT_SESSION",
+      "pass": true,
+      "detail": "persistent=false; cache=false",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "ONE_INERT_RENDERER",
+      "pass": true,
+      "detail": "windowWebContents=1",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "IN_PROCESS_TEARDOWN",
+      "pass": true,
+      "detail": "windows=0; windowWebContents=0",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "PACKAGED_PROCESS_EXIT",
+      "pass": true,
+      "detail": "exitCode=0; signal=null; timedOut=false",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "ZERO_ORPHAN_CHILDREN",
+      "pass": true,
+      "detail": "matchingProcessesBefore=0; matchingProcessesAfter=0; profileRemoved=true",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    },
+    {
+      "id": "EXACT_BINARY_AND_CONFIG_RECORDED",
+      "pass": true,
+      "detail": "electron=43.4.0; packager=20.0.4; asar=true",
+      "evidenceGrade": "OBSERVED_PACKAGED"
+    }
+  ],
+  "counts": {
+    "passed": 16,
+    "total": 16
+  },
+  "digests": {
+    "packagedExecutableSha256": "bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "packagedAppAsarSha256": "19eebbec6a4fcabee04f6712f2625f4d97b40442141db52a7bf49aa221cb1b7f",
+    "packageLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
+    "packagingProfileSha256": "7da491abd5523f22f952cec9570e04e14b43f53d0a1ddb1cd4b2fa2883fb13c6",
+    "sourceSha256": {
+      "package.json": "92ec079d0d7528e22aa91e931d0866f27eb20c971d14d57afb67e01be7323221",
+      "package-lock.json": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
+      "packages/platform-electron-main/src/index.ts": "0e81f067d8f539030c74158d78d5ad10262c0e18722b2489d726cd38b1a56337",
+      "packages/platform-electron-main/src/main.ts": "9ece336e1a2035ccaf4e79a394eaaf7fda7210246955c21f7ec6399e59556688",
+      "packages/platform-electron-main/src/security-profile.ts": "d90f0e71a7143db5e53dbc9ee02205ce26c5ccdd9d84b088b97997390ee5a04e",
+      "packages/renderer-ui/src/index.ts": "366b18ae3f8e3a0d30e7c1169c567874a223e9854d63d2bc9fe76db06840973d",
+      "tooling/shell-package-bld006.mjs": "72bed411a384175977c22a67d47dad3ffe31cddf68137cee624e487bf9999a1b",
+      "tooling/shell-run-bld006.mjs": "2f70e050e07c583a1f1841eccc96517e5490fae90ff64466288eb631c1c1852d",
+      "tests/bld-006-electron-shell.test.mjs": "47d20552533ebf0b189a64a45ae21f9bc51e41dcb1df0eaf4b3ff7f7a6ebae76"
+    }
+  },
+  "processInventory": {
+    "exactExecutableMatchesBefore": 0,
+    "exactExecutableMatchesAfter": 0,
+    "exitCode": 0,
+    "terminationSignal": null,
+    "timedOut": false,
+    "profileRemoved": true
+  },
+  "testEnvironment": {
+    "launcherNode": "v22.20.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "osRelease": "10.0.26200",
+    "packagedElectron": {
+      "electron": "43.4.0",
+      "chromium": "150.0.7871.224",
+      "node": "24.18.1"
+    }
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_LOCAL",
+    "retainedStdout": false,
+    "retainedStderr": false,
+    "hostnameRetained": false,
+    "usernameRetained": false,
+    "absolutePathRetained": false,
+    "productionDataRetained": false,
+    "credentialsRetained": false
+  },
+  "rerunCommands": [
+    "npm run build",
+    "npm run shell:package",
+    "npm run shell:test:packaged",
+    "npm run shell:verify"
+  ],
+  "limitations": [
+    "This is the bounded BLD-006 empty-shell baseline, not complete P06 or issue #37 acceptance.",
+    "Renderer crash/rebind, utility processes, native decoding, fuses, signing, installer/update, and release security remain unproved here.",
+    "The launcher Node version describes this host's test runner; the packaged Electron result records its embedded Node version separately.",
+    "No app-supplied icon or asset was provided; admitted Electron runtime resources remain part of the packaged binary."
+  ]
+}

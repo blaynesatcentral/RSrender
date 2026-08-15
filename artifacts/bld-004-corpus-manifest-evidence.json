@@ -1,0 +1,208 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-004",
+  "issue": 48,
+  "implementationResult": "PASS",
+  "closureReadiness": "READY_TICKET_SCOPED_ROOT_RED_ONLY_IN_UNRELATED_CONCURRENT_WORK",
+  "authority": [
+    "issue-16",
+    "corpus-specification-sections-3-through-5",
+    "OA-GOLD-001",
+    "OA-REP-001",
+    "product-specification-sections-18-and-21",
+    "architecture-section-13",
+    "acceptance-strategy-sections-2.3-and-8.1-through-8.2"
+  ],
+  "corpus": {
+    "logicalVersion": "rsrender.golden-log-corpus.v1",
+    "manifestSchemaVersion": "rsrender.corpus-manifest.schema.v1",
+    "corpusRevision": 1,
+    "fixtureIdentity": "fx-01-smoke-short@r1",
+    "fixtureFamily": "FX-01",
+    "semanticLayer": "render-dataset-synthetic",
+    "originClass": "independently-authored-synthetic",
+    "admissionDisposition": "admitted-canonical",
+    "producer": "BLD-004 deterministic in-memory test builder",
+    "fixtureCandidateDigest": "sha256:73484aa74b29c140454ba656d30e043513e66727fe30a9a5ac72dd1d10b1073a",
+    "admissionRecordDigest": "sha256:69a663f834016363d1c1a3d3169f95a9569197bd709b43d68f1b241badafeb94",
+    "corpusManifestDigest": "sha256:dc487689b8d9ef2ba31820a4e33b8627bc49b47cd4a8ebf847f822772aad13fb",
+    "provenanceState": "complete-synthetic-metadata",
+    "rightsState": "repository-use-approved-no-assets",
+    "oracleRevisions": [
+      {
+        "oracleId": "OA-GOLD-001",
+        "revision": 1,
+        "state": "decided"
+      },
+      {
+        "oracleId": "OA-REP-001",
+        "revision": 1,
+        "state": "accepted-uncertainty"
+      }
+    ]
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "observedNode": "24.18.1",
+    "requiredNode": "24.18.1",
+    "observedNpm": "11.16.0",
+    "requiredNpm": "11.16.0",
+    "typescript": "6.0.3",
+    "electron": "43.4.0-not-executed",
+    "chromium": "not-applicable-metadata-only",
+    "applicationBinary": "not-applicable-metadata-only",
+    "operatingSystem": "Windows-sanitized",
+    "locale": "invariant-input-no-locale-sensitive-operation",
+    "timeZone": "America/Los_Angeles",
+    "startUtc": "2026-08-15T00:10:34.0228113Z",
+    "endUtc": "2026-08-15T00:13:26.1718133Z"
+  },
+  "observations": {
+    "scopedTestsPerProcess": 9,
+    "freshProcesses": 3,
+    "identicalRepetitionsPerProcess": 2,
+    "scopedTestsAcrossFreshProcesses": 54,
+    "scopedPassedAcrossFreshProcesses": 54,
+    "rootTests": 28,
+    "rootPassed": 25,
+    "rootFailuresOutsideTicketScope": 3,
+    "positiveManifestVectors": 1,
+    "enumeratedNegativeAndRepeatReads": 16,
+    "propertySeeds": [4718593, 4718594, 4718595],
+    "propertyCasesPerSeed": 1000,
+    "propertyCasesPerScopedExecution": 3000,
+    "propertyCasesAcrossFreshProcesses": 18000,
+    "manifestTextReadsObservedByAccessSpyPerScopedExecution": 16,
+    "manifestTextReadsObservedByAccessSpyAcrossFreshProcesses": 96,
+    "payloadReadsObservedByAccessSpy": 0,
+    "restrictedGoByReadsObservedByAccessSpy": 0,
+    "positiveSourceDtosMaterialized": 0,
+    "fixtureValuesInvented": 0,
+    "physicalPackagesOpened": 0,
+    "stateEffects": 0,
+    "comparisonMethod": "exact-structural-and-stable-diagnostic-code",
+    "comparisonTolerance": "exact-no-tolerance"
+  },
+  "expectedVectorOutcomes": [
+    "valid admitted synthetic metadata returns deeply frozen metadata and claim restrictions",
+    "prohibited origin rejects with CORPUS.FIXTURE.PROHIBITED_ORIGIN",
+    "pending or quarantined admission rejects with CORPUS.ADMISSION.NOT_ADMITTED",
+    "missing manifest or admission digest rejects with the corresponding DIGEST_MISSING code",
+    "wrong manifest, admission-record, or exact-candidate digest rejects with the corresponding DIGEST_MISMATCH code",
+    "input-part/fixture layer mismatch rejects with CORPUS.FIXTURE.LAYER_MISMATCH",
+    "duplicate fixture and admission identities reject without precedence",
+    "unsupported version rejects with CORPUS.MANIFEST.UNSUPPORTED_VERSION",
+    "unknown fields and malformed metadata reject with CORPUS.MANIFEST.MALFORMED",
+    "invalid JSON rejects with CORPUS.MANIFEST.JSON_INVALID",
+    "missing OA-REP-001 limitations reject with CORPUS.FIXTURE.NONREPRESENTATIVE_REQUIRED"
+  ],
+  "stableDiagnosticCodes": [
+    "CORPUS.ADMISSION.DIGEST_INVALID",
+    "CORPUS.ADMISSION.DIGEST_MISMATCH",
+    "CORPUS.ADMISSION.DIGEST_MISSING",
+    "CORPUS.ADMISSION.DUPLICATE_IDENTITY",
+    "CORPUS.ADMISSION.IDENTITY_MISMATCH",
+    "CORPUS.ADMISSION.NOT_ADMITTED",
+    "CORPUS.FIXTURE.DUPLICATE_IDENTITY",
+    "CORPUS.FIXTURE.LAYER_MISMATCH",
+    "CORPUS.FIXTURE.NONREPRESENTATIVE_REQUIRED",
+    "CORPUS.FIXTURE.PROHIBITED_ORIGIN",
+    "CORPUS.FIXTURE.REPOSITORY_NOT_APPROVED",
+    "CORPUS.MANIFEST.DIGEST_INVALID",
+    "CORPUS.MANIFEST.DIGEST_MISMATCH",
+    "CORPUS.MANIFEST.DIGEST_MISSING",
+    "CORPUS.MANIFEST.JSON_INVALID",
+    "CORPUS.MANIFEST.MALFORMED",
+    "CORPUS.MANIFEST.UNSUPPORTED_VERSION",
+    "CORPUS.ORACLE.REQUIRED_MISSING"
+  ],
+  "verification": [
+    {
+      "command": "pinned-node node_modules/typescript/bin/tsc -b packages/test-support --pretty false",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-node node_modules/eslint/bin/eslint.js packages/test-support/src/corpus-manifest.ts packages/test-support/src/index.ts tests/bld-004-corpus-manifest.test.mjs",
+      "result": "PASS"
+    },
+    {
+      "command": "pinned-node --test tests/bld-004-corpus-manifest.test.mjs; 3 fresh processes x 2 repetitions",
+      "result": "PASS-54-of-54"
+    },
+    {
+      "command": "npm run format:check",
+      "result": "PASS"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "npm test",
+      "result": "FAIL-25-of-28; all BLD-004 tests pass; failures confined to concurrent BLD-003 work"
+    },
+    {
+      "command": "npm run architecture:check",
+      "result": "PASS-11-packages"
+    },
+    {
+      "command": "npm run package:check",
+      "result": "PASS-11-packages"
+    },
+    {
+      "command": "npm run lint",
+      "result": "FAIL-UNRELATED-CONCURRENT-BLD-006-FILES"
+    }
+  ],
+  "inventory": {
+    "algorithm": "sha256",
+    "canonicalOrdering": "path-ascending-with-LF",
+    "digest": "sha256:c6804268a85a2f29aabf4c8d89042fd61746d5dfcb405689959c03e0231c79b6",
+    "files": [
+      {
+        "path": "package-lock.json",
+        "digest": "sha256:d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af"
+      },
+      {
+        "path": "packages/test-support/src/corpus-manifest.ts",
+        "digest": "sha256:a623172b0fb09102504d45fb41cdbf6e3032ba8cd850c4d91745e1a61155e453"
+      },
+      {
+        "path": "packages/test-support/src/index.ts",
+        "digest": "sha256:d63ab86a3bba33e491cd030500b1fcd008a18ce4989fdd86a66f05a7d9965d16"
+      },
+      {
+        "path": "tests/bld-004-corpus-manifest.test.mjs",
+        "digest": "sha256:39539313d80f0b9bdee928683d823cdf377f0c81910e15a483b87584aaf04860"
+      }
+    ]
+  },
+  "privacy": {
+    "class": "repository-safe-independently-authored-synthetic-metadata",
+    "approvalReference": "issue-16-and-bld-004-claim",
+    "rawLocation": "not-applicable-no-raw-or-restricted-evidence-collected",
+    "retentionRule": "repository-retained-ticket-test-and-normalized-evidence",
+    "prohibitedContent": false,
+    "clientOrProductionContent": false,
+    "restrictedGoByContent": false,
+    "credentialsOrInternalPaths": false
+  },
+  "explicitNonclaims": [
+    "The fixture is synthetic coverage only and is not representative, typical, percentile, or frequency evidence.",
+    "The fixture establishes no supported workload or product limit.",
+    "No positive vendor source shape, mapper, DTO, file-package parser, fixture payload, or evidence row was implemented.",
+    "No production, client-bearing, restricted, or go-by content was read.",
+    "Ticket-scoped EP-PURE evidence does not establish packaged-process, production-data, or representative-product behavior."
+  ],
+  "rerunTriggers": [
+    "Manifest schema, canonicalization, digest, Diagnostic, fixture, oracle, admission, provenance, rights, or layer rule changes.",
+    "Runtime/compiler/dependency lock or corpus specification revision changes.",
+    "Any future capability that permits payload, package, filesystem, network, production, restricted, or go-by access."
+  ],
+  "limitations": [
+    "Repository-wide lint was red only in concurrent BLD-006 files outside this ticket's authorized edit scope; exact-runtime scoped BLD-004 lint passed.",
+    "The exact-runtime root test run was red only in three concurrent BLD-003 tests; every BLD-004 test passed.",
+    "No real corpus payload exists or is read; this ticket validates metadata and admission only.",
+    "No representative evidence, positive source DTO, physical package, application binary, or restricted evidence is in scope."
+  ]
+}

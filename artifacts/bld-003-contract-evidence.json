@@ -1,0 +1,155 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-003",
+  "issue": 47,
+  "generatedAtUtc": "2026-08-15T00:31:58.6128980Z",
+  "result": "PASS",
+  "authority": {
+    "requirements": ["PI-20", "D04-input", "P06-input", "ADR-0008", "architecture-6"],
+    "controllingSpecRevision": "e7be6be",
+    "scope": "runtime tagged-union validation pattern only"
+  },
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "locale": "en-US",
+    "timeZone": "UTC"
+  },
+  "oracle": {
+    "startUtc": "2026-08-15T00:31:47.2946123Z",
+    "endUtc": "2026-08-15T00:31:58.6128980Z",
+    "positiveVariants": 5,
+    "fixedNegativeVectors": 14,
+    "propertySeeds": [324508639, 610839776, 1592635395],
+    "iterationsPerSeed": 1000,
+    "variantsPerIteration": 5,
+    "positivePropertyValidations": 15000,
+    "extraFieldPropertyRejections": 15000,
+    "invalidUnicodePropertyRejections": 12000,
+    "freshProcessesPerRepetition": 3,
+    "repetitions": 2,
+    "warmups": 0,
+    "freshProcessResults": [
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      },
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      },
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      },
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      },
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      },
+      {
+        "result": "PASS",
+        "digest": "e9e1b806bc5127536cf56bc28bb71082c7f8d90c44da14f20d0b1f90b08b1821"
+      }
+    ],
+    "expectedRuntimeSchemaDriftExit": 1,
+    "expectedTypeSchemaDriftDiagnostic": "TS2322",
+    "injectedFaults": [
+      "missing, extra, wrong-type, unknown-tag, and unsupported-version inputs",
+      "arbitrary prototype, symbol, hidden, accessor, and hostile-proxy inputs",
+      "ill-formed Unicode request identity",
+      "runtime field-descriptor drift",
+      "TypeScript field-descriptor drift"
+    ],
+    "comparison": {
+      "method": "exact structural equality plus SHA-256 digest equality",
+      "version": "bld-003-oracle-v1",
+      "tolerance": "exact"
+    },
+    "failures": [],
+    "exclusions": [
+      {
+        "item": "packaged Electron transport",
+        "validityRule": "This bounded EP-PURE result is an input seam only; packaged P06 remains outside BLD-003."
+      }
+    ],
+    "stateEffects": 0,
+    "inputOrSecretEchoes": 0
+  },
+  "stableRejectionCodes": [
+    "CONTRACT_MALFORMED",
+    "CONTRACT_MISSING_FIELD",
+    "CONTRACT_EXTRA_FIELD",
+    "CONTRACT_WRONG_TYPE",
+    "CONTRACT_UNKNOWN_TAG",
+    "CONTRACT_UNSUPPORTED_VERSION",
+    "CONTRACT_SCHEMA_DRIFT"
+  ],
+  "artifacts": [
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "281b48df4bf7685667e6e217b5093839812a90e896f98018b908d4414248be79"
+    },
+    {
+      "path": "packages/contracts/src/runtime-contract.ts",
+      "sha256": "73107d7f7809746d87ff7028ba83d639babdd7322bdb00cb6e457f3959e47e8f"
+    },
+    {
+      "path": "tests/bld-003-runtime-contract.test.mjs",
+      "sha256": "da6a2387667a3fc167be161099259d8eb8127a2ba8aeb71993a5364048a653ad"
+    },
+    {
+      "path": "tests/helpers/check-bld-003-schema-drift.mjs",
+      "sha256": "68f3244046a3b3409c017b3d5cb38504c9bfbe397a0d9131bbc71d37bf651558"
+    },
+    {
+      "path": "tests/helpers/run-bld-003-vectors.mjs",
+      "sha256": "82f78d4b758793c221a2f7b467227eb44890f269b2482d490bf3b20e2c7a3409"
+    },
+    {
+      "path": "tests/fixtures/bld-003-schema-drift.json",
+      "sha256": "43a7bc96ea14fee6df49ba12a98dd436bba62d802e20d40c50a0f94b3d084962"
+    },
+    {
+      "path": "tests/fixtures/bld-003-type-schema-drift/drift.ts",
+      "sha256": "7652d98f8251234539e4454295a0c67fc10ed36a15d96c706c476591d31bd464"
+    },
+    {
+      "path": "tests/fixtures/bld-003-type-schema-drift/tsconfig.json",
+      "sha256": "8a7149fd496dc59c3ead7214a8cf79d9fa80c546733cd1c8ca50364fc5f8b4bd"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af"
+    }
+  ],
+  "custody": {
+    "owner": "RSrender implementation evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner plus adversarial independent reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "approvalReference": "GitHub #47 internal-use activation under #44/#45",
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "retention": "Retain with the BLD-003 source revision and invalidate on any rerun trigger.",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false
+  },
+  "limitations": [
+    "No generic IPC bridge or Electron adapter is implemented.",
+    "No real product command, mutation, document authority, path, credential, source, or file capability is represented.",
+    "This is an input seam only and does not claim full D04 or packaged P06 acceptance."
+  ],
+  "rerunTriggers": [
+    "Contract type, type manifest, runtime schema, or validator change",
+    "TypeScript, Node.js, or runtime version change",
+    "New message type, kind, field, or contract version",
+    "Transport or preload integration",
+    "Any retained artifact digest change"
+  ]
+}
