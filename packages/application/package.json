@@ -13,5 +13,9 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@rsrender/contracts": "0.0.0",
+    "@rsrender/domain": "0.0.0"
+  }
 }

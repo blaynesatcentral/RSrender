@@ -1,0 +1,182 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-010",
+  "issue": 54,
+  "generatedAtUtc": "2026-08-15T02:20:16.3007199Z",
+  "result": "PASS",
+  "authority": {
+    "requirements": ["PI-20", "D04", "architecture-6", "ADR-0008"],
+    "scope": "strict application-service contracts, one in-memory synthetic document-domain mutation, one inert query, bounded snapshot subscription, and pure projection-replica gap recovery",
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/54#issuecomment-5299892229",
+    "interpretations": [
+      "Exact requestId plus exact canonical complete envelope returns the cached prior result with no second commit or event.",
+      "Reuse of a requestId with any canonical envelope difference rejects with REQUEST_ID_REUSE_MISMATCH.",
+      "Projection sequence-gap recovery is a pure replica discard-and-refetch decision; main never accepts renderer state for reconciliation.",
+      "SyntheticCommitIdentity is a bounded transcript marker, not an Undo history entry or inverse.",
+      "Every in-memory service instance requires explicit positive safe-integer replay, commit, event, and subscription-batch capacities; no product default is invented."
+    ]
+  },
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "contract": {
+    "applicationServiceContractRevision": "bld-010-v1",
+    "inMemoryApplicationServiceRevision": "bld-010-v1",
+    "contractVersion": 1,
+    "commandId": "synthetic.template-content.replace",
+    "queryKind": "synthetic.template.projection",
+    "subscriptionKind": "synthetic.document.events",
+    "runtimeValidation": "closed independently executable schemas; strict own enumerable data/plain-record normalization; detached frozen accepted DTOs; well-formed opaque identity scalars; closed rejection reasons; projection aggregate digests recomputed from exact canonical LogTemplateAggregate fields",
+    "revisionPrimitives": [
+      "isWorkingRevision/parseWorkingRevision",
+      "isEventSequence/parseEventSequence",
+      "isOwnerGeneration/parseOwnerGeneration"
+    ]
+  },
+  "oracle": {
+    "comparison": {
+      "method": "exact structural equality, stable rejection-code equality, exact revision/event/commit cardinality, canonical request equality, and SHA-256 transcript equality",
+      "version": "bld-010-oracle-v1",
+      "tolerance": "exact"
+    },
+    "targetedTests": 14,
+    "integratedNonBld007Tests": 69,
+    "propertySeeds": [324508639, 610839776, 1592635408],
+    "iterationsPerSeed": 1000,
+    "zeroMutationFaultVectors": 3000,
+    "freshProcesses": 6,
+    "freshProcessTranscriptDigest": "sha256:ca09ccfc9d5b03cfd9643eaf85226b26d7783c538a15b4ce5e2d4aa0c577a9b5",
+    "capacityBoundary": {
+      "configuredReplayEntries": 256,
+      "configuredCommits": 256,
+      "configuredEvents": 256,
+      "configuredSubscriptionBatch": 256,
+      "retainedAtBoundary": 256,
+      "result": "the 257th new mutation rejects CAPACITY_EXHAUSTED with zero mutation, the first exact request remains idempotent, reuse drift rejects, and no entry is silently evicted"
+    },
+    "concurrencyRace": {
+      "invocation": "Promise.all with two distinct request IDs and payloads at expectedWorkingRevision 0",
+      "results": ["domainCommitted", "STALE_WORKING_REVISION"],
+      "workingRevision": 1,
+      "eventCount": 1,
+      "commitCount": 1
+    },
+    "injectedFaults": [
+      "stale working revision",
+      "owner generation mismatch",
+      "document identity mismatch",
+      "same-content invalid precondition",
+      "unknown command and unsupported contract version",
+      "extra, hidden, symbol, inherited, top-level accessor, and nested accessor fields",
+      "requestId reuse with different digest, expected revision, and scope",
+      "query minimum revision ahead of authoritative state",
+      "subscription cursor ahead of authoritative event sequence and subscription-batch overflow",
+      "invalid factory and projection-replica input, including zero, negative, fractional, excessive, extra, and accessor capacities",
+      "event sequence gap, owner/document change, base/result revision mismatch, projection identity change, forged projection aggregate digest with recomputed public commit identity, before/after digest mismatch, commit-identity mismatch, malformed replica state, and unknown event"
+    ],
+    "failures": [],
+    "inputOrSecretEchoes": 0
+  },
+  "dependencyDelta": {
+    "reason": "The application workspace imports already admitted internal contracts and domain workspaces for strict DTO validation, canonical request identity, aggregate decoding, and SHA-256 primitives.",
+    "workspaceEdgesAdded": [
+      "@rsrender/application@0.0.0 -> @rsrender/contracts@0.0.0",
+      "@rsrender/application@0.0.0 -> @rsrender/domain@0.0.0"
+    ],
+    "edgeClassification": "INTERNAL_WORKSPACE_ONLY",
+    "priorLockSha256": "65a11d0a546d4056dc6eaeaea4208ec26893efa0b2ec7551d0905ea111af13ec",
+    "currentLockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+    "baselineExternalIdentityCount": 156,
+    "currentExternalIdentityCount": 156,
+    "addedExternalIdentities": 0,
+    "removedExternalIdentities": 0,
+    "changedExternalIdentities": 0,
+    "comparisonMethod": "Exact comparison of external lock path, version, resolved URL, integrity, dev, optional, and install-script fields against artifacts/dependency-inventory.json",
+    "externalAdmissionChange": "NONE"
+  },
+  "stableRejectionCodes": [
+    "CONTRACT_MALFORMED",
+    "CONTRACT_UNSUPPORTED_VERSION",
+    "CAPACITY_EXHAUSTED",
+    "DOCUMENT_IDENTITY_MISMATCH",
+    "EVENT_SEQUENCE_AHEAD",
+    "INVALID_PRECONDITION",
+    "MINIMUM_WORKING_REVISION_UNAVAILABLE",
+    "OWNER_GENERATION_MISMATCH",
+    "REQUEST_ID_REUSE_MISMATCH",
+    "STALE_WORKING_REVISION",
+    "UNKNOWN_COMMAND",
+    "UNKNOWN_QUERY"
+  ],
+  "artifacts": [
+    {
+      "path": "packages/contracts/src/application-service-contract.ts",
+      "sha256": "1aa4a185f54508f115cabe0d91490445b9f855682b894bda2608a6733d5ccc39"
+    },
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "6ba3bc039893e9e7ae0b695c4d7298d8d03ca79a2c25bf44b98d999d860d0cd7"
+    },
+    {
+      "path": "packages/application/src/in-memory-application-service.ts",
+      "sha256": "2477bdb8005d6bfd428dbf3d8ffecb8bbfbe0987c4d947b4635f06b3ce235cc3"
+    },
+    {
+      "path": "packages/application/src/index.ts",
+      "sha256": "3015bd606789ba5a9be3101a9fc2018fc783c97a1a4bbadd49626ede1278afe8"
+    },
+    {
+      "path": "packages/application/package.json",
+      "sha256": "2cccb85e4aaf8baf0b055379793c193dd73f247039e2b37bc4d6fa4c4caabb23"
+    },
+    {
+      "path": "tests/bld-010-application-service.test.mjs",
+      "sha256": "a5388799c63d50fd73471c83b886013f39ab8e64198191a35bc3ece6f311f1c8"
+    },
+    {
+      "path": "tests/helpers/bld-010-fixtures.mjs",
+      "sha256": "868b32e0467a9c264779e4edadf7ccc8c2c923cae5b1b070d1def21b8b2f8348"
+    },
+    {
+      "path": "tests/helpers/run-bld-010-vectors.mjs",
+      "sha256": "0128be2bd18178aa43baa1a1b8919d01a4590eb07838e7842dc7f4e3d9f957c9"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c"
+    }
+  ],
+  "custody": {
+    "owner": "RSrender application evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner and adversarial reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "approvalReference": "GitHub #54 explicit activation after BLD-003/#47 and BLD-009/#53 closed",
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "retention": "Retain with the BLD-010 source revision and invalidate on any rerun trigger.",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false
+  },
+  "limitations": [
+    "The command and query are synthetic boundary probes, not a product editing command or projection.",
+    "SyntheticCommitIdentity is not an Undo history entry; no inverse, Undo, Redo, or product history is implemented or claimed.",
+    "The in-memory seam never evicts silently: explicit caller capacities reject new mutations atomically at exhaustion, and subscription batches that exceed their configured capacity fail explicitly; production session retention and transport replay policy remain later work.",
+    "No Electron, preload, IPC, filesystem, network, persistence, source adapter, job, UI, or vendor behavior is implemented or claimed.",
+    "The replica helper only decides apply versus discard-and-refetch; it does not reconcile renderer state or perform transport I/O.",
+    "BLD-007 enforcement remains independently fail-closed while BLD-010 has pending close status in its topology authority record."
+  ],
+  "rerunTriggers": [
+    "Application-service DTO, runtime schema, rejection reason, revision primitive, or command/query/subscription kind change",
+    "Replay, concurrency, commit, event, projection, subscription, or replica-gap behavior change",
+    "LogTemplateAggregate, canonical JSON, SHA-256, Node.js, TypeScript, manifest, dependency-lock, PI-20, D04, architecture section 6, or ADR 0008 change",
+    "Any retained artifact digest or external dependency identity/source/integrity change",
+    "Introduction of product commands, Undo/history, Electron/IPC, persistence, files, network, source, job, or UI behavior"
+  ]
+}
