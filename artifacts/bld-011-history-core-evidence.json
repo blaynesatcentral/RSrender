@@ -1,0 +1,267 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-011",
+  "issue": 55,
+  "generatedAtUtc": "2026-08-15T03:16:41.0954355Z",
+  "result": "PASS",
+  "authority": {
+    "requirements": [
+      "AC-001-bounded-revision-history-seam",
+      "OA-GOLD-001",
+      "OA-REP-001",
+      "architecture-5",
+      "architecture-6",
+      "ADR-0001",
+      "D04",
+      "E03-pure-captured-revision-seam"
+    ],
+    "scope": "pure in-memory working/durable revision identity, immutable captured working revisions, one synthetic history mutation, and bounded Undo/Redo",
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/55#issuecomment-5300072650",
+    "interpretations": [
+      "The initial validated aggregate is the durable baseline at durable revision zero; this ticket provides no operation that advances durable revision.",
+      "Dirty state is exact revision-identity inequality, so Undo to byte-equivalent durable content remains dirty when working revision is newer than durable revision.",
+      "A BLD-010 SyntheticCommitIdentity is an internal execution transcript only and is never used as a BLD-011 HistoryEntryIdentity, inverse, or history boundary.",
+      "One original synthetic mutation appends one immutable HistoryEntry; Undo and Redo are validated commands that move the chronological cursor without appending another HistoryEntry and always advance working revision.",
+      "A branch mutation after Undo truncates only the abandoned forward branch before appending its one new HistoryEntry.",
+      "Every target aggregate, digest, next safe revision, cursor, history entry/branch, and result is prepared before delegating to BLD-010. Private history-integrity assertions run before delegation and fail as an internal invariant rather than an outward result state; after a successful delegate commit only private-field installation and return of the already-frozen result remain.",
+      "Application, document-lifecycle, workspace, recovery, file, Save, publication, and other non-document-domain effects are absent from the closed command union and cannot enter this history core."
+    ]
+  },
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "contract": {
+    "historyCoreContractRevision": "bld-011-v1",
+    "inMemoryHistoryCoreRevision": "bld-011-v1",
+    "reducerRevision": "bld-011-v1",
+    "historyRevision": "bld-011-v1",
+    "contractVersion": 1,
+    "commands": [
+      "synthetic.template-content.replace",
+      "history.undo",
+      "history.redo"
+    ],
+    "runtimeValidation": "closed independently executable command and result guards; admitted opaque identity and well-formed Unicode rules; safe revision/cursor relationships; operation-command-cursor parity; detached frozen accepted DTOs; closed rejection reasons",
+    "revisionPrimitives": [
+      "WorkingRevision",
+      "DurableRevision",
+      "HistoryCursor"
+    ],
+    "identityPrimitives": [
+      "HistoryEntryIdentity",
+      "CapturedRevisionIdentity"
+    ]
+  },
+  "oracle": {
+    "resultState": "PASS",
+    "fixture": {
+      "identity": "BLD-011-SYNTHETIC-HISTORY-VECTORS",
+      "revision": "bld-011-fixture-v1",
+      "sha256": "d9d22a59c8e33a92df4e35918c028a99f8c7e4f840737930aca5e0c6f5c27646",
+      "classification": "SYNTHETIC_NONREPRESENTATIVE"
+    },
+    "propertyOracle": {
+      "identity": "BLD-011-HISTORY-PROPERTY-MODEL",
+      "revision": "bld-011-property-v1",
+      "sha256": "dc949ff91e02adb0c6b168442552a49d11c482ea2a6b100fb89274017c5d85b8",
+      "classification": "SYNTHETIC_NONREPRESENTATIVE"
+    },
+    "comparison": {
+      "method": "exact structural equality, exact revision/digest/cursor/history cardinality, closed rejection equality, canonical transcript equality, and immutable-capture equality",
+      "version": "bld-011-oracle-v1",
+      "tolerance": "exact"
+    },
+    "targetedTests": 14,
+    "composedBld010AndBld011Tests": 28,
+    "integratedNonBld007NonBld012Tests": 83,
+    "propertySeeds": [
+      324508639,
+      610839776,
+      1592594996
+    ],
+    "iterationsPerSeed": 1000,
+    "seededOperations": 3000,
+    "modeledInvariantEvaluations": {
+      "workingRevisionMonotonicity": 3000,
+      "durableRevisionRemainsUnchangedWithoutSave": 3000,
+      "historyCursorMatchesAppliedBranch": 3000,
+      "historyLengthMatchesCurrentBranch": 3000,
+      "aggregateExactlyMatchesModeledCursorState": 3000,
+      "dirtyExactlyMatchesRevisionIdentityInequality": 3000
+    },
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "generatedOperationsPerFreshPropertyExecution": 3000,
+    "totalFreshGeneratedOperations": 18000,
+    "freshProcessLocale": "en-US",
+    "freshProcessTimeZone": "UTC",
+    "fixedTranscriptDigest": "sha256:96fd0ce79714fda6e79d5a456fbb9f03d8763263e755036a588888b5c5daa7d4",
+    "freshPropertyModelDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a",
+    "freshProcessEnvelopeDigest": "sha256:1efdbf8c0fe2600173ca26a62375817e6fc417f077b7f1d409be24ad23262cb2",
+    "freshPropertyRuns": [
+      {
+        "process": 1,
+        "repetition": 1,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      },
+      {
+        "process": 1,
+        "repetition": 2,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      },
+      {
+        "process": 2,
+        "repetition": 1,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      },
+      {
+        "process": 2,
+        "repetition": 2,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      },
+      {
+        "process": 3,
+        "repetition": 1,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      },
+      {
+        "process": 3,
+        "repetition": 2,
+        "result": "PASS",
+        "propertyDigest": "sha256:f1f595a7ac306f60e2dbf879a54484babef7bbd6cfb5720db53fdb58c9f2565a"
+      }
+    ],
+    "fixedTranscript": {
+      "workingRevisions": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "durableRevision": 0,
+      "historyCursors": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "historyLengths": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "undoRestoresDurableAggregateDigest": true,
+      "undoRemainsDirtyByRevisionIdentity": true
+    },
+    "injectedFaults": [
+      "stale working revision",
+      "wrong document identity and owner generation",
+      "Undo and Redo with no eligible entry",
+      "request identity replay drift",
+      "history, replay, delegate commit, and event capacity exhaustion",
+      "abandoned Redo branch after a new mutation",
+      "concurrent same-revision mutation race",
+      "application, lifecycle, workspace, recovery, and extra-field commands",
+      "unknown tag, unsupported version, malformed scalar, prototype, symbol, hidden, accessor, throwing proxy, and ill-formed Unicode input",
+      "forged result revision, dirty, cursor, operation, identity, and rejection reason relationships"
+    ],
+    "failures": [],
+    "inputOrSecretEchoes": 0
+  },
+  "dependencyDelta": {
+    "reason": "BLD-011 composes only the already admitted contracts, domain, and application workspaces already present in the application package dependency graph.",
+    "workspaceEdgesAddedByBld011": [],
+    "manifestOrLockFilesChangedByBld011": [],
+    "edgeClassification": "NO_DEPENDENCY_DELTA",
+    "observedLockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+    "sharedArtifactAttribution": "The stable shared contracts/application index exports and current lock also contain concurrent BLD-012 additions; BLD-011 changed only its history export blocks and introduced no manifest or lock edge.",
+    "currentExternalIdentityCount": 156,
+    "addedExternalIdentities": 0,
+    "removedExternalIdentities": 0,
+    "changedExternalIdentities": 0,
+    "externalAdmissionChange": "NONE"
+  },
+  "artifacts": [
+    {
+      "path": "packages/contracts/src/history-core-contract.ts",
+      "sha256": "fee9dfab0484e6d81d87a744e955613557f96cf09e363d26d5fb2e6d08b376ca"
+    },
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "a49f11f21d028b004d1bda056a758e4d442dfbec4a2967299ddf5b7fdb839352"
+    },
+    {
+      "path": "packages/application/src/in-memory-history-core.ts",
+      "sha256": "f7661c7b97403b67c057cb10ccddc142a68e90899a511e4d0ad95613ee80ff13"
+    },
+    {
+      "path": "packages/application/src/index.ts",
+      "sha256": "d36c1d04cfc985153901d6f8c771c2a0703c77ee939d1b3408fba98cd8f98725"
+    },
+    {
+      "path": "packages/application/package.json",
+      "sha256": "2cccb85e4aaf8baf0b055379793c193dd73f247039e2b37bc4d6fa4c4caabb23"
+    },
+    {
+      "path": "tests/bld-011-history-core.test.mjs",
+      "sha256": "d1fdaa1abb06b45491b80816462c4601e0060d6d425de4d5cd344f217c2e3a89"
+    },
+    {
+      "path": "tests/helpers/bld-011-fixtures.mjs",
+      "sha256": "d9d22a59c8e33a92df4e35918c028a99f8c7e4f840737930aca5e0c6f5c27646"
+    },
+    {
+      "path": "tests/helpers/bld-011-property-model.mjs",
+      "sha256": "dc949ff91e02adb0c6b168442552a49d11c482ea2a6b100fb89274017c5d85b8"
+    },
+    {
+      "path": "tests/helpers/run-bld-011-vectors.mjs",
+      "sha256": "f4c1df963175523b49c7956149ecd73995ab08697cf4cd239dd2c0e828d11ea0"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422"
+    }
+  ],
+  "custody": {
+    "owner": "RSrender application evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner and adversarial reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "approvalReference": "GitHub #55 explicit activation after BLD-009/#53 and BLD-010/#54 closed",
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "retention": "Retain with the BLD-011 source revision and invalidate on any rerun trigger.",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false
+  },
+  "limitations": [
+    "The mutation changes one synthetic Log Template content digest; it is not a product element, hierarchy, source Refresh, or lifecycle command.",
+    "All fixtures and vectors are synthetic and nonrepresentative; no production, client, representative-user, or representative-workflow claim is made.",
+    "The durable baseline is initialized and identified but never written, verified, rebound, or advanced. No Save, Save As, filesystem, Authoritative File, storage, recovery, or publication behavior is implemented or claimed.",
+    "History is bounded and in-memory only. It is neither serialized nor retained after session disposal and creates no template, project, Source Snapshot, PDF, or output version history.",
+    "The BLD-010 service retains its own bounded SyntheticCommitRecord transcripts for execution evidence; those transcripts are not exposed or interpreted as BLD-011 HistoryEntries.",
+    "No Electron, preload, renderer, IPC, source adapter, network, job, or MCP behavior is implemented or claimed.",
+    "This is bounded AC-001/D04 and pure captured-revision E03 seam evidence only; it is not full AC-001, E03, or storage evidence."
+  ],
+  "rerunTriggers": [
+    "History command/result DTO, runtime guard, rejection reason, identity, revision, cursor, capture, entry, replay, capacity, branch, Undo, Redo, or dirty-state rule change",
+    "BLD-010 application-service execute, atomic commit, aggregate replacement, replay, or capacity semantics change",
+    "LogTemplateAggregate, canonical JSON, SHA-256, Node.js, TypeScript, application/contracts/domain package boundary, or dependency graph change",
+    "AC-001, architecture section 5 or 6, ADR 0001, D04, or E03 change",
+    "Introduction of Save, filesystem, durable revision advancement, recovery, publication, Electron/IPC, persistence, source, job, or UI behavior"
+  ]
+}

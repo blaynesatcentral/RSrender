@@ -1,9 +1,30 @@
+import { randomBytes } from "node:crypto";
 import { once } from "node:events";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { app, BrowserWindow, Menu, protocol, session, webContents } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, protocol, session, webContents } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
+
+import {
+  applicationVersionQueryHandlerRevision,
+  createApplicationVersionQueryHandler,
+} from "@rsrender/application";
+import { applicationVersionContractRevision } from "@rsrender/contracts";
+
+import {
+  APPLICATION_VERSION_BOOTSTRAP_CHANNEL,
+  APPLICATION_VERSION_QUERY_CHANNEL,
+  ApplicationVersionRouteBroker,
+  applicationVersionTransportRevision,
+} from "./application-version-route-broker.js";
+import type { ApplicationVersionRouteContext } from "./application-version-route-broker.js";
+import { generatedApplicationVersionPreloadRevision } from "./generated-application-version-preload.js";
+import {
+  packagedApplicationVersionPreloadRelativePath,
+  verifyPackagedApplicationVersionPreload,
+} from "./packaged-application-version-preload.js";
 
 import { EMPTY_SHELL_SECURITY_PROFILE, EMPTY_SHELL_URL } from "./security-profile.js";
 
@@ -13,6 +34,22 @@ const RESULT_FILENAME = "rsrender-bld006-probe-result.json";
 const SHELL_SCHEME = "rsrender-shell";
 const probeMode = process.argv.includes(PROBE_ARGUMENT);
 const shellProfileRoot = path.join(app.getPath("temp"), "rsrender-bld006-shell-profile");
+const applicationVersionPreloadPath = path.join(
+  app.getAppPath(),
+  ...packagedApplicationVersionPreloadRelativePath.split("/"),
+);
+const packagedPreloadBytes = (() => {
+  try {
+    return readFileSync(applicationVersionPreloadPath) as Uint8Array;
+  } catch {
+    return null;
+  }
+})();
+const packagedPreloadVerification = verifyPackagedApplicationVersionPreload(packagedPreloadBytes);
+if (!packagedPreloadVerification.accepted) {
+  throw new Error(packagedPreloadVerification.code);
+}
+const packagedPreloadSha256 = packagedPreloadVerification.sha256;
 mkdirSync(shellProfileRoot, { recursive: true, mode: 0o700 });
 app.setPath("userData", shellProfileRoot);
 app.setPath("sessionData", path.join(shellProfileRoot, "session"));
@@ -34,7 +71,7 @@ type Observation = Readonly<{
   id: string;
   pass: boolean;
   detail: string;
-  evidenceGrade: "OBSERVED_PACKAGED";
+  evidenceGrade: "OBSERVED_PACKAGED" | "RELATIONAL_IN_PACKAGED_PROCESS";
 }>;
 
 type DenialCounters = {
@@ -52,8 +89,13 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-function observe(id: string, pass: boolean, detail: string): Observation {
-  return Object.freeze({ id, pass, detail, evidenceGrade: "OBSERVED_PACKAGED" });
+function observe(
+  id: string,
+  pass: boolean,
+  detail: string,
+  evidenceGrade: Observation["evidenceGrade"] = "OBSERVED_PACKAGED",
+): Observation {
+  return Object.freeze({ id, pass, detail, evidenceGrade });
 }
 
 function emitResult(value: unknown): void {
@@ -142,6 +184,7 @@ function createShellWindow(counters: DenialCounters): BrowserWindow {
     webPreferences: {
       ...EMPTY_SHELL_SECURITY_PROFILE.webPreferences,
       partition: EMPTY_SHELL_SECURITY_PROFILE.partition,
+      preload: applicationVersionPreloadPath,
     },
   });
 
@@ -187,10 +230,17 @@ async function runPackagedProbe(
   shellSession: Electron.Session,
   counters: DenialCounters,
   phases: string[],
+  versionBroker: ApplicationVersionRouteBroker,
+  removeVersionHandlers: () => void,
 ): Promise<boolean> {
   const observations: Observation[] = [];
-  const record = (id: string, pass: boolean, detail: string): void => {
-    observations.push(observe(id, pass, detail));
+  const record = (
+    id: string,
+    pass: boolean,
+    detail: string,
+    evidenceGrade?: Observation["evidenceGrade"],
+  ): void => {
+    observations.push(observe(id, pass, detail, evidenceGrade));
   };
 
   phases.push("renderer-loaded");
@@ -231,9 +281,10 @@ async function runPackagedProbe(
       .join("; "),
   );
   record(
-    "NO_PRELOAD",
-    !effectivePreferences.preload && EMPTY_SHELL_SECURITY_PROFILE.preload === "absent",
-    `effectivePreload=${effectivePreferences.preload ? "present" : "absent"}; configured=absent`,
+    "ONE_GENERATED_PRELOAD",
+    packagedPreloadVerification.accepted &&
+      EMPTY_SHELL_SECURITY_PROFILE.preload === "generated-application-version-only",
+    `packagedDigestVerified=${packagedPreloadVerification.accepted}; effectivePreferenceField=${effectivePreferences.preload ? "present" : "redacted"}; configured=${EMPTY_SHELL_SECURITY_PROFILE.preload}`,
   );
 
   const rendererSurface = (await shellWindow.webContents.executeJavaScript(
@@ -243,35 +294,132 @@ async function runPackagedProbe(
       electronType: typeof globalThis.electron,
       ipcRendererType: typeof globalThis.ipcRenderer,
       rsrenderType: typeof globalThis.rsrender,
+      rsrenderKeys: globalThis.rsrender ? Object.keys(globalThis.rsrender) : [],
+      applicationKeys: globalThis.rsrender?.application ? Object.keys(globalThis.rsrender.application) : [],
+      getVersionType: typeof globalThis.rsrender?.application?.getVersion,
+      getVersionArity: globalThis.rsrender?.application?.getVersion?.length,
+      rootFrozen: globalThis.rsrender ? Object.isFrozen(globalThis.rsrender) : false,
+      applicationFrozen: globalThis.rsrender?.application ? Object.isFrozen(globalThis.rsrender.application) : false,
       bodyText: document.body.innerText.replace(/\\s+/gu, ' ').trim()
     })`,
     true,
-  )) as Record<string, string>;
-  const forbiddenGlobalKeys = [
-    "requireType",
-    "processType",
-    "electronType",
-    "ipcRendererType",
-    "rsrenderType",
-  ];
+  )) as Record<string, unknown>;
+  const forbiddenGlobalKeys = ["requireType", "processType", "electronType", "ipcRendererType"];
   record(
     "NO_NODE_ELECTRON_GLOBALS",
     forbiddenGlobalKeys.every((key) => rendererSurface[key] === "undefined"),
-    forbiddenGlobalKeys.map((key) => `${key}=${rendererSurface[key] ?? "missing"}`).join("; "),
+    forbiddenGlobalKeys
+      .map((key) => `${key}=${formatPreferenceValue(rendererSurface[key] ?? "missing")}`)
+      .join("; "),
   );
   record(
     "INERT_RENDERER",
     rendererSurface["bodyText"] ===
-      "RSrender security shell No application capabilities are available.",
+      "RSrender security shell One read-only application version query is available.",
     "static packaged text only",
   );
   record(
-    "NO_RENDERER_CAPABILITY",
-    EMPTY_SHELL_SECURITY_PROFILE.ipcChannels.length === 0 &&
-      EMPTY_SHELL_SECURITY_PROFILE.rendererCapabilities.length === 0 &&
-      rendererSurface["rsrenderType"] === "undefined",
-    "preload methods=0; IPC channels=0; renderer capabilities=0",
+    "EXACT_RENDERER_API_SURFACE",
+    rendererSurface["rsrenderType"] === "object" &&
+      JSON.stringify(rendererSurface["rsrenderKeys"]) === JSON.stringify(["application"]) &&
+      JSON.stringify(rendererSurface["applicationKeys"]) === JSON.stringify(["getVersion"]) &&
+      rendererSurface["getVersionType"] === "function" &&
+      rendererSurface["getVersionArity"] === 0 &&
+      rendererSurface["rootFrozen"] === true &&
+      rendererSurface["applicationFrozen"] === true,
+    "one frozen zero-argument rsrender.application.getVersion method",
   );
+
+  const versionResult = (await shellWindow.webContents.executeJavaScript(
+    `globalThis.rsrender.application.getVersion()`,
+    true,
+  )) as Record<string, unknown>;
+  record(
+    "APPLICATION_VERSION_QUERY",
+    versionResult["kind"] === "application.version.result" &&
+      versionResult["version"] === app.getVersion() &&
+      Object.keys(versionResult).sort().join(",") ===
+        "contractVersion,kind,messageType,requestId,version",
+    `kind=${String(versionResult["kind"])}; exactPackagedVersion=${versionResult["version"] === app.getVersion()}`,
+  );
+
+  const liveContext: ApplicationVersionRouteContext = {
+    window: shellWindow,
+    webContents: shellWindow.webContents,
+    frame: shellWindow.webContents.mainFrame,
+    mainFrame: shellWindow.webContents.mainFrame,
+    url: shellWindow.webContents.mainFrame.url,
+    windowLive: !shellWindow.isDestroyed(),
+    webContentsLive: !shellWindow.webContents.isDestroyed(),
+  };
+  const alternateWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: false,
+    },
+  });
+  const matrix = await versionBroker.qualifyBoundNegativeMatrix(liveContext, {
+    window: alternateWindow,
+    webContents: alternateWindow.webContents,
+    frame: alternateWindow.webContents.mainFrame,
+  });
+  alternateWindow.destroy();
+  const expectedMatrix = {
+    REPLAY: "SEQUENCE_REPLAYED",
+    MALFORMED_RAW_ENVELOPE: "TRANSPORT_MALFORMED",
+    CROSS_WINDOW: "CROSS_WINDOW",
+    CROSS_SENDER: "SENDER_INVALID",
+    CHILD_OR_UNBOUND_FRAME: "FRAME_INVALID",
+    CROSS_ROUTE_QUERY: "ORIGIN_ROUTE_INVALID",
+    CROSS_ROUTE_FRAGMENT: "ORIGIN_ROUTE_INVALID",
+    CAPABILITY: "CAPABILITY_INVALID",
+    GENERATION: "GENERATION_INVALID",
+    QUERY_SCHEMA: "QUERY_SCHEMA_INVALID",
+  } as const;
+  for (const entry of matrix) {
+    record(
+      `PACKAGED_${entry.id}`,
+      expectedMatrix[entry.id as keyof typeof expectedMatrix] === entry.code,
+      `redactedRejectionObserved=${entry.code.length > 0}`,
+      "RELATIONAL_IN_PACKAGED_PROCESS",
+    );
+  }
+  record(
+    "RAW_CHANNEL_UNAVAILABLE_TO_PAGE",
+    rendererSurface["ipcRendererType"] === "undefined" &&
+      EMPTY_SHELL_SECURITY_PROFILE.ipcChannels.length === 2,
+    "page has no ipcRenderer/send/invoke/on or channel-name surface",
+  );
+
+  versionBroker.invalidate();
+  const staleResult = (await shellWindow.webContents.executeJavaScript(
+    `globalThis.rsrender.application.getVersion().then(() => "unexpected-success").catch((error) => String(error && error.message))`,
+    true,
+  )) as string;
+  record(
+    "CAPABILITY_ROTATION_REJECTS_LATE_CALL",
+    staleResult === "APPLICATION_VERSION_UNAVAILABLE",
+    `result=${staleResult}`,
+  );
+  const rebound = versionBroker.bootstrap(liveContext);
+  record(
+    "ROTATE_AND_REBOOTSTRAP",
+    rebound.accepted && rebound.generation === 2,
+    `newGenerationIssued=${rebound.accepted && rebound.generation === 2}`,
+  );
+  const lateGenerationResult = (await shellWindow.webContents.executeJavaScript(
+    `globalThis.rsrender.application.getVersion().then(() => "unexpected-success").catch((error) => String(error && error.message))`,
+    true,
+  )) as string;
+  record(
+    "LATE_GENERATION_REDACTED",
+    lateGenerationResult === "APPLICATION_VERSION_UNAVAILABLE",
+    `publicResult=${lateGenerationResult}`,
+  );
+  versionBroker.invalidate();
 
   const originalUrl = shellWindow.webContents.getURL();
   await shellWindow.webContents.executeJavaScript(
@@ -335,6 +483,8 @@ async function runPackagedProbe(
 
   phases.push("probes-complete");
   const closed = once(shellWindow, "closed");
+  removeVersionHandlers();
+  versionBroker.invalidate();
   shellWindow.destroy();
   await closed;
   phases.push("renderer-destroyed");
@@ -352,9 +502,9 @@ async function runPackagedProbe(
 
   const passed = observations.every((entry) => entry.pass);
   emitResult({
-    schema: "rsrender.bld006.packaged-probe.v0",
+    schema: "rsrender.bld012.packaged-application-version-probe.v0",
     result: passed ? "PASS" : "FAIL",
-    scope: "empty packaged Electron security shell only",
+    scope: "one generated application-version query in packaged Electron shell",
     versions: {
       electron: process.versions.electron,
       chromium: process.versions.chrome,
@@ -367,6 +517,15 @@ async function runPackagedProbe(
       packaged: app.isPackaged,
     },
     securityProfile: EMPTY_SHELL_SECURITY_PROFILE,
+    revisions: {
+      applicationVersionContract: applicationVersionContractRevision,
+      applicationVersionHandler: applicationVersionQueryHandlerRevision,
+      applicationVersionTransport: applicationVersionTransportRevision,
+      generatedPreload: generatedApplicationVersionPreloadRevision,
+    },
+    digests: {
+      packagedPreloadSha256,
+    },
     counters,
     phases,
     counts: {
@@ -389,7 +548,7 @@ const hasSingleInstanceAuthority = app.requestSingleInstanceLock();
 if (!hasSingleInstanceAuthority) {
   if (probeMode) {
     emitResult({
-      schema: "rsrender.bld006.packaged-probe.v0",
+      schema: "rsrender.bld012.packaged-application-version-probe.v0",
       result: "FAIL",
       failure: { code: "SINGLE_INSTANCE_AUTHORITY_UNAVAILABLE" },
       nonClaims: ["No packaged-shell result is established"],
@@ -429,20 +588,64 @@ if (!hasSingleInstanceAuthority) {
       installSessionDenials(shellSession, counters);
       installInMemoryShell(shellSession);
       const shellWindow = createShellWindow(counters);
+      const versionHandler = createApplicationVersionQueryHandler(app.getVersion());
+      if (!versionHandler.accepted) throw new Error(versionHandler.code);
+      const versionBroker = new ApplicationVersionRouteBroker({
+        expectedWindow: shellWindow,
+        expectedWebContents: shellWindow.webContents,
+        service: versionHandler.service,
+        createCapability: () => randomBytes(32).toString("hex"),
+      });
+      const routeContext = (event: IpcMainInvokeEvent): ApplicationVersionRouteContext => {
+        const observedWindow = BrowserWindow.fromWebContents(event.sender);
+        return {
+          window: observedWindow,
+          webContents: event.sender,
+          frame: event.senderFrame,
+          mainFrame: event.sender.mainFrame,
+          url: event.senderFrame?.url ?? "",
+          windowLive: observedWindow !== null && !observedWindow.isDestroyed(),
+          webContentsLive: !event.sender.isDestroyed(),
+        };
+      };
+      ipcMain.handle(APPLICATION_VERSION_BOOTSTRAP_CHANNEL, (event) =>
+        versionBroker.bootstrap(routeContext(event)),
+      );
+      ipcMain.handle(APPLICATION_VERSION_QUERY_CHANNEL, (event, input: unknown) =>
+        versionBroker.handle(routeContext(event), input),
+      );
+      const removeVersionHandlers = (): void => {
+        ipcMain.removeHandler(APPLICATION_VERSION_BOOTSTRAP_CHANNEL);
+        ipcMain.removeHandler(APPLICATION_VERSION_QUERY_CHANNEL);
+      };
+      shellWindow.webContents.on("render-process-gone", () => versionBroker.invalidate());
+      shellWindow.webContents.on("destroyed", () => versionBroker.invalidate());
+      shellWindow.webContents.on("will-navigate", () => versionBroker.invalidate());
+      shellWindow.webContents.on("will-redirect", () => versionBroker.invalidate());
+      shellWindow.on("closed", () => {
+        versionBroker.invalidate();
+        removeVersionHandlers();
+      });
       phases.push("renderer-created");
       await shellWindow.loadURL(EMPTY_SHELL_URL);
       if (probeMode) {
-        await runPackagedProbe(shellWindow, shellSession, counters, phases);
+        await runPackagedProbe(
+          shellWindow,
+          shellSession,
+          counters,
+          phases,
+          versionBroker,
+          removeVersionHandlers,
+        );
       }
     })
     .catch((error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : "Unknown empty-shell startup failure";
+      void error;
       if (probeMode) {
         emitResult({
-          schema: "rsrender.bld006.packaged-probe.v0",
+          schema: "rsrender.bld012.packaged-application-version-probe.v0",
           result: "FAIL",
-          failure: { code: "EMPTY_SHELL_HARNESS_FAILURE", message },
+          failure: { code: "APPLICATION_VERSION_HARNESS_FAILURE" },
           nonClaims: ["No packaged-shell result is established"],
         });
       }

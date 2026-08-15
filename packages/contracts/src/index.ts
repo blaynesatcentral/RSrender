@@ -68,6 +68,26 @@ export {
   validateApplicationServiceQuery,
   validateApplicationServiceSubscriptionRequest,
 } from "./application-service-contract.js";
+
+export {
+  applicationVersionContractRevision,
+  applicationVersionContractVersion,
+  applicationVersionQueryKind,
+  applicationVersionResultKind,
+  createApplicationVersionQuery,
+  createApplicationVersionResult,
+  isApplicationVersion,
+  parseApplicationVersion,
+  validateApplicationVersionQuery,
+  validateApplicationVersionResult,
+} from "./application-version-contract.js";
+export type {
+  ApplicationVersion,
+  ApplicationVersionContractCode,
+  ApplicationVersionQuery,
+  ApplicationVersionResult,
+  ApplicationVersionValidationResult,
+} from "./application-version-contract.js";
 export type {
   ApplicationRequestIdentity,
   ApplicationServiceCommand,
@@ -93,3 +113,38 @@ export type {
   SyntheticTemplateProjectionResult,
   WorkingRevision,
 } from "./application-service-contract.js";
+
+export {
+  canonicalHistoryCoreCommand,
+  capturedRevisionIdentityCodec,
+  historyCoreContractRevision,
+  historyCoreContractVersion,
+  historyCoreSchemaManifest,
+  historyEntryIdentityCodec,
+  historyRedoCommandId,
+  historyUndoCommandId,
+  isDurableRevision,
+  isHistoryCoreCommittedResult,
+  isHistoryCoreRejectedResult,
+  isHistoryCursor,
+  parseDurableRevision,
+  parseHistoryCursor,
+  validateHistoryCoreCommand,
+  validateHistoryCoreResult,
+} from "./history-core-contract.js";
+export type {
+  CapturedRevisionIdentity,
+  DurableRevision,
+  HistoryCoreCommand,
+  HistoryCoreCommandResult,
+  HistoryCoreCommittedResult,
+  HistoryCoreContractRejectionCode,
+  HistoryCoreRejectedResult,
+  HistoryCoreRejectionReason,
+  HistoryCoreValidationResult,
+  HistoryCursor,
+  HistoryEntryIdentity,
+  HistoryOperation,
+  HistoryRedoCommand,
+  HistoryUndoCommand,
+} from "./history-core-contract.js";

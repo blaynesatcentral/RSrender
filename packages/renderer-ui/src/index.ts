@@ -2,8 +2,8 @@
 export const packageBoundary = "@rsrender/renderer-ui" as const;
 
 /**
- * The BLD-006 page is deliberately inert. It has no script, preload, remote
- * resource, input, link, command, or application state.
+ * The page remains inert markup. BLD-012 adds one isolated-preload application
+ * version query without adding page script, remote resources, input, or state.
  */
 export const inertShellHtml = `<!doctype html>
 <html lang="en">
@@ -16,7 +16,7 @@ export const inertShellHtml = `<!doctype html>
 <body>
   <main aria-label="Empty security shell">
     <h1>RSrender security shell</h1>
-    <p>No application capabilities are available.</p>
+    <p>One read-only application version query is available.</p>
   </main>
 </body>
 </html>

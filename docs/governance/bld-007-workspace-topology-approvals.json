@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+  "currentLockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
   "expectedArtifactDigests": {
-    "spdx": "sha256:32c3ef5e8e8740bf21e03a2e9eafc3f9c7ab9f5660b574d6c3b268102696ea9b",
-    "custody": "sha256:367ec31523ede56ce5502a1dd1653f92f1d4f1410deaf08639d1d69f0e1c546b",
+    "spdx": "sha256:3e29ef6b6ebb732b67bc538416c50aacb60c34bfd7ddb8eb0e2871ba142ccd4d",
+    "custody": "sha256:fae092ab486e6ba15babb4393183399cec111e5f5dedd8ded3c590442a2fcfc7",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts and BLD-010 application-to-contracts/domain",
-    "condition": "effective only after BLD-010 / GitHub #54 closes with final evidence and this exact lock hash",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, and BLD-012 platform-electron-main-to-application/contracts",
+    "condition": "effective only after BLD-012 / GitHub #56 closes with final evidence, issue comment 5300323523 records the exact two internal edges, and this exact lock hash matches",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -35,6 +35,19 @@
       "workspaceEdgesAdded": [
         "@rsrender/application@0.0.0 -> @rsrender/contracts@0.0.0",
         "@rsrender/application@0.0.0 -> @rsrender/domain@0.0.0"
+      ]
+    },
+    {
+      "ticket": "BLD-012 / GitHub #56",
+      "status": "CLOSED",
+      "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/56#issuecomment-5300323523",
+      "lockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+      "evidence": "artifacts/bld-012-application-version-evidence.json",
+      "evidenceSha256": "1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/application@0.0.0",
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/contracts@0.0.0"
       ]
     }
   ],
@@ -77,7 +90,10 @@
     {
       "path": "packages/platform-electron-main",
       "identity": "@rsrender/platform-electron-main@0.0.0",
-      "dependencies": {},
+      "dependencies": {
+        "@rsrender/application": "0.0.0",
+        "@rsrender/contracts": "0.0.0"
+      },
       "devDependencies": {},
       "optionalDependencies": {}
     },

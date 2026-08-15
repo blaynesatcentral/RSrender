@@ -5,9 +5,12 @@ export const EMPTY_SHELL_SECURITY_PROFILE = Object.freeze({
   electronVersion: "43.4.0",
   partition: "rsrender-shell",
   persistence: "memory-only",
-  preload: "absent",
-  ipcChannels: Object.freeze([] as string[]),
-  rendererCapabilities: Object.freeze([] as string[]),
+  preload: "generated-application-version-only",
+  ipcChannels: Object.freeze([
+    "rsrender:application-version:bootstrap:v1",
+    "rsrender:application-version:query:v1",
+  ] as const),
+  rendererCapabilities: Object.freeze(["rsrender.application.getVersion"] as const),
   webPreferences: Object.freeze({
     sandbox: true,
     contextIsolation: true,

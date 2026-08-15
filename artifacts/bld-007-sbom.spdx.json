@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "RSrender-BLD-007-exact-internal-dependency-snapshot",
-  "documentNamespace": "https://rsrender.invalid/spdx/bld-007/d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+  "documentNamespace": "https://rsrender.invalid/spdx/bld-007/6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
   "creationInfo": {
     "created": "2026-08-14T00:00:00Z",
     "creators": [
@@ -4234,6 +4234,16 @@
       "spdxElementId": "SPDXRef-Package-61f595114b42a38867c3",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-c90baa3b36b65fd362a3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6345842887b2575c3485",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6345842887b2575c3485",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9d6d2021292b0609c5f0"
     },
     {
       "spdxElementId": "SPDXRef-Package-6390bf853aed627edd1f",

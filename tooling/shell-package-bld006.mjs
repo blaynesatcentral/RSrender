@@ -107,6 +107,17 @@ async function prepareStage() {
     path.join(stageDirectory, "main"),
     { recursive: true },
   );
+  for (const packageName of ["application", "contracts", "domain"]) {
+    const target = path.join(stageDirectory, "node_modules", "@rsrender", packageName);
+    await mkdir(target, { recursive: true });
+    await cp(path.join(root, "packages", packageName, "dist"), path.join(target, "dist"), {
+      recursive: true,
+    });
+    await copyFile(
+      path.join(root, "packages", packageName, "package.json"),
+      path.join(target, "package.json"),
+    );
+  }
 
   const rendererModuleUrl = `${
     pathToFileURL(path.join(root, "packages", "renderer-ui", "dist", "index.js")).href
@@ -115,6 +126,26 @@ async function prepareStage() {
   if (typeof inertShellHtml !== "string" || inertShellHtml.length === 0) {
     throw new Error("BLD006_INERT_RENDERER_MISSING");
   }
+
+  const preloadGeneratorUrl = `${
+    pathToFileURL(
+      path.join(
+        root,
+        "packages",
+        "platform-electron-main",
+        "dist",
+        "generated-application-version-preload.js",
+      ),
+    ).href
+  }?bld012=${Date.now()}`;
+  const { generateApplicationVersionPreloadSource } = await import(preloadGeneratorUrl);
+  const preloadDirectory = path.join(stageDirectory, "preload");
+  await mkdir(preloadDirectory, { recursive: true });
+  await writeFile(
+    path.join(preloadDirectory, "application-version.cjs"),
+    generateApplicationVersionPreloadSource(),
+    "utf8",
+  );
 
   const entrySource = [
     `globalThis.__RSRENDER_INERT_SHELL_HTML__ = ${JSON.stringify(inertShellHtml)};`,

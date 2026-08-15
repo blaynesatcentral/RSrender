@@ -11,9 +11,14 @@ import { inertShellHtml } from "../packages/renderer-ui/dist/index.js";
 test("BLD-006 security profile explicitly denies renderer authority", () => {
   assert.equal(EMPTY_SHELL_SECURITY_PROFILE.electronVersion, "43.4.0");
   assert.equal(EMPTY_SHELL_SECURITY_PROFILE.persistence, "memory-only");
-  assert.equal(EMPTY_SHELL_SECURITY_PROFILE.preload, "absent");
-  assert.deepEqual(EMPTY_SHELL_SECURITY_PROFILE.ipcChannels, []);
-  assert.deepEqual(EMPTY_SHELL_SECURITY_PROFILE.rendererCapabilities, []);
+  assert.equal(EMPTY_SHELL_SECURITY_PROFILE.preload, "generated-application-version-only");
+  assert.deepEqual(EMPTY_SHELL_SECURITY_PROFILE.ipcChannels, [
+    "rsrender:application-version:bootstrap:v1",
+    "rsrender:application-version:query:v1",
+  ]);
+  assert.deepEqual(EMPTY_SHELL_SECURITY_PROFILE.rendererCapabilities, [
+    "rsrender.application.getVersion",
+  ]);
   assert.deepEqual(EMPTY_SHELL_SECURITY_PROFILE.webPreferences, {
     sandbox: true,
     contextIsolation: true,
@@ -36,7 +41,7 @@ test("BLD-006 security profile explicitly denies renderer authority", () => {
 });
 
 test("BLD-006 renderer is inert static markup", () => {
-  assert.match(inertShellHtml, /No application capabilities are available\./u);
+  assert.match(inertShellHtml, /One read-only application version query is available\./u);
   assert.doesNotMatch(inertShellHtml, /<script\b/iu);
   assert.doesNotMatch(inertShellHtml, /<iframe\b/iu);
   assert.doesNotMatch(inertShellHtml, /<webview\b/iu);
@@ -44,10 +49,11 @@ test("BLD-006 renderer is inert static markup", () => {
   assert.doesNotMatch(inertShellHtml, /\b(?:src|href)\s*=/iu);
 });
 
-test("BLD-006 main registers no IPC or renderer preload bridge", async () => {
+test("BLD-006 historical no-preload baseline is explicitly superseded by one generated query", async () => {
   const mainSource = await readFile("packages/platform-electron-main/src/main.ts", "utf8");
-  assert.doesNotMatch(mainSource, /\bipcMain\b/u);
   assert.doesNotMatch(mainSource, /\bcontextBridge\b/u);
   assert.doesNotMatch(mainSource, /\bwebContents\.send\b/u);
-  assert.doesNotMatch(mainSource, /\bpreload\s*:/u);
+  assert.match(mainSource, /APPLICATION_VERSION_BOOTSTRAP_CHANNEL/u);
+  assert.match(mainSource, /APPLICATION_VERSION_QUERY_CHANNEL/u);
+  assert.match(mainSource, /preload:\s*applicationVersionPreloadPath/u);
 });

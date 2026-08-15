@@ -1,0 +1,945 @@
+{
+  "schema": "rsrender.bld012.application-version-evidence.v0",
+  "ticket": "BLD-012 / GitHub #56",
+  "startedAtUtc": "2026-08-15T03:31:24.060Z",
+  "finishedAtUtc": "2026-08-15T03:31:34.028Z",
+  "result": "PASS",
+  "trace": [
+    "PI-16",
+    "PI-20",
+    "P06-bounded-seam",
+    "OA-GOLD-001",
+    "OA-REP-001"
+  ],
+  "requirements": {
+    "productInvariants": [
+      "PI-16",
+      "PI-20"
+    ],
+    "acceptanceMatrix": {
+      "id": "P06",
+      "revision": "accepted-spec-2026-08-14"
+    },
+    "fixturePolicies": [
+      "OA-GOLD-001",
+      "OA-REP-001"
+    ],
+    "liveObjective": "GitHub #56 Objective Done"
+  },
+  "environment": {
+    "launcherNode": "v24.18.1",
+    "platform": "win32",
+    "architecture": "x64",
+    "locale": "en-US",
+    "timeZone": "America/Los_Angeles"
+  },
+  "sourceResult": {
+    "state": "PASS",
+    "evidenceGrade": "G2_OBSERVED_PACKAGED_PLUS_G1_RELATIONAL",
+    "custodyClass": "SYNTHETIC_REPOSITORY_SAFE"
+  },
+  "fixture": {
+    "identity": "FIX-BLD012-PACKAGED-APPLICATION-VERSION-001",
+    "revision": 1,
+    "packagedVersion": "0.0.0",
+    "method": "rsrender.application.getVersion",
+    "sha256": "8e2e4c2bb21d371c6c2bd856567968eb0c32cef335212ee09ab4542a2a596f72"
+  },
+  "oracle": {
+    "version": "bld-012-packaged-oracle-v1",
+    "method": "exact schema/value/API-surface/rejection equality across three fresh packaged sessions",
+    "tolerance": "exact",
+    "freshSessionCount": 3,
+    "normalizedResultDigests": [
+      "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+      "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+      "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6"
+    ],
+    "comparisonResult": "EXACT_MATCH",
+    "gradeSplit": {
+      "G2_OBSERVED_PACKAGED": [
+        "positive fixed-channel query through actual Electron IPC sender/main frame",
+        "exact frozen page API and no Electron/Node/raw IPC global surface",
+        "public late-capability rejection after rotation",
+        "navigation/popup/permission/network denial and process/profile teardown"
+      ],
+      "G1_RELATIONAL_IN_PACKAGED_PROCESS": [
+        "cross-window/sender/frame/route, replay, malformed envelope, capability, generation, and query-schema broker matrix using live Electron object identities with fabricated relational contexts"
+      ]
+    },
+    "failures": []
+  },
+  "revisions": {
+    "applicationVersionContract": "bld-012-v1",
+    "applicationVersionHandler": "bld-012-v1",
+    "applicationVersionTransport": "bld-012-v1",
+    "generatedPreload": "bld-012-v1"
+  },
+  "digests": {
+    "packagedExecutableSha256": "bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "packagedAppAsarSha256": "fd26e098010caf0f14ab8d0a7788ed99a2f6fe3b55abd8e85885d109f7f073f8",
+    "packageResultSha256": "907ebbe728a6a44f4e10f731c012009a66eed3f26c457cc93a88da0c5fa29835",
+    "packagedPreloadSha256": "f955fea391bccdfa2225ffaf2bea7173410b3f1d299cb8d823d96531e045396f",
+    "packageLockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+    "applicationVersionContractSourceSha256": "f1f8186164a690bc2db305eeb95837fbfab5885360b56951de1db0679f12cd08",
+    "applicationVersionHandlerSourceSha256": "f43e4241e4c1fb2f5d7d2c3dc4a66bfb82aaf513d5ec8ff998cfeb76579c4603",
+    "applicationVersionTransportSourceSha256": "f240f4b1ec73f8790651c12626cebcd10e9fd1eb453323ecb4af7e28ca68ba38",
+    "packagedHarnessSourceSha256": "8eb97b8eccdf60507a6243465f0600b0e6c6390234a327bc0777f2d65a667d5b",
+    "packagingImplementationSourceSha256": "8b750321416984c75137260ef3b910f57cde8e249c39c9d545ee428ec56d18e0",
+    "packagingWrapperSourceSha256": "10f882559a453431af22417e00b93d1254f3909c62f260e633a6bb628aa43b92",
+    "packagedProbeSchemaSha256": "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+    "securityProfileSha256": "0a92bd10e73371a244a121243839497a7d54653f2222df787ee12c808c258478",
+    "sbomSha256": "32c3ef5e8e8740bf21e03a2e9eafc3f9c7ab9f5660b574d6c3b268102696ea9b",
+    "dependencyCustodySha256": "367ec31523ede56ce5502a1dd1653f92f1d4f1410deaf08639d1d69f0e1c546b",
+    "sourceSha256": {
+      "package-lock.json": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+      "packages/contracts/src/application-version-contract.ts": "f1f8186164a690bc2db305eeb95837fbfab5885360b56951de1db0679f12cd08",
+      "packages/contracts/src/index.ts": "a49f11f21d028b004d1bda056a758e4d442dfbec4a2967299ddf5b7fdb839352",
+      "packages/application/src/application-version-query-handler.ts": "f43e4241e4c1fb2f5d7d2c3dc4a66bfb82aaf513d5ec8ff998cfeb76579c4603",
+      "packages/application/src/index.ts": "d36c1d04cfc985153901d6f8c771c2a0703c77ee939d1b3408fba98cd8f98725",
+      "packages/platform-electron-main/package.json": "55ddbcef43700425eefe79aacff92dedb7dea88c6c3c2e3f02a43c647a86001f",
+      "packages/platform-electron-main/src/application-version-route-broker.ts": "f240f4b1ec73f8790651c12626cebcd10e9fd1eb453323ecb4af7e28ca68ba38",
+      "packages/platform-electron-main/src/generated-application-version-preload.ts": "ce58915e08021f4c0b9d2e782e27656641099382effa849f43658abf784dd0b0",
+      "packages/platform-electron-main/src/packaged-application-version-preload.ts": "3ac1ccfad58b70923028c098b99e0c90cd061fc456489f1a38ce6a3adad49600",
+      "packages/platform-electron-main/src/main.ts": "f7fa8fe5e846b89c6b09957a7c001551dfd27c9c6b9027fa459051d36a0daa54",
+      "packages/platform-electron-main/src/security-profile.ts": "832cf03d8a68a67056da2dd164d703c52afdd236fe9f28d5fe08b81c8ebbc027",
+      "packages/renderer-ui/src/index.ts": "20a7af8240310cc8467c7ee113aa6b07a168d14570ec7b90ebf307c35b0dc4bf",
+      "tests/bld-012-application-version-preload.test.mjs": "cc65c9bd72589e08c630918c0b035c03aea81f4589eb06570654604a1ff50352",
+      "tooling/shell-package-bld006.mjs": "8b750321416984c75137260ef3b910f57cde8e249c39c9d545ee428ec56d18e0",
+      "tooling/shell-package-bld012.mjs": "10f882559a453431af22417e00b93d1254f3909c62f260e633a6bb628aa43b92",
+      "tooling/shell-run-bld012.mjs": "8eb97b8eccdf60507a6243465f0600b0e6c6390234a327bc0777f2d65a667d5b"
+    }
+  },
+  "sessions": [
+    {
+      "index": 1,
+      "normalizedResultSha256": "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+      "result": {
+        "schema": "rsrender.bld012.packaged-application-version-probe.v0",
+        "result": "PASS",
+        "scope": "one generated application-version query in packaged Electron shell",
+        "versions": {
+          "electron": "43.4.0",
+          "chromium": "150.0.7871.224",
+          "node": "24.18.1"
+        },
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "osRelease": "10.0.26200",
+          "packaged": true
+        },
+        "revisions": {
+          "applicationVersionContract": "bld-012-v1",
+          "applicationVersionHandler": "bld-012-v1",
+          "applicationVersionTransport": "bld-012-v1",
+          "generatedPreload": "bld-012-v1"
+        },
+        "digests": {
+          "packagedPreloadSha256": "f955fea391bccdfa2225ffaf2bea7173410b3f1d299cb8d823d96531e045396f"
+        },
+        "counters": {
+          "navigation": 1,
+          "popup": 1,
+          "permissionCheck": 6,
+          "permissionRequest": 1,
+          "download": 0,
+          "webview": 0,
+          "network": 0,
+          "remoteCompleted": 0
+        },
+        "phases": [
+          "app-ready",
+          "renderer-created",
+          "renderer-loaded",
+          "probes-complete",
+          "renderer-destroyed",
+          "session-cleared"
+        ],
+        "counts": {
+          "passed": 28,
+          "total": 28
+        },
+        "observations": [
+          {
+            "id": "PACKAGED_RUNTIME",
+            "pass": true,
+            "detail": "packaged=true; electron=43.4.0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EFFECTIVE_WEB_PREFERENCES",
+            "pass": true,
+            "detail": "sandbox=true; contextIsolation=true; nodeIntegration=false; nodeIntegrationInSubFrames=false; webSecurity=true; allowRunningInsecureContent=false; experimentalFeatures=false; webviewTag=false; safeDialogs=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_GENERATED_PRELOAD",
+            "pass": true,
+            "detail": "packagedDigestVerified=true; effectivePreferenceField=redacted; configured=generated-application-version-only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NO_NODE_ELECTRON_GLOBALS",
+            "pass": true,
+            "detail": "requireType=undefined; processType=undefined; electronType=undefined; ipcRendererType=undefined",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "INERT_RENDERER",
+            "pass": true,
+            "detail": "static packaged text only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EXACT_RENDERER_API_SURFACE",
+            "pass": true,
+            "detail": "one frozen zero-argument rsrender.application.getVersion method",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "APPLICATION_VERSION_QUERY",
+            "pass": true,
+            "detail": "kind=application.version.result; exactPackagedVersion=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PACKAGED_REPLAY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_MALFORMED_RAW_ENVELOPE",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_WINDOW",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_SENDER",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CHILD_OR_UNBOUND_FRAME",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_QUERY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_FRAGMENT",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CAPABILITY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_GENERATION",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_QUERY_SCHEMA",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "RAW_CHANNEL_UNAVAILABLE_TO_PAGE",
+            "pass": true,
+            "detail": "page has no ipcRenderer/send/invoke/on or channel-name surface",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "CAPABILITY_ROTATION_REJECTS_LATE_CALL",
+            "pass": true,
+            "detail": "result=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ROTATE_AND_REBOOTSTRAP",
+            "pass": true,
+            "detail": "newGenerationIssued=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "LATE_GENERATION_REDACTED",
+            "pass": true,
+            "detail": "publicResult=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NAVIGATION_DENIED",
+            "pass": true,
+            "detail": "denials=1; currentUrlIsShell=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "POPUP_DENIED",
+            "pass": true,
+            "detail": "denials=1; windows=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PERMISSION_DENIED",
+            "pass": true,
+            "detail": "result=denied; checks=5; requests=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "RENDERER_NETWORK_DENIED",
+            "pass": true,
+            "detail": "result=denied; policyDenials=0; remoteCompleted=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NONPERSISTENT_SESSION",
+            "pass": true,
+            "detail": "persistent=false; cache=false",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_INERT_RENDERER",
+            "pass": true,
+            "detail": "windowWebContents=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "IN_PROCESS_TEARDOWN",
+            "pass": true,
+            "detail": "windows=0; windowWebContents=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          }
+        ],
+        "securityProfile": {
+          "schema": "rsrender.empty-shell-security-profile.v0",
+          "electronVersion": "43.4.0",
+          "partition": "rsrender-shell",
+          "persistence": "memory-only",
+          "preload": "generated-application-version-only",
+          "rendererCapabilities": [
+            "rsrender.application.getVersion"
+          ],
+          "webPreferences": {
+            "sandbox": true,
+            "contextIsolation": true,
+            "nodeIntegration": false,
+            "nodeIntegrationInWorker": false,
+            "nodeIntegrationInSubFrames": false,
+            "webSecurity": true,
+            "allowRunningInsecureContent": false,
+            "experimentalFeatures": false,
+            "devTools": false,
+            "webviewTag": false,
+            "safeDialogs": true,
+            "navigateOnDragDrop": false,
+            "spellcheck": false
+          },
+          "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+          "navigation": "exact-shell-url-only",
+          "windows": "deny-all",
+          "permissions": "deny-all",
+          "downloads": "deny-all",
+          "rendererNetwork": "deny-all",
+          "ipcChannelCount": 2
+        }
+      },
+      "process": {
+        "before": 0,
+        "after": 0,
+        "profileRemoved": true,
+        "exitCode": 0,
+        "signal": null,
+        "timedOut": false,
+        "stdoutBytes": 8302,
+        "stderrBytes": 0
+      }
+    },
+    {
+      "index": 2,
+      "normalizedResultSha256": "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+      "result": {
+        "schema": "rsrender.bld012.packaged-application-version-probe.v0",
+        "result": "PASS",
+        "scope": "one generated application-version query in packaged Electron shell",
+        "versions": {
+          "electron": "43.4.0",
+          "chromium": "150.0.7871.224",
+          "node": "24.18.1"
+        },
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "osRelease": "10.0.26200",
+          "packaged": true
+        },
+        "revisions": {
+          "applicationVersionContract": "bld-012-v1",
+          "applicationVersionHandler": "bld-012-v1",
+          "applicationVersionTransport": "bld-012-v1",
+          "generatedPreload": "bld-012-v1"
+        },
+        "digests": {
+          "packagedPreloadSha256": "f955fea391bccdfa2225ffaf2bea7173410b3f1d299cb8d823d96531e045396f"
+        },
+        "counters": {
+          "navigation": 1,
+          "popup": 1,
+          "permissionCheck": 6,
+          "permissionRequest": 1,
+          "download": 0,
+          "webview": 0,
+          "network": 0,
+          "remoteCompleted": 0
+        },
+        "phases": [
+          "app-ready",
+          "renderer-created",
+          "renderer-loaded",
+          "probes-complete",
+          "renderer-destroyed",
+          "session-cleared"
+        ],
+        "counts": {
+          "passed": 28,
+          "total": 28
+        },
+        "observations": [
+          {
+            "id": "PACKAGED_RUNTIME",
+            "pass": true,
+            "detail": "packaged=true; electron=43.4.0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EFFECTIVE_WEB_PREFERENCES",
+            "pass": true,
+            "detail": "sandbox=true; contextIsolation=true; nodeIntegration=false; nodeIntegrationInSubFrames=false; webSecurity=true; allowRunningInsecureContent=false; experimentalFeatures=false; webviewTag=false; safeDialogs=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_GENERATED_PRELOAD",
+            "pass": true,
+            "detail": "packagedDigestVerified=true; effectivePreferenceField=redacted; configured=generated-application-version-only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NO_NODE_ELECTRON_GLOBALS",
+            "pass": true,
+            "detail": "requireType=undefined; processType=undefined; electronType=undefined; ipcRendererType=undefined",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "INERT_RENDERER",
+            "pass": true,
+            "detail": "static packaged text only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EXACT_RENDERER_API_SURFACE",
+            "pass": true,
+            "detail": "one frozen zero-argument rsrender.application.getVersion method",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "APPLICATION_VERSION_QUERY",
+            "pass": true,
+            "detail": "kind=application.version.result; exactPackagedVersion=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PACKAGED_REPLAY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_MALFORMED_RAW_ENVELOPE",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_WINDOW",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_SENDER",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CHILD_OR_UNBOUND_FRAME",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_QUERY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_FRAGMENT",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CAPABILITY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_GENERATION",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_QUERY_SCHEMA",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "RAW_CHANNEL_UNAVAILABLE_TO_PAGE",
+            "pass": true,
+            "detail": "page has no ipcRenderer/send/invoke/on or channel-name surface",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "CAPABILITY_ROTATION_REJECTS_LATE_CALL",
+            "pass": true,
+            "detail": "result=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ROTATE_AND_REBOOTSTRAP",
+            "pass": true,
+            "detail": "newGenerationIssued=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "LATE_GENERATION_REDACTED",
+            "pass": true,
+            "detail": "publicResult=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NAVIGATION_DENIED",
+            "pass": true,
+            "detail": "denials=1; currentUrlIsShell=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "POPUP_DENIED",
+            "pass": true,
+            "detail": "denials=1; windows=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PERMISSION_DENIED",
+            "pass": true,
+            "detail": "result=denied; checks=5; requests=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "RENDERER_NETWORK_DENIED",
+            "pass": true,
+            "detail": "result=denied; policyDenials=0; remoteCompleted=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NONPERSISTENT_SESSION",
+            "pass": true,
+            "detail": "persistent=false; cache=false",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_INERT_RENDERER",
+            "pass": true,
+            "detail": "windowWebContents=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "IN_PROCESS_TEARDOWN",
+            "pass": true,
+            "detail": "windows=0; windowWebContents=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          }
+        ],
+        "securityProfile": {
+          "schema": "rsrender.empty-shell-security-profile.v0",
+          "electronVersion": "43.4.0",
+          "partition": "rsrender-shell",
+          "persistence": "memory-only",
+          "preload": "generated-application-version-only",
+          "rendererCapabilities": [
+            "rsrender.application.getVersion"
+          ],
+          "webPreferences": {
+            "sandbox": true,
+            "contextIsolation": true,
+            "nodeIntegration": false,
+            "nodeIntegrationInWorker": false,
+            "nodeIntegrationInSubFrames": false,
+            "webSecurity": true,
+            "allowRunningInsecureContent": false,
+            "experimentalFeatures": false,
+            "devTools": false,
+            "webviewTag": false,
+            "safeDialogs": true,
+            "navigateOnDragDrop": false,
+            "spellcheck": false
+          },
+          "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+          "navigation": "exact-shell-url-only",
+          "windows": "deny-all",
+          "permissions": "deny-all",
+          "downloads": "deny-all",
+          "rendererNetwork": "deny-all",
+          "ipcChannelCount": 2
+        }
+      },
+      "process": {
+        "before": 0,
+        "after": 0,
+        "profileRemoved": true,
+        "exitCode": 0,
+        "signal": null,
+        "timedOut": false,
+        "stdoutBytes": 8302,
+        "stderrBytes": 0
+      }
+    },
+    {
+      "index": 3,
+      "normalizedResultSha256": "f65fe253205381bc6428e2c8a0f3696c6a38bb9da5f7eabbd47c1f4f304f71b6",
+      "result": {
+        "schema": "rsrender.bld012.packaged-application-version-probe.v0",
+        "result": "PASS",
+        "scope": "one generated application-version query in packaged Electron shell",
+        "versions": {
+          "electron": "43.4.0",
+          "chromium": "150.0.7871.224",
+          "node": "24.18.1"
+        },
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "osRelease": "10.0.26200",
+          "packaged": true
+        },
+        "revisions": {
+          "applicationVersionContract": "bld-012-v1",
+          "applicationVersionHandler": "bld-012-v1",
+          "applicationVersionTransport": "bld-012-v1",
+          "generatedPreload": "bld-012-v1"
+        },
+        "digests": {
+          "packagedPreloadSha256": "f955fea391bccdfa2225ffaf2bea7173410b3f1d299cb8d823d96531e045396f"
+        },
+        "counters": {
+          "navigation": 1,
+          "popup": 1,
+          "permissionCheck": 6,
+          "permissionRequest": 1,
+          "download": 0,
+          "webview": 0,
+          "network": 0,
+          "remoteCompleted": 0
+        },
+        "phases": [
+          "app-ready",
+          "renderer-created",
+          "renderer-loaded",
+          "probes-complete",
+          "renderer-destroyed",
+          "session-cleared"
+        ],
+        "counts": {
+          "passed": 28,
+          "total": 28
+        },
+        "observations": [
+          {
+            "id": "PACKAGED_RUNTIME",
+            "pass": true,
+            "detail": "packaged=true; electron=43.4.0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EFFECTIVE_WEB_PREFERENCES",
+            "pass": true,
+            "detail": "sandbox=true; contextIsolation=true; nodeIntegration=false; nodeIntegrationInSubFrames=false; webSecurity=true; allowRunningInsecureContent=false; experimentalFeatures=false; webviewTag=false; safeDialogs=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_GENERATED_PRELOAD",
+            "pass": true,
+            "detail": "packagedDigestVerified=true; effectivePreferenceField=redacted; configured=generated-application-version-only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NO_NODE_ELECTRON_GLOBALS",
+            "pass": true,
+            "detail": "requireType=undefined; processType=undefined; electronType=undefined; ipcRendererType=undefined",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "INERT_RENDERER",
+            "pass": true,
+            "detail": "static packaged text only",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "EXACT_RENDERER_API_SURFACE",
+            "pass": true,
+            "detail": "one frozen zero-argument rsrender.application.getVersion method",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "APPLICATION_VERSION_QUERY",
+            "pass": true,
+            "detail": "kind=application.version.result; exactPackagedVersion=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PACKAGED_REPLAY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_MALFORMED_RAW_ENVELOPE",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_WINDOW",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_SENDER",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CHILD_OR_UNBOUND_FRAME",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_QUERY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CROSS_ROUTE_FRAGMENT",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_CAPABILITY",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_GENERATION",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "PACKAGED_QUERY_SCHEMA",
+            "pass": true,
+            "detail": "redactedRejectionObserved=true",
+            "evidenceGrade": "RELATIONAL_IN_PACKAGED_PROCESS"
+          },
+          {
+            "id": "RAW_CHANNEL_UNAVAILABLE_TO_PAGE",
+            "pass": true,
+            "detail": "page has no ipcRenderer/send/invoke/on or channel-name surface",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "CAPABILITY_ROTATION_REJECTS_LATE_CALL",
+            "pass": true,
+            "detail": "result=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ROTATE_AND_REBOOTSTRAP",
+            "pass": true,
+            "detail": "newGenerationIssued=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "LATE_GENERATION_REDACTED",
+            "pass": true,
+            "detail": "publicResult=APPLICATION_VERSION_UNAVAILABLE",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NAVIGATION_DENIED",
+            "pass": true,
+            "detail": "denials=1; currentUrlIsShell=true",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "POPUP_DENIED",
+            "pass": true,
+            "detail": "denials=1; windows=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "PERMISSION_DENIED",
+            "pass": true,
+            "detail": "result=denied; checks=5; requests=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "RENDERER_NETWORK_DENIED",
+            "pass": true,
+            "detail": "result=denied; policyDenials=0; remoteCompleted=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "NONPERSISTENT_SESSION",
+            "pass": true,
+            "detail": "persistent=false; cache=false",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "ONE_INERT_RENDERER",
+            "pass": true,
+            "detail": "windowWebContents=1",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          },
+          {
+            "id": "IN_PROCESS_TEARDOWN",
+            "pass": true,
+            "detail": "windows=0; windowWebContents=0",
+            "evidenceGrade": "OBSERVED_PACKAGED"
+          }
+        ],
+        "securityProfile": {
+          "schema": "rsrender.empty-shell-security-profile.v0",
+          "electronVersion": "43.4.0",
+          "partition": "rsrender-shell",
+          "persistence": "memory-only",
+          "preload": "generated-application-version-only",
+          "rendererCapabilities": [
+            "rsrender.application.getVersion"
+          ],
+          "webPreferences": {
+            "sandbox": true,
+            "contextIsolation": true,
+            "nodeIntegration": false,
+            "nodeIntegrationInWorker": false,
+            "nodeIntegrationInSubFrames": false,
+            "webSecurity": true,
+            "allowRunningInsecureContent": false,
+            "experimentalFeatures": false,
+            "devTools": false,
+            "webviewTag": false,
+            "safeDialogs": true,
+            "navigateOnDragDrop": false,
+            "spellcheck": false
+          },
+          "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+          "navigation": "exact-shell-url-only",
+          "windows": "deny-all",
+          "permissions": "deny-all",
+          "downloads": "deny-all",
+          "rendererNetwork": "deny-all",
+          "ipcChannelCount": 2
+        }
+      },
+      "process": {
+        "before": 0,
+        "after": 0,
+        "profileRemoved": true,
+        "exitCode": 0,
+        "signal": null,
+        "timedOut": false,
+        "stdoutBytes": 8302,
+        "stderrBytes": 0
+      }
+    }
+  ],
+  "dependencyBoundary": {
+    "externalIdentityCount": 156,
+    "externalDelta": 0,
+    "internalEdgesAdded": [
+      "@rsrender/platform-electron-main@0.0.0 -> @rsrender/application@0.0.0",
+      "@rsrender/platform-electron-main@0.0.0 -> @rsrender/contracts@0.0.0"
+    ]
+  },
+  "privacy": {
+    "capabilityRetained": false,
+    "hostPathRetained": false,
+    "stdoutRetained": false,
+    "stderrRetained": false,
+    "credentialsRetained": false,
+    "clientDataRetained": false,
+    "scanner": {
+      "version": "bld-012-retained-evidence-scan-v1",
+      "rules": [
+        "no Windows absolute host path",
+        "no raw capability field",
+        "no internal IPC channel literal",
+        "no password/token/authorization field"
+      ],
+      "result": "PASS"
+    }
+  },
+  "rolesAndCustody": {
+    "executor": "implementation agent",
+    "observer": "independent adversarial reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "retention": "retain with BLD-012 source revision; invalidate on any rerun trigger"
+  },
+  "rerunTriggers": [
+    "Electron, Chromium, Node, preload, broker, contract, handler, packaged route, sender/frame/origin validation, security profile, package manifest, lock, or harness change",
+    "Any retained source, SBOM, dependency custody, packaged binary, app.asar, preload, configuration, fixture, or schema digest change"
+  ],
+  "nonClaims": [
+    "Synthetic nonrepresentative one-query seam only",
+    "Not full P06, document, file, source, auth, mutation, subscription, crash-rebind, release, installer, update, signing, or commercial acceptance",
+    "BLD-006 evidence remains a historical no-preload baseline and is not rewritten by this result"
+  ]
+}

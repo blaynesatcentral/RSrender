@@ -3,7 +3,7 @@
   "admission": "ADMITTED_INTERNAL_BLD001",
   "authority": "Central Engineering Services/admin; GitHub #45; 2026-08-14",
   "lockfileVersion": 3,
-  "lockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+  "lockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
   "externalPackages": [
     {
       "path": "node_modules/@electron-internal/extract-zip",

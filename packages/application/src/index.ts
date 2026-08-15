@@ -21,3 +21,26 @@ export type {
   SubscriptionFailureCode,
   SyntheticCommitRecord,
 } from "./in-memory-application-service.js";
+
+export {
+  applicationVersionQueryHandlerRevision,
+  createApplicationVersionQueryHandler,
+} from "./application-version-query-handler.js";
+export type {
+  ApplicationVersionQueryHandlerCreationResult,
+  ApplicationVersionQueryHandlerResult,
+  ApplicationVersionQueryPort,
+} from "./application-version-query-handler.js";
+
+export {
+  createInMemoryHistoryCore,
+  inMemoryHistoryCoreRevision,
+} from "./in-memory-history-core.js";
+export type {
+  CapturedWorkingRevision,
+  HistoryCoreInitializationResult,
+  HistoryEntry,
+  InMemoryHistoryCore,
+  InMemoryHistoryCoreCapacities,
+  InMemoryHistoryCoreSnapshot,
+} from "./in-memory-history-core.js";
