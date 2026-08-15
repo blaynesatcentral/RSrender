@@ -1,0 +1,170 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-009",
+  "issue": 53,
+  "generatedAtUtc": "2026-08-15T01:12:49.6075656Z",
+  "result": "PASS",
+  "authority": {
+    "requirements": [
+      "PI-02",
+      "PI-06",
+      "PI-07",
+      "PI-08",
+      "D01",
+      "OA-ID-001",
+      "OA-GOLD-001",
+      "OA-REP-001"
+    ],
+    "domainSections": [
+      "boring-log-domain-model-3",
+      "boring-log-domain-model-4",
+      "boring-log-domain-model-14"
+    ],
+    "fixtureRevisions": [
+      "FX-01:one-exploration@r1",
+      "FX-07:assignment-precedence@r1",
+      "FX-08A:accepted-before@r1",
+      "FX-08B:staged-after@r1"
+    ],
+    "scope": "aggregate skeleton, identity derivation, effective template assignment, shared replacement, and explicit divergence only"
+  },
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "oracle": {
+    "comparison": {
+      "method": "exact structural equality, stable rejection-code equality, exact assignment cardinality, and SHA-256 canonical-encoding equality",
+      "version": "bld-009-oracle-v1",
+      "tolerance": "exact"
+    },
+    "fixedTests": 11,
+    "propertySeeds": [324508639, 610839776, 1592635401],
+    "iterationsPerSeed": 1000,
+    "completeAggregateVectors": 3000,
+    "freshProcessesPerScopedRun": 6,
+    "scopedRunRepetitions": 3,
+    "freshProcessDigest": "sha256:b87184130f494b0b54e6dfce9aec9e57eab7c59c2c334fb0cbe31abd9f3accf8",
+    "structurallyIncompleteAuthoringProject": {
+      "decodeResult": "PASS",
+      "effectiveAssignmentResult": "TEMPLATE_ASSIGNMENT_MISSING"
+    },
+    "completeFixtureAssignmentCardinality": "exactly one effective assignment per membership",
+    "precedence": ["exploration", "nearest-group", "ancestor-group", "log-set"],
+    "injectedFaults": [
+      "extra and wrong-type aggregate fields",
+      "derived log-set, membership, and assignment identity mismatch",
+      "duplicate membership and duplicate assignment scope",
+      "orphan group parent, membership group, and embedded-template reference",
+      "group cycle",
+      "attempted inferred display-name field",
+      "invalid same-template divergence"
+    ],
+    "failures": [],
+    "stateEffects": 0,
+    "inputOrSecretEchoes": 0
+  },
+  "dependencyDelta": {
+    "reason": "The domain workspace now imports the already admitted internal contracts workspace for opaque identities, canonical JSON, and SHA-256 primitives.",
+    "manifestEdge": "@rsrender/domain -> @rsrender/contracts@0.0.0",
+    "edgeClassification": "INTERNAL_WORKSPACE_ONLY",
+    "priorLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
+    "currentLockSha256": "65a11d0a546d4056dc6eaeaea4208ec26893efa0b2ec7551d0905ea111af13ec",
+    "baselineExternalIdentityCount": 156,
+    "currentExternalIdentityCount": 156,
+    "addedExternalIdentities": 0,
+    "removedExternalIdentities": 0,
+    "changedExternalIdentities": 0,
+    "comparisonMethod": "Exact comparison of path, version, resolved URL, integrity, dev, optional, and install-script fields against artifacts/dependency-inventory.json",
+    "externalAdmissionChange": "NONE"
+  },
+  "stableRejectionCodes": [
+    "AGGREGATE_EXTRA_FIELD",
+    "AGGREGATE_MALFORMED",
+    "AGGREGATE_MISSING_FIELD",
+    "AGGREGATE_UNKNOWN_TAG",
+    "AGGREGATE_UNSUPPORTED_VERSION",
+    "AGGREGATE_WRONG_TYPE",
+    "ASSIGNMENT_IDENTITY_DUPLICATE",
+    "ASSIGNMENT_IDENTITY_MISMATCH",
+    "ASSIGNMENT_SCOPE_ORPHANED",
+    "ETR_DIVERGENCE_INVALID",
+    "ETR_DUPLICATE_IDENTITY",
+    "ETR_DUPLICATE_TEMPLATE_DIGEST",
+    "ETR_IDENTITY_MISMATCH",
+    "ETR_REPLACEMENT_INVALID",
+    "GROUP_CYCLE",
+    "GROUP_DUPLICATE_IDENTITY",
+    "GROUP_IDENTITY_MISMATCH",
+    "GROUP_PARENT_ORPHANED",
+    "LOG_SET_IDENTITY_MISMATCH",
+    "MEMBERSHIP_DUPLICATE_EXPLORATION",
+    "MEMBERSHIP_DUPLICATE_IDENTITY",
+    "MEMBERSHIP_GROUP_ORPHANED",
+    "MEMBERSHIP_IDENTITY_MISMATCH",
+    "TEMPLATE_ASSIGNMENT_AMBIGUOUS",
+    "TEMPLATE_ASSIGNMENT_ETR_ORPHANED",
+    "TEMPLATE_ASSIGNMENT_MISSING"
+  ],
+  "artifacts": [
+    {
+      "path": "packages/domain/src/aggregate-skeleton.ts",
+      "sha256": "36ca3d3db6d942d4e392a6d382770bdf54f77ee1a9ad6dbec92dd700a4ec3c8b"
+    },
+    {
+      "path": "packages/domain/src/index.ts",
+      "sha256": "8fb77b35e35423294ac2dcf15da8f6c00965a8e28473407f82d2f12b8d3fdc60"
+    },
+    {
+      "path": "packages/domain/package.json",
+      "sha256": "34ec53599ac542ec3213e1fc991cf6a29be02461146dd3fcc6e75290882d0ab5"
+    },
+    {
+      "path": "tests/bld-009-aggregate-skeleton.test.mjs",
+      "sha256": "3934195098958ff27f337f6e879738478355e7d029e5b5d35dac606e378848b4"
+    },
+    {
+      "path": "tests/helpers/bld-009-fixtures.mjs",
+      "sha256": "52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc"
+    },
+    {
+      "path": "tests/helpers/run-bld-009-vectors.mjs",
+      "sha256": "efb9d3055f3d4f47ddc406f35fac810dc3a471179b28c04fb66a20603453d86d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "65a11d0a546d4056dc6eaeaea4208ec26893efa0b2ec7551d0905ea111af13ec"
+    }
+  ],
+  "custody": {
+    "owner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner and adversarial reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "approvalReference": "GitHub #53 implementation activation after #52 closed; internal workspace edge explicitly authorized by integration owner",
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "retention": "Retain with the BLD-009 source revision and invalidate on any rerun trigger.",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false
+  },
+  "limitations": [
+    "These are synthetic aggregate and identity vectors, not representative client-data or vendor-behavior evidence.",
+    "No RSLog DTO, network access, mapper, Render Dataset assembler, page assignment, pagination, editor, persistence, or renderer behavior is implemented or claimed.",
+    "The separately addressable FX-08A accepted-before and FX-08B staged-after fixtures establish stable membership identity across one bounded pair; they do not implement Refresh reconciliation.",
+    "The aggregate intentionally permits incomplete authoring state; consumers requiring output must call effective-assignment evaluation and handle a deterministic non-success result.",
+    "The implementation stores only current embedded-template representations and explicit separation origin; it does not retain historical template versions."
+  ],
+  "rerunTriggers": [
+    "Aggregate, identity, assignment precedence, replacement, divergence, or rejection-code contract change",
+    "FX-01, FX-07, FX-08A, FX-08B, PI-02, PI-06, PI-07, PI-08, D01, OA-ID-001, OA-GOLD-001, or OA-REP-001 revision change",
+    "TypeScript, Node.js, contracts workspace, runtime, manifest, or dependency-lock change",
+    "Any retained artifact digest change",
+    "Introduction of refresh reconciliation, source mapping, render assembly, persistence, UI, or renderer consumers"
+  ]
+}
