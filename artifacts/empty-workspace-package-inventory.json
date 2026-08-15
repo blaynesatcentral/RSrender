@@ -52,26 +52,26 @@
     {
       "package": "domain",
       "file": "packages/domain/dist/index.d.ts",
-      "bytes": 156,
-      "sha256": "b946fae4475112620faf8ae025b8371add4cffcbd4b28331008db54ea70377ee"
+      "bytes": 574,
+      "sha256": "2cd759c4ffe37011e9069198f175402fbcfe043ccf23fdd6bb46cab222a85d57"
     },
     {
       "package": "domain",
       "file": "packages/domain/dist/index.d.ts.map",
-      "bytes": 153,
-      "sha256": "8e9b0b9413b1b662f46d5a23a9301853d3d8ba988aff656c1e8bd4be50db9469"
+      "bytes": 416,
+      "sha256": "01de1a575dbb7266dd71fbec8f5b4a635a3a3125681aaba2d1c6c65da8d6ca8a"
     },
     {
       "package": "domain",
       "file": "packages/domain/dist/index.js",
-      "bytes": 147,
-      "sha256": "262961df770560921931552bc15dcdcbb0807cc87be9e77e87e7fb1bf1006ff5"
+      "bytes": 285,
+      "sha256": "05691617f72466b4facfd6a5e9cf0001ed02df884fc73c9a173532c9c5837574"
     },
     {
       "package": "domain",
       "file": "packages/domain/dist/index.js.map",
-      "bytes": 156,
-      "sha256": "7a47fa4a361f0c2b9f34b3d9c2e44dbc8c92a17067cecb490dee79ef14110ebf"
+      "bytes": 241,
+      "sha256": "bf87a9491afbacfd92c9183564bb1c359e3819dfcc04cf9a01ad5a96446779e0"
     },
     {
       "package": "layout-host",

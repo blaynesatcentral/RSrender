@@ -1,0 +1,158 @@
+{
+  "schema": "rsrender.bld-evidence.v0",
+  "ticket": "BLD-008",
+  "issue": 52,
+  "generatedAtUtc": "2026-08-15T00:51:47.3813544Z",
+  "result": "PASS",
+  "authority": {
+    "requirements": ["PI-05", "PI-19", "D02", "D03", "OA-VAL-001", "OA-PROV-001"],
+    "domainSections": ["boring-log-domain-model-5", "boring-log-domain-model-6", "boring-log-domain-model-9", "boring-log-domain-model-14"],
+    "corpusVersion": "rsrender.golden-log-corpus.v1",
+    "fixtureRevisions": [
+      "FX-04:sparse-missing@r1",
+      "FX-12:lab-supplemental@r1-adapter-neutral"
+    ],
+    "scope": "adapter-neutral orthogonal value-state and provenance records only"
+  },
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "locale": "en-US",
+    "timeZone": "UTC"
+  },
+  "oracle": {
+    "startUtc": "2026-08-15T00:51:46.8770995Z",
+    "endUtc": "2026-08-15T00:51:47.3813544Z",
+    "warmups": 0,
+    "contentStates": 9,
+    "provenanceClasses": 5,
+    "fixedBoundaryRecords": 17,
+    "fixedNegativeVectors": 20,
+    "fixedProvenanceFlatteningRejections": 5,
+    "propertySeeds": [324508639, 610839776, 1592635400],
+    "iterationsPerSeed": 1000,
+    "propertyPositiveRoundTrips": 3000,
+    "propertyNegativeRejections": 12000,
+    "freshProcessesPerRepetition": 3,
+    "repetitions": 2,
+    "freshProcessResults": [
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      },
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      },
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      },
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      },
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      },
+      {
+        "result": "PASS",
+        "rawDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77",
+        "normalizedDigest": "34274894a23405a6db1bed812d632656bad7ab2fe00db67c45410a0b86446b77"
+      }
+    ],
+    "comparison": {
+      "method": "exact structural round trip plus SHA-256 digest equality",
+      "version": "bld-008-oracle-v1",
+      "tolerance": "exact"
+    },
+    "injectedFaults": [
+      "missing, extra, wrong-type, unknown-tag, and unsupported-version records",
+      "zero/value coercion, empty/absent/null collapse attempts, and failed-collection-as-content attempts",
+      "unmatched, ambiguous, nonfinal, unsupported-unit, and uncovered eligibility states",
+      "cross-class provenance tag flattening and duplicate candidate identities",
+      "arbitrary prototype, symbol, hidden, accessor, and ill-formed Unicode inputs"
+    ],
+    "failures": [],
+    "stateEffects": 0,
+    "inputOrSecretEchoes": 0,
+    "exclusions": [
+      {
+        "item": "vendor source shapes and access",
+        "validityRule": "FX-12 vectors are independently authored adapter-neutral synthetic domain records; no positive vendor contract is claimed."
+      },
+      {
+        "item": "assembler, formula, precedence, and UI behavior",
+        "validityRule": "This result validates records and codecs only; full D03 assembly and all UI consequences remain outside BLD-008."
+      }
+    ]
+  },
+  "stableRejectionCodes": [
+    "DOMAIN_VALUE_MALFORMED",
+    "DOMAIN_VALUE_MISSING_FIELD",
+    "DOMAIN_VALUE_EXTRA_FIELD",
+    "DOMAIN_VALUE_WRONG_TYPE",
+    "DOMAIN_VALUE_UNKNOWN_TAG",
+    "DOMAIN_VALUE_UNSUPPORTED_VERSION",
+    "DOMAIN_VALUE_INVALID_COMBINATION"
+  ],
+  "artifacts": [
+    {
+      "path": "packages/domain/src/index.ts",
+      "sha256": "e3b3f131cf778d9d2568e0be112cb3abc50c586bf13570d965e2b079b920ee0f"
+    },
+    {
+      "path": "packages/domain/src/value-record.ts",
+      "sha256": "9db7ed21d2ef227575c09992609a4bee80e82c3b84632287bc6ee520b656c5be"
+    },
+    {
+      "path": "tests/bld-008-domain-value-record.test.mjs",
+      "sha256": "85703c3e6bb7fb2715b93e147650c7406d7f406be8ea0657ae50f9d8246b61c3"
+    },
+    {
+      "path": "tests/helpers/bld-008-fixtures.mjs",
+      "sha256": "64ea97d6e87778e7d8992ec5f0bd4b7b6378a4e56aeb7a7ac90241a92baccef6"
+    },
+    {
+      "path": "tests/helpers/run-bld-008-vectors.mjs",
+      "sha256": "33a9aaae48470d9e49900a9a013f4df28fd41178b8c2bab2bc3faf38a102505d"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af"
+    }
+  ],
+  "custody": {
+    "owner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner and adversarial reviewer",
+    "acceptanceOwner": "RSrender product owner",
+    "approvalReference": "GitHub #52 explicit implementation activation under #44/#45",
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "retention": "Retain with the BLD-008 source revision and invalidate on any rerun trigger.",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false
+  },
+  "limitations": [
+    "No vendor DTO, mapper, source transport, credential, path, file, or positive vendor access behavior is implemented or claimed.",
+    "No inferred engineering formula, laboratory status mapping, source precedence, Render Dataset assembler, aggregate membership, Diagnostic severity, or UI behavior is implemented or claimed.",
+    "This is bounded D02 and provenance-record evidence; it does not claim full D03 assembler determinism."
+  ],
+  "rerunTriggers": [
+    "Value, unit, association, finality, eligibility, provenance, or codec contract change",
+    "FX-04, FX-12, PI-05, PI-19, D02, D03, or corpus revision change",
+    "TypeScript, Node.js, runtime, or dependency-lock change",
+    "Any retained artifact digest change",
+    "Introduction of a vendor mapper, assembler, precedence, formula, or UI consumer"
+  ]
+}
