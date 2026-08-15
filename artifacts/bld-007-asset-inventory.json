@@ -1,0 +1,54 @@
+{
+  "schema": "rsrender.bld007.asset-inventory.v0",
+  "admissionBasis": "BLD-001 admitted no production asset, font, fixture, hatch, picture, or icon",
+  "scanBoundary": {
+    "sourceRoot": "packages",
+    "rootAssetDirectories": [
+      "assets",
+      "examples",
+      "fixtures",
+      "public",
+      "resources"
+    ],
+    "extensions": [
+      ".bin",
+      ".bmp",
+      ".csv",
+      ".dll",
+      ".dylib",
+      ".eot",
+      ".gif",
+      ".ico",
+      ".jpeg",
+      ".jpg",
+      ".mp3",
+      ".mp4",
+      ".node",
+      ".otf",
+      ".pdf",
+      ".png",
+      ".so",
+      ".svg",
+      ".tif",
+      ".tiff",
+      ".ttf",
+      ".wasm",
+      ".wav",
+      ".webm",
+      ".webp",
+      ".woff",
+      ".woff2",
+      ".zip"
+    ],
+    "discovery": "git tracked plus nonignored untracked files; package output included; symlinks fail closed",
+    "exclusions": [
+      "docs/**",
+      "tests/**",
+      "artifacts/**",
+      ".wayfinder-tmp/**",
+      "ignored go-by references"
+    ]
+  },
+  "assets": [],
+  "expectedCount": 0
+}

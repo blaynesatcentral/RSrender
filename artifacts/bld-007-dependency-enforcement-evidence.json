@@ -1,0 +1,919 @@
+{
+  "schema": "rsrender.bld007.enforcement-evidence.v0",
+  "ticket": "BLD-007 / GitHub #51",
+  "generatedAtUtc": "2026-08-14T00:00:00.000Z",
+  "result": "PASS",
+  "acceptanceRowResult": "BLOCKED",
+  "scope": "continuous enforcement of the prior BLD-001 internal-only admission",
+  "acceptanceTrace": [
+    "P07-harness-seam",
+    "product-14",
+    "product-21",
+    "architecture-14"
+  ],
+  "cleanRuns": {
+    "repetitions": 2,
+    "deterministic": true,
+    "result": "PASS",
+    "artifactDigests": {
+      "spdx": "sha256:32c3ef5e8e8740bf21e03a2e9eafc3f9c7ab9f5660b574d6c3b268102696ea9b",
+      "custody": "sha256:367ec31523ede56ce5502a1dd1653f92f1d4f1410deaf08639d1d69f0e1c546b",
+      "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
+      "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
+    },
+    "identityCount": 156,
+    "dependencyEdgeCount": 218,
+    "assetCount": 0
+  },
+  "baseline": {
+    "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
+    "implementationTopologyLockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+    "implementationTopologyAuthority": "BLD-001 immutable external admission plus reviewed entries in the BLD-007 workspace-topology approval record",
+    "admittedExternalIdentityCount": 156,
+    "observedExternalIdentityCount": 156,
+    "unexpectedExternalIdentityCount": 0,
+    "changedExternalSourceOrIntegrityCount": 0,
+    "workspacePackageCount": 11
+  },
+  "intentionalFailures": [
+    {
+      "id": "new-package",
+      "expectedCode": "BLD007_DEPENDENCY_UNAPPROVED",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_DEPENDENCY_UNAPPROVED",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_DEPENDENCY_UNAPPROVED",
+          "subject": "bld007-unapproved-fixture@1.0.0",
+          "consequence": "An unapproved exact dependency entered the lock; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "changed-version",
+      "expectedCode": "BLD007_DEPENDENCY_VERSION_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_DEPENDENCY_MISSING",
+        "BLD007_DEPENDENCY_UNAPPROVED",
+        "BLD007_DEPENDENCY_VERSION_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_DEPENDENCY_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "An admitted dependency disappeared from the exact graph; build and distribution stop."
+        },
+        {
+          "code": "BLD007_DEPENDENCY_UNAPPROVED",
+          "subject": "@electron-internal/extract-zip@999.0.0",
+          "consequence": "An unapproved exact dependency entered the lock; build and distribution stop."
+        },
+        {
+          "code": "BLD007_DEPENDENCY_VERSION_DRIFT",
+          "subject": "node_modules/@electron-internal/extract-zip",
+          "consequence": "An admitted path changed version or disappeared; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "changed-integrity",
+      "expectedCode": "BLD007_DEPENDENCY_INTEGRITY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_DEPENDENCY_INTEGRITY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_DEPENDENCY_INTEGRITY_DRIFT",
+          "subject": "node_modules/@electron-internal/extract-zip",
+          "consequence": "An admitted artifact hash changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "changed-source",
+      "expectedCode": "BLD007_DEPENDENCY_SOURCE_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_DEPENDENCY_SOURCE_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_DEPENDENCY_SOURCE_DRIFT",
+          "subject": "node_modules/@electron-internal/extract-zip",
+          "consequence": "An admitted artifact source changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "lock-byte-drift",
+      "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "missing-license",
+      "expectedCode": "BLD007_LICENSE_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_LICENSE_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_LICENSE_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "The admitted artifact has no license declaration; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "unknown-license",
+      "expectedCode": "BLD007_LICENSE_UNKNOWN",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_LICENSE_UNKNOWN"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_LICENSE_UNKNOWN",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "The license is outside the exact BLD-001 admitted set; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "prohibited-license",
+      "expectedCode": "BLD007_LICENSE_PROHIBITED",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_LICENSE_PROHIBITED"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_LICENSE_PROHIBITED",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "A prohibited license classification entered the graph; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "missing-notice",
+      "expectedCode": "BLD007_NOTICE_OBLIGATION_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NOTICE_OBLIGATION_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NOTICE_OBLIGATION_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "The admitted notice obligation is absent; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "missing-local-notice",
+      "expectedCode": "BLD007_NOTICE_TEXT_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NOTICE_TEXT_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NOTICE_TEXT_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "No exact retained or explicitly authorized internal-custody license text exists; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "missing-runtime-notice",
+      "expectedCode": "BLD007_NOTICE_TEXT_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NOTICE_TEXT_MISSING",
+        "BLD007_NOTICE_TEXT_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NOTICE_TEXT_MISSING",
+          "subject": "node_modules/electron/dist/LICENSE",
+          "consequence": "A packaged-runtime notice is absent; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NOTICE_TEXT_MISSING",
+          "subject": "node_modules/electron/dist/LICENSES.chromium.html",
+          "consequence": "A packaged-runtime notice is absent; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "lifecycle-drift",
+      "expectedCode": "BLD007_LIFECYCLE_SCRIPT_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_LIFECYCLE_SCRIPT_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_LIFECYCLE_SCRIPT_DRIFT",
+          "subject": "esbuild@0.28.1",
+          "consequence": "The one admitted install lifecycle command drifted; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "provenance-drift",
+      "expectedCode": "BLD007_SOURCE_PROVENANCE_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_SOURCE_PROVENANCE_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_SOURCE_PROVENANCE_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "The exact artifact lacks its prior admission or source/hash provenance; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "signature-drift",
+      "expectedCode": "BLD007_SOURCE_PROVENANCE_MISSING",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_SOURCE_PROVENANCE_MISSING"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_SOURCE_PROVENANCE_MISSING",
+          "subject": "@electron-internal/extract-zip@1.0.5",
+          "consequence": "The exact artifact lacks its prior admission or source/hash provenance; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "workspace-edge-drift",
+      "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_DEPENDENCY_GRAPH_UNRESOLVED",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_DEPENDENCY_GRAPH_UNRESOLVED",
+          "subject": "@rsrender/application@0.0.0->@rsrender/unapproved-workspace",
+          "consequence": "The exact lock dependency edge cannot be resolved; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "packages/application:dependencies",
+          "consequence": "Workspace manifest and lock metadata disagree; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "workspace-manifest-drift",
+      "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "packages/application:name",
+          "consequence": "Workspace manifest and lock metadata disagree; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "topology-evidence-drift",
+      "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "BLD-009 / GitHub #53:evidence",
+          "consequence": "A closed topology approval evidence file is missing or changed; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "toolchain-archive-missing",
+      "expectedCode": "BLD007_TOOLCHAIN_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "nodeArchive",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "external-identity-count-drift",
+      "expectedCode": "BLD007_ADMISSION_COUNT_MISMATCH",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_COUNT_MISMATCH",
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_DEPENDENCY_UNAPPROVED",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_COUNT_MISMATCH",
+          "subject": "admission-inventory",
+          "consequence": "The approved identity or enforcement-owner record drifted; build and distribution stop."
+        },
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_DEPENDENCY_UNAPPROVED",
+          "subject": "yocto-queue@0.1.0",
+          "consequence": "An unapproved exact dependency entered the lock; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "npm-version-drift",
+      "expectedCode": "BLD007_TOOLCHAIN_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_TOOLCHAIN_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "artifact-baseline-drift",
+      "expectedCode": "BLD007_GENERATED_INVENTORY_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "notices",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "toolchain-binary-drift",
+      "expectedCode": "BLD007_TOOLCHAIN_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "electronExe",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "root-symlink-asset",
+      "expectedCode": "BLD007_UNDECLARED_ASSET",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_UNDECLARED_ASSET"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "assets",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_UNDECLARED_ASSET",
+          "subject": "fixture.pdf#symlink",
+          "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "package-output-asset",
+      "expectedCode": "BLD007_UNDECLARED_ASSET",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_UNDECLARED_ASSET"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "assets",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_UNDECLARED_ASSET",
+          "subject": "packages/renderer-ui/dist/unapproved-font.woff2",
+          "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "undeclared-asset",
+      "expectedCode": "BLD007_UNDECLARED_ASSET",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_UNDECLARED_ASSET"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "assets",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_UNDECLARED_ASSET",
+          "subject": "packages/renderer-ui/src/assets/bld007-undeclared.svg",
+          "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "admission-mismatch",
+      "expectedCode": "BLD007_ADMISSION_STATE_INVALID",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_ADMISSION_DIGEST_DRIFT",
+        "BLD007_ADMISSION_STATE_INVALID",
+        "BLD007_GENERATED_INVENTORY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_ADMISSION_DIGEST_DRIFT",
+          "subject": "bld-001-internal-dependency-admission.json",
+          "consequence": "The approved admission record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_ADMISSION_STATE_INVALID",
+          "subject": "admission-state",
+          "consequence": "Automation cannot create or revive an admission; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "authority-drift",
+      "expectedCode": "BLD007_AUTHORITY_DIGEST_DRIFT",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_AUTHORITY_DIGEST_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_AUTHORITY_DIGEST_DRIFT",
+          "subject": "bld-001-authority-approval-packet.md",
+          "consequence": "The accountable policy record drifted; automation cannot approve the replacement."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    },
+    {
+      "id": "node-version-drift",
+      "expectedCode": "BLD007_NODE_VERSION_MISMATCH",
+      "result": "FAIL",
+      "observedCodes": [
+        "BLD007_NODE_VERSION_MISMATCH"
+      ],
+      "observedDiagnostics": [
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        }
+      ],
+      "expectedFailureObserved": true
+    }
+  ],
+  "sourceDigests": {
+    "package.json": "sha256:d2543a55c3b3f3ee7365ce4e9f3b38ddd26992dd72feaa2a65d871461e3f2bd5",
+    "package-lock.json": "sha256:d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+    "docs/governance/bld-001-authority-approval-packet.md": "sha256:4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
+    "docs/governance/bld-001-internal-dependency-admission.json": "sha256:52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
+    "docs/governance/bld-007-workspace-topology-approvals.json": "sha256:234c83b9a254c1fcb04021f2e3c81312f003fa44a9ebb9295ce32790ca3b355b",
+    "docs/planning/evidence/bld-001-foundation-verification.md": "sha256:4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734",
+    "tooling/dependency-enforcement-bld007.mjs": "sha256:a07b3f4d0cdc0db304887bf4533b5be808250853e6d8dc05348f2357cfa1c251",
+    "tooling/enforce-dependency-admission-bld007.mjs": "sha256:d59f008090945cb927ec4cae8d0f078bde476681e47ed50538bef1edaff93f9f",
+    "tests/bld-007-dependency-enforcement.test.mjs": "sha256:59b165f61ac259f2013ed9d6a4488c0c263d896ff4ee5f9dee04acc2ddd6dbee",
+    "tests/fixtures/bld-007-drift-fixtures.json": "sha256:f2e1e35bbb349a01a348a670c807954d0962fe15bd3db20b4bcca387a442ba92"
+  },
+  "environment": {
+    "profile": "EP-PURE bounded enforcement harness",
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "platform": "Windows-sanitized",
+    "architecture": "x64"
+  },
+  "privacy": {
+    "scanResult": "PASS",
+    "classification": "REPOSITORY_SAFE_DEPENDENCY_METADATA",
+    "hostnameRetained": false,
+    "usernameRetained": false,
+    "absolutePathRetained": false,
+    "productionDataRetained": false,
+    "credentialsRetained": false,
+    "proprietaryAssetRetained": false
+  },
+  "rerunCommands": [
+    "npm run dependency:enforce",
+    "npm run dependency:test:drift",
+    "npm run verify"
+  ],
+  "invalidationTriggers": [
+    "package.json or package-lock.json changes",
+    "dependency version, graph, source, integrity, license, notice, signature, attestation, or lifecycle metadata changes",
+    "BLD-001 authority, scope, admission, contribution policy, or production-lock evidence changes",
+    "Node/npm/tooling version changes",
+    "production asset, font, picture, icon, hatch, fixture, binary, or native module introduction",
+    "public, external, commercial, sale, assignment, transfer, or buyer-transfer scope is proposed"
+  ],
+  "nonclaims": [
+    "This automation enforces prior BLD-001 decisions and cannot create an admission, exception, rights disposition, or approval.",
+    "This is not complete release-level P07, legal approval, vulnerability remediation, external distribution, sale, or transfer acceptance.",
+    "No Esri, Rocscience, RSLog, client, go-by, font, hatch, picture, icon, or other production asset entered the inventory."
+  ]
+}

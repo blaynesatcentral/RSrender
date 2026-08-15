@@ -1,0 +1,124 @@
+{
+  "schema": "rsrender.bld007.workspace-topology-approvals.v0",
+  "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
+  "externalIdentityBaselineCount": 156,
+  "currentLockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+  "expectedArtifactDigests": {
+    "spdx": "sha256:32c3ef5e8e8740bf21e03a2e9eafc3f9c7ab9f5660b574d6c3b268102696ea9b",
+    "custody": "sha256:367ec31523ede56ce5502a1dd1653f92f1d4f1410deaf08639d1d69f0e1c546b",
+    "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
+    "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
+  },
+  "accountableHumanApproval": {
+    "statement": "i approve the topology",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts and BLD-010 application-to-contracts/domain",
+    "condition": "effective only after BLD-010 / GitHub #54 closes with final evidence and this exact lock hash",
+    "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
+  },
+  "approvals": [
+    {
+      "ticket": "BLD-009 / GitHub #53",
+      "status": "CLOSED",
+      "lockSha256": "65a11d0a546d4056dc6eaeaea4208ec26893efa0b2ec7551d0905ea111af13ec",
+      "evidence": "artifacts/bld-009-aggregate-skeleton-evidence.json",
+      "evidenceSha256": "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": ["@rsrender/domain@0.0.0 -> @rsrender/contracts@0.0.0"]
+    },
+    {
+      "ticket": "BLD-010 / GitHub #54",
+      "status": "CLOSED",
+      "lockSha256": "d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+      "evidence": "artifacts/bld-010-application-service-evidence.json",
+      "evidenceSha256": "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/application@0.0.0 -> @rsrender/contracts@0.0.0",
+        "@rsrender/application@0.0.0 -> @rsrender/domain@0.0.0"
+      ]
+    }
+  ],
+  "workspacePackages": [
+    {
+      "path": "packages/application",
+      "identity": "@rsrender/application@0.0.0",
+      "dependencies": { "@rsrender/contracts": "0.0.0", "@rsrender/domain": "0.0.0" },
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/contracts",
+      "identity": "@rsrender/contracts@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/domain",
+      "identity": "@rsrender/domain@0.0.0",
+      "dependencies": { "@rsrender/contracts": "0.0.0" },
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/layout-host",
+      "identity": "@rsrender/layout-host@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/package-contract",
+      "identity": "@rsrender/package-contract@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/platform-electron-main",
+      "identity": "@rsrender/platform-electron-main@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/platform-zipjs",
+      "identity": "@rsrender/platform-zipjs@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/renderer-ui",
+      "identity": "@rsrender/renderer-ui@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/scene",
+      "identity": "@rsrender/scene@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/source-contract",
+      "identity": "@rsrender/source-contract@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    },
+    {
+      "path": "packages/test-support",
+      "identity": "@rsrender/test-support@0.0.0",
+      "dependencies": {},
+      "devDependencies": {},
+      "optionalDependencies": {}
+    }
+  ],
+  "nonclaims": [
+    "This record cannot approve a new external dependency or change the BLD-001 external graph.",
+    "A pending build ticket is fail-closed and is not an approval."
+  ]
+}

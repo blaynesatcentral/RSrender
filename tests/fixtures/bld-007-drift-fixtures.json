@@ -1,0 +1,114 @@
+[
+  {
+    "id": "new-package",
+    "expectedCode": "BLD007_DEPENDENCY_UNAPPROVED"
+  },
+  {
+    "id": "changed-version",
+    "expectedCode": "BLD007_DEPENDENCY_VERSION_DRIFT"
+  },
+  {
+    "id": "changed-integrity",
+    "expectedCode": "BLD007_DEPENDENCY_INTEGRITY_DRIFT"
+  },
+  {
+    "id": "changed-source",
+    "expectedCode": "BLD007_DEPENDENCY_SOURCE_DRIFT"
+  },
+  {
+    "id": "lock-byte-drift",
+    "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+  },
+  {
+    "id": "missing-license",
+    "expectedCode": "BLD007_LICENSE_MISSING"
+  },
+  {
+    "id": "unknown-license",
+    "expectedCode": "BLD007_LICENSE_UNKNOWN"
+  },
+  {
+    "id": "prohibited-license",
+    "expectedCode": "BLD007_LICENSE_PROHIBITED"
+  },
+  {
+    "id": "missing-notice",
+    "expectedCode": "BLD007_NOTICE_OBLIGATION_MISSING"
+  },
+  {
+    "id": "missing-local-notice",
+    "expectedCode": "BLD007_NOTICE_TEXT_MISSING"
+  },
+  {
+    "id": "missing-runtime-notice",
+    "expectedCode": "BLD007_NOTICE_TEXT_MISSING"
+  },
+  {
+    "id": "lifecycle-drift",
+    "expectedCode": "BLD007_LIFECYCLE_SCRIPT_DRIFT"
+  },
+  {
+    "id": "provenance-drift",
+    "expectedCode": "BLD007_SOURCE_PROVENANCE_MISSING"
+  },
+  {
+    "id": "signature-drift",
+    "expectedCode": "BLD007_SOURCE_PROVENANCE_MISSING"
+  },
+  {
+    "id": "workspace-edge-drift",
+    "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+  },
+  {
+    "id": "workspace-manifest-drift",
+    "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+  },
+  {
+    "id": "topology-evidence-drift",
+    "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
+  },
+  {
+    "id": "toolchain-archive-missing",
+    "expectedCode": "BLD007_TOOLCHAIN_DRIFT"
+  },
+  {
+    "id": "external-identity-count-drift",
+    "expectedCode": "BLD007_ADMISSION_COUNT_MISMATCH"
+  },
+  {
+    "id": "npm-version-drift",
+    "expectedCode": "BLD007_TOOLCHAIN_DRIFT"
+  },
+  {
+    "id": "artifact-baseline-drift",
+    "expectedCode": "BLD007_GENERATED_INVENTORY_DRIFT"
+  },
+  {
+    "id": "toolchain-binary-drift",
+    "expectedCode": "BLD007_TOOLCHAIN_DRIFT"
+  },
+  {
+    "id": "root-symlink-asset",
+    "expectedCode": "BLD007_UNDECLARED_ASSET"
+  },
+  {
+    "id": "package-output-asset",
+    "expectedCode": "BLD007_UNDECLARED_ASSET"
+  },
+  {
+    "id": "undeclared-asset",
+    "expectedCode": "BLD007_UNDECLARED_ASSET"
+  },
+  {
+    "id": "admission-mismatch",
+    "expectedCode": "BLD007_ADMISSION_STATE_INVALID"
+  },
+  {
+    "id": "authority-drift",
+    "expectedCode": "BLD007_AUTHORITY_DIGEST_DRIFT"
+  },
+  {
+    "id": "node-version-drift",
+    "expectedCode": "BLD007_NODE_VERSION_MISMATCH"
+  }
+]

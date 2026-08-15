@@ -1,0 +1,5044 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "RSrender-BLD-007-exact-internal-dependency-snapshot",
+  "documentNamespace": "https://rsrender.invalid/spdx/bld-007/d9474b45cf6b56ec572ea8c81ea8d601a34f701a0ced11f2c164ab26f5a88b4c",
+  "creationInfo": {
+    "created": "2026-08-14T00:00:00Z",
+    "creators": [
+      "Tool: RSrender-BLD-007"
+    ],
+    "comment": "Deterministic snapshot keyed to the BLD-001 decision date and exact production lock."
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-RSrender",
+      "name": "rsrender",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned application workspace; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9d6d2021292b0609c5f0",
+      "name": "@rsrender/application",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/application; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8f4b151764845434e70d",
+      "name": "@rsrender/contracts",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/contracts; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d3ed5f0d94893f555766",
+      "name": "@rsrender/domain",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/domain; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-677144beff6604e52605",
+      "name": "@rsrender/layout-host",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/layout-host; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7404efafe70194101436",
+      "name": "@rsrender/package-contract",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/package-contract; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6345842887b2575c3485",
+      "name": "@rsrender/platform-electron-main",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/platform-electron-main; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-effc57c789c2c2a304de",
+      "name": "@rsrender/platform-zipjs",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/platform-zipjs; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7325c7f20f4562f1cbaa",
+      "name": "@rsrender/renderer-ui",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/renderer-ui; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-019311f7321f90ebb1cc",
+      "name": "@rsrender/scene",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/scene; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-aa18a59d0442c184995a",
+      "name": "@rsrender/source-contract",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/source-contract; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b52147a6f0516c313a0a",
+      "name": "@rsrender/test-support",
+      "versionInfo": "0.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "comment": "Owned workspace package at packages/test-support; not a third-party admission record."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a18a7609c5ff94cf0e1a",
+      "name": "@electron-internal/extract-zip",
+      "versionInfo": "1.0.5",
+      "downloadLocation": "https://registry.npmjs.org/@electron-internal/extract-zip/-/extract-zip-1.0.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f9ba8508ff7ca4b2344edd17428d539a55edc2359c8484a77433b10a411c22e5205d6a419cbc9123ed8353e99eb2f9cc317e8bd570ea60d0349573431ddff288"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron-internal/extract-zip@1.0.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5f587138a7fa7b84711d",
+      "name": "@electron/asar",
+      "versionInfo": "4.2.1",
+      "downloadLocation": "https://registry.npmjs.org/@electron/asar/-/asar-4.2.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ac6c847bb8b2e76cf1896ba2855fe1fc0a90ac5931ed89d4509296d5b76e7d50c70b320c3ff5c3ac323f34eceffcb2edceddcd76e03335ae3be564664679acc1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/asar@4.2.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0200831352e62c963644",
+      "name": "@electron/get",
+      "versionInfo": "5.1.0",
+      "downloadLocation": "https://registry.npmjs.org/@electron/get/-/get-5.1.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "de4481b46f0e6dc4d57d76a79b9bd527a52704b115995b1193533ebc6a82b8c055f972c26c962e5907ee97ec88cb41900ec4a52b490712b8841e7ed23e4e049c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/get@5.1.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8c4add900e285a631c59",
+      "name": "@electron/notarize",
+      "versionInfo": "3.1.1",
+      "downloadLocation": "https://registry.npmjs.org/@electron/notarize/-/notarize-3.1.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b9041294e8899ea4644cbd70944040c5ef749d537f15cfe11269346eaa4a93c9ca8d5d627ffb572c72943de3edbfd5ecc7dd0fb5953c6a2771e650223a98e441"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/notarize@3.1.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-74485145ba6bba38fcfc",
+      "name": "@electron/osx-sign",
+      "versionInfo": "2.6.0",
+      "downloadLocation": "https://registry.npmjs.org/@electron/osx-sign/-/osx-sign-2.6.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5e22475de9127de429935d5df6e599f4fb439b8003216bdcad24d126871a0e0038eadd68931ad0d6478bf2bb61511257e803f70c3167ceba2e88fe90e6aa0760"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/osx-sign@2.6.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "name": "@electron/packager",
+      "versionInfo": "20.0.4",
+      "downloadLocation": "https://registry.npmjs.org/@electron/packager/-/packager-20.0.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "eb5883e2b920d1ca1f4e7e73f71378b1d86d311fa5ec6d62fd7e7f0a637be19cb0396d6d516faa6bf27fc398adc6274c7a601026328b6fd618307171b1b9e4ec"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/packager@20.0.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0951437a9a4696dd52be",
+      "name": "@electron/universal",
+      "versionInfo": "3.0.6",
+      "downloadLocation": "https://registry.npmjs.org/@electron/universal/-/universal-3.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3289d2d647e465d48490b648d29751fd30b1f1e731c114859bbb0e45fc0890323d51a21b1e79383207aaabe39bf6a0d0455f0b67dfa11c29a29a903d05170dc7"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/universal@3.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-89215114e4166a445355",
+      "name": "@electron/windows-sign",
+      "versionInfo": "2.0.6",
+      "downloadLocation": "https://registry.npmjs.org/@electron/windows-sign/-/windows-sign-2.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1125a036416c5c51f4e88e44076b87bf7866640df21788fd19307bed6ef8c776f9299348b71820373b800f0e351d4cba9a19c2d8af84da64f45e073860abb721"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40electron/windows-sign@2.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-29a939c9d4116153a4f8",
+      "name": "@esbuild/aix-ppc64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4af97bb6af24ff4f3ea7a0973e94634357ca5fed68747fc141b6f8f1f57a7e3dc258786ca083a863cef0d681d79b4a84a6420add97d5829d2179ddd7057cd731"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/aix-ppc64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0bed7f14c3d22083ad7a",
+      "name": "@esbuild/android-arm",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "d24d85d76f57762a354dd25fcc9f2ccb5438eef503d8d9f07618807fb76b50dd440537cf7f886c142b66320bbfea6f094b3b01ae59958ee74c050a8e7c6f2eb1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/android-arm@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0d6007b4e421f1403d73",
+      "name": "@esbuild/android-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "df810611b088020a2c633ea0a0b728a57e8ca3b3721aff6d7f010cdbfec27b655c551939ebc892be788659c517232ef0103475c33a2573172b88556b59873006"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/android-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-bc0bdf7bbd89c12c00d5",
+      "name": "@esbuild/android-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "75bc18ee5b523035ac45ab5c4690a7112e05fa29bcf0e094806663cb9dac842ec6a87444fdc625c4d6c1e19e14a49b30a5c738431776a04fee7ccd29eb520a9e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/android-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f27cfab6411787e20038",
+      "name": "@esbuild/darwin-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4d96d691063b92f4c05db5d44fbb9500247970c1ec0e24b3f73ed92805ff453abf589124dd0c91af4c19a4d8410d7fbfd02b5da9420994e8a875072d6bab58dd"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/darwin-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5a09292072b7308bbe9d",
+      "name": "@esbuild/darwin-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cdf77380af400813592c8fc2c874cec7cd52c8d6cce985e7eebc52817f7b563ca23e5f56d62e0a6b87e0284084a0508a1a9bc18f9a80ad62068108cec2482c91"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/darwin-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d8f9ba4fc83b5a1f97d4",
+      "name": "@esbuild/freebsd-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c06d8403c10d744234aa191264c8dfaab758fb38826023cc9ad6638c8c0e9971639b2cc41e7f94531939a1ff9262c8ed7ecdd5a67942ed02f3488e6163face03"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/freebsd-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-35f9fa2de0510c322532",
+      "name": "@esbuild/freebsd-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8bb759f6f4209ef482ce2feb6025cd82d17f53e78a64d241ceedde4d06d18079cceed3528b32ce911140977ab355cfcea7fbb96241c76b8a5fff70ce607b612d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/freebsd-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ff2c87a3b1731c846151",
+      "name": "@esbuild/linux-arm",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a955c1387412f9de58ef6d86c09cc952d38b957ee49b70ab68e686a2b985d690ed3ddd82fe5d521d13e08cbba72c67b9d5287961858a3050f25784b180c4184d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-arm@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-4d3478764df48f056795",
+      "name": "@esbuild/linux-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c87b3ed2e73cfa7bc401f01fc6b59028ae6979237305ce0f7a070c3b4109da14fbd6e03bbc1f08860d9eefb4763fb486e6e6233db1e52cb9af7b82cb2d109fd2"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fe26c44078b52df03eba",
+      "name": "@esbuild/linux-ia32",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "775cf866e3f46a3adfcff161193e2fbf6efcad7f0a9cf3c9c7c8b9f80b4aed361bc7d2def45d61cb3bab669904ca39066bd7541a1428c380b5366786beac4ddb"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-ia32@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-32b2e7678f98638beb5c",
+      "name": "@esbuild/linux-loong64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "339b118d4559ae49b53803d1ddd94e63336637e96864a1958b5554406af0baa2dc6d1eaa780cfe7da98c863012787dd854abd9cfecd3d63961fe4782dd18ff96"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-loong64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-4e42226a5fd0eeead180",
+      "name": "@esbuild/linux-mips64el",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "99139b0597878763b170114f584fc58f296446065d62e893477bda4e8ceab8218e1f5e223fda0de31e067bcd42a080d842b5e6231a45ba6241bb932d6699d025"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-mips64el@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-de1261caf947abc915e6",
+      "name": "@esbuild/linux-ppc64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b2549c06c3006f71850dc76b0a02f066d3d84681f61ffca8bafd744226724639ac3f8f1fce7a2f796cad4a0088fd1d19714829734661214131e8b1edb3ccab7d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-ppc64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-726f52f0c9610695e82b",
+      "name": "@esbuild/linux-riscv64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "930d28c24d68d061444d42725b48dcd06e18cecd011d99f424367c2514f4f3cbe32585fbefb040b357c31b1002faaf37d6a3acd834c2f7a98db06da8a5d7f2c9"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-riscv64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7276d60d48a7ec9574be",
+      "name": "@esbuild/linux-s390x",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "fe50088d7f1a605441ca187a2f9ad8b4f10346a6bd75eff857f8ee39772d6b97eb8efcd73b8feca84b72cadb1ed20df3645b96bb97033743242f3daa4430f602"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-s390x@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-36205626d8ed9ee2c92c",
+      "name": "@esbuild/linux-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bbf6a73581769a654e103c0bb67435c0eaf7119f6c4cd18b5abb18198c075b3180dd28bce083a41d795b5930f5341fbdff595c9f079828ee78ba1c59c9d3737c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/linux-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9cf9a22e400c2915b7ee",
+      "name": "@esbuild/netbsd-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a24b340d86cbc1632669a913b026feccbe04f9a1d154ba26f48259380b6131010f8909b27571e4ce2604b06611c74b8d57f22310a18057de352731f4da97e5ab"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/netbsd-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2ec1e2f9d436156188dc",
+      "name": "@esbuild/netbsd-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "69e2fa9409cdf3d1f3e373258751bc0116ac6eea18bd22130c4c74b478796fb8c99c772cb2a823cbd631e37d060e99826ba3b2acaa12d1a3518caba77518b31a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/netbsd-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c5f43b7c8a528bc1f11a",
+      "name": "@esbuild/openbsd-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3041497b90b747ca705dd679636d68a3a9bb78f892d1df695ae727f7d3bfc2fc896428682102ab403c4aac6796f05e7e4f4a244c77ac0260de8870d322ad15fd"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/openbsd-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f3e431cdc81f7b2c3017",
+      "name": "@esbuild/openbsd-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8bf64b20e69f13467c708fd700d2408b1a092ffb910284b6c4e037adbd3137e28ad0ad7bedc300b10624cc7b41aed31700ab8073b1c681c5a267fb110b537183"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/openbsd-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a80e4c75dbd58bfb448a",
+      "name": "@esbuild/openharmony-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "81ef99ec45c536dd813b5a0032c569890f04c27755f62d715deac079320aec0b4fb376ca15740cee7951c4348850831eb9e47508d5f1ab3b4bcdd35e45e28126"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/openharmony-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7d8c72a96479f4d46f3a",
+      "name": "@esbuild/sunos-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0448e0b440a42f7bd8f9269243a9f355f8802d4785c696b0ca9f0999fe4fb5885fd54838d0dd61fe1c6586db3e7f516f4af6ab12281dc52dc1952308d8f24b71"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/sunos-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6ab54c7079b2ff6e1d89",
+      "name": "@esbuild/win32-arm64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "942bfd78afc7e992566c4edb8769f0e78099f4cda7ba907125c4ec764fd04275a47528ca1aec66987f3f196ae54f578c9997e7e1d19c0a346d7b7f7b5aa7d05c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/win32-arm64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a5f4ab7c9556fcb6a236",
+      "name": "@esbuild/win32-ia32",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cef6ff981d9b482a093a9a0206060a2a95fa60cea624194151552d563e350e564954407aff408a9516313f9c169750b520b882a00539c19678ab53f7a9e4ba12"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/win32-ia32@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7a8eb4cf54c968736483",
+      "name": "@esbuild/win32-x64",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6e6e0ca30aeff865cc969597fbe11c5f0fe22f2775a37f9b2640b60e4597615be0642a83fdb4a3f5cb59780302ddc2318234554760ee7da8aee183f1af9816d4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40esbuild/win32-x64@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-81c7dfd40d2f80b9798b",
+      "name": "@eslint-community/eslint-utils",
+      "versionInfo": "4.10.1",
+      "downloadLocation": "https://registry.npmjs.org/@eslint-community/eslint-utils/-/eslint-utils-4.10.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "72e69d73154513cb032ba89625bb3c4a7d1abf636b8764121908559415bd01a007a87c235ac6474fc2c9e211463e1ec048157675e15d33b1ff0cf8ee96687cae"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint-community/eslint-utils@4.10.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1d1887a9bf30a3aed0e0",
+      "name": "@eslint-community/regexpp",
+      "versionInfo": "4.12.2",
+      "downloadLocation": "https://registry.npmjs.org/@eslint-community/regexpp/-/regexpp-4.12.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "12b8924e5b79382f7fed25e445208085f4b1c684948019b7dce1fe224c1b769828aac4ac520ef2dee87e208088fd08380415abdd4da2dfd4699b271bc4cab87b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint-community/regexpp@4.12.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c4003c9d3aa0b670fd15",
+      "name": "@eslint/config-array",
+      "versionInfo": "0.23.5",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/config-array/-/config-array-0.23.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "63790a2ef0b576f4ce4fea0696a350d572ea2ba0f51d4d985cf739d8d98094965b30c583cc66173223d127c4d80f7f66b83fce4e395998d27889beddbd2acc04"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/config-array@0.23.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5e96e6a5142ed84b7bec",
+      "name": "@eslint/config-helpers",
+      "versionInfo": "0.7.0",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/config-helpers/-/config-helpers-0.7.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0ce6ddfca294b14f85685bf83cbc5245e9e95df41698f5d73f7a4f67afcad4f0ab32edaf42930332e41efc1a987a82dccfcae8d1b54317547138981f54476153"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/config-helpers@0.7.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8011bd8ea05490cb724e",
+      "name": "@eslint/core",
+      "versionInfo": "1.2.1",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/core/-/core-1.2.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "330704d4ff806780ba0d69698a7fce98e039e2698867ffb166e26241de12c81dbda00263377d145bdc2428da6d5b672da78704b2f8652d8fc2b10d6ea070e5a1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/core@1.2.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-4eb560c0557e5532edf8",
+      "name": "@eslint/js",
+      "versionInfo": "10.0.1",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/js/-/js-10.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cde47d939a5de20c6367469b46821ac5d73b2379c392da17664daa3aff6008d5b1de6570127df65518722da46c0e22634ecd31abf4fc99f3edcae5eeec658170"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/js@10.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a42e0543fbb6e6a39017",
+      "name": "@eslint/object-schema",
+      "versionInfo": "3.0.5",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/object-schema/-/object-schema-3.0.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bea4da504831ce6f980d274495a77a3e24685f8b7c5460e30adb74e739f89d4f35d14231fee34457bfe5649e8ac054e12993b33b1cd7cb8f1d6be368ec765a33"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/object-schema@3.0.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-61f595114b42a38867c3",
+      "name": "@eslint/plugin-kit",
+      "versionInfo": "0.7.2",
+      "downloadLocation": "https://registry.npmjs.org/@eslint/plugin-kit/-/plugin-kit-0.7.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f82340cf182592ba4d7ff90acb0a907e4ef8423b5c7ae384ed09be005f26891bcf17fc2698ae7e3893a0561dc05534f744fda61f7f8539ac65139bfbda8c24d0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40eslint/plugin-kit@0.7.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-70b26b91b2ae2357f6fd",
+      "name": "@humanfs/core",
+      "versionInfo": "0.19.2",
+      "downloadLocation": "https://registry.npmjs.org/@humanfs/core/-/core-0.19.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5215cd9be08531671b0a15f2c05c249a1aa3b373d10a67126bf85f0602c86fba10e4735bd704b489c5ac1ad48050d81e7c7788f9e06b03c2357f199b1ec19dbc"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40humanfs/core@0.19.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f153f8244a2e0243e86f",
+      "name": "@humanfs/node",
+      "versionInfo": "0.16.8",
+      "downloadLocation": "https://registry.npmjs.org/@humanfs/node/-/node-0.16.8.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "804d5e40d67747efa44f3154a5d1a5a66cbc903643fcc2f21ea0f0aa3915408d0931d2350f9d6ccb51fde7c3cd5d890cdab01a73b7b9fc29c8299ac7b4f87705"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40humanfs/node@0.16.8"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-f6a7778b783cd75ce63c",
+      "name": "@humanfs/types",
+      "versionInfo": "0.15.0",
+      "downloadLocation": "https://registry.npmjs.org/@humanfs/types/-/types-0.15.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "659d70d1aa10930b94b82ed87feeec75e68d7ea42288b71245b7c8d3ca00c6a2eda5742bf402155fb032ec72c3ba22d801a14fbbca0160dabf4088bd5111c9dd"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40humanfs/types@0.15.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2281c2232c283a10977c",
+      "name": "@humanwhocodes/module-importer",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "https://registry.npmjs.org/@humanwhocodes/module-importer/-/module-importer-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6f1bde57857cbf961be277054d3deb3d281904ea429237cad32e28555549c08b8354144c0d7acfc9744bf7cf22e5aa7d9bd6e7c8412359f9b95a4066b5f7cb7c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40humanwhocodes/module-importer@1.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-726321f5c138be97fd5b",
+      "name": "@humanwhocodes/retry",
+      "versionInfo": "0.4.3",
+      "downloadLocation": "https://registry.npmjs.org/@humanwhocodes/retry/-/retry-0.4.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6d5d13828f4ae217cf09e93e68c027f35469a452afdb248341e328499baf4c04b2c0d4e7549080ac2644d855aaa6f21ab4abbb54c44b5a547511acef5610f285"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40humanwhocodes/retry@0.4.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6b7fc6e51360fd21bb8c",
+      "name": "@malept/cross-spawn-promise",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/@malept/cross-spawn-promise/-/cross-spawn-promise-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "d43a4a5346794e196d0708cdc92302d788340a46f28426b3f45921c6a36c648eae00f257152f1c3179412a8dba149f19b96e92f4608c711f483b99365f9ffd16"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40malept/cross-spawn-promise@2.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-fe5a4a38ec87bb3f66fb",
+      "name": "@types/esrecurse",
+      "versionInfo": "4.3.1",
+      "downloadLocation": "https://registry.npmjs.org/@types/esrecurse/-/esrecurse-4.3.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c490406c389fa398697df0c1b8797463ccb0b306e2029fd68bb63f1ad0204a5672200069a72babc55b9e38f13c2d440ec5d9608ba66a71eeeea04a6a3537a253"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/esrecurse@4.3.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ec29746adee7d0f372e8",
+      "name": "@types/estree",
+      "versionInfo": "1.0.9",
+      "downloadLocation": "https://registry.npmjs.org/@types/estree/-/estree-1.0.9.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1a174f832d5e978fc898fd395f4e54c38730dbf33ddc10949a712f599352b650b310a304e05924f98a680393a21cd426a12ec269f6fc5dadcfc9af26d50af37a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/estree@1.0.9"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7a6781250b863b66457d",
+      "name": "@types/json-schema",
+      "versionInfo": "7.0.15",
+      "downloadLocation": "https://registry.npmjs.org/@types/json-schema/-/json-schema-7.0.15.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e7e7cff0ff0c14d0be0326420f1ac1da991914f1b3a90594ce949ebae54bbe6f1531ca2b3586af06aa057312bc6d0cf842c6e7e2850411e9b8c032df732b061c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/json-schema@7.0.15"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d3e856da30b4a795cfd0",
+      "name": "@types/node",
+      "versionInfo": "24.13.3",
+      "downloadLocation": "https://registry.npmjs.org/@types/node/-/node-24.13.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0e1f2f02c577ea2839c1af4e5f8a57bcc73d0f755e89b7f0db08b1d0253060e0cb0fc9e48fd52c2e3012af8f673e0fb678acf184157ebfb2fca57bd3e1eeb7f5"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/node@24.13.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "name": "@typescript-eslint/eslint-plugin",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2048286fbf17d76ac7a549ad73016c5e165d54626dc1354ff058822d9911e8695856b9763dcb81f8a842139065542fde429427bbc59746d90766e3daafe80244"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/eslint-plugin@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8316447e41c92a616f41",
+      "name": "@typescript-eslint/parser",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/parser/-/parser-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "099e273315b082ed4710414d91e682a6dadaf500ad92629d81fdec5a1d6b975b6b2219b12e29604d5e1cc1c6d0e307a69d3e2c59037c09a28e99d631fa0da030"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/parser@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e68be82b1b5dce6c854b",
+      "name": "@typescript-eslint/project-service",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/project-service/-/project-service-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4b19cf85b4ec19a862cc381bbbba2a147ff156dcc8a8c77fb3e5ad9d2c4dc49649a4b6dd4f920f77383c119c4edfe3e829a8579b024b78d40ea4a25bdff6e2ed"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/project-service@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3f58d6a05c24bf7eafdc",
+      "name": "@typescript-eslint/scope-manager",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/scope-manager/-/scope-manager-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "12c6e5f0e498895c41a2462058f7fb5555a0fc113bf7cc178629a79fd30bf4fb79aa80dff1b7d09608e529747f93df3e01c37394b298ae909cadcb99f4364b82"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/scope-manager@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0ab4d213ff81eadb728d",
+      "name": "@typescript-eslint/tsconfig-utils",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/tsconfig-utils/-/tsconfig-utils-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8fa1b31aa0a245d03b421babd9556629902404b7e71c541fc784da2462fd44cbde66a0a8e3c8d21c73b40d3822cc49c686d5a7aa66ed0944aba9291d898ff41e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/tsconfig-utils@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "name": "@typescript-eslint/type-utils",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/type-utils/-/type-utils-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "623699ecf448e6a63b6b1d8bdcf6ef5f4ad1c86b62a4045e096b349a18430478c7fef9748340689da197aca74aa4c6c822c308c0381b93fc739014f2025b52e6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/type-utils@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a0865889983df9a550f3",
+      "name": "@typescript-eslint/types",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/types/-/types-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2524b058dcbe1f413fd358c910cfa1ad7e8dd0e143cc5cde2211c54804b4d6d95569ebe91bc705c9844f852e728c63af054c77b2a40754c8c22f508065933106"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/types@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c9997afedc01650835d6",
+      "name": "@typescript-eslint/typescript-estree",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/typescript-estree/-/typescript-estree-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "25ba00136b30698b78b5bd5f1e11d30011362be38bcb4f577dc4db8679383f0f7a7fd75dd9ef6262c276f20060807968e73e71d6b9325af70fa13b8d4dde281a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/typescript-estree@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0e049f6388faa031042d",
+      "name": "@typescript-eslint/utils",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/utils/-/utils-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8178b0207b18ade6e8c5e26e70728fbe0c25edd5ede74985f2cd7f734d1c3ff5a8553c9628576d7e1456c198976055391f63bcbd5a122cdadec45663612fd218"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/utils@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3bc1a583417694c136d5",
+      "name": "@typescript-eslint/visitor-keys",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/@typescript-eslint/visitor-keys/-/visitor-keys-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f02ef50509068e23265eda29ee91d526ed65d8d3528457640b20fa6b67b3cece6f53f2f72d1b5bebd12d72d785c33d2660c3f32203b0d27e8e57854151665dec"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40typescript-eslint/visitor-keys@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1ad10cf39a07bbaca08b",
+      "name": "@xmldom/xmldom",
+      "versionInfo": "0.9.11",
+      "downloadLocation": "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.9.11.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b56f1b70ade1b06d3fbaa4a7373e932b806472e6527b3a14ec396762cb082e664392d3e74871ee0c9245334009bfed77833dabd2219dae3eaaa8a7949f15c40e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40xmldom/xmldom@0.9.11"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6d45531ac43d56e2b3c8",
+      "name": "@zip.js/zip.js",
+      "versionInfo": "2.8.49",
+      "downloadLocation": "https://registry.npmjs.org/@zip.js/zip.js/-/zip.js-2.8.49.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4d8ddf291fc842a3c9aab39002886f5ba92fed077569e87353b33b85baa134d2b154ff2e29230ef9a525070b5d5b34c277ad84d18381f871d6f4dd2132286b5b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40zip.js/zip.js@2.8.49"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-650a0d8a160f64127220",
+      "name": "acorn-jsx",
+      "versionInfo": "5.3.2",
+      "downloadLocation": "https://registry.npmjs.org/acorn-jsx/-/acorn-jsx-5.3.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "aeaf6cf893617f4202863b435f196527b838d68664e52957b69d0b1f0c80e5c7a3c27eef2a62a9e293eb8ba60478fbf63d4eb9b00b1e81b5ed2229e60c50d781"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/acorn-jsx@5.3.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c7901d4af178944446ba",
+      "name": "acorn",
+      "versionInfo": "8.18.0",
+      "downloadLocation": "https://registry.npmjs.org/acorn/-/acorn-8.18.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "946abef72af5fc6b8059a558207463befc921b9ff855f288bc2f045b14ad3dd70387f29aec51b7b703fabf8779064adabd48a584802c1b8423f37b74d8b5943d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/acorn@8.18.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ad437bedcb0866d17714",
+      "name": "ajv",
+      "versionInfo": "6.15.0",
+      "downloadLocation": "https://registry.npmjs.org/ajv/-/ajv-6.15.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "7e0171ec77e8abad32b4ad9cec386717c8c8bf362038cc5fba08cb3923078cb20f81e9ea6bb4bba1a6a001352af7d995e8862f376b51982d309d3617ea23db33"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ajv@6.15.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5d9d8851e0b3a24a8205",
+      "name": "balanced-match",
+      "versionInfo": "4.0.4",
+      "downloadLocation": "https://registry.npmjs.org/balanced-match/-/balanced-match-4.0.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04bae011c453c17da8ea01b118e08dc8cbc64a9df96287ee633c3d87520c4d198aaadb40659554ebb6dd6fd3ebdaf50703cfa3de2dad25f8cee82ebee26c864c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/balanced-match@4.0.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cf278cb8d073b3bd22b6",
+      "name": "base64-js",
+      "versionInfo": "1.5.1",
+      "downloadLocation": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "00aa5a6251e7f2de1255b3870b2f9be7e28a82f478bebb03f2f6efadb890269b3b7ca0d3923903af2ea38b4ad42630b49336cd78f2f0cf1abc8b2a68e35a9e58"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/base64-js@1.5.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8d760e4ad257be5ff72b",
+      "name": "brace-expansion",
+      "versionInfo": "5.0.9",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.9.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "49c43822ebc8105d533253fb66dfaf8c9ffff7394f6f64837315b13376e4f2ceade8619d27b28ed5d09c4e274e3c929e3d6df42c4ff6713ef00b23e1a3dfd6c6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/brace-expansion@5.0.9"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7aa63ec2252418dd3a94",
+      "name": "commander",
+      "versionInfo": "9.5.0",
+      "downloadLocation": "https://registry.npmjs.org/commander/-/commander-9.5.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "291b3b5950ca83ce8f5a2b80aa10eb0109d35d92ab69570273abc574bd78aab67f0dc5b0b91a3b5688985da9573bb4b918aa6a622544c026e01437f134728905"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/commander@9.5.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-50cb51119b3e7a0445ea",
+      "name": "cross-spawn",
+      "versionInfo": "7.0.6",
+      "downloadLocation": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b95d903963f69d6ceccb668ca7c69189b862f5d9731791e0879487681f4e893184c834e2249cb1d2ecb9d505ddc966ed00736e6b85c9cd429c6b73b3294777bc"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/cross-spawn@7.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6390bf853aed627edd1f",
+      "name": "debug",
+      "versionInfo": "4.4.3",
+      "downloadLocation": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "446c305a7c10be455f6af295b76d8518bc3ec5849dcc04709b4aeee83853540dee994e6165cdbc57790ee2cb6062bcab4e52e9baf808f468a28e5b408cd6dca8"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/debug@4.4.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ddcd360453f22ba5daab",
+      "name": "deep-is",
+      "versionInfo": "0.1.4",
+      "downloadLocation": "https://registry.npmjs.org/deep-is/-/deep-is-0.1.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a083f392c993838fccae289a6063bea245c34fbced9ffc37129b6fffe81221d31d2ac268d2ee027d834524fcbee1228cb82a86c36c319c0f9444c837b7c6bf6d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/deep-is@0.1.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dd4e12c36a57abb99cb0",
+      "name": "electron",
+      "versionInfo": "43.4.0",
+      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-43.4.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "deac4617409e41b8a8c79a165752656d6190d557ab6e60e14c5a96e2c27c87bbaa4c79e21583ce6d725c0e76b40cc877d9eb747c5c8acf3d1863c949bf7b798e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/electron@43.4.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c891998e88a2a7a79b8c",
+      "name": "env-paths",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://registry.npmjs.org/env-paths/-/env-paths-3.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "76d2544dea73316dcb9bf34fc517f7c0fe3ae365168632f6b10c5cfb29b660c8f59bf1f6cc33503a57b369fce41f09fab0cb2d8c74f01ba89042c72d0d6fdbd4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/env-paths@3.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5e03035f19a278120767",
+      "name": "err-code",
+      "versionInfo": "2.0.3",
+      "downloadLocation": "https://registry.npmjs.org/err-code/-/err-code-2.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "d9b9a546934a0714ff09198f3a5c88490a4d8fea92798bdcca6fee4f4271d9b30e94a2ed4b2d5998bb95c5210a2b2a2bfcde7286fa7f6621b5a04dc311831214"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/err-code@2.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "name": "esbuild",
+      "versionInfo": "0.28.1",
+      "downloadLocation": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1eb26bbd9bf96b2c41ccf7f0a613a837393338822589fce4d0a26b18ad9cf11e3e2caa4cb6960b41e51d8e7c235affcb665907da569993ee30efca62f7d0f857"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/esbuild@0.28.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8c51af36cd574fcb38fb",
+      "name": "escape-string-regexp",
+      "versionInfo": "4.0.0",
+      "downloadLocation": "https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4eda5c349dd7033c771aaf2c591cc96956a346cd2e57103660091d6f58e6d9890fcf81ba7a05050320379f9bed10865e7cf93959ae145db2ae4b97ca90959d80"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/escape-string-regexp@4.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1242bb0a2257053402e4",
+      "name": "eslint-scope",
+      "versionInfo": "9.1.2",
+      "downloadLocation": "https://registry.npmjs.org/eslint-scope/-/eslint-scope-9.1.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c52f741f9d5c2b0d2396dc66be61f2d886a2d4b22aadf6f0e7b6fbf70fc9ecc7ef0df90890567e923eb30b7063b54c21d79d07b1249dc5765cb2ebfbda688315"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/eslint-scope@9.1.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d73964c6d2eb87ae9907",
+      "name": "eslint-visitor-keys",
+      "versionInfo": "3.4.3",
+      "downloadLocation": "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-3.4.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c2973e2d77a2ca28acc4f944914cd4eacbf24b57eb20edcc8318f57ddcbb3e6f1883382e6b1d8ddc56bf0ff6a0d56a9b3a9add23eb98eb031497cfdad86fa26a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/eslint-visitor-keys@3.4.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-77649af58b264ee369f1",
+      "name": "eslint-visitor-keys",
+      "versionInfo": "5.0.1",
+      "downloadLocation": "https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-5.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b43e34787c40df98743c421935e223907a034786238c9a77e1b88cd260efa6505efff981f881c2a870c657ba7117eecc9254ef8a085c08f3d90bbca75b28dd4c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/eslint-visitor-keys@5.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "name": "eslint",
+      "versionInfo": "10.8.0",
+      "downloadLocation": "https://registry.npmjs.org/eslint/-/eslint-10.8.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9ee28abcdfa82013b492837b4e6edd9649a791cdb59adb744092f000ace32ead78cba9514dd546dfa3191c9f1e407c1d24cc196d034c94f39879d32afe8549bd"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/eslint@10.8.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-23d4e7a3725d7eaf749a",
+      "name": "espree",
+      "versionInfo": "11.2.0",
+      "downloadLocation": "https://registry.npmjs.org/espree/-/espree-11.2.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ee9dc3ad5108a295b50756af0062ee0928758ee6dcd351f624773c078aaa19b966839808f72ba60600028d6a3826521cd38b9fba0e3127749023c1e44bf460cf"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/espree@11.2.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0e77450dbf69ca87669f",
+      "name": "esquery",
+      "versionInfo": "1.7.0",
+      "downloadLocation": "https://registry.npmjs.org/esquery/-/esquery-1.7.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "029e86d16430714fcb1ecbcbc0e3757c0417f59a7403663a63f709065f6bfc96d6f74672838ff36c6eb3cca6b639300b10b6ab60798abb41a1a4ce443beed3d2"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/esquery@1.7.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-19afb85871ec6753a412",
+      "name": "esrecurse",
+      "versionInfo": "4.3.0",
+      "downloadLocation": "https://registry.npmjs.org/esrecurse/-/esrecurse-4.3.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2a67ca2f76fa1be457bcff0dd6faf74ead642ffa021609f63585c4b6a3fcfcbde929aa540381bc70555aa05dd2537db7083e17ca947f7df8a81e692d8bafd36a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/esrecurse@4.3.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3aa131105909c2fef450",
+      "name": "estraverse",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://registry.npmjs.org/estraverse/-/estraverse-5.3.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "30c74046e54443388d4de243f0380caa6870475d41450fdc04ffa92ed61d4939dfdcc20ef1f15e8883446d7dfa65d3657d4ffb03d7f7814c38f41de842cbf004"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/estraverse@5.3.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cbd4dd8d594e202bb6c9",
+      "name": "esutils",
+      "versionInfo": "2.0.3",
+      "downloadLocation": "https://registry.npmjs.org/esutils/-/esutils-2.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "915b1ca97938382a7af126747648042958baffc8a3df4d0a0564c9ab7d8ffdd61e5934b02b8d56c93c5a94dd5e46603967d514fcb5fd0fb1564a657d480631ea"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/esutils@2.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-60db03f2d9496a0b9ae9",
+      "name": "fast-deep-equal",
+      "versionInfo": "3.1.3",
+      "downloadLocation": "https://registry.npmjs.org/fast-deep-equal/-/fast-deep-equal-3.1.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "7f7a90f68432f63d808417bf1fd542f75c0b98a042094fe00ce9ca340606e61b303bb04b2a3d3d1dce4760dcfd70623efb19690c22200da8ad56cd3701347ce1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/fast-deep-equal@3.1.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a49874e94660e63ec8a7",
+      "name": "fast-json-stable-stringify",
+      "versionInfo": "2.1.0",
+      "downloadLocation": "https://registry.npmjs.org/fast-json-stable-stringify/-/fast-json-stable-stringify-2.1.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "96177fc05f8b93df076684c2b6556b687b5f8795d88a32236a55dc93bb1a52db9a9d20f22ccc671e149710326a1f10fb9ac47c0f4b829aa964c23095f31bf01f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/fast-json-stable-stringify@2.1.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-45c405680bb2f8203b4d",
+      "name": "fast-levenshtein",
+      "versionInfo": "2.0.6",
+      "downloadLocation": "https://registry.npmjs.org/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0c25eee887e1a9c92ced364a6371f1a77cbaaa9858e522599ab58c0eb29c11148e5d641d32153d220fcf62bcf2c3fba5f63388ca1d0de0cd2d6c2e61a1d83c77"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/fast-levenshtein@2.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0e7b031c61139b98da0e",
+      "name": "fdir",
+      "versionInfo": "6.5.0",
+      "downloadLocation": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b486d8b596ee70eb340511aa3c992c84951874bf920c7edd54cf208f2f84469dd60148cb105244fb4da46a7c87b708d63a7c2b298062c0098cd29e242c90275e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/fdir@6.5.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-cfd34b733a3c0f577fc6",
+      "name": "file-entry-cache",
+      "versionInfo": "8.0.0",
+      "downloadLocation": "https://registry.npmjs.org/file-entry-cache/-/file-entry-cache-8.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5d74d4c02be2b1ae6869c34644ff527cdb5804d00c8be44fc011666e564417b37bb301d8412ebf65f93b491c31e03e63dc21f6d7560d45ca350c430d55f6429d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/file-entry-cache@8.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d4a6d0062553630849b1",
+      "name": "filename-reserved-regex",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://registry.npmjs.org/filename-reserved-regex/-/filename-reserved-regex-3.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "867e1c41f53a18e4ffedc1475c1a9e060d936eb30181d0f491c8cb86f490618c26dece01e9c8ef05f6fb9c100b24b017aa6539c5a8d26bb5f636752e77f54277"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/filename-reserved-regex@3.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a2daa845be2ba7349cec",
+      "name": "filenamify",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "https://registry.npmjs.org/filenamify/-/filenamify-6.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bea22536880a7b20f7cb3ae6d3285131083c84e57061c6117e3128383778f620a9acc9f81cbf3980adc7732910139dc43c8a57dc77006c603910b42fdb5e9d01"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/filenamify@6.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-36b5efd728dd4478427e",
+      "name": "find-up",
+      "versionInfo": "5.0.0",
+      "downloadLocation": "https://registry.npmjs.org/find-up/-/find-up-5.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "efcfcf5d3d7094b2c3813cc3b3bb23abd873cf4bd70fece7fbbc32a447b87d74310a6766a9f1ac10f4319a2092408dda8c557dd5b552b2f36dac94625ba9c69e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/find-up@5.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2a36811f99d5a61a2f19",
+      "name": "flat-cache",
+      "versionInfo": "4.0.1",
+      "downloadLocation": "https://registry.npmjs.org/flat-cache/-/flat-cache-4.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "7fb71c14f2b7497147a71d795081b2449fc525072db8a674cd5b8dddfac1a381e72b771acbd5445b447ac8f6051c2d0082a86e90fcca8eadb6b790e6032a86cb"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/flat-cache@4.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-57b7d7dc886d3409051c",
+      "name": "flatted",
+      "versionInfo": "3.4.4",
+      "downloadLocation": "https://registry.npmjs.org/flatted/-/flatted-3.4.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e7ec9b841640344271687dd7e5ebc015ab54c4b7c41d2afb9fa91827ed50774994aabe1ebbd8087fa1836d61dff112628c7ae38cef06fa56b5e1294bd92792d5"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/flatted@3.4.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-904b5f9f629461dd2d32",
+      "name": "flora-colossus",
+      "versionInfo": "3.0.2",
+      "downloadLocation": "https://registry.npmjs.org/flora-colossus/-/flora-colossus-3.0.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "264efc2bf4f3b7ab1ac503c60a1949c3af71b851a95b24d2012f04754d21fc5c97c03d8ae3ac8d3979a8ea7447719f68a1e932040ccc9309a218db7bc0e0b9ce"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/flora-colossus@3.0.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1099dc8fa98a6755615b",
+      "name": "galactus",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/galactus/-/galactus-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1e62b24c51a899d01c873e2e9b1f0cc019eb9df166769c224f2180e19385eebc9ad8b9a06dcf6a6ad7b8cb07889cbfb481405522685acf5d92046a56dd263862"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/galactus@2.0.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7b90c3653564b1f16e24",
+      "name": "glob-parent",
+      "versionInfo": "6.0.2",
+      "downloadLocation": "https://registry.npmjs.org/glob-parent/-/glob-parent-6.0.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5f1c08f043a1550816a7a8832feddbd2bf3a7f877a017eb3494e791df078c9d084b972d773915c61e3aefa79c67ed4b84c48eeff5d6bb782893d33206df9afe0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/glob-parent@6.0.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-59626fdea6dbc52eac32",
+      "name": "glob",
+      "versionInfo": "13.0.6",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-13.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5a3972ae89669bcb83a66fe8806c976576f567e09ad81f0d6c9c2a0558346b12bd19b05ea12ef2195eaf8d79d87469ba5f9de27a112ec716f288aa7c42637857"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/glob@13.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c0b8c47fbef7d28839a8",
+      "name": "graceful-fs",
+      "versionInfo": "4.2.11",
+      "downloadLocation": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "45b279fe398570d342703579a3d7939c12c9fc7b33595d0fef76dcf857f89d2feb263f98692e881b288e2f45680585fe9755ab97793ade1fcaac7fa7849d17bd"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/graceful-fs@4.2.11"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-8280c55d26338cc81666",
+      "name": "ignore",
+      "versionInfo": "5.3.2",
+      "downloadLocation": "https://registry.npmjs.org/ignore/-/ignore-5.3.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "86c053354a904c3c245ad71d608da2d3a63f9d4044b0d10324a8d676280bbde832f240ee2404bcb91969924710a721172f467fa630f2e4706632344227682afa"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ignore@5.3.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5327a0e07d206b3f195b",
+      "name": "ignore",
+      "versionInfo": "7.0.6",
+      "downloadLocation": "https://registry.npmjs.org/ignore/-/ignore-7.0.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04083a42413c5be4ee40baebc34520afb1de81776e46eba3f3fb62da448e73e8f3d5d9b1f3f58d723afa5c69eae58a435b1170c1a6afa83d3e8c850e29e953b3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ignore@7.0.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-d1af6342e06cf4463a1e",
+      "name": "imurmurhash",
+      "versionInfo": "0.1.4",
+      "downloadLocation": "https://registry.npmjs.org/imurmurhash/-/imurmurhash-0.1.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2665cc67ac2ebc398b88712697dca4cea3ba97015ba1fd061b822470668435d0910c398c5679f2eece47b0880709b6aad30d8cc8f843aa48535204b62d4d8f1c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/imurmurhash@0.1.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9975757ae9e01b0d541e",
+      "name": "is-extglob",
+      "versionInfo": "2.1.1",
+      "downloadLocation": "https://registry.npmjs.org/is-extglob/-/is-extglob-2.1.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "49b29b00d90deb4dd58b88c466fe3d2de549327e321b0b1bcd9c28ac4a32122badb0dde725875b3b7eb37e1189e90103a4e6481640ed9eae494719af9778eca1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/is-extglob@2.1.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ab2c83c8b42b81287351",
+      "name": "is-glob",
+      "versionInfo": "4.0.3",
+      "downloadLocation": "https://registry.npmjs.org/is-glob/-/is-glob-4.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c5e9526b21c7dfa66013b6568658bba56df884d6cd97c3a3bf92959a4243e2105d0f7b61f137e4f6f61ab0b33e99758e6611648197f184b4a7af046be1e9524a"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/is-glob@4.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-025dcb8e5060a70b8aba",
+      "name": "isbinaryfile",
+      "versionInfo": "4.0.10",
+      "downloadLocation": "https://registry.npmjs.org/isbinaryfile/-/isbinaryfile-4.0.10.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "887aea7b9b21bc151c15b999abdcce40706878e85926ee91406ac3a4181e9d49bf026f85dc9336320423fab2b767ad357f3acbe602d95ad00f1f638169255ccb"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/isbinaryfile@4.0.10"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2f62e711a6921973ef3f",
+      "name": "isexe",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "447c4c2e9f659ca1c61d19e0f5016144231b600715a67ebdb2648672addfdfac638155564e18f8aaa2db4cb96aed2b23f01f9f210d44b8210623694ab3241e23"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/isexe@2.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-adbc921fc34de3b1dd43",
+      "name": "json-buffer",
+      "versionInfo": "3.0.1",
+      "downloadLocation": "https://registry.npmjs.org/json-buffer/-/json-buffer-3.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e1b57905f4769aa7d04c99be579b4f3dd7fe669ba1888bd3b8007983c91cad7399a534ff430c15456072c17d68cebea512e3dd6c7c70689966f46ea6236b1f49"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/json-buffer@3.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-224390b164849450598f",
+      "name": "json-schema-traverse",
+      "versionInfo": "0.4.1",
+      "downloadLocation": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c5b6c21f9742614e53f0b704861ba1ec727cf075ee5b7aac237634cce64529f6441dca5688753f271ce4eb6f41aec69bfe63221d0b62f7030ffbce3944f7b756"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/json-schema-traverse@0.4.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0e74de0204bb619f7376",
+      "name": "json-stable-stringify-without-jsonify",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "https://registry.npmjs.org/json-stable-stringify-without-jsonify/-/json-stable-stringify-without-jsonify-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "05d6e8cbe97bb40dce196e858f21475a43f92ee0728f54e4df72e3caad1ac72cdd93dfff2528b6bb77cfd504a677528dc2ae9538a606940bbcec28ac562afa3f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/json-stable-stringify-without-jsonify@1.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1cc319eb338a105e9805",
+      "name": "junk",
+      "versionInfo": "4.0.1",
+      "downloadLocation": "https://registry.npmjs.org/junk/-/junk-4.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "42eb21d2e3fe1bc65272918c66f1d48917c8d18056b81de0541625234bf4bef389b7914b89c728f8890fd1ae742ea4d34219adb3f9bab4fe52584f944b222f71"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/junk@4.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b44ddb67514f56771598",
+      "name": "keyv",
+      "versionInfo": "4.5.4",
+      "downloadLocation": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a3154790747f1097f608d5e75b144b5ba9a0ec9c82094706d03b441a62f672d528d4f3538a7d4f52297eafffb8af93295600bf7e7d648ecc7b9a34ae8caa88a7"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/keyv@4.5.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c90baa3b36b65fd362a3",
+      "name": "levn",
+      "versionInfo": "0.4.1",
+      "downloadLocation": "https://registry.npmjs.org/levn/-/levn-0.4.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f9b4f6b87e04e4b184ee1fe7ddebdc4bfb109495c2a48a7aca6f0e589e5e57afbaec3b2a97f2da693eea24102ddabcdfa1aff94011818710e2c7574cb7691029"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/levn@0.4.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ad481860c229fd356273",
+      "name": "locate-path",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "https://registry.npmjs.org/locate-path/-/locate-path-6.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "88f64ae9e6236f146edee078fd667712c10830914ca80a28a65dd1fb3baad148dc026fcc3ba282c1e0e03df3f77a54f3b6828fdcab67547c539f63470520d553"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/locate-path@6.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e163550123a385379047",
+      "name": "lru-cache",
+      "versionInfo": "11.5.2",
+      "downloadLocation": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e297ccd457f4c79d28d2d4306f9b9cc3f4733720f4fd824c13a215712b5a959b8c5b176ddec47786e4ad4edc73e0f526bd97d182ebc37a36acbd0da489f475d6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lru-cache@11.5.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-7dfd90b95b048a79ebe8",
+      "name": "minimatch",
+      "versionInfo": "10.2.6",
+      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "be92d012cf952c2af59d4d015d2d3b99a628170943007d209e042ebadb71230bad0c510c1ead9b957fbcbe98310dd2b72753f08c22627a9efb3a2b536782e5d4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/minimatch@10.2.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-919212b4955186da5048",
+      "name": "minipass",
+      "versionInfo": "7.1.3",
+      "downloadLocation": "https://registry.npmjs.org/minipass/-/minipass-7.1.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b44047a839c8a0cff5ad7304d738246bd83a43695ca029311cbb9cece0c9e41c5b3f977873667970682d5c092ee7ddb4d02c7b762b874ce61f4810fc9fa9a6f0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/minipass@7.1.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-2083576c5af805492764",
+      "name": "ms",
+      "versionInfo": "2.1.3",
+      "downloadLocation": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e85973b9b4cb646dc9d9afcd542025784863ceae68c601f268253dc985ef70bb2fa1568726afece715c8ebf5d73fab73ed1f7100eb479d23bfb57b45dd645394"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ms@2.1.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-de1347ea1b99e6688958",
+      "name": "natural-compare",
+      "versionInfo": "1.4.0",
+      "downloadLocation": "https://registry.npmjs.org/natural-compare/-/natural-compare-1.4.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "396343f1e8b756d342f61ed5eb4a9f7f7495a1b1ebf7de824f0831b9b832418129836f7487d2746eec8408d3497b19059b9b0e6a38791b5d7a45803573c64c4b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/natural-compare@1.4.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b028d685c41c571063fc",
+      "name": "optionator",
+      "versionInfo": "0.9.4",
+      "downloadLocation": "https://registry.npmjs.org/optionator/-/optionator-0.9.4.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e88a50ee6294c5171934b20e6d1d21cfb971b1aa5248860d649c173c6785d264d5a862852178f50d070ca13db64b744e70bc98febcf43d669667d6b25a669df6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/optionator@0.9.4"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c16cf2138c211e8ccc28",
+      "name": "p-limit",
+      "versionInfo": "3.1.0",
+      "downloadLocation": "https://registry.npmjs.org/p-limit/-/p-limit-3.1.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4d839a9ccdf01b0346b193767154d83c0af0e39e319d78f9aa6585d5b12801ce3e714fe897b19587ba1d7af8e9d4534776e1dcdca64c70576ec54e5773ab8945"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/p-limit@3.1.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-6dd2208f9e4cbc38eac1",
+      "name": "p-locate",
+      "versionInfo": "5.0.0",
+      "downloadLocation": "https://registry.npmjs.org/p-locate/-/p-locate-5.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2da363b51594058fbecc1e6713f37071aa0cca548f93e4be647341d53cdd6cc24c9f2e9dca7a401aded7fed97f418ab74c8784ea7c47a696e8d8b1b29ab1b93f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/p-locate@5.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3ae48f237e1a4424a3b1",
+      "name": "path-exists",
+      "versionInfo": "4.0.0",
+      "downloadLocation": "https://registry.npmjs.org/path-exists/-/path-exists-4.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6a4f50cb943b8d86f65b071ecb9169be0d8aa0073f64884b48b392066466ca03ec1b091556dd1f65ad2aaed333fa6ead2530077d943c167981e0c1b82d6cbbff"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-exists@4.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e1a2a032096ace66b422",
+      "name": "path-key",
+      "versionInfo": "3.1.1",
+      "downloadLocation": "https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a2399e374a9dfb2d23b3312da18e3caf43deab97703049089423aee90e5fe3595f92cc17b8ab58ae18284e92e7c887079b6e1486ac7ee53aa6d889d2c0b844e9"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-key@3.1.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-885adc94c3a1b56bb842",
+      "name": "path-scurry",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "dcefe2555b0900fb0e9e9c1621e0fe77acffecf9aa029c9078f52d0a77636ad8fff48e4bca51efb79aa5b856814f7239877af57a37d1d39e9cf850aff8d9cd5e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-scurry@2.0.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e4e8b4151db67e391fb6",
+      "name": "pe-library",
+      "versionInfo": "1.0.1",
+      "downloadLocation": "https://registry.npmjs.org/pe-library/-/pe-library-1.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9e1dfd328d5e1969994bbcbe98afdd408aa0ed2d65a77f03a51c64ca81dfd19714b3f1c373ecb24e3b8eb53bd23191e67d22ee490697f78e6ed3963643a51666"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/pe-library@1.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c78c64a6fc75782d50e6",
+      "name": "picomatch",
+      "versionInfo": "4.0.5",
+      "downloadLocation": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "46fc3072bb8d8c8d67713e7145a91ec92f4b7fc95c22dbf7e0a0fe6a27fe547f6476e0327d8062a46875db6ef8c6d7a720f675d7dfd1f4175305af200304a1d0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/picomatch@4.0.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-34f101c77defd4577c69",
+      "name": "plist",
+      "versionInfo": "3.1.1",
+      "downloadLocation": "https://registry.npmjs.org/plist/-/plist-3.1.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6487dc2c90beec4ec50459c3c66f4c3e6b7b0fe0e2772436ea57b089e3bbe407610366b232db094844b4896cea2506dc5514ab4ee7d0a32d0347de311ee7b4a0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/plist@3.1.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-54b020bcab3c812dadea",
+      "name": "postject",
+      "versionInfo": "1.0.0-alpha.6",
+      "downloadLocation": "https://registry.npmjs.org/postject/-/postject-1.0.0-alpha.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6fd11bf21d9e56a344f1e76f29dc2a92b63a3bb900c2623c91c9c1bf535272895825ba39f57505d27a05abe9716c2d72376d1b982d160446c30b91ffec049bd0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/postject@1.0.0-alpha.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-78fc019ae342d5003c51",
+      "name": "prelude-ls",
+      "versionInfo": "1.2.1",
+      "downloadLocation": "https://registry.npmjs.org/prelude-ls/-/prelude-ls-1.2.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "be47033eb459a354192db9f944b18fa60fd698843ae6aa165a170629ffdbe5ea659246ab5f49bdcfca6909ab789a53aa52c5a9c8db9880edd5472ad81d2cd7e6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/prelude-ls@1.2.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-09a37784646f81f8963d",
+      "name": "prettier",
+      "versionInfo": "3.9.6",
+      "downloadLocation": "https://registry.npmjs.org/prettier/-/prettier-3.9.6.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3a9374cf355d89a880871a6eba3e5e7e9212e2c63d8fb6d8eae4799a78f9c8fcc691d92334a4897944e13dbeb4270dbd42e019800e28fbf881e3d90589a057ea"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/prettier@3.9.6"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b598d996665da76d1044",
+      "name": "progress",
+      "versionInfo": "2.0.3",
+      "downloadLocation": "https://registry.npmjs.org/progress/-/progress-2.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ecf887b4b965e4b767288330d74d08fbcc495d1e605b6430598913ea226f6b46d78ad64a6bf5ccad26dd9a0debd979da89dcfd42e99dd153da32b66517d57db0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/progress@2.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-44fe814781fdcdc856ac",
+      "name": "promise-retry",
+      "versionInfo": "2.0.1",
+      "downloadLocation": "https://registry.npmjs.org/promise-retry/-/promise-retry-2.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cbe58a165051f011979ec3652071463d99b20dfdc314ca0b85a7e5027c99815eab1bac6ef89c1eb13a3643d47a5f0626b66c001429009377b7e6311da1e87fde"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/promise-retry@2.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3fe331f5536b72438f24",
+      "name": "punycode",
+      "versionInfo": "2.3.1",
+      "downloadLocation": "https://registry.npmjs.org/punycode/-/punycode-2.3.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bd8b7b503d54f5683ad77f2c84bb4b3af740bbef03b02fe2945b44547707fb0c9d712a4d136d007d239db9fe8c91115a84be4563b5f5a14ee7295645b5fabc16"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/punycode@2.3.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a22252006874f67d8e59",
+      "name": "resedit",
+      "versionInfo": "2.0.3",
+      "downloadLocation": "https://registry.npmjs.org/resedit/-/resedit-2.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a1379e9b1c2832ec714d8c575308e4ace3df9e04d07a196fd3f1e8605364078bb3b0fd549f503d9c8f0940a18e164c69aa40bbaa432cd2552c1abbd495b2cd50"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/resedit@2.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9c9488d55d14179427b4",
+      "name": "retry",
+      "versionInfo": "0.12.0",
+      "downloadLocation": "https://registry.npmjs.org/retry/-/retry-0.12.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f4b9224f08d487aad3e79e43b44f6b4d7f81281c8f7eb333100b67944b5d130af73647dfc228a1a9ed9b5800e0f8e4118edf6097a20276607f6450c2180b52a3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/retry@0.12.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-82a86616e50ded792532",
+      "name": "semver",
+      "versionInfo": "7.8.5",
+      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "63bfca0ec6fc2e3a28669c1aa86cae94ee8342592c8029dc7211c693eb19218e1206f52870c044147e54af57c8e1d57e26f974c3a723bee71a222e34a6e462a0"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/semver@7.8.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a9cba97b71b818fb0a49",
+      "name": "shebang-command",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "907c6bdb366962d766acdd6a0e3aeb5ff675ad1d641bc0f1fa09292b51b87979af5ecc26704d614d6056614ce5ada630d7fc99a7a62e0d8efb62dbdb3747660c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/shebang-command@2.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-849fb37298f1c4dcdeb6",
+      "name": "shebang-regex",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "efef9d161b5cc77df9dee05aabc0c347836ec417ad0730bb6503a19934089c711de9b4ab5dd884cb30af1b4ed9e3851874b4a1594c97b7933fca1cfc7a471bd4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/shebang-regex@3.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-dcaa1b0a5fe4092c3fa2",
+      "name": "sumchecker",
+      "versionInfo": "3.0.1",
+      "downloadLocation": "https://registry.npmjs.org/sumchecker/-/sumchecker-3.0.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "32f8d7ce4cff04e7f2543906d2814eb41c475f6bb780a6cc1c817f7576e566c803dc158e14b987a2f229658ec1ca425d02372a442062d5660135d102f7223bbe"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/sumchecker@3.0.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b066f6a628712391f95f",
+      "name": "tinyglobby",
+      "versionInfo": "0.2.17",
+      "downloadLocation": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c1747f758a5ca8a99f5a911d66388a24ec023459dd0f40cc9eb5bf7188d51adb449017d581c2c51e836b963e3b9a339589cf72c8dbbae5a96c805e0d4324dada"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/tinyglobby@0.2.17"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-3b8eb31d252afb70ed9e",
+      "name": "ts-api-utils",
+      "versionInfo": "2.5.0",
+      "downloadLocation": "https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-2.5.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "389fe26f184f96aacc33452234727fd02290928285db8dff0049a996ddeaa518245bc546ec87ce4b8d61ed5f138c84ea741c87ceb8dc4bfdac8becb894887c34"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ts-api-utils@2.5.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-ad4a2682392e9c8fa29d",
+      "name": "type-check",
+      "versionInfo": "0.4.0",
+      "downloadLocation": "https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5e5794a1cf6ec065ea8d6c176944d9026ccc705679f39f10036befc7552be7121c8b15c83fef0b9c50e0469954df4bacead7aa765b2415fbbe69ee0aefd3a87b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/type-check@0.4.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-0f04d0d9d0f94e41c1ce",
+      "name": "typescript-eslint",
+      "versionInfo": "8.65.0",
+      "downloadLocation": "https://registry.npmjs.org/typescript-eslint/-/typescript-eslint-8.65.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "fe082b1c0c328c4343bacbf2c5bbaac400b67539d983f67c17e7e042d608cfe2fa9fff477d294465c14657f36c30d6ba0a41a4d315235001700b4bc739f96f20"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/typescript-eslint@8.65.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-e500ed061b70ae8772dc",
+      "name": "typescript",
+      "versionInfo": "6.0.3",
+      "downloadLocation": "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cb64efbb14993c3c906a490544f6472859be28a56a222b1d83dfc26709bd7edbca5cb3fc3515a3dfcfce0e335baf8dd2b285ea36e022b047f519d0b1a9671d07"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/typescript@6.0.3"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-a96475123ac78b297519",
+      "name": "undici-types",
+      "versionInfo": "7.18.2",
+      "downloadLocation": "https://registry.npmjs.org/undici-types/-/undici-types-7.18.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "02cb82cdf7c61c9c9b49a46b9abe5e1ebf359b0254de48f0e8cfaea6b5af09788d78df52386c10dc99fc8dbf26dd9ea2cd58249e7d51d054c21003f642b2d8ff"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/undici-types@7.18.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9f3dc2d15b893a0f515f",
+      "name": "undici",
+      "versionInfo": "7.29.0",
+      "downloadLocation": "https://registry.npmjs.org/undici/-/undici-7.29.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "203c5f95e2e699b4ac91f5925004e23759df9f6ac3baf9cc3aa6f909647dda221fa2303451dfae94e000110e7b2cfafdad69acade5327f9970c9aa3eec634d57"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/undici@7.29.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-9cc71211156a831c626e",
+      "name": "uri-js",
+      "versionInfo": "4.4.1",
+      "downloadLocation": "https://registry.npmjs.org/uri-js/-/uri-js-4.4.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "eeb294cb2df7435c9cf7ca50d430262edc17d74f45ed321f5a55b561da3c5a5d628b549e1e279e8741c77cf78bd9f3172bacf4b3c79c2acf5fac2b8b26f9dd06"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/uri-js@4.4.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-5a71f2b741944bf107d6",
+      "name": "which",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04b2374e5d535b73ef97bd25df2ab763ae22f9ac29c17aac181616924a8cb676d782b303fb28fbae15b492e103c7325a6171a3116e6881aa4a34c10a34c8e26c"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/which@2.0.2"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-b2c9e1725f26164bb22e",
+      "name": "word-wrap",
+      "versionInfo": "1.2.5",
+      "downloadLocation": "https://registry.npmjs.org/word-wrap/-/word-wrap-1.2.5.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04ddb607979a30c23d50cb63ac677983978260fa423c3532d052576d8b1a4f9cd8c6314e7244b9dd2403137a56915a16a475d56f706b61c10de13c1ae7907970"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/word-wrap@1.2.5"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-c801f70722d786dee48b",
+      "name": "xmlbuilder",
+      "versionInfo": "15.1.1",
+      "downloadLocation": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-15.1.1.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c8ca8606ab57c9e3757b74c662f80d803559de3f385b873090e5d0b30821a25e803e065669f7fd9676ef37b3076093a25ecbc63d7b634d8244882f49db0bfd12"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/xmlbuilder@15.1.1"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1ba1de1d446de06fd9b9",
+      "name": "yargs-parser",
+      "versionInfo": "22.0.0",
+      "downloadLocation": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-22.0.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "af0bbf0a535d48ca644ab51bf9de8146c4a42d4ab57e67ec63a4cea58cd3c2fc24835fcd446f39281cb792afbe03c2ca4305fa96cbbe69669dfb6921bee5ebab"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yargs-parser@22.0.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-1acee86624de49829433",
+      "name": "yocto-queue",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz",
+      "filesAnalyzed": false,
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ad592cbec9cd09d27fa2119ceb180fc3237c7a1782c6c88b33c9b1b84fedfe6395a897b03ee3b59a22e94c74224604ca08b7b12f831e00555a82db3b1e6359d9"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yocto-queue@0.1.0"
+        }
+      ],
+      "comment": "Exact BLD-001 internal-use admission; automation records but does not grant legal approval."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-RSrender"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-82a86616e50ded792532"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9f3dc2d15b893a0f515f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-b598d996665da76d1044"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c0b8c47fbef7d28839a8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c891998e88a2a7a79b8c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0200831352e62c963644",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-dcaa1b0a5fe4092c3fa2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0951437a9a4696dd52be",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-34f101c77defd4577c69"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0951437a9a4696dd52be",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5f587138a7fa7b84711d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0951437a9a4696dd52be",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0e049f6388faa031042d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3f58d6a05c24bf7eafdc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0e049f6388faa031042d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-81c7dfd40d2f80b9798b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0e049f6388faa031042d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0e049f6388faa031042d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c9997afedc01650835d6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0e77450dbf69ca87669f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3aa131105909c2fef450"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0f04d0d9d0f94e41c1ce",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e049f6388faa031042d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0f04d0d9d0f94e41c1ce",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-34cc4e9a70ddb6b73bcf"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0f04d0d9d0f94e41c1ce",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8316447e41c92a616f41"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-0f04d0d9d0f94e41c1ce",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c9997afedc01650835d6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1099dc8fa98a6755615b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1099dc8fa98a6755615b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-904b5f9f629461dd2d32"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1242bb0a2257053402e4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-19afb85871ec6753a412"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1242bb0a2257053402e4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3aa131105909c2fef450"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1242bb0a2257053402e4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ec29746adee7d0f372e8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-1242bb0a2257053402e4",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-fe5a4a38ec87bb3f66fb"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-19afb85871ec6753a412",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3aa131105909c2fef450"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-23d4e7a3725d7eaf749a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-650a0d8a160f64127220"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-23d4e7a3725d7eaf749a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-77649af58b264ee369f1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-23d4e7a3725d7eaf749a",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c7901d4af178944446ba"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2a36811f99d5a61a2f19",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-57b7d7dc886d3409051c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-2a36811f99d5a61a2f19",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-b44ddb67514f56771598"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e049f6388faa031042d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3b8eb31d252afb70ed9e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-312a4bc9b6201a1c253c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c9997afedc01650835d6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e049f6388faa031042d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1d1887a9bf30a3aed0e0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-312a4bc9b6201a1c253c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3b8eb31d252afb70ed9e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3bc1a583417694c136d5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3f58d6a05c24bf7eafdc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5327a0e07d206b3f195b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34cc4e9a70ddb6b73bcf",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-de1347ea1b99e6688958"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34f101c77defd4577c69",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1ad10cf39a07bbaca08b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34f101c77defd4577c69",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c801f70722d786dee48b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-34f101c77defd4577c69",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cf278cb8d073b3bd22b6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-36b5efd728dd4478427e",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3ae48f237e1a4424a3b1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-36b5efd728dd4478427e",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ad481860c229fd356273"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3bc1a583417694c136d5",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-77649af58b264ee369f1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3bc1a583417694c136d5",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3f58d6a05c24bf7eafdc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3bc1a583417694c136d5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-3f58d6a05c24bf7eafdc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-44fe814781fdcdc856ac",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5e03035f19a278120767"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-44fe814781fdcdc856ac",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9c9488d55d14179427b4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-50cb51119b3e7a0445ea",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5a71f2b741944bf107d6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-50cb51119b3e7a0445ea",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a9cba97b71b818fb0a49"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-50cb51119b3e7a0445ea",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-e1a2a032096ace66b422"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-54b020bcab3c812dadea",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7aa63ec2252418dd3a94"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-59626fdea6dbc52eac32",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7dfd90b95b048a79ebe8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-59626fdea6dbc52eac32",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-885adc94c3a1b56bb842"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-59626fdea6dbc52eac32",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-919212b4955186da5048"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5a71f2b741944bf107d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2f62e711a6921973ef3f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5e96e6a5142ed84b7bec",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8011bd8ea05490cb724e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5f587138a7fa7b84711d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-59626fdea6dbc52eac32"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-5f587138a7fa7b84711d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7dfd90b95b048a79ebe8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-61f595114b42a38867c3",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8011bd8ea05490cb724e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-61f595114b42a38867c3",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c90baa3b36b65fd362a3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6390bf853aed627edd1f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2083576c5af805492764"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6b7fc6e51360fd21bb8c",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-50cb51119b3e7a0445ea"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6dd2208f9e4cbc38eac1",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c16cf2138c211e8ccc28"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-70b26b91b2ae2357f6fd",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f6a7778b783cd75ce63c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-74485145ba6bba38fcfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-025dcb8e5060a70b8aba"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-74485145ba6bba38fcfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-34f101c77defd4577c69"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-74485145ba6bba38fcfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-74485145ba6bba38fcfc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-82a86616e50ded792532"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-7b90c3653564b1f16e24",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ab2c83c8b42b81287351"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-7dfd90b95b048a79ebe8",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8d760e4ad257be5ff72b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8011bd8ea05490cb724e",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7a6781250b863b66457d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-81c7dfd40d2f80b9798b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d73964c6d2eb87ae9907"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8316447e41c92a616f41",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3bc1a583417694c136d5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8316447e41c92a616f41",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3f58d6a05c24bf7eafdc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8316447e41c92a616f41",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8316447e41c92a616f41",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8316447e41c92a616f41",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c9997afedc01650835d6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-885adc94c3a1b56bb842",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-919212b4955186da5048"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-885adc94c3a1b56bb842",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-e163550123a385379047"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-89215114e4166a445355",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-54b020bcab3c812dadea"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-89215114e4166a445355",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-89215114e4166a445355",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c0b8c47fbef7d28839a8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8c4add900e285a631c59",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-44fe814781fdcdc856ac"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8c4add900e285a631c59",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-8d760e4ad257be5ff72b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5d9d8851e0b3a24a8205"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-904b5f9f629461dd2d32",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9cc71211156a831c626e",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3fe331f5536b72438f24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9d6d2021292b0609c5f0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-9d6d2021292b0609c5f0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d3ed5f0d94893f555766"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-a22252006874f67d8e59",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-e4e8b4151db67e391fb6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-a2daa845be2ba7349cec",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d4a6d0062553630849b1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-a9cba97b71b818fb0a49",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-849fb37298f1c4dcdeb6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ab2c83c8b42b81287351",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9975757ae9e01b0d541e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad437bedcb0866d17714",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-224390b164849450598f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad437bedcb0866d17714",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-60db03f2d9496a0b9ae9"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad437bedcb0866d17714",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9cc71211156a831c626e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad437bedcb0866d17714",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a49874e94660e63ec8a7"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad481860c229fd356273",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6dd2208f9e4cbc38eac1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ad4a2682392e9c8fa29d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-78fc019ae342d5003c51"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-45c405680bb2f8203b4d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-78fc019ae342d5003c51"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ad4a2682392e9c8fa29d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-b2c9e1725f26164bb22e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c90baa3b36b65fd362a3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b028d685c41c571063fc",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ddcd360453f22ba5daab"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b066f6a628712391f95f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e7b031c61139b98da0e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b066f6a628712391f95f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c78c64a6fc75782d50e6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-b44ddb67514f56771598",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-adbc921fc34de3b1dd43"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c16cf2138c211e8ccc28",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1acee86624de49829433"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c4003c9d3aa0b670fd15",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c4003c9d3aa0b670fd15",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7dfd90b95b048a79ebe8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c4003c9d3aa0b670fd15",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a42e0543fbb6e6a39017"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c90baa3b36b65fd362a3",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-78fc019ae342d5003c51"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c90baa3b36b65fd362a3",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ad4a2682392e9c8fa29d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0ab4d213ff81eadb728d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3b8eb31d252afb70ed9e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3bc1a583417694c136d5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7dfd90b95b048a79ebe8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-82a86616e50ded792532"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-b066f6a628712391f95f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-c9997afedc01650835d6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-e68be82b1b5dce6c854b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-cfd34b733a3c0f577fc6",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2a36811f99d5a61a2f19"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d3e856da30b4a795cfd0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a96475123ac78b297519"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d3ed5f0d94893f555766",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e74de0204bb619f7376"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0e77450dbf69ca87669f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1242bb0a2257053402e4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1d1887a9bf30a3aed0e0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2281c2232c283a10977c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-23d4e7a3725d7eaf749a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-36b5efd728dd4478427e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-50cb51119b3e7a0445ea"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5e96e6a5142ed84b7bec"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-60db03f2d9496a0b9ae9"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-61f595114b42a38867c3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-726321f5c138be97fd5b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-77649af58b264ee369f1"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7b90c3653564b1f16e24"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7dfd90b95b048a79ebe8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8011bd8ea05490cb724e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-81c7dfd40d2f80b9798b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8280c55d26338cc81666"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8c51af36cd574fcb38fb"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ab2c83c8b42b81287351"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ad437bedcb0866d17714"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-b028d685c41c571063fc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c4003c9d3aa0b670fd15"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cbd4dd8d594e202bb6c9"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cfd34b733a3c0f577fc6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d1af6342e06cf4463a1e"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-de1347ea1b99e6688958"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ec29746adee7d0f372e8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-d6988e01c13f17ee6d53",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f153f8244a2e0243e86f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dcaa1b0a5fe4092c3fa2",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dd4e12c36a57abb99cb0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0200831352e62c963644"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dd4e12c36a57abb99cb0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a18a7609c5ff94cf0e1a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-dd4e12c36a57abb99cb0",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d3e856da30b4a795cfd0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0bed7f14c3d22083ad7a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0d6007b4e421f1403d73"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-29a939c9d4116153a4f8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-2ec1e2f9d436156188dc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-32b2e7678f98638beb5c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-35f9fa2de0510c322532"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-36205626d8ed9ee2c92c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4d3478764df48f056795"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-4e42226a5fd0eeead180"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5a09292072b7308bbe9d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6ab54c7079b2ff6e1d89"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-726f52f0c9610695e82b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7276d60d48a7ec9574be"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7a8eb4cf54c968736483"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-7d8c72a96479f4d46f3a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-9cf9a22e400c2915b7ee"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a5f4ab7c9556fcb6a236"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a80e4c75dbd58bfb448a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-bc0bdf7bbd89c12c00d5"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c5f43b7c8a528bc1f11a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-d8f9ba4fc83b5a1f97d4"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-de1261caf947abc915e6"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f27cfab6411787e20038"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f3e431cdc81f7b2c3017"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-fe26c44078b52df03eba"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e5f02a509c4311553bd7",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-ff2c87a3b1731c846151"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e68be82b1b5dce6c854b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0ab4d213ff81eadb728d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e68be82b1b5dce6c854b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-e68be82b1b5dce6c854b",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a0865889983df9a550f3"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f153f8244a2e0243e86f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-70b26b91b2ae2357f6fd"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f153f8244a2e0243e86f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-726321f5c138be97fd5b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f153f8244a2e0243e86f",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-f6a7778b783cd75ce63c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0200831352e62c963644"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-0951437a9a4696dd52be"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1099dc8fa98a6755615b"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1ba1de1d446de06fd9b9"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-1cc319eb338a105e9805"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-34f101c77defd4577c69"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-5f587138a7fa7b84711d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6390bf853aed627edd1f"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6b7fc6e51360fd21bb8c"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-74485145ba6bba38fcfc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-82a86616e50ded792532"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-89215114e4166a445355"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8c4add900e285a631c59"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a18a7609c5ff94cf0e1a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a22252006874f67d8e59"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-a2daa845be2ba7349cec"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-f70fd432ab1b10d72e6d",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-c0b8c47fbef7d28839a8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-019311f7321f90ebb1cc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-6345842887b2575c3485"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-677144beff6604e52605"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-6d45531ac43d56e2b3c8"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-7325c7f20f4562f1cbaa"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-7404efafe70194101436"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-9d6d2021292b0609c5f0"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-aa18a59d0442c184995a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-b52147a6f0516c313a0a"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-d3ed5f0d94893f555766"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-RSrender",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-effc57c789c2c2a304de"
+    }
+  ]
+}
