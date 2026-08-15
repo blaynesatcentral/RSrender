@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+  "currentLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
   "expectedArtifactDigests": {
-    "spdx": "sha256:3e29ef6b6ebb732b67bc538416c50aacb60c34bfd7ddb8eb0e2871ba142ccd4d",
-    "custody": "sha256:fae092ab486e6ba15babb4393183399cec111e5f5dedd8ded3c590442a2fcfc7",
+    "spdx": "sha256:8b6ed277dfe5ac05dd4cd59c03e9dcc05c310ee495d5d8e12548f369bdf051c6",
+    "custody": "sha256:355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, and BLD-012 platform-electron-main-to-application/contracts",
-    "condition": "effective only after BLD-012 / GitHub #56 closes with final evidence, issue comment 5300323523 records the exact two internal edges, and this exact lock hash matches",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, and BLD-013 test-support-to-contracts",
+    "condition": "effective for BLD-013 only under the user's unconditional implementation authorization and explicit current-topology approval, exact qualifying BLD-013 evidence, the one recorded test-support-to-contracts edge, and this exact lock hash",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -48,6 +48,17 @@
       "workspaceEdgesAdded": [
         "@rsrender/platform-electron-main@0.0.0 -> @rsrender/application@0.0.0",
         "@rsrender/platform-electron-main@0.0.0 -> @rsrender/contracts@0.0.0"
+      ]
+    },
+    {
+      "ticket": "BLD-013 / GitHub #57",
+      "status": "CLOSED",
+      "lockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+      "evidence": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
+      "evidenceSha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/test-support@0.0.0 -> @rsrender/contracts@0.0.0"
       ]
     }
   ],
@@ -128,7 +139,7 @@
     {
       "path": "packages/test-support",
       "identity": "@rsrender/test-support@0.0.0",
-      "dependencies": {},
+      "dependencies": { "@rsrender/contracts": "0.0.0" },
       "devDependencies": {},
       "optionalDependencies": {}
     }

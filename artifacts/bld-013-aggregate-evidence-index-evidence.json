@@ -1,0 +1,280 @@
+{
+  "schema": "rsrender.bld013.aggregate-evidence-index-evidence.v1",
+  "ticket": "BLD-013 / GitHub #57",
+  "startedAtUtc": "2026-08-15T04:32:53.2578935Z",
+  "finishedAtUtc": "2026-08-15T04:34:45.4640936Z",
+  "generatedAtUtc": "2026-08-15T04:34:45.4640936Z",
+  "result": "PASS",
+  "resultMeaning": "The bounded aggregate-index validator and its exact referential-integrity oracles passed; this is not an aggregate product acceptance or release result.",
+  "authority": {
+    "requirements": [
+      "product-specification-21",
+      "acceptance-strategy-2.1",
+      "acceptance-strategy-8.1",
+      "architecture-13",
+      "OA-GOLD-001",
+      "OA-REP-001"
+    ],
+    "sourceTickets": ["BLD-008", "BLD-009", "BLD-010", "BLD-011", "BLD-012"],
+    "matrixRow": {
+      "rowId": "BLD-013",
+      "revision": "github-issue-57@2026-08-14T22:32:44Z",
+      "source": "GitHub #57 Objective Done and roadmap BLD-013"
+    },
+    "oracleRows": [
+      { "oracleId": "OA-GOLD-001", "revision": "rsrender.golden-log-corpus.v1" },
+      { "oracleId": "OA-REP-001", "revision": "rsrender.golden-log-corpus.v1" },
+      { "oracleId": "bld-013-oracle-v1", "revision": 1 }
+    ],
+    "scope": "read-only traceability and referential-integrity index over five frozen bounded source manifests"
+  },
+  "contract": {
+    "schemaVersion": "rsrender.aggregate-evidence-index.v1",
+    "indexId": "BLD-013-EVIDENCE-INDEX",
+    "indexRevision": 1,
+    "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009",
+    "sourceSchemaAllowlist": [
+      "rsrender.bld-evidence.v0",
+      "rsrender.bld012.application-version-evidence.v0"
+    ],
+    "resultVocabulary": [
+      "METHOD_NOT_RUN",
+      "BLOCKED",
+      "PASS",
+      "FAIL",
+      "INVALID",
+      "APPROVED",
+      "NOT_APPROVED"
+    ],
+    "legacyTrace": {
+      "authorityLinkTickets": ["BLD-008", "BLD-010"],
+      "authorityIds": ["OA-GOLD-001", "OA-REP-001"],
+      "bld010FixtureDisposition": "legacy-no-source-fixture-recorded",
+      "bld010FixtureLinks": 0,
+      "meaning": "immutable linkage metadata only; no fixture identity, revision, digest, source result, or acceptance meaning was manufactured"
+    }
+  },
+  "sourceInventory": [
+    {
+      "ticket": "BLD-008",
+      "path": "artifacts/bld-008-domain-value-evidence.json",
+      "sha256": "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+      "retainedResult": "PASS",
+      "retainedFailuresPointer": "/oracle/failures"
+    },
+    {
+      "ticket": "BLD-009",
+      "path": "artifacts/bld-009-aggregate-skeleton-evidence.json",
+      "sha256": "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+      "retainedResult": "PASS",
+      "retainedFailuresPointer": "/oracle/failures"
+    },
+    {
+      "ticket": "BLD-010",
+      "path": "artifacts/bld-010-application-service-evidence.json",
+      "sha256": "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+      "retainedResult": "PASS",
+      "retainedFailuresPointer": "/oracle/failures"
+    },
+    {
+      "ticket": "BLD-011",
+      "path": "artifacts/bld-011-history-core-evidence.json",
+      "sha256": "88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8",
+      "retainedResult": "PASS",
+      "retainedFailuresPointer": "/oracle/failures"
+    },
+    {
+      "ticket": "BLD-012",
+      "path": "artifacts/bld-012-application-version-evidence.json",
+      "sha256": "1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb",
+      "retainedResult": "PASS",
+      "retainedFailuresPointer": "/oracle/failures"
+    }
+  ],
+  "environment": {
+    "node": "24.18.1",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "platform": "win32",
+    "architecture": "x64",
+    "nodeExecutableIdentity": "node@24.18.1",
+    "nodeExecutableSha256": "ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "runtimeCustodyReference": "artifacts/bld-007-dependency-custody.json#/exactToolchainCustody/1"
+  },
+  "execution": {
+    "warmups": 0,
+    "qualifyingStartUtc": "2026-08-15T04:32:53.2578935Z",
+    "qualifyingEndUtc": "2026-08-15T04:34:45.4640936Z",
+    "exclusions": [
+      {
+        "exclusionId": "SOURCE_TEST_EXECUTION",
+        "validityRule": "GitHub #57 prohibits rerunning source-ticket tests; validity requires reading only the exact frozen manifest bytes."
+      },
+      {
+        "exclusionId": "RESTRICTED_OR_PRODUCTION_EVIDENCE",
+        "validityRule": "BLD-013 uses repository-safe synthetic manifests only; restricted or production evidence would invalidate custody and is not needed for index mechanics."
+      },
+      {
+        "exclusionId": "AGGREGATE_ACCEPTANCE",
+        "validityRule": "The index validates references and may not combine source PASS values into product or release readiness."
+      }
+    ]
+  },
+  "oracle": {
+    "comparison": {
+      "method": "exact closed-schema, source-byte SHA-256, JSON-pointer/value, result/nonclaim/failure digest, fixture/oracle/revision, authority-link, and canonical-index equality",
+      "version": "bld-013-oracle-v1",
+      "tolerance": "exact"
+    },
+    "targetedTests": 15,
+    "propertySeeds": [324508639, 610839776, 1592595201],
+    "iterationsPerSeed": 1000,
+    "parentRejectedMutations": 3000,
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "rejectedMutationsPerFreshExecution": 3000,
+    "totalFreshRejectedMutations": 18000,
+    "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea",
+    "freshRuns": [
+      { "process": 1, "repetition": 1, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:b530a9a8a73446b141ff9a971c3840b81e33a0929c51035a5bccb255effaf65c", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" },
+      { "process": 1, "repetition": 2, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:9336666420a9cf57793ea3857be5f46cf79b36019726cabef7493aace3fae8eb", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" },
+      { "process": 2, "repetition": 1, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:b530a9a8a73446b141ff9a971c3840b81e33a0929c51035a5bccb255effaf65c", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" },
+      { "process": 2, "repetition": 2, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:9336666420a9cf57793ea3857be5f46cf79b36019726cabef7493aace3fae8eb", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" },
+      { "process": 3, "repetition": 1, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:b530a9a8a73446b141ff9a971c3840b81e33a0929c51035a5bccb255effaf65c", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" },
+      { "process": 3, "repetition": 2, "result": "PASS", "indexDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009", "propertyDigest": "sha256:4b69bcc1d4f6d4a8ae6b53d658aaf698dc89de6ba27e4fe00fd84a0b1d957fea", "runDigest": "sha256:9336666420a9cf57793ea3857be5f46cf79b36019726cabef7493aace3fae8eb", "processTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a", "node": "v24.18.1", "locale": "en-US", "timeZone": "UTC" }
+    ],
+    "twoRepetitionTranscriptDigest": "sha256:354f09d502ba3435f34373dd1bb2c66e04bfbbe2e2c5440689b05f3a9beba66a",
+    "freshDigestEquality": "exact across all six full property executions",
+    "sourceTestsExecuted": false,
+    "sourceManifestsRewritten": false,
+    "sourceResultsReinterpreted": false,
+    "aggregateAcceptanceEmitted": false,
+    "failures": [],
+    "injectedFaults": [
+      "missing, reordered, duplicate, and wrong-but-unique entry/ticket/manifest identities",
+      "missing source, non-text source, invalid Unicode source, changed bytes, and changed result with attacker-recomputed digests",
+      "caller-selected and unresolved pointers, wrong path/schema/ticket literal, and unsupported index schema",
+      "missing final product/invariant/acceptance/OA trace, empty or approximate legacy authority addendum, and unauthorized addendum ticket",
+      "BLD-010 invented fixture identity/revision/digest semantics",
+      "wrong fixture, oracle, revision, result, retained-failure, and nonclaim links",
+      "malformed, extra-field, accessor, unknown-result, invalid-digest, and inventory-digest mismatch inputs"
+    ]
+  },
+  "build": {
+    "result": "PASS",
+    "command": "pinned-node node_modules/typescript/bin/tsc -b packages/test-support --force --pretty false",
+    "completedBeforeQualifyingRun": true,
+    "tsconfig": { "path": "packages/test-support/tsconfig.json", "sha256": "ae40c0b8ea329898be2c509314c0702a9f2f243e51ffc6ebc7d47ee4d383bf50" },
+    "executedJavaScript": [
+      { "path": "packages/test-support/dist/aggregate-evidence-index.js", "sha256": "f5ceda3a20b056ae2d9e09b110dddc691108c2b46df94722dfb871b165f8e2f5" },
+      { "path": "packages/test-support/dist/index.js", "sha256": "bc757be598602bdabd4dca4eb88b649007178f28c3fc01abd542e2a95a255033" },
+      { "path": "packages/contracts/dist/canonical-json.js", "sha256": "01e19305c37a015d32a9e81347787c55f153df2e514f7001c46cd31cf7954633" },
+      { "path": "packages/contracts/dist/sha256.js", "sha256": "353538d84c21f5ea9beb26270e17dd78b264f366c43af223ecce3b9edd58fcf3" },
+      { "path": "packages/contracts/dist/index.js", "sha256": "331d14ed48da369ce1a02ae51ea8eb279c5a1cd62380dada549bc2d543c2fa5e" }
+    ]
+  },
+  "sourceMutationProof": {
+    "method": "SHA-256 of each exact source manifest before index construction and after the qualifying suite; all pairs are identical",
+    "before": [
+      "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+      "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+      "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+      "88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8",
+      "1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb"
+    ],
+    "after": [
+      "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+      "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+      "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+      "88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8",
+      "1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb"
+    ],
+    "changed": 0
+  },
+  "primitiveDependencies": [
+    { "identity": "BLD-002 bounded primitive evidence", "revision": "bld-002-v1", "path": "docs/planning/evidence/bld-002-contract-primitives-verification.md", "sha256": "5e1238fbe4294b2d17042d43a8b018911bcc19852a116d7d1675c75ad2db0f51" },
+    { "identity": "canonical-json", "revision": "bld-002-v1", "path": "packages/contracts/src/canonical-json.ts", "sha256": "39fcd7f0b57230a537c53ac15ca24851737e559f3b98b1d916428913840b8a7f" },
+    { "identity": "sha256", "revision": "bld-002-v1", "path": "packages/contracts/src/sha256.ts", "sha256": "45b0b19c6905e06cbe2eac1b5ef43a82922fbc0c51ad85a24041507315a9e9ff" },
+    { "identity": "contracts-index", "revision": "bld-002-v1 plus later additive exports", "path": "packages/contracts/src/index.ts", "sha256": "a49f11f21d028b004d1bda056a758e4d442dfbec4a2967299ddf5b7fdb839352" }
+  ],
+  "dependencyDelta": {
+    "requestedInternalEdge": "@rsrender/test-support@0.0.0 -> @rsrender/contracts@0.0.0",
+    "topologyState": "PENDING_CLOSE_TIME_QUALIFICATION",
+    "topologyRecord": "docs/governance/bld-007-workspace-topology-approvals.json#/approvals/3",
+    "reason": "reuse the admitted canonical JSON and algorithm-qualified SHA-256 primitives",
+    "packageLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "baselineExternalIdentityCount": 156,
+    "currentExternalIdentityCount": 156,
+    "baselineExternalIdentitySetDigest": "sha256:d45a5d8ea52899bf68be4ae4e5e92e65909639907258b46f27bf89d9151d98fd",
+    "currentExternalIdentitySetDigest": "sha256:d45a5d8ea52899bf68be4ae4e5e92e65909639907258b46f27bf89d9151d98fd",
+    "externalIdentitySetDigestMethod": {
+      "version": "bld-013-external-identity-projection-v1",
+      "projection": "Select packages[].identity, sort by ECMAScript default UTF-16 code-unit order, encode the resulting string array with bld-002-v1 canonical JSON, then apply bld-002-v1 algorithm-qualified SHA-256.",
+      "baselineInput": { "path": "docs/governance/bld-001-internal-dependency-admission.json", "sha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a" },
+      "currentInput": { "path": "artifacts/bld-007-dependency-custody.json", "sha256": "355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7" }
+    },
+    "externalDelta": { "added": 0, "removed": 0, "changed": 0 }
+  },
+  "artifacts": [
+    { "path": "packages/test-support/src/aggregate-evidence-index.ts", "sha256": "769d12ec2211fc4168d7032dc898052af7db7f94f10b71b928ef0dd724fedfe2" },
+    { "path": "packages/test-support/src/index.ts", "sha256": "a9a2fca83630fe79dbe3bb7ed6e8b913c989cdd0e8766a8b86c80bc29e24cd48" },
+    { "path": "packages/test-support/package.json", "sha256": "9485ab8066ea355772ff315f001a7f8cd48dff91517421062898805f60d89545" },
+    { "path": "tests/bld-013-aggregate-evidence-index.test.mjs", "sha256": "5418f25dd73bee9e31f671263231fa8a3e4ed3a8c6c035c67c9ca07a4fdf1379" },
+    { "path": "tests/helpers/bld-013-index-fixture.mjs", "sha256": "a186b7fdb7c7a82c8bfccd7f28db602cd15bb25de49ffee2915904bb62c8df01" },
+    { "path": "tests/helpers/bld-013-property-model.mjs", "sha256": "3d7a6da781067f3bee7dc8241da579cc0cd8115501f6c1828238cd5692b3a027" },
+    { "path": "tests/helpers/run-bld-013-vectors.mjs", "sha256": "b42f9503ce3c43a17b207217519a4927bf6f8a44e57b483fc45aee9a4754eb42" },
+    { "path": "artifacts/bld-013-aggregate-evidence-index.json", "sha256": "8f2ee596f66be3c1011258c8c0364e37ccd2cd633e71bff4a5f54d84b28b432d" },
+    { "path": "package-lock.json", "sha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351" },
+    { "path": "docs/planning/evidence/bld-013-aggregate-evidence-index-verification.md", "sha256": "90226efc2aba824013878e24878ca1365f4fc0353e658da4e8ab0beedb1519a6" },
+    { "path": "packages/test-support/tsconfig.json", "sha256": "ae40c0b8ea329898be2c509314c0702a9f2f243e51ffc6ebc7d47ee4d383bf50" },
+    { "path": "packages/test-support/dist/aggregate-evidence-index.js", "sha256": "f5ceda3a20b056ae2d9e09b110dddc691108c2b46df94722dfb871b165f8e2f5" },
+    { "path": "packages/test-support/dist/index.js", "sha256": "bc757be598602bdabd4dca4eb88b649007178f28c3fc01abd542e2a95a255033" },
+    { "path": "packages/contracts/dist/canonical-json.js", "sha256": "01e19305c37a015d32a9e81347787c55f153df2e514f7001c46cd31cf7954633" },
+    { "path": "packages/contracts/dist/sha256.js", "sha256": "353538d84c21f5ea9beb26270e17dd78b264f366c43af223ecce3b9edd58fcf3" },
+    { "path": "packages/contracts/dist/index.js", "sha256": "331d14ed48da369ce1a02ae51ea8eb279c5a1cd62380dada549bc2d543c2fa5e" }
+  ],
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanner": "BLD-007 prohibited absolute-path/credential patterns plus BLD-013 host/user/tenant/client/credential/source-path tokens over all BLD-013 committed artifacts",
+    "scanResult": "PASS",
+    "rawLocation": { "state": "not-collected", "reference": "repository-safe normalized artifacts only" },
+    "prohibitedContentFound": 0
+  },
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "owner": "RSrender test-support evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "integration owner and independent adversarial reviewer",
+    "approvalReference": "GitHub #57 explicit activation under the user's unconditional implementation and exact-topology approval",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rawLocation": { "state": "not-collected", "reference": "no raw or restricted evidence collected" },
+    "retention": "Retain with the BLD-013 implementation and exact source-manifest revisions until superseded by a recorded invalidation/rerun.",
+    "deletion": "Delete superseded repository-safe BLD-013 evidence through ordinary reviewed repository history; no controlled-local payload deletion is required because none was collected."
+  },
+  "rerunCommands": [
+    "pinned-node node_modules/typescript/bin/tsc -b packages/test-support --pretty false",
+    "pinned-node node_modules/eslint/bin/eslint.js packages/test-support/src/aggregate-evidence-index.ts packages/test-support/src/index.ts tests/helpers/bld-013-index-fixture.mjs tests/helpers/bld-013-property-model.mjs tests/helpers/run-bld-013-vectors.mjs tests/bld-013-aggregate-evidence-index.test.mjs",
+    "LANG=en-US LC_ALL=en-US TZ=UTC pinned-node --test tests/bld-013-aggregate-evidence-index.test.mjs",
+    "after close-time topology qualification: pinned-npm run verify"
+  ],
+  "limitations": [
+    "This result validates index mechanics and exact referential integrity only; it is not aggregate product acceptance, release readiness, or an approval.",
+    "No BLD-008 through BLD-012 test was executed, no source manifest was rewritten, and no source result was promoted or reinterpreted.",
+    "BLD-010 records that no source fixture identity/revision exists; the index does not convert its helper artifact into fixture evidence.",
+    "All linked fixtures and vectors remain synthetic and nonrepresentative; no client-data, vendor-behavior, typicality, supported-limit, or production-workflow claim is made.",
+    "The pending internal test-support-to-contracts edge adds no external package identity and grants no production, file, network, source, or release authority; BLD-007 close-time qualification remains mandatory."
+  ],
+  "rerunTriggers": [
+    "Any BLD-008 through BLD-012 source manifest byte or digest changes",
+    "Aggregate index schema, pointer table, trace authority, oracle, fixture disposition, result vocabulary, canonical JSON, or SHA-256 primitive changes",
+    "Any owned validator, fixture, property model, runner, test, export, package manifest, or lock artifact changes",
+    "OA-GOLD-001, OA-REP-001, product specification section 21, acceptance strategy sections 2.1/8.1, architecture section 13, or GitHub #57 changes"
+  ]
+}

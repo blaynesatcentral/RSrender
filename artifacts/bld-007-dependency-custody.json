@@ -309,7 +309,7 @@
   ],
   "inputDigests": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "6265758dbd5c3dd2fee7250272b6119b274fc603da9a44d00189daad4aa97422",
+    "implementationTopologyLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
     "admissionSha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
     "authorityPacketSha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "foundationEvidenceSha256": "4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734"
@@ -318,7 +318,7 @@
   "counts": {
     "admittedIdentities": 156,
     "workspacePackageCount": 11,
-    "dependencyEdges": 220,
+    "dependencyEdges": 221,
     "locallyPresentIdentities": 131,
     "platformOptionalAbsentIdentities": 25
   },
@@ -8543,7 +8543,9 @@
     {
       "identity": "@rsrender/test-support@0.0.0",
       "path": "packages/test-support",
-      "dependencies": {}
+      "dependencies": {
+        "@rsrender/contracts": "0.0.0"
+      }
     }
   ],
   "graph": [
@@ -8769,6 +8771,10 @@
     },
     {
       "from": "@rsrender/platform-electron-main@0.0.0",
+      "to": "@rsrender/contracts@0.0.0"
+    },
+    {
+      "from": "@rsrender/test-support@0.0.0",
       "to": "@rsrender/contracts@0.0.0"
     },
     {

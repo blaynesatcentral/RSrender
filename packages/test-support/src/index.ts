@@ -51,3 +51,20 @@ export type {
   EvidenceResultRecord,
   EvidenceResultState,
 } from "./evidence-manifest.js";
+
+export {
+  AGGREGATE_EVIDENCE_INDEX_DIAGNOSTIC_CODES,
+  AGGREGATE_EVIDENCE_INDEX_SCHEMA_VERSION,
+  readAggregateEvidenceIndex,
+  writeAggregateEvidenceIndex,
+} from "./aggregate-evidence-index.js";
+
+export type {
+  AggregateEvidenceIndex,
+  AggregateEvidenceIndexDiagnostic,
+  AggregateEvidenceIndexDiagnosticCode,
+  AggregateEvidenceIndexDraft,
+  AggregateEvidenceIndexEntry,
+  AggregateEvidenceIndexResult,
+  AggregateEvidenceManifestSource,
+} from "./aggregate-evidence-index.js";

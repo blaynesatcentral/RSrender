@@ -244,26 +244,26 @@
     {
       "package": "test-support",
       "file": "packages/test-support/dist/index.d.ts",
-      "bytes": 1350,
-      "sha256": "41646d4bdb15151c8f8ac1dcbfd2b7c8c72bea31f84ea70e046c41af4e66774e"
+      "bytes": 1811,
+      "sha256": "fc52b7c7ab4b8a64d9a293cfcc8cc7ad2c352913198700551f80d2baccce6dc2"
     },
     {
       "package": "test-support",
       "file": "packages/test-support/dist/index.d.ts.map",
-      "bytes": 792,
-      "sha256": "6ec0e98f6d1162bc9c9df2cf55a394e17512a77d4ccc08dfec00f4b23396ecc3"
+      "bytes": 1001,
+      "sha256": "f2e8b822f7f236cc964f138d8921707d74c3fbecd87015dadc9b821a3180c7fe"
     },
     {
       "package": "test-support",
       "file": "packages/test-support/dist/index.js",
-      "bytes": 655,
-      "sha256": "94680e08f8d79ee02f66eb90d84d0bab700145fbab6b98be8479e52ac8708027"
+      "bytes": 845,
+      "sha256": "bc757be598602bdabd4dca4eb88b649007178f28c3fc01abd542e2a95a255033"
     },
     {
       "package": "test-support",
       "file": "packages/test-support/dist/index.js.map",
-      "bytes": 405,
-      "sha256": "6cdacff6bea7f0c2536260c978cdb92be73af8d6393e8826e1d1403857f21c4a"
+      "bytes": 491,
+      "sha256": "d56d8c77471613a73a776f5056877c1159b165c181f56c6ef5d2de74edaa227c"
     }
   ]
 }

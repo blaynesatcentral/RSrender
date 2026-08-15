@@ -1,0 +1,530 @@
+{
+  "entries": [
+    {
+      "authorityLinks": [
+        {
+          "authorityId": "OA-GOLD-001",
+          "authorityReference": "GitHub #52; docs/planning/specifications/rsrender-phased-implementation-roadmap.md#93-next-frontier-unlocked-by-the-initial-parallel-tickets; docs/planning/specifications/rsrender-acceptance-strategy.md#81-evidence-manifest; docs/planning/specifications/sanitized-example-dataset-golden-log-corpus.md#mandatory-cross-cutting-oracle-atoms",
+          "linkage": "legacy-trace-addendum",
+          "noninterpretation": "linkage-metadata-only",
+          "sourceEvidenceDigest": "sha256:7f09d63b8a17298f65838099a2c86ea929a1201488f7f8c2416a84b911f791ef",
+          "sourceManifestDigest": "sha256:9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+          "sourcePointers": [
+            "/authority/corpusVersion",
+            "/authority/fixtureRevisions",
+            "/oracle/comparison",
+            "/environment",
+            "/custody"
+          ]
+        },
+        {
+          "authorityId": "OA-REP-001",
+          "authorityReference": "GitHub #52; docs/planning/specifications/rsrender-phased-implementation-roadmap.md#93-next-frontier-unlocked-by-the-initial-parallel-tickets; docs/planning/specifications/rsrender-acceptance-strategy.md#81-evidence-manifest; docs/planning/specifications/sanitized-example-dataset-golden-log-corpus.md#mandatory-cross-cutting-oracle-atoms",
+          "linkage": "legacy-trace-addendum",
+          "noninterpretation": "linkage-metadata-only",
+          "sourceEvidenceDigest": "sha256:3af65553273d1f79073a555408687c8dbd84c39a5d0ba03ab0c17dd225d7525c",
+          "sourceManifestDigest": "sha256:9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+          "sourcePointers": [
+            "/custody/classification",
+            "/limitations"
+          ]
+        }
+      ],
+      "entryId": "BLD-013-ENTRY-BLD-008",
+      "fixtureDisposition": "source-recorded-fixtures",
+      "fixtureLinks": [
+        {
+          "digest": "sha256:64ea97d6e87778e7d8992ec5f0bd4b7b6378a4e56aeb7a7ac90241a92baccef6",
+          "digestPointer": "/artifacts/3/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-04",
+          "fixtureRevision": "FX-04:sparse-missing@r1",
+          "identityPointer": "/authority/fixtureRevisions/0",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/0"
+        },
+        {
+          "digest": "sha256:64ea97d6e87778e7d8992ec5f0bd4b7b6378a4e56aeb7a7ac90241a92baccef6",
+          "digestPointer": "/artifacts/3/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-12",
+          "fixtureRevision": "FX-12:lab-supplemental@r1-adapter-neutral",
+          "identityPointer": "/authority/fixtureRevisions/1",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/1"
+        }
+      ],
+      "oracleLink": {
+        "method": "exact structural round trip plus SHA-256 digest equality",
+        "methodPointer": "/oracle/comparison/method",
+        "oracleId": "bld-008-oracle-v1",
+        "tolerance": "exact",
+        "tolerancePointer": "/oracle/comparison/tolerance",
+        "version": "bld-008-oracle-v1",
+        "versionPointer": "/oracle/comparison/version"
+      },
+      "requirementLinks": [
+        {
+          "requirementId": "PI-05",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "PI-19",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "D02",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "D03",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-VAL-001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-PROV-001",
+          "sourcePointer": "/authority/requirements"
+        }
+      ],
+      "revisionLinks": [
+        {
+          "linkage": "content-addressed-source",
+          "revision": "content-addressed:sha256:9db7ed21d2ef227575c09992609a4bee80e82c3b84632287bc6ee520b656c5be",
+          "revisionId": "domain-value-record",
+          "sourcePointer": "/artifacts/1/sha256"
+        }
+      ],
+      "sourceManifest": {
+        "digest": "sha256:9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+        "failuresDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "failuresPointer": "/oracle/failures",
+        "manifestIdentity": "artifacts/bld-008-domain-value-evidence.json@sha256:9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71",
+        "nonclaimsDigest": "sha256:982890c83b5b7b7ff0fc7d8f4e14f33c4a52cadc2c47f9b68ceef89911cb2a08",
+        "nonclaimsPointer": "/limitations",
+        "path": "artifacts/bld-008-domain-value-evidence.json",
+        "resultPointer": "/result",
+        "resultState": "PASS",
+        "schema": "rsrender.bld-evidence.v0",
+        "schemaPointer": "/schema",
+        "ticketPointer": "/ticket"
+      },
+      "ticketId": "BLD-008"
+    },
+    {
+      "authorityLinks": [],
+      "entryId": "BLD-013-ENTRY-BLD-009",
+      "fixtureDisposition": "source-recorded-fixtures",
+      "fixtureLinks": [
+        {
+          "digest": "sha256:52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc",
+          "digestPointer": "/artifacts/4/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-01",
+          "fixtureRevision": "FX-01:one-exploration@r1",
+          "identityPointer": "/authority/fixtureRevisions/0",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/0"
+        },
+        {
+          "digest": "sha256:52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc",
+          "digestPointer": "/artifacts/4/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-07",
+          "fixtureRevision": "FX-07:assignment-precedence@r1",
+          "identityPointer": "/authority/fixtureRevisions/1",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/1"
+        },
+        {
+          "digest": "sha256:52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc",
+          "digestPointer": "/artifacts/4/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-08A",
+          "fixtureRevision": "FX-08A:accepted-before@r1",
+          "identityPointer": "/authority/fixtureRevisions/2",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/2"
+        },
+        {
+          "digest": "sha256:52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc",
+          "digestPointer": "/artifacts/4/sha256",
+          "digestScope": "combined-fixture-helper",
+          "fixtureIdentity": "FX-08B",
+          "fixtureRevision": "FX-08B:staged-after@r1",
+          "identityPointer": "/authority/fixtureRevisions/3",
+          "linkage": "source-recorded-combined",
+          "revisionPointer": "/authority/fixtureRevisions/3"
+        }
+      ],
+      "oracleLink": {
+        "method": "exact structural equality, stable rejection-code equality, exact assignment cardinality, and SHA-256 canonical-encoding equality",
+        "methodPointer": "/oracle/comparison/method",
+        "oracleId": "bld-009-oracle-v1",
+        "tolerance": "exact",
+        "tolerancePointer": "/oracle/comparison/tolerance",
+        "version": "bld-009-oracle-v1",
+        "versionPointer": "/oracle/comparison/version"
+      },
+      "requirementLinks": [
+        {
+          "requirementId": "PI-02",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "PI-06",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "PI-07",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "PI-08",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "D01",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-ID-001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-GOLD-001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-REP-001",
+          "sourcePointer": "/authority/requirements"
+        }
+      ],
+      "revisionLinks": [
+        {
+          "linkage": "content-addressed-source",
+          "revision": "content-addressed:sha256:36ca3d3db6d942d4e392a6d382770bdf54f77ee1a9ad6dbec92dd700a4ec3c8b",
+          "revisionId": "log-template-project-aggregate",
+          "sourcePointer": "/artifacts/0/sha256"
+        }
+      ],
+      "sourceManifest": {
+        "digest": "sha256:a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+        "failuresDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "failuresPointer": "/oracle/failures",
+        "manifestIdentity": "artifacts/bld-009-aggregate-skeleton-evidence.json@sha256:a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9",
+        "nonclaimsDigest": "sha256:7d14dae1741c8797ae219fefd5e2b1a5b744b3832aec416849c28ce33ef6f848",
+        "nonclaimsPointer": "/limitations",
+        "path": "artifacts/bld-009-aggregate-skeleton-evidence.json",
+        "resultPointer": "/result",
+        "resultState": "PASS",
+        "schema": "rsrender.bld-evidence.v0",
+        "schemaPointer": "/schema",
+        "ticketPointer": "/ticket"
+      },
+      "ticketId": "BLD-009"
+    },
+    {
+      "authorityLinks": [
+        {
+          "authorityId": "OA-GOLD-001",
+          "authorityReference": "GitHub #54; docs/planning/specifications/rsrender-phased-implementation-roadmap.md#93-next-frontier-unlocked-by-the-initial-parallel-tickets; docs/planning/specifications/rsrender-acceptance-strategy.md#81-evidence-manifest; docs/planning/specifications/sanitized-example-dataset-golden-log-corpus.md#mandatory-cross-cutting-oracle-atoms",
+          "linkage": "legacy-trace-addendum",
+          "noninterpretation": "linkage-metadata-only",
+          "sourceEvidenceDigest": "sha256:37c957065be8f7b6d77d12eea80519ea320299f695347bfb8b2f6df31935e59d",
+          "sourceManifestDigest": "sha256:3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+          "sourcePointers": [
+            "/artifacts/6/path",
+            "/artifacts/6/sha256",
+            "/oracle/comparison",
+            "/environment",
+            "/custody"
+          ]
+        },
+        {
+          "authorityId": "OA-REP-001",
+          "authorityReference": "GitHub #54; docs/planning/specifications/rsrender-phased-implementation-roadmap.md#93-next-frontier-unlocked-by-the-initial-parallel-tickets; docs/planning/specifications/rsrender-acceptance-strategy.md#81-evidence-manifest; docs/planning/specifications/sanitized-example-dataset-golden-log-corpus.md#mandatory-cross-cutting-oracle-atoms",
+          "linkage": "legacy-trace-addendum",
+          "noninterpretation": "linkage-metadata-only",
+          "sourceEvidenceDigest": "sha256:51a1fda0254696009bf2f7833157a2ef805671cb44ec52b78ab0b6bfe965d11b",
+          "sourceManifestDigest": "sha256:3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+          "sourcePointers": [
+            "/custody/classification",
+            "/limitations/0"
+          ]
+        }
+      ],
+      "entryId": "BLD-013-ENTRY-BLD-010",
+      "fixtureDisposition": "legacy-no-source-fixture-recorded",
+      "fixtureLinks": [],
+      "oracleLink": {
+        "method": "exact structural equality, stable rejection-code equality, exact revision/event/commit cardinality, canonical request equality, and SHA-256 transcript equality",
+        "methodPointer": "/oracle/comparison/method",
+        "oracleId": "bld-010-oracle-v1",
+        "tolerance": "exact",
+        "tolerancePointer": "/oracle/comparison/tolerance",
+        "version": "bld-010-oracle-v1",
+        "versionPointer": "/oracle/comparison/version"
+      },
+      "requirementLinks": [
+        {
+          "requirementId": "PI-20",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "D04",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "architecture-6",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "ADR-0008",
+          "sourcePointer": "/authority/requirements"
+        }
+      ],
+      "revisionLinks": [
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-010-v1",
+          "revisionId": "application-service-contract",
+          "sourcePointer": "/contract/applicationServiceContractRevision"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-010-v1",
+          "revisionId": "in-memory-application-service",
+          "sourcePointer": "/contract/inMemoryApplicationServiceRevision"
+        }
+      ],
+      "sourceManifest": {
+        "digest": "sha256:3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+        "failuresDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "failuresPointer": "/oracle/failures",
+        "manifestIdentity": "artifacts/bld-010-application-service-evidence.json@sha256:3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616",
+        "nonclaimsDigest": "sha256:568e55127d7e325cf484a43bc05059d026b5c3f4b57148a3df1b1ad93e91ec7b",
+        "nonclaimsPointer": "/limitations",
+        "path": "artifacts/bld-010-application-service-evidence.json",
+        "resultPointer": "/result",
+        "resultState": "PASS",
+        "schema": "rsrender.bld-evidence.v0",
+        "schemaPointer": "/schema",
+        "ticketPointer": "/ticket"
+      },
+      "ticketId": "BLD-010"
+    },
+    {
+      "authorityLinks": [],
+      "entryId": "BLD-013-ENTRY-BLD-011",
+      "fixtureDisposition": "source-recorded-fixtures",
+      "fixtureLinks": [
+        {
+          "digest": "sha256:d9d22a59c8e33a92df4e35918c028a99f8c7e4f840737930aca5e0c6f5c27646",
+          "digestPointer": "/oracle/fixture/sha256",
+          "digestScope": "single-fixture",
+          "fixtureIdentity": "BLD-011-SYNTHETIC-HISTORY-VECTORS",
+          "fixtureRevision": "bld-011-fixture-v1",
+          "identityPointer": "/oracle/fixture/identity",
+          "linkage": "source-recorded",
+          "revisionPointer": "/oracle/fixture/revision"
+        },
+        {
+          "digest": "sha256:dc949ff91e02adb0c6b168442552a49d11c482ea2a6b100fb89274017c5d85b8",
+          "digestPointer": "/oracle/propertyOracle/sha256",
+          "digestScope": "single-fixture",
+          "fixtureIdentity": "BLD-011-HISTORY-PROPERTY-MODEL",
+          "fixtureRevision": "bld-011-property-v1",
+          "identityPointer": "/oracle/propertyOracle/identity",
+          "linkage": "source-recorded",
+          "revisionPointer": "/oracle/propertyOracle/revision"
+        }
+      ],
+      "oracleLink": {
+        "method": "exact structural equality, exact revision/digest/cursor/history cardinality, closed rejection equality, canonical transcript equality, and immutable-capture equality",
+        "methodPointer": "/oracle/comparison/method",
+        "oracleId": "bld-011-oracle-v1",
+        "tolerance": "exact",
+        "tolerancePointer": "/oracle/comparison/tolerance",
+        "version": "bld-011-oracle-v1",
+        "versionPointer": "/oracle/comparison/version"
+      },
+      "requirementLinks": [
+        {
+          "requirementId": "AC-001-bounded-revision-history-seam",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-GOLD-001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "OA-REP-001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "architecture-5",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "architecture-6",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "ADR-0001",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "D04",
+          "sourcePointer": "/authority/requirements"
+        },
+        {
+          "requirementId": "E03-pure-captured-revision-seam",
+          "sourcePointer": "/authority/requirements"
+        }
+      ],
+      "revisionLinks": [
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-011-v1",
+          "revisionId": "history-core-contract",
+          "sourcePointer": "/contract/historyCoreContractRevision"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-011-v1",
+          "revisionId": "in-memory-history-core",
+          "sourcePointer": "/contract/inMemoryHistoryCoreRevision"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-011-v1",
+          "revisionId": "history-reducer",
+          "sourcePointer": "/contract/reducerRevision"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-011-v1",
+          "revisionId": "history",
+          "sourcePointer": "/contract/historyRevision"
+        }
+      ],
+      "sourceManifest": {
+        "digest": "sha256:88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8",
+        "failuresDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "failuresPointer": "/oracle/failures",
+        "manifestIdentity": "artifacts/bld-011-history-core-evidence.json@sha256:88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8",
+        "nonclaimsDigest": "sha256:862cccd8d03175295fea97b06f7c273444548935662efb46647f281e0170af38",
+        "nonclaimsPointer": "/limitations",
+        "path": "artifacts/bld-011-history-core-evidence.json",
+        "resultPointer": "/result",
+        "resultState": "PASS",
+        "schema": "rsrender.bld-evidence.v0",
+        "schemaPointer": "/schema",
+        "ticketPointer": "/ticket"
+      },
+      "ticketId": "BLD-011"
+    },
+    {
+      "authorityLinks": [],
+      "entryId": "BLD-013-ENTRY-BLD-012",
+      "fixtureDisposition": "source-recorded-fixtures",
+      "fixtureLinks": [
+        {
+          "digest": "sha256:8e2e4c2bb21d371c6c2bd856567968eb0c32cef335212ee09ab4542a2a596f72",
+          "digestPointer": "/fixture/sha256",
+          "digestScope": "single-fixture",
+          "fixtureIdentity": "FIX-BLD012-PACKAGED-APPLICATION-VERSION-001",
+          "fixtureRevision": "1",
+          "identityPointer": "/fixture/identity",
+          "linkage": "source-recorded",
+          "revisionPointer": "/fixture/revision"
+        }
+      ],
+      "oracleLink": {
+        "method": "exact schema/value/API-surface/rejection equality across three fresh packaged sessions",
+        "methodPointer": "/oracle/method",
+        "oracleId": "bld-012-packaged-oracle-v1",
+        "tolerance": "exact",
+        "tolerancePointer": "/oracle/tolerance",
+        "version": "bld-012-packaged-oracle-v1",
+        "versionPointer": "/oracle/version"
+      },
+      "requirementLinks": [
+        {
+          "requirementId": "PI-16",
+          "sourcePointer": "/trace"
+        },
+        {
+          "requirementId": "PI-20",
+          "sourcePointer": "/trace"
+        },
+        {
+          "requirementId": "P06-bounded-seam",
+          "sourcePointer": "/trace"
+        },
+        {
+          "requirementId": "OA-GOLD-001",
+          "sourcePointer": "/trace"
+        },
+        {
+          "requirementId": "OA-REP-001",
+          "sourcePointer": "/trace"
+        }
+      ],
+      "revisionLinks": [
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-012-v1",
+          "revisionId": "application-version-contract",
+          "sourcePointer": "/revisions/applicationVersionContract"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-012-v1",
+          "revisionId": "application-version-handler",
+          "sourcePointer": "/revisions/applicationVersionHandler"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-012-v1",
+          "revisionId": "application-version-transport",
+          "sourcePointer": "/revisions/applicationVersionTransport"
+        },
+        {
+          "linkage": "source-recorded",
+          "revision": "bld-012-v1",
+          "revisionId": "generated-preload",
+          "sourcePointer": "/revisions/generatedPreload"
+        }
+      ],
+      "sourceManifest": {
+        "digest": "sha256:1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb",
+        "failuresDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "failuresPointer": "/oracle/failures",
+        "manifestIdentity": "artifacts/bld-012-application-version-evidence.json@sha256:1f765ff56f8ea20dbd4ad3ff81bd94eac2fa9a7c5e7319dfe798b1037f774dbb",
+        "nonclaimsDigest": "sha256:e533c723f12fe929b860f2e68bb5932b0ffadecd6f374afcde64bfacd8307c7b",
+        "nonclaimsPointer": "/nonClaims",
+        "path": "artifacts/bld-012-application-version-evidence.json",
+        "resultPointer": "/sourceResult/state",
+        "resultState": "PASS",
+        "schema": "rsrender.bld012.application-version-evidence.v0",
+        "schemaPointer": "/schema",
+        "ticketPointer": "/ticket"
+      },
+      "ticketId": "BLD-012"
+    }
+  ],
+  "indexId": "BLD-013-EVIDENCE-INDEX",
+  "indexRevision": 1,
+  "nonclaims": [
+    "Traceability and referential-integrity result only; not aggregate acceptance or release readiness.",
+    "Source manifests were not rerun, rewritten, reinterpreted, or promoted.",
+    "All linked fixtures and vectors remain synthetic and nonrepresentative."
+  ],
+  "purpose": "traceability-and-referential-integrity-only",
+  "schemaVersion": "rsrender.aggregate-evidence-index.v1",
+  "inventoryDigest": "sha256:894c4cba70bad92e2e87134833f6c3d3b8f47483d2ebacb2171265e09279a009"
+}
