@@ -1,0 +1,446 @@
+{
+  "schema": "rsrender.bld-016.project-input-revisions-evidence.v1",
+  "ticket": "BLD-016 / GitHub #60",
+  "result": "PASS",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/60#issuecomment-5356571829",
+    "scope": "Phase 1 Log Project v2 ownership of zero/one accepted Source Snapshot and seven explicit current revision references while preserving BLD-009 compatibility"
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "node": "v24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "manifestLockOrTopologyChanged": false
+  },
+  "contract": {
+    "retainedBld009AggregateVersion": 1,
+    "phase1LogProjectAggregateVersion": 2,
+    "projectInputRevisionHandleVersion": 1,
+    "orderedCollectionKinds": [
+      "supplemental-sources",
+      "presentation-overrides",
+      "freeform-annotations",
+      "source-resolution-decisions",
+      "source-extension-bindings",
+      "page-range-configuration",
+      "data-track-configuration"
+    ],
+    "acceptedSourceSnapshotCardinality": "zero-or-one full BLD-015 SourceSnapshot",
+    "emptyHandleSemantics": "state=empty requires projectRevision=0, derived revision identity, and canonical empty-content digest",
+    "currentHandleSemantics": "state=current requires a positive project revision, derived revision identity, and supplied valid content digest"
+  },
+  "oracle": {
+    "fixtureRevisions": {
+      "emptyCompatibility": "BLD-009:empty-project@v1-to-bld-016-v2-r1",
+      "fx01Compatibility": "FX-01:one-exploration@r1-to-bld-016-v2-r1",
+      "fx07Compatibility": "FX-07:assignment-precedence@r1-to-bld-016-v2-r1",
+      "sourceBacked": "FX-01:bld-016-source-backed-project@r1"
+    },
+    "fixtureAdmission": {
+      "classification": "SYNTHETIC_REPOSITORY_SAFE",
+      "rightsState": "repository-safe synthetic fixtures authored for RSrender internal domain qualification; no client, vendor, credential, restricted go-by, or third-party content",
+      "sourcePath": "tests/helpers/bld-016-fixtures.mjs",
+      "sourceSha256": "c4f173bc4f4939466dfcd48368b7b634ce9741b11639e09565ed6ffbcfbfb722"
+    },
+    "oracleRevision": "bld-016-project-input-oracle-v1",
+    "generatorRevision": "bld-016-project-input-generator-v1",
+    "seeds": [
+      369098753,
+      369098754,
+      369098755
+    ],
+    "iterationsPerSeed": 1000,
+    "casesPerRepetition": 3000,
+    "invariantsPerCase": 7,
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "totalGeneratedCases": 18000,
+    "totalInvariantEvaluations": 126000,
+    "normalizedRepetitionDigest": "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3",
+    "processTranscriptDigest": "sha256:20a51fc4c54bc71866e8a0d65d1f8b8d2e6e6984a6c4f401abb81dfc1f6f609c",
+    "executions": [
+      {
+        "process": 1,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3",
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3"
+        ],
+        "processDigest": "sha256:20a51fc4c54bc71866e8a0d65d1f8b8d2e6e6984a6c4f401abb81dfc1f6f609c"
+      },
+      {
+        "process": 2,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3",
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3"
+        ],
+        "processDigest": "sha256:20a51fc4c54bc71866e8a0d65d1f8b8d2e6e6984a6c4f401abb81dfc1f6f609c"
+      },
+      {
+        "process": 3,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3",
+          "sha256:43b24e667e1e126fb7df201879066af6579aa3d4ff61207d44903f052000d5a3"
+        ],
+        "processDigest": "sha256:20a51fc4c54bc71866e8a0d65d1f8b8d2e6e6984a6c4f401abb81dfc1f6f609c"
+      }
+    ],
+    "compatibility": [
+      {
+        "revision": "BLD-009:empty-project@v1-to-bld-016-v2-r1",
+        "v1Digest": "sha256:987eea4d8fd5e6a9c1830329046b1571f73d860bf9b839d43cdbc00b6369e3b4",
+        "compatibilityDigest": "sha256:987eea4d8fd5e6a9c1830329046b1571f73d860bf9b839d43cdbc00b6369e3b4",
+        "v2Digest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+        "assignmentResult": {
+          "complete": true,
+          "assignments": []
+        },
+        "phase1AssignmentResult": {
+          "complete": true,
+          "assignments": []
+        }
+      },
+      {
+        "revision": "FX-01:one-exploration@r1-to-bld-016-v2-r1",
+        "v1Digest": "sha256:44a69860ce1fb459b28d2f42dc9c871d9d8474c840f8cbd2adf135f9730e958f",
+        "compatibilityDigest": "sha256:44a69860ce1fb459b28d2f42dc9c871d9d8474c840f8cbd2adf135f9730e958f",
+        "v2Digest": "sha256:25756dd7cbda22059a464e84fc96ee10ae078fd147336721b5ba472c9441a7a6",
+        "assignmentResult": {
+          "complete": true,
+          "assignments": [
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:927e83e3dab54e8f689b2205f0116a5f22f57fec5bf566815dd54ab731253d4b",
+              "boringLogIdentity": "urn:rsrender:boring-log:609901b78f2b576ae24880c35da890e4d39ab199876f5ecb17e034aa1e550177",
+              "assignmentIdentity": "urn:rsrender:template-assignment:61ddf8c1b8ed085a00c548e7789da600ca683aa2bf8f978af6d79eab5a0cd83f",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "log-set",
+              "originTargetIdentity": "urn:rsrender:log-set:04996d1433272a0f16678c62ec3aa6e084792fcc2fd789359ec91aefcd1a6ba4",
+              "inherited": true
+            }
+          ]
+        },
+        "phase1AssignmentResult": {
+          "complete": true,
+          "assignments": [
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:927e83e3dab54e8f689b2205f0116a5f22f57fec5bf566815dd54ab731253d4b",
+              "boringLogIdentity": "urn:rsrender:boring-log:609901b78f2b576ae24880c35da890e4d39ab199876f5ecb17e034aa1e550177",
+              "assignmentIdentity": "urn:rsrender:template-assignment:61ddf8c1b8ed085a00c548e7789da600ca683aa2bf8f978af6d79eab5a0cd83f",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "log-set",
+              "originTargetIdentity": "urn:rsrender:log-set:04996d1433272a0f16678c62ec3aa6e084792fcc2fd789359ec91aefcd1a6ba4",
+              "inherited": true
+            }
+          ]
+        }
+      },
+      {
+        "revision": "FX-07:assignment-precedence@r1-to-bld-016-v2-r1",
+        "v1Digest": "sha256:b87184130f494b0b54e6dfce9aec9e57eab7c59c2c334fb0cbe31abd9f3accf8",
+        "compatibilityDigest": "sha256:b87184130f494b0b54e6dfce9aec9e57eab7c59c2c334fb0cbe31abd9f3accf8",
+        "v2Digest": "sha256:08749e5e973d57ceaca9e335436dffa2f61540dcb82137fff916ac68cf8cba0f",
+        "assignmentResult": {
+          "complete": true,
+          "assignments": [
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:a22ea4901c4a66d92f0c80b965768017c1878b28c802b8c214e88affc7c9f9a1",
+              "boringLogIdentity": "urn:rsrender:boring-log:9c7fe09fd9b0e171412603209aaff9298ecedb91418032ecf76ad32180497f23",
+              "assignmentIdentity": "urn:rsrender:template-assignment:80a48c8ac778fa3529ca9d1e8b97f61caaad74eeca086d427f550857c1362606",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:1dfda406a11d1ae6f063496fa7a8e012f759955301861fe724b94ec63277bf9a",
+              "origin": "exploration",
+              "originTargetIdentity": "urn:rsrender:exploration-membership:a22ea4901c4a66d92f0c80b965768017c1878b28c802b8c214e88affc7c9f9a1",
+              "inherited": false
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:224070d13c5d052eaf3878b20f51119cc3c9c6c70ce1dbb889f9eedce51655dd",
+              "boringLogIdentity": "urn:rsrender:boring-log:efeaa441c328f557dd913eebb70cc58a5121bffb40fdb49ec782a6ac804156ae",
+              "assignmentIdentity": "urn:rsrender:template-assignment:b5f02664e5693b06d80b51c20adbfdc2c3b3016dce515f9b2f31f60f6fca963a",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:8e270daeb3cb362e8d9a186f8ea77049868d08792c4c671db5dd8f3342f144cd",
+              "origin": "group",
+              "originTargetIdentity": "urn:rsrender:exploration-group:aeaef95209fefa724faf929ba91ead4fc577805ec70192a71f4823fb7ca46e9f",
+              "inherited": true
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:34523d6cd3910c947bb664f2cb4004f99a54ec5fba4562f13cb52eda990f1a31",
+              "boringLogIdentity": "urn:rsrender:boring-log:b242281bb0ba55a7ec44240e7435df2e6930b7e36c740684c4dedc31a2d69f9b",
+              "assignmentIdentity": "urn:rsrender:template-assignment:5dbf1c35f55f3bf947dbed107a43206021d7d566dc39477562c032ae18ef6034",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "group",
+              "originTargetIdentity": "urn:rsrender:exploration-group:ed398cb050e564a22df34fffe73312cb2e713878fc471ba7cc44cdfac5e4ee44",
+              "inherited": true
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:268a5c07c7cb7d768e164e81fddc08fa9cf000dacbefa77dfac9c1342a867c96",
+              "boringLogIdentity": "urn:rsrender:boring-log:b9cc16085ad7fd1546f5e1807ba5e67e6598ae5f301cea2355fc08c05fedf494",
+              "assignmentIdentity": "urn:rsrender:template-assignment:47a5eeda9a01cdda10bba9520a32068929d600dc9550778e3875835579de70bb",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "log-set",
+              "originTargetIdentity": "urn:rsrender:log-set:04996d1433272a0f16678c62ec3aa6e084792fcc2fd789359ec91aefcd1a6ba4",
+              "inherited": true
+            }
+          ]
+        },
+        "phase1AssignmentResult": {
+          "complete": true,
+          "assignments": [
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:a22ea4901c4a66d92f0c80b965768017c1878b28c802b8c214e88affc7c9f9a1",
+              "boringLogIdentity": "urn:rsrender:boring-log:9c7fe09fd9b0e171412603209aaff9298ecedb91418032ecf76ad32180497f23",
+              "assignmentIdentity": "urn:rsrender:template-assignment:80a48c8ac778fa3529ca9d1e8b97f61caaad74eeca086d427f550857c1362606",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:1dfda406a11d1ae6f063496fa7a8e012f759955301861fe724b94ec63277bf9a",
+              "origin": "exploration",
+              "originTargetIdentity": "urn:rsrender:exploration-membership:a22ea4901c4a66d92f0c80b965768017c1878b28c802b8c214e88affc7c9f9a1",
+              "inherited": false
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:224070d13c5d052eaf3878b20f51119cc3c9c6c70ce1dbb889f9eedce51655dd",
+              "boringLogIdentity": "urn:rsrender:boring-log:efeaa441c328f557dd913eebb70cc58a5121bffb40fdb49ec782a6ac804156ae",
+              "assignmentIdentity": "urn:rsrender:template-assignment:b5f02664e5693b06d80b51c20adbfdc2c3b3016dce515f9b2f31f60f6fca963a",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:8e270daeb3cb362e8d9a186f8ea77049868d08792c4c671db5dd8f3342f144cd",
+              "origin": "group",
+              "originTargetIdentity": "urn:rsrender:exploration-group:aeaef95209fefa724faf929ba91ead4fc577805ec70192a71f4823fb7ca46e9f",
+              "inherited": true
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:34523d6cd3910c947bb664f2cb4004f99a54ec5fba4562f13cb52eda990f1a31",
+              "boringLogIdentity": "urn:rsrender:boring-log:b242281bb0ba55a7ec44240e7435df2e6930b7e36c740684c4dedc31a2d69f9b",
+              "assignmentIdentity": "urn:rsrender:template-assignment:5dbf1c35f55f3bf947dbed107a43206021d7d566dc39477562c032ae18ef6034",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "group",
+              "originTargetIdentity": "urn:rsrender:exploration-group:ed398cb050e564a22df34fffe73312cb2e713878fc471ba7cc44cdfac5e4ee44",
+              "inherited": true
+            },
+            {
+              "membershipIdentity": "urn:rsrender:exploration-membership:268a5c07c7cb7d768e164e81fddc08fa9cf000dacbefa77dfac9c1342a867c96",
+              "boringLogIdentity": "urn:rsrender:boring-log:b9cc16085ad7fd1546f5e1807ba5e67e6598ae5f301cea2355fc08c05fedf494",
+              "assignmentIdentity": "urn:rsrender:template-assignment:47a5eeda9a01cdda10bba9520a32068929d600dc9550778e3875835579de70bb",
+              "embeddedTemplateRepresentationIdentity": "urn:rsrender:embedded-template-representation:288e01d3bff040d753d78c95308405e7f4f47f782718a46512faa88b7f2e17ae",
+              "origin": "log-set",
+              "originTargetIdentity": "urn:rsrender:log-set:04996d1433272a0f16678c62ec3aa6e084792fcc2fd789359ec91aefcd1a6ba4",
+              "inherited": true
+            }
+          ]
+        }
+      }
+    ],
+    "sourceBacked": {
+      "digest": "sha256:8e715074799584cf6929259cff307e0c7573b622bf488da0fe95d929e177638b",
+      "snapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+      "explorationIdentity": "urn:test:bld-015:exploration:synthetic-001",
+      "availability": {
+        "structuralAuthoring": "available",
+        "sourceSnapshot": "present",
+        "templateAssignments": "complete",
+        "sourceMemberships": "available",
+        "evaluation": "not-evaluated-by-bld-016",
+        "publication": "not-evaluated-by-bld-016",
+        "diagnostics": []
+      }
+    },
+    "generatorWindow": {
+      "startedAtUtc": "2026-08-20T14:52:44.032Z",
+      "finishedAtUtc": "2026-08-20T14:56:53.438Z",
+      "failures": []
+    }
+  },
+  "hashes": [
+    {
+      "path": "packages/domain/src/project-input-revisions.ts",
+      "sha256": "e4002f6d842d5f13b9eff859cefceab1c1489966fcfef1b56d05b66f4f7d557b"
+    },
+    {
+      "path": "packages/domain/src/index.ts",
+      "sha256": "7217b0b45db930f92875e0ba086bd56274d471cd0d5a23338b8cd2983b640ee0"
+    },
+    {
+      "path": "tests/bld-016-project-input-revisions.test.mjs",
+      "sha256": "e57c43d883f76322e351cea67c04116bc515ae6ff9ee54e171806e4fe9c65bfa"
+    },
+    {
+      "path": "tests/helpers/bld-016-fixtures.mjs",
+      "sha256": "c4f173bc4f4939466dfcd48368b7b634ce9741b11639e09565ed6ffbcfbfb722"
+    },
+    {
+      "path": "tests/helpers/bld-016-property-model.mjs",
+      "sha256": "b8241cc197b5cdadf26001d6efe9f4bf279b2b0b18ad16803f6c71f911a5dd23"
+    },
+    {
+      "path": "tests/helpers/run-bld-016-vectors.mjs",
+      "sha256": "70f421a3c4d3ac0493f4a32e42c5fad67332aeec988d253f3c190c00170d7041"
+    },
+    {
+      "path": "tests/helpers/run-bld-016-evidence.mjs",
+      "sha256": "163411ee72c567213071a23f348e49ad1a18cf1416296ce2577e9a1e03e80826"
+    }
+  ],
+  "prerequisites": [
+    {
+      "path": "artifacts/bld-009-aggregate-skeleton-evidence.json",
+      "sha256": "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9"
+    },
+    {
+      "path": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
+      "sha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6"
+    },
+    {
+      "path": "artifacts/bld-014-diagnostic-fact-evidence.json",
+      "sha256": "ebbc0c0a82e09e83033222257dcbc78a7b9952360050612b064d80c456d8e477"
+    },
+    {
+      "path": "artifacts/bld-015-source-snapshot-evidence.json",
+      "sha256": "ecc36e0ff350d9029ca8591f52e863eca856dc2e44fd7f6ccf01274116d4e234"
+    },
+    {
+      "path": "packages/domain/src/aggregate-skeleton.ts",
+      "sha256": "36ca3d3db6d942d4e392a6d382770bdf54f77ee1a9ad6dbec92dd700a4ec3c8b"
+    },
+    {
+      "path": "packages/domain/src/diagnostic-fact.ts",
+      "sha256": "23d3c7871e240773bfc2a781b3086079a665a0ae4216bf84ba4b272657d34f1e"
+    },
+    {
+      "path": "packages/domain/src/source-snapshot.ts",
+      "sha256": "0c72f4f71e3b2204c3d8b35bb8f644b7bbfe7cb87125d2f2499f4bc9db2bdf1d"
+    }
+  ],
+  "executedJavaScript": [
+    {
+      "path": "packages/contracts/dist/index.js",
+      "sha256": "331d14ed48da369ce1a02ae51ea8eb279c5a1cd62380dada549bc2d543c2fa5e"
+    },
+    {
+      "path": "packages/domain/dist/aggregate-skeleton.js",
+      "sha256": "967a9019b6b11129d535bdedfed9f43e3f8136fd88860e4c259381cce32891df"
+    },
+    {
+      "path": "packages/domain/dist/diagnostic-fact.js",
+      "sha256": "0f52cdbc39e9b095529977a8c2d14770755a7e5a9d9e185f42620c0073c8ebac"
+    },
+    {
+      "path": "packages/domain/dist/source-snapshot.js",
+      "sha256": "815ff8ddc22d9e56b2d3823d54853ccfd00f70ecb9c30c76f6d578faa3469269"
+    },
+    {
+      "path": "packages/domain/dist/project-input-revisions.js",
+      "sha256": "02a048216f1260a991b2bf8a5b2f6a3c0945ec272380f6763254bea3672b4f4c"
+    },
+    {
+      "path": "packages/domain/dist/index.js",
+      "sha256": "668ae190b6540ac6910a209f3c0a7d5f0f4cd8ee2f4dffa94f4f2cd827cd5417"
+    }
+  ],
+  "authorities": [
+    {
+      "path": "docs/planning/specifications/boring-log-domain-model.md",
+      "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-product-specification.md",
+      "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-phased-implementation-roadmap.md",
+      "sha256": "a6c13c347868a43b46489edc9e96cf964966b40071877bae21b1691e29288159"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-acceptance-strategy.md",
+      "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+    },
+    {
+      "path": "docs/adr/0005-source-snapshot-acceptance-boundary.md",
+      "sha256": "9095b60beff5381b3e2978a53482ba85645c1f0d7e579bf5a907cbe94db882c7"
+    }
+  ],
+  "qualifyingTargetedRun": {
+    "startedAtUtc": "2026-08-20T14:31:54.1599503Z",
+    "finishedAtUtc": "2026-08-20T14:34:53.2802909Z",
+    "durationMilliseconds": 178925.5339,
+    "tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "fixedVectorGroups": 9,
+    "directPropertyGroups": 1,
+    "epPureFreshProcessGroups": 1,
+    "propertyCasesPerRepetition": 3000,
+    "fullFreshPropertyExecutions": 6,
+    "totalGeneratedCases": 18000,
+    "totalInvariantEvaluations": 126000,
+    "warmups": "none",
+    "exclusions": "none",
+    "validity": "PASS only if the retained admitted-Node receipt reports 11/11 tests passed and zero failures, every fail-closed child observes exact admitted Node bytes/en-US/UTC with empty stderr, each of three processes completes two identical full repetitions over all three 1000-case seeds, and all repetition/process digests agree"
+  },
+  "fixedVectors": [
+    "v1-to-v2 migration with exact seven explicit empty sentinels and byte-exact v1 compatibility view",
+    "missing, duplicate-empty, duplicate-current, unknown, noncanonical-order, wrong-owner, forged-identity/digest/state/revision, malformed-digest, and nested/top-level extra-field rejections",
+    "zero/one exact full BLD-015 Snapshot with context/project/digest mismatch rejection",
+    "provider-native SourceExplorationIdentity matching with no name, depth, order, or SourceEntityIdentity inference",
+    "structurally valid incomplete authoring with stable BLD-014 facts and unavailable evaluation/publication prerequisites",
+    "persisted parsed canonical JSON/digest/Snapshot/handle-identity round-trip",
+    "frozen v1/v2 assignment precedence and ETR replace/diverge compatibility with phase1Inputs preservation",
+    "hostile null-prototype/accessor/symbol/sparse/lone-surrogate inputs, deep freeze, and caller-mutation detachment",
+    "generated bounded nested group chains with exploration/nearest/broader/log-set precedence and cycle/orphan v1/v2 rejection parity"
+  ],
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "contextReviewedScannerLiteralMatches": 0,
+    "scanner": "literal scan for absolute Windows user paths, authorization-header and bearer-token shapes, private-key headers, and assigned password/secret/token values",
+    "scannedPaths": [
+      "packages/domain/src/project-input-revisions.ts",
+      "packages/domain/src/index.ts",
+      "tests/bld-016-project-input-revisions.test.mjs",
+      "tests/helpers/bld-016-fixtures.mjs",
+      "tests/helpers/bld-016-property-model.mjs",
+      "tests/helpers/run-bld-016-vectors.mjs",
+      "tests/helpers/run-bld-016-evidence.mjs"
+    ],
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "acceptanceOwner": "RSrender domain/project-input acceptance owner",
+    "custodyOwner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "GitHub #60 activation under standing internal-development authorization",
+    "rawLocation": "tests/bld-016-project-input-revisions.test.mjs and tests/helpers/bld-016-*.mjs retain fixed vectors, fixtures, generator, repetition transcript, and failure conditions",
+    "normalizedLocation": "artifacts/bld-016-project-input-revisions-evidence.json retains normalized process/repetition digests, timing, hashes, and failures",
+    "retention": "Retain the bound source, fixtures, oracle, generator, evidence, prerequisite evidence, lock, and admitted Node bytes together until a recorded replacement rerun supersedes them.",
+    "deletion": "Deletion or loss invalidates this bounded PASS and every downstream citation until a replacement qualification is retained."
+  },
+  "rerunTriggers": [
+    "Any Phase 1 aggregate, revision-handle, identity, Snapshot ownership, availability Diagnostic, canonicalization, rejection-code, or BLD-009 compatibility change",
+    "Any fixture, oracle, generator, source, export, executed JavaScript, prerequisite, manifest, lock, toolchain, locale, time-zone, authority, or retained hash change",
+    "Introduction of handle transition/reducer, command/history, assembler, persistence, scene, renderer, publication policy, or UI behavior",
+    "Deletion or loss of any retained raw or normalized evidence"
+  ],
+  "rerunCommands": [
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\typescript\\bin\\tsc -b packages\\domain --force --pretty false",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\prettier\\bin\\prettier.cjs --check packages/domain/src/project-input-revisions.ts packages/domain/src/index.ts tests/bld-016-project-input-revisions.test.mjs tests/helpers/bld-016-fixtures.mjs tests/helpers/bld-016-property-model.mjs tests/helpers/run-bld-016-vectors.mjs tests/helpers/run-bld-016-evidence.mjs artifacts/bld-016-project-input-revisions-evidence.json docs/planning/evidence/bld-016-project-input-revisions-verification.md",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\eslint\\bin\\eslint.js packages/domain/src/project-input-revisions.ts packages/domain/src/index.ts tests/bld-016-project-input-revisions.test.mjs tests/helpers/bld-016-fixtures.mjs tests/helpers/bld-016-property-model.mjs tests/helpers/run-bld-016-vectors.mjs tests/helpers/run-bld-016-evidence.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe --test tests\\bld-016-project-input-revisions.test.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe tests\\helpers\\run-bld-016-evidence.mjs",
+    "after integration-owner coordination: & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\npm.cmd run verify"
+  ],
+  "nonclaims": [
+    "Revision handles are immutable opaque current-reference values only; BLD-016 exposes no handle transition, replacement, reducer, monotonicity, command, or history API.",
+    "The empty revision-zero sentinel has a derived Project Collection Revision identity/digest for explicit empty ownership, but is not a positive current collection payload or transition event.",
+    "No Supplemental Source, Override, Annotation, Resolution, Extension-binding, page-range, or Data Track collection behavior is implemented.",
+    "No assembler, persistence, scene, renderer, publication decision, UI, MVP, release, security, privacy, performance, or production acceptance is claimed."
+  ],
+  "evidenceDigest": "sha256:b758b5934614dfa14a43e89cc8ab3e963589d0bf6d50fdcbffa930b6ba59a4e6"
+}
