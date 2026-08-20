@@ -1,0 +1,644 @@
+{
+  "schema": "rsrender.bld-017.display-value-override-evidence.v1",
+  "ticket": "BLD-017 / GitHub #61",
+  "result": "PASS",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/61#issuecomment-5357998655",
+    "scope": "Immutable Display Value Override collection plus bounded D02/D03/S06 Render Dataset assembly over one accepted BLD-015 Snapshot and exact BLD-016 ownership inputs"
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "node": "v24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "manifestLockOrTopologyChanged": false
+  },
+  "contract": {
+    "displayValueOverrideVersion": 1,
+    "presentationOverrideCollectionVersion": 1,
+    "boundedOverrideRenderDatasetVersion": 1,
+    "sourceSnapshotCardinality": "exactly one accepted BLD-015 SourceSnapshot",
+    "presentationInput": "strict tagged union: exact owned revision-0 empty handle with no collection, or exact owned positive current handle with one strict collection",
+    "boundedEnabledOverrideCardinality": "zero-or-one enabled Display Value Override",
+    "requiredEmptyInputs": [
+      "supplemental-sources",
+      "source-resolution-decisions",
+      "source-extension-bindings"
+    ],
+    "deliberateNondependencies": [
+      "freeform-annotations",
+      "page-range-configuration",
+      "data-track-configuration"
+    ]
+  },
+  "acceptance": {
+    "admittedBoundedCapabilities": [
+      "D02",
+      "D03",
+      "S06"
+    ],
+    "requiredOracleAxes": [
+      "OA-VAL-001",
+      "OA-PROV-001"
+    ],
+    "fixtureIds": [
+      "FX-05",
+      "FX-08"
+    ],
+    "propertyInvariantIds": [
+      "PI-05",
+      "PI-19"
+    ],
+    "acceptanceCriterion": "bounded AC-005",
+    "qualification": "This evidence admits only the one-Snapshot, zero-or-one enabled Display Value Override seam; it does not admit full D02, D03, S06, or AC-005 behavior."
+  },
+  "oracle": {
+    "fixtureRevisions": [
+      "FX-05:bld-017-display-override@r1",
+      "FX-05:bld-017-minimal-property-snapshot@r1",
+      "FX-08:bld-017-refresh-a-b-conflicts@r1"
+    ],
+    "fixtureAdmission": {
+      "classification": "SYNTHETIC_REPOSITORY_SAFE",
+      "rightsState": "repository-safe synthetic fixtures authored for RSrender internal domain qualification; no client, vendor, credential, restricted go-by, or third-party content",
+      "sourcePath": "tests/helpers/bld-017-fixtures.mjs",
+      "sourceSha256": "bd41def1ca7919deb58ae26a09065a9dd37f05c6170491f85365dff31895df6b"
+    },
+    "oracleRevision": "bld-017-display-value-override-oracle-v1",
+    "generatorRevision": "bld-017-display-value-override-generator-v1",
+    "seeds": [
+      385875969,
+      385875970,
+      385875971
+    ],
+    "iterationsPerSeed": 1000,
+    "casesPerRepetition": 3000,
+    "invariantsPerCase": 10,
+    "exactOutcomeDistributionPerRepetition": {
+      "assembled": 999,
+      "BOUNDED_OVERRIDE_ASSEMBLY_STALE_BASELINE": 501,
+      "BOUNDED_OVERRIDE_ASSEMBLY_RETYPE_CONFLICT": 501,
+      "BOUNDED_OVERRIDE_ASSEMBLY_UNIT_CONFLICT": 501,
+      "BOUNDED_OVERRIDE_ASSEMBLY_OVERRIDE_TARGET_DELETED": 498
+    },
+    "fixedFailureVectorsPerRepetition": 17,
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "totalGeneratedCases": 18000,
+    "totalAssemblyEvaluations": 36000,
+    "totalInvariantEvaluations": 180000,
+    "normalizedRepetitionDigest": "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec",
+    "processTranscriptDigest": "sha256:983ed58018e310d38bda3908d8e1ad9ac0457747c12e9d2b1dcbafc0830867e0",
+    "executions": [
+      {
+        "process": 1,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec",
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec"
+        ],
+        "processDigest": "sha256:983ed58018e310d38bda3908d8e1ad9ac0457747c12e9d2b1dcbafc0830867e0"
+      },
+      {
+        "process": 2,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec",
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec"
+        ],
+        "processDigest": "sha256:983ed58018e310d38bda3908d8e1ad9ac0457747c12e9d2b1dcbafc0830867e0"
+      },
+      {
+        "process": 3,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec",
+          "sha256:b91cd6caddf75e7704abb01b86b8aa9b5eadfe0a01f10d3400ee9d01427457ec"
+        ],
+        "processDigest": "sha256:983ed58018e310d38bda3908d8e1ad9ac0457747c12e9d2b1dcbafc0830867e0"
+      }
+    ],
+    "successfulOverrideWitness": {
+      "sourceFieldIdentity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1",
+      "sourceOriginalDigest": "sha256:e555d46dde2f698035003644f096d88eb13587cff6dbebfa0ec85af7b88117fb",
+      "sourceOriginalProvenanceClass": "source",
+      "effectiveDisplayDigest": "sha256:d0f18c5ca37eb5b00896f3148490a5a78cfaa23342332ddea9ba09e2e8948af3",
+      "effectiveDisplayProvenanceClass": "override",
+      "presentationOverrideIdentity": "urn:rsrender:presentation-override:49acad2038334515ce8ddd53f1d7ef35823f574196865ccae6866434a856e455"
+    },
+    "revisionZeroEmptyPresentationWitness": {
+      "state": "empty",
+      "projectRevision": 0,
+      "revisionIdentity": "urn:rsrender:project-input-revision:7344f64be3687958e70b13c7097fe2be83136045519a7feacbbf1c2dd4417654",
+      "contentDigest": "sha256:7301708f22cb174f322bdc645324db701f983ca28c3d089bbb2fc136ad9b1879",
+      "collectionIdentity": null,
+      "collectionRevision": null,
+      "collectionDigest": null
+    },
+    "currentEmptyPresentationWitness": {
+      "state": "current",
+      "projectRevision": 1,
+      "revisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+      "contentDigest": "sha256:c4ad396c08551b1677bda7a22c30350cbc395122ea21aaff553b40739fb0a0a9",
+      "collectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+      "collectionRevision": 1,
+      "collectionDigest": "sha256:c4ad396c08551b1677bda7a22c30350cbc395122ea21aaff553b40739fb0a0a9"
+    },
+    "sourceEffectiveDigest": "sha256:2783f213d5f0eb8031e5c27ecd314a74b8a48e1429ca93d57d1eaa2d9924efbe",
+    "fixedFailures": [
+      {
+        "label": "stale-baseline",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_STALE_BASELINE",
+        "factCode": "OVERRIDE.BASELINE.STALE",
+        "factIdentity": "sha256:2eedbf786dee7e199347653923be48928332546796c01af1ca07a84386f9b5bc",
+        "factInputDigest": "sha256:de0601eab101c45601b8b86ca8136af3b7a184e84d02324e7f7e8351cdf65624",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:8b1ab99b62d6b63c6248d40a3e22483dc4543d669269eb5b42d5131b6487dd48",
+        "afterInputDigest": "sha256:8b1ab99b62d6b63c6248d40a3e22483dc4543d669269eb5b42d5131b6487dd48"
+      },
+      {
+        "label": "deleted-target",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_OVERRIDE_TARGET_DELETED",
+        "factCode": "OVERRIDE.TARGET.DELETED",
+        "factIdentity": "sha256:5605aa93ac35703fc76a29dd6b349bb9e3f0f56757bf0b72f9cb7572de1c7c35",
+        "factInputDigest": "sha256:9d2528a64ff644dd836b94787b53a56dccfd65c62efe2bdcf399e92a88eba833",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:test:bld-017:source-field:deleted"
+        },
+        "beforeInputDigest": "sha256:7d9e888613248ce9c71c7cfc38b16ad108aa70f6d8da3228d2947aa3f93fb3b9",
+        "afterInputDigest": "sha256:7d9e888613248ce9c71c7cfc38b16ad108aa70f6d8da3228d2947aa3f93fb3b9"
+      },
+      {
+        "label": "retyped",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_RETYPE_CONFLICT",
+        "factCode": "OVERRIDE.TYPE.CONFLICT",
+        "factIdentity": "sha256:65e4714d9c76722dc5b2593886cb0ef59abbb7de80064d106254714aa19c5dd4",
+        "factInputDigest": "sha256:f5b1f59d80cc5594120917f5b81ef125681fdc6f5d4a507b8a13c4523ac3fe1c",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:15a60ae76ad1d738c7f421960a2185b6008e9f2c3f5c040a7b1cd695e58f52c7",
+        "afterInputDigest": "sha256:15a60ae76ad1d738c7f421960a2185b6008e9f2c3f5c040a7b1cd695e58f52c7"
+      },
+      {
+        "label": "unit",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_UNIT_CONFLICT",
+        "factCode": "OVERRIDE.UNIT.CONFLICT",
+        "factIdentity": "sha256:3eac9a0d5b405bda38ea641da8bb994e045c78191db8dbf6364a922471aaeadc",
+        "factInputDigest": "sha256:3dfc3bd5cdd8c591f92a8d9cc930e9edd586c1e640e3e3a5cf28a7ce812c7332",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:404cc1c40378d77649a5c3fd60d9b2c15818c9ba55d2b0640299264b24693d50",
+        "afterInputDigest": "sha256:404cc1c40378d77649a5c3fd60d9b2c15818c9ba55d2b0640299264b24693d50"
+      },
+      {
+        "label": "context",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_OVERRIDE_CONTEXT_MISMATCH",
+        "factCode": "OVERRIDE.CONTEXT.MISMATCH",
+        "factIdentity": "sha256:686710c07ebace58f41bc0418fa281ed10e051955e3bd0556351834c3dc21415",
+        "factInputDigest": "sha256:8b3c006e7d1f157e4a2a72bdc56f937d2092eca8721fd7fbae71440376a78cfb",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:eedba95b4ba837e713bcc950f8237c2d2420e4b923227c129e0da7b07e39eb46",
+        "afterInputDigest": "sha256:eedba95b4ba837e713bcc950f8237c2d2420e4b923227c129e0da7b07e39eb46"
+      },
+      {
+        "label": "entity",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_OVERRIDE_CONTEXT_MISMATCH",
+        "factCode": "OVERRIDE.ENTITY.MISMATCH",
+        "factIdentity": "sha256:7cc1f70308f5e30c093b3afbf2cdd32660f30029b6fa86ac98d373445ee8d5e6",
+        "factInputDigest": "sha256:aaef45f99a56b54241aacc3d41e375f1f3caa2b51476ff2dc09cce88e748a7b5",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:33df342ab8d2ed45e5baf97ee66a224497a8f80d2adc807e2cec92072b44dd01",
+        "afterInputDigest": "sha256:33df342ab8d2ed45e5baf97ee66a224497a8f80d2adc807e2cec92072b44dd01"
+      },
+      {
+        "label": "semantic-association",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_SEMANTIC_AXIS_CONFLICT",
+        "factCode": "OVERRIDE.SEMANTIC_AXIS.CONFLICT",
+        "factIdentity": "sha256:091a32fb1641165343533697843af7d4b41fd9e203dafea17e5311cdb9335f1f",
+        "factInputDigest": "sha256:fa9674b778c76c797adc5edd25138982f754819869df5fdeb506e0d143fc4dda",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:011ef55372a43fd2b6a2f1acc30030ad408922a4b46d854c744ec41eae9c1b33",
+        "afterInputDigest": "sha256:011ef55372a43fd2b6a2f1acc30030ad408922a4b46d854c744ec41eae9c1b33"
+      },
+      {
+        "label": "semantic-finality",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_SEMANTIC_AXIS_CONFLICT",
+        "factCode": "OVERRIDE.SEMANTIC_AXIS.CONFLICT",
+        "factIdentity": "sha256:091a32fb1641165343533697843af7d4b41fd9e203dafea17e5311cdb9335f1f",
+        "factInputDigest": "sha256:270e21f9e62febcb957fba5e05fbfe63cadf535565ea38f7a8ed17b3beca88f1",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:87c595e87dc32ace305d6a49677ec75fd2c5091bbc9f66294c0ea23badc03dde",
+        "afterInputDigest": "sha256:87c595e87dc32ace305d6a49677ec75fd2c5091bbc9f66294c0ea23badc03dde"
+      },
+      {
+        "label": "semantic-eligibility",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_SEMANTIC_AXIS_CONFLICT",
+        "factCode": "OVERRIDE.SEMANTIC_AXIS.CONFLICT",
+        "factIdentity": "sha256:091a32fb1641165343533697843af7d4b41fd9e203dafea17e5311cdb9335f1f",
+        "factInputDigest": "sha256:7146d66c921fd52677a70c0edbdbad314ab07ba1040a6c96f18c5e15146728b7",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:e785ccc7a02a70132b4613ac04ecb25ecf2fcab374d3e9402fbe7cdfb8f9e5c8",
+        "afterInputDigest": "sha256:e785ccc7a02a70132b4613ac04ecb25ecf2fcab374d3e9402fbe7cdfb8f9e5c8"
+      },
+      {
+        "label": "duplicate-enabled",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_DUPLICATE_ENABLED_TARGET",
+        "factCode": "OVERRIDE.TARGET.DUPLICATE_ENABLED",
+        "factIdentity": "sha256:193cfd38024a314edf593d082f2a9039c92667b69f3a8b2e8caf5a362a4a4959",
+        "factInputDigest": "sha256:24bd01e674b24b5e2fc7a1b9c1447301aaa44029653e8516b281df4c89ca6247",
+        "affected": {
+          "identityKind": "SourceSnapshotIdentity",
+          "identity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8"
+        },
+        "beforeInputDigest": "sha256:413cac136959ae9d9880e3bb7f3d90d049a29c57dea9a46c3100f8cb63c2257f",
+        "afterInputDigest": "sha256:413cac136959ae9d9880e3bb7f3d90d049a29c57dea9a46c3100f8cb63c2257f"
+      },
+      {
+        "label": "multiple-enabled",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_MULTIPLE_OVERRIDES",
+        "factCode": "OVERRIDE.BOUNDED_ASSEMBLER.MULTIPLE_UNSUPPORTED",
+        "factIdentity": "sha256:7a83beebe5865e0678ad0575de9de1c992b96e0dc4ee19e5636704b90bf33881",
+        "factInputDigest": "sha256:18021af1ff6790641298bfcf36411260a32212d65658ef374109f53c263da5d5",
+        "affected": {
+          "identityKind": "PresentationOverrideCollectionIdentity",
+          "identity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca"
+        },
+        "beforeInputDigest": "sha256:bb2fa2576e70022d873ef83dc17b9c1826e54999ad730dc36af30dbdda2e0e0d",
+        "afterInputDigest": "sha256:bb2fa2576e70022d873ef83dc17b9c1826e54999ad730dc36af30dbdda2e0e0d"
+      },
+      {
+        "label": "unsupported-supplemental-sources",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_NONEMPTY_INPUT",
+        "factCode": null,
+        "factIdentity": null,
+        "factInputDigest": null,
+        "affected": null,
+        "beforeInputDigest": "sha256:a984ba7ca257784957fc66bb345b972d37996f9e580c592abee8a47067963d8e",
+        "afterInputDigest": "sha256:a984ba7ca257784957fc66bb345b972d37996f9e580c592abee8a47067963d8e"
+      },
+      {
+        "label": "unsupported-source-resolution-decisions",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_NONEMPTY_INPUT",
+        "factCode": null,
+        "factIdentity": null,
+        "factInputDigest": null,
+        "affected": null,
+        "beforeInputDigest": "sha256:4b9b89ea522e965adb3d796b2f7f98a826b5d713375be3fe65b0bfb341c3d6bf",
+        "afterInputDigest": "sha256:4b9b89ea522e965adb3d796b2f7f98a826b5d713375be3fe65b0bfb341c3d6bf"
+      },
+      {
+        "label": "unsupported-source-extension-bindings",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_NONEMPTY_INPUT",
+        "factCode": null,
+        "factIdentity": null,
+        "factInputDigest": null,
+        "affected": null,
+        "beforeInputDigest": "sha256:e7852fa963b514a8a892ddfecc2cbb6b257a9d13f4a344ec68ca8052d50a2d71",
+        "afterInputDigest": "sha256:e7852fa963b514a8a892ddfecc2cbb6b257a9d13f4a344ec68ca8052d50a2d71"
+      },
+      {
+        "label": "presentation-handle-mismatch",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_PRESENTATION_HANDLE_MISMATCH",
+        "factCode": null,
+        "factIdentity": null,
+        "factInputDigest": null,
+        "affected": null,
+        "beforeInputDigest": "sha256:bc8b2ec1b7a2c6d9878610b5f6abd3ab65e013675373b3aa365a0e1df526a3b6",
+        "afterInputDigest": "sha256:bc8b2ec1b7a2c6d9878610b5f6abd3ab65e013675373b3aa365a0e1df526a3b6"
+      },
+      {
+        "label": "hostile-accessor",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_MALFORMED",
+        "factCode": null,
+        "factIdentity": null,
+        "factInputDigest": null,
+        "affected": null,
+        "beforeInputDigest": null,
+        "afterInputDigest": null,
+        "getterCalls": 0
+      },
+      {
+        "label": "refresh-a-b-changed-source",
+        "code": "BOUNDED_OVERRIDE_ASSEMBLY_STALE_BASELINE",
+        "factCode": "OVERRIDE.BASELINE.STALE",
+        "factIdentity": "sha256:2eedbf786dee7e199347653923be48928332546796c01af1ca07a84386f9b5bc",
+        "factInputDigest": "sha256:d9455b1ec3168d82716a3462d1faddadcfec42d78ea43549a58305b090551569",
+        "affected": {
+          "identityKind": "SourceFieldIdentity",
+          "identity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1"
+        },
+        "beforeInputDigest": "sha256:a246008e9f796c06fd57c286c6ee24713c891e3ef350d7ca3a67d2d09facb024",
+        "afterInputDigest": "sha256:a246008e9f796c06fd57c286c6ee24713c891e3ef350d7ca3a67d2d09facb024"
+      }
+    ],
+    "generatorWindow": {
+      "startedAtUtc": "2026-08-20T17:03:10.327Z",
+      "finishedAtUtc": "2026-08-20T17:22:23.673Z",
+      "failures": []
+    }
+  },
+  "hashes": [
+    {
+      "path": "packages/domain/src/display-value-override.ts",
+      "sha256": "2e9df39a1c0ecc53465b00ef74614e4a3da5a1c460a3e0da84421444f1f56eb0"
+    },
+    {
+      "path": "packages/domain/src/bounded-override-render-dataset.ts",
+      "sha256": "07a3aed3a7ac6261550478ff3b5b09c36195c0150e008a09fda6f050bc80490e"
+    },
+    {
+      "path": "packages/domain/src/index.ts",
+      "sha256": "241b609ee7ced167b8df9df2e24a1a692c65463da7fd649755ed73f07fe299f9"
+    },
+    {
+      "path": "tests/bld-017-display-value-override.test.mjs",
+      "sha256": "75a25541e4962280b38fe39be7ed5d2af359893cb485f7b86c6dea5d12152487"
+    },
+    {
+      "path": "tests/helpers/bld-015-fixtures.mjs",
+      "sha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7"
+    },
+    {
+      "path": "tests/helpers/bld-017-fixtures.mjs",
+      "sha256": "bd41def1ca7919deb58ae26a09065a9dd37f05c6170491f85365dff31895df6b"
+    },
+    {
+      "path": "tests/helpers/bld-017-property-model.mjs",
+      "sha256": "9328ae6f80a474f0ede0f4d0bb5e9576ec9ca7f12cb8cf2a8ab4339a03aa901f"
+    },
+    {
+      "path": "tests/helpers/bld-017-fixed-vectors.mjs",
+      "sha256": "44656a165b0da2e55ed73c0f69c1aae2781539db6c0c4e8281e04262d6f31ee1"
+    },
+    {
+      "path": "tests/helpers/run-bld-017-vectors.mjs",
+      "sha256": "8412401fe26bdee15f77ee1556de79e94e879797d419d87999e7ca8b1dc367bc"
+    },
+    {
+      "path": "tests/helpers/run-bld-017-evidence.mjs",
+      "sha256": "efd22ad25b1ca7001ff08230c29949d19ddfdd1ad15520a1aa50954d535e57a1"
+    },
+    {
+      "path": "artifacts/bld-017-targeted-run.stdout.txt",
+      "sha256": "3a372c7c7991b146ce67a1bf3ad3c71dba57f43a2dbd3b5a41aced7dfaaf2fe7"
+    }
+  ],
+  "prerequisites": [
+    {
+      "path": "artifacts/bld-008-domain-value-evidence.json",
+      "sha256": "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71"
+    },
+    {
+      "path": "artifacts/bld-014-diagnostic-fact-evidence.json",
+      "sha256": "ebbc0c0a82e09e83033222257dcbc78a7b9952360050612b064d80c456d8e477"
+    },
+    {
+      "path": "artifacts/bld-015-source-snapshot-evidence.json",
+      "sha256": "ecc36e0ff350d9029ca8591f52e863eca856dc2e44fd7f6ccf01274116d4e234"
+    },
+    {
+      "path": "artifacts/bld-016-project-input-revisions-evidence.json",
+      "sha256": "7f97458f538595eb25e355baf8b038903e972b85f603741dd445a660626cc300"
+    },
+    {
+      "path": "packages/domain/src/value-record.ts",
+      "sha256": "9db7ed21d2ef227575c09992609a4bee80e82c3b84632287bc6ee520b656c5be"
+    },
+    {
+      "path": "packages/domain/src/diagnostic-fact.ts",
+      "sha256": "23d3c7871e240773bfc2a781b3086079a665a0ae4216bf84ba4b272657d34f1e"
+    },
+    {
+      "path": "packages/domain/src/source-snapshot.ts",
+      "sha256": "0c72f4f71e3b2204c3d8b35bb8f644b7bbfe7cb87125d2f2499f4bc9db2bdf1d"
+    },
+    {
+      "path": "packages/domain/src/project-input-revisions.ts",
+      "sha256": "e4002f6d842d5f13b9eff859cefceab1c1489966fcfef1b56d05b66f4f7d557b"
+    }
+  ],
+  "executedJavaScript": [
+    {
+      "path": "packages/contracts/dist/index.js",
+      "sha256": "b44000d4f87b64015baa5f87907ae898bb3f820154fa4d60d140b91b771b8646"
+    },
+    {
+      "path": "packages/domain/dist/value-record.js",
+      "sha256": "9e2b95833eef22c60749182482ce00f1f83d0e7bd9082faa666e640307ea9e92"
+    },
+    {
+      "path": "packages/domain/dist/diagnostic-fact.js",
+      "sha256": "0f52cdbc39e9b095529977a8c2d14770755a7e5a9d9e185f42620c0073c8ebac"
+    },
+    {
+      "path": "packages/domain/dist/source-snapshot.js",
+      "sha256": "815ff8ddc22d9e56b2d3823d54853ccfd00f70ecb9c30c76f6d578faa3469269"
+    },
+    {
+      "path": "packages/domain/dist/project-input-revisions.js",
+      "sha256": "02a048216f1260a991b2bf8a5b2f6a3c0945ec272380f6763254bea3672b4f4c"
+    },
+    {
+      "path": "packages/domain/dist/display-value-override.js",
+      "sha256": "e326250edbfa8197f8cc7513f1f375fa9396fedd27f42b422aa2a3a9d9052e84"
+    },
+    {
+      "path": "packages/domain/dist/bounded-override-render-dataset.js",
+      "sha256": "b344220457a9411071ddacb6a4cba3ad1fc19d94f300f84583455493a81622d8"
+    },
+    {
+      "path": "packages/domain/dist/index.js",
+      "sha256": "32269594bb7374c901b8d1d9d7c64c522155fb22e1533d5e6b7af1c8283adb37"
+    }
+  ],
+  "authorities": [
+    {
+      "path": "docs/planning/specifications/boring-log-domain-model.md",
+      "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-product-specification.md",
+      "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-phased-implementation-roadmap.md",
+      "sha256": "a6c13c347868a43b46489edc9e96cf964966b40071877bae21b1691e29288159"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-acceptance-strategy.md",
+      "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+    },
+    {
+      "path": "docs/adr/0005-source-snapshot-acceptance-boundary.md",
+      "sha256": "9095b60beff5381b3e2978a53482ba85645c1f0d7e579bf5a907cbe94db882c7"
+    }
+  ],
+  "workspaceAndAdmissionInputs": [
+    {
+      "path": "package.json",
+      "sha256": "d2543a55c3b3f3ee7365ce4e9f3b38ddd26992dd72feaa2a65d871461e3f2bd5"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "c6706b42aa66a16f66f56049c8bb5334901d8548033978f565a7668c6aeeabf6"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha256": "a8ea5e128345515c5b3f7515e6d1ce2d40c746cbf7bd32ce1e0cd43de6218c78"
+    },
+    {
+      "path": "packages/domain/package.json",
+      "sha256": "34ec53599ac542ec3213e1fc991cf6a29be02461146dd3fcc6e75290882d0ab5"
+    },
+    {
+      "path": "packages/domain/tsconfig.json",
+      "sha256": "ae40c0b8ea329898be2c509314c0702a9f2f243e51ffc6ebc7d47ee4d383bf50"
+    },
+    {
+      "path": "docs/governance/bld-001-internal-dependency-admission.json",
+      "sha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a"
+    },
+    {
+      "path": "docs/governance/bld-001-authority-approval-packet.md",
+      "sha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815"
+    },
+    {
+      "path": "artifacts/bld-007-dependency-enforcement-evidence.json",
+      "sha256": "ecad1333c1e4331f5c08a6e7767a5830357da8ae6b8ae19a383946335da8f378"
+    },
+    {
+      "path": "artifacts/bld-007-dependency-custody.json",
+      "sha256": "355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7"
+    },
+    {
+      "path": "docs/governance/bld-007-workspace-topology-approvals.json",
+      "sha256": "31aaeb47e7b380488349392f085f7e68e4454ed616e1bdca137e5bde03c35fd6"
+    }
+  ],
+  "integrationGates": {
+    "rootIntegratedVerify": "PENDING_INTEGRATION_OWNER",
+    "dependencyAdmissionAndTopology": "PENDING_ROOT_INTEGRATED_GATES",
+    "boundedEpPureResultIndependentOfPendingGates": true
+  },
+  "qualifyingTargetedRun": {
+    "startedAtUtc": "2026-08-20T16:31:19.0300254Z",
+    "finishedAtUtc": "2026-08-20T16:44:39.8175056Z",
+    "durationMilliseconds": 800766.2541,
+    "nodeTestDurationMilliseconds": 800428.9182,
+    "normalizedStdoutPath": "artifacts/bld-017-targeted-run.stdout.txt",
+    "normalizedStdoutSha256": "3a372c7c7991b146ce67a1bf3ad3c71dba57f43a2dbd3b5a41aced7dfaaf2fe7",
+    "tests": 14,
+    "passed": 14,
+    "failed": 0,
+    "fixedVectorGroups": 13,
+    "directPropertyGroups": 1,
+    "propertyCasesPerRepetition": 3000,
+    "validity": "PASS only if the retained admitted-Node receipt reports 14/14 tests passed and zero failures, followed by three fresh admitted-Node processes each completing two identical full repetitions with empty stderr and exact cross-process digests"
+  },
+  "fixedVectors": [
+    "revision-0 empty presentation sentinel and positive current empty collection are both source-effective but canonically distinct",
+    "one exact applicable Override retains source-original and separate effective override value/provenance",
+    "accepted Refresh A/B changed, deleted, retyped, and unit conflicts plus provenance-only refresh applicability",
+    "context, entity, association, finality, eligibility, stale baseline, deleted target, retype, and unit fail-closed Diagnostics",
+    "duplicate enabled target, duplicate identity, noncanonical order, and bounded multiple-enabled rejection",
+    "exact honestly-owned nonempty Supplemental, Resolution, and Extension-binding rejection plus presentation-handle mismatch",
+    "freeform Annotation, page-range, and Data Track handle changes are deliberate byte-exact nondependencies",
+    "pure next collection new/unchanged/edited item revision rules with no command or history semantics",
+    "hostile accessor-safe total boundaries, recursive forbidden Diagnostic policy-key absence, deep freeze, caller detachment, and source immutability",
+    "3,000 generated cases varying target/deletion, baseline, type, unit, and provenance with two exact assemblies per case"
+  ],
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "contextReviewedScannerLiteralMatches": 0,
+    "scanner": "literal scan for absolute Windows user paths, authorization-header and bearer-token shapes, private-key headers, and assigned password/secret/token values",
+    "scannedPaths": [
+      "packages/domain/src/display-value-override.ts",
+      "packages/domain/src/bounded-override-render-dataset.ts",
+      "packages/domain/src/index.ts",
+      "tests/bld-017-display-value-override.test.mjs",
+      "tests/helpers/bld-015-fixtures.mjs",
+      "tests/helpers/bld-017-fixtures.mjs",
+      "tests/helpers/bld-017-property-model.mjs",
+      "tests/helpers/bld-017-fixed-vectors.mjs",
+      "tests/helpers/run-bld-017-vectors.mjs",
+      "tests/helpers/run-bld-017-evidence.mjs",
+      "artifacts/bld-017-targeted-run.stdout.txt"
+    ],
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "acceptanceOwner": "RSrender domain/Override acceptance owner",
+    "custodyOwner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "GitHub #61 activation under standing internal-development authorization",
+    "rawLocation": "tests/bld-017-display-value-override.test.mjs and tests/helpers/bld-017-*.mjs retain fixed vectors, fixtures, generator, repetition transcript, and failure conditions",
+    "normalizedLocation": "artifacts/bld-017-display-value-override-evidence.json retains normalized process/repetition digests, timing, hashes, and failures",
+    "retention": "Retain the bound source, fixtures, oracle, generator, evidence, prerequisite evidence, lock, and admitted Node bytes together until a recorded replacement rerun supersedes them.",
+    "deletion": "Deletion or loss invalidates this bounded PASS and every downstream citation until a replacement qualification is retained."
+  },
+  "rerunTriggers": [
+    "Any Override item/collection, baseline value-state digest, provenance, identity, revision, canonicalization, conflict, Diagnostic, or bounded dataset contract change",
+    "Any Source Snapshot, Phase1 ownership handle, empty/current presentation input, Supplemental/Resolution/Extension precondition, or deliberate nondependency change",
+    "Any fixture, oracle, generator, source, export, executed JavaScript, prerequisite, manifest, lock, toolchain, locale, time-zone, authority, or retained hash change",
+    "Introduction of full assembler, Supplemental interpretation, Resolution, Extension binding, Refresh command, history, persistence, scene, renderer, publication policy, or UI behavior",
+    "Deletion or loss of any retained raw or normalized evidence"
+  ],
+  "rerunCommands": [
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\typescript\\bin\\tsc -b packages\\domain --force --pretty false",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\prettier\\bin\\prettier.cjs --check packages/domain/src/display-value-override.ts packages/domain/src/bounded-override-render-dataset.ts packages/domain/src/index.ts tests/bld-017-display-value-override.test.mjs tests/helpers/bld-017-fixtures.mjs tests/helpers/bld-017-property-model.mjs tests/helpers/bld-017-fixed-vectors.mjs tests/helpers/run-bld-017-vectors.mjs tests/helpers/run-bld-017-evidence.mjs artifacts/bld-017-display-value-override-evidence.json docs/planning/evidence/bld-017-display-value-override-verification.md",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\eslint\\bin\\eslint.js packages/domain/src/display-value-override.ts packages/domain/src/bounded-override-render-dataset.ts packages/domain/src/index.ts tests/bld-017-display-value-override.test.mjs tests/helpers/bld-017-fixtures.mjs tests/helpers/bld-017-property-model.mjs tests/helpers/bld-017-fixed-vectors.mjs tests/helpers/run-bld-017-vectors.mjs tests/helpers/run-bld-017-evidence.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe --test tests\\bld-017-display-value-override.test.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe tests\\helpers\\run-bld-017-evidence.mjs",
+    "after integration-owner coordination: & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\npm.cmd run verify"
+  ],
+  "nonclaims": [
+    "The bounded assembler admits at most one enabled Display Value Override and is not the full D03 Render Dataset assembler.",
+    "No Supplemental Source interpretation, Resolution application, active Source Extension binding, Refresh, command, reducer, history, persistence, scene, renderer, PDF, publication decision, or UI behavior is implemented.",
+    "Freeform Annotation, page-range configuration, and Data Track configuration are deliberate nondependencies under domain section 11 and are excluded from the dataset header/digest.",
+    "createNextPresentationOverrideCollection is a pure structural next-state constructor, not a transition, monotonicity, command, reducer, or history API.",
+    "No source value or provenance is flattened, overwritten, or mutated; effective override display value and provenance remain separate from the retained source original.",
+    "No MVP, release, security, privacy, performance, or production acceptance is claimed."
+  ],
+  "evidenceDigest": "sha256:83d348f2bc36d4d4f5aa7665a4549c4080ba78c43f08abfb16518d62f7875ef0"
+}

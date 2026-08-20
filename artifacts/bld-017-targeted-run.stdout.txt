@@ -1,0 +1,23 @@
+✔ override item and collection round-trip canonically with exact baseline, type, unit and provenance (12.0506ms)
+✔ zero-current collection keeps source original and effective value exact (408.2237ms)
+✔ revision-zero empty presentation input is queryable and canonically distinct (899.4317ms)
+✔ one applicable override replaces only effective display value and preserves source truth (345.8882ms)
+✔ stale, deleted, retyped, incompatible-unit, entity and context states fail with exact facts (8721.6825ms)
+✔ accepted Snapshot refresh A/B vectors detect changed, deleted, retyped and unit conflicts (4971.9883ms)
+✔ collection rejects duplicate enabled targets, duplicate identities and noncanonical order (8.3735ms)
+✔ bounded assembler rejects more than one enabled override even for distinct targets (877.7816ms)
+✔ bounded assembler preserves duplicate-enabled target taxonomy and Diagnostic (888.1621ms)
+✔ pure next collection enforces new, unchanged and edited item revision semantics (11.0583ms)
+✔ presentation handle and explicit unsupported input handles fail closed (3590.3434ms)
+✔ freeform, page-range and data-track handles are deliberate nondependencies (1625.0406ms)
+✔ hostile boundaries are total, accessor-safe, immutable and detached (1587.422ms)
+✔ bounded property model covers target, baseline, type, unit, provenance, immutability and determinism (775483.2923ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 800428.9182
+BLD017_RECEIPT start=2026-08-20T16:31:19.0300254Z finish=2026-08-20T16:44:39.8175056Z durationMs=800766.2541 exit=0

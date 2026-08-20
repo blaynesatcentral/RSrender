@@ -244,6 +244,51 @@ export {
   resolvePhase1EffectiveTemplateAssignment,
   toLogProjectAggregateV1CompatibilityView,
 } from "./project-input-revisions.js";
+
+export {
+  createDisplayValueOverride,
+  createNextPresentationOverrideCollection,
+  createPresentationOverrideCollection,
+  decodeDisplayValueOverride,
+  decodePresentationOverrideCollection,
+  derivePresentationOverrideIdentity,
+  digestSourceBaselineValue,
+  displayValueOverrideVersion,
+  displayValueTypeOf,
+  encodeDisplayValueOverride,
+  encodePresentationOverrideCollection,
+  localPresentationOverrideIdentityCodec,
+  presentationOverrideCollectionIdentityCodec,
+  presentationOverrideCollectionVersion,
+  presentationOverrideContractRevision,
+  presentationOverrideIdentityCodec,
+} from "./display-value-override.js";
+export type {
+  DisplayValueOverride,
+  DisplayValueOverrideDraft,
+  DisplayValueOverrideEncodeResult,
+  DisplayValueOverrideRejectionCode,
+  DisplayValueOverrideResult,
+  LocalPresentationOverrideIdentity,
+  OverrideValueType,
+  PresentationOverrideCollection,
+  PresentationOverrideCollectionIdentity,
+  PresentationOverrideIdentity,
+} from "./display-value-override.js";
+
+export {
+  assembleBoundedOverrideRenderDataset,
+  boundedOverrideProjectionContractVersion,
+  boundedOverrideRenderDatasetIdentityCodec,
+  boundedOverrideRenderDatasetVersion,
+} from "./bounded-override-render-dataset.js";
+export type {
+  BoundedOverrideAssemblyRejectionCode,
+  BoundedOverrideAssemblyResult,
+  BoundedOverrideRenderDataset,
+  BoundedOverrideRenderDatasetIdentity,
+  BoundedOverrideRenderValue,
+} from "./bounded-override-render-dataset.js";
 export type {
   Phase1AcceptedSnapshotIdentity,
   Phase1CompleteAssignmentEvaluationResult,
