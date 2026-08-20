@@ -1,0 +1,320 @@
+{
+  "schema": "rsrender.bld015.source-snapshot-evidence.v1",
+  "ticket": "BLD-015 / GitHub #59",
+  "generatedAtUtc": "2026-08-20T06:00:41.5150732Z",
+  "result": "PASS",
+  "resultMeaning": "The bounded source-only Source Snapshot v1 identity, family, relationship, value/provenance, extension, diagnostic, ordering, immutability, and digest contract passed EP-PURE/G1 exact and property evidence. This is not a Source Adapter, Candidate, Refresh, Render Dataset, vendor-shape, MVP, release, or production acceptance result.",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/59#issuecomment-5351451927",
+    "requirements": [
+      "PI-05",
+      "PI-19",
+      "PI-02",
+      "D01",
+      "D02",
+      "D03-source-only",
+      "S04",
+      "AC-005-source-snapshot-subset-only",
+      "OA-ID-001",
+      "OA-VAL-001",
+      "OA-PROV-001",
+      "boring-log-domain-model-3-through-8",
+      "boring-log-domain-model-13-through-16",
+      "ADR-0005",
+      "GitHub-59-Objective-Done"
+    ],
+    "scope": "strict immutable accepted Source Snapshot contract over admitted synthetic source-domain records only",
+    "prerequisites": [
+      {
+        "ticket": "BLD-002",
+        "path": "docs/planning/evidence/bld-002-contract-primitives-verification.md",
+        "sha256": "5e1238fbe4294b2d17042d43a8b018911bcc19852a116d7d1675c75ad2db0f51"
+      },
+      {
+        "ticket": "BLD-008",
+        "path": "artifacts/bld-008-domain-value-evidence.json",
+        "sha256": "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71"
+      },
+      {
+        "ticket": "BLD-009",
+        "path": "artifacts/bld-009-aggregate-skeleton-evidence.json",
+        "sha256": "a260e4dbb48824f8e68e82cdf42444eb2163e2df85f4601c003a90160a6edcd9"
+      },
+      {
+        "ticket": "BLD-014",
+        "evidencePath": "artifacts/bld-014-diagnostic-fact-evidence.json",
+        "evidenceSha256": "ebbc0c0a82e09e83033222257dcbc78a7b9952360050612b064d80c456d8e477",
+        "sourcePath": "packages/domain/src/diagnostic-fact.ts",
+        "sourceSha256": "23d3c7871e240773bfc2a781b3086079a665a0ae4216bf84ba4b272657d34f1e"
+      }
+    ]
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "nodeExecutableIdentity": "node@24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "compiler": "TypeScript 6.0.3",
+    "icu": "78.3",
+    "unicode": "17.0",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "manifestLockOrTopologyChanged": false
+  },
+  "contract": {
+    "contractRevision": "bld-015-source-snapshot-v1",
+    "snapshotVersion": 1,
+    "recordFamilies": [
+      "source-project",
+      "exploration",
+      "stratum",
+      "sample",
+      "field-test",
+      "comment",
+      "open-hole-groundwater-observation",
+      "lookup"
+    ],
+    "sourceContextBasis": [
+      "adapterId",
+      "providerOrganizationIdentity",
+      "providerAccountScopeIdentity",
+      "sourceProjectIdentity"
+    ],
+    "sourceEntityBasis": [
+      "sourceContextIdentity",
+      "entityKind",
+      "providerNativeIdentity"
+    ],
+    "sourceFieldBasis": ["sourceEntityIdentity", "canonicalFieldPath"],
+    "snapshotIdentityBasis": ["candidateIdentity", "acceptedLogicalDigest"],
+    "logicalDigestExclusions": [
+      "acceptedAtUtc",
+      "logicalDigest",
+      "snapshotIdentity"
+    ],
+    "canonicalOrdering": "depth/start and end only when exact compatible length-unit symbols match, then exact supplied source order or null, then UTF-16 identity; no conversion, locale, or invented source order",
+    "extensionSafetyLimits": {
+      "maxDepth": 8,
+      "maxNodes": 256,
+      "maxCanonicalUtf8Bytes": 16384,
+      "claim": "fail-closed inert-envelope safety limits only; not workload, provider, package, or renderer limits"
+    },
+    "blockedCapabilities": [
+      "piezometer-well-series",
+      "drilling-detail-and-run",
+      "interim-variation",
+      "laboratory-api",
+      "vendor-hatch-binary",
+      "sample-blow-counts-mapping"
+    ],
+    "blockedDisposition": "source-evidence-blocked under #43 with exactly zero positive records"
+  },
+  "oracle": {
+    "fixtureId": "FX-01",
+    "fixtureRevision": "FX-01:bld-015-source-original@r1",
+    "fixtureAdmission": {
+      "recordVersion": 1,
+      "classification": "SYNTHETIC_REPOSITORY_SAFE",
+      "rightsState": "repository-safe synthetic fixture authored for RSrender internal domain qualification; no client, vendor, credential, restricted go-by, or third-party content",
+      "purpose": "exact source-only Source Snapshot v1 identity, provenance, relationship, extension, Diagnostic, ordering, immutability, and canonical-digest qualification",
+      "sourcePath": "tests/helpers/bld-015-fixtures.mjs",
+      "sourceSha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7",
+      "boundSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+      "boundSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999"
+    },
+    "oracleRevision": "bld-015-source-snapshot-oracle-v1",
+    "oraclePath": "tests/bld-015-source-snapshot.test.mjs",
+    "oracleSha256": "efe09599b5ef5d50862d1c76b08fe2886ef4eec3d51caddb29940bc882929e75",
+    "generatorRevision": "bld-015-source-snapshot-generator-v1",
+    "generatorPath": "tests/helpers/bld-015-property-model.mjs",
+    "generatorSha256": "6f84fb1ebabac8b55d5192fdf948d4cef10d3f7188f1df9c21ca21b692b16b40",
+    "comparison": "exact identity, relationship, field/value/provenance, rejection/Diagnostic code, canonical JSON, and SHA-256 equality",
+    "tolerance": "exact",
+    "snapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+    "snapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+    "snapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+    "recordCounts": {
+      "sourceProjects": 1,
+      "explorations": 1,
+      "strata": 1,
+      "samples": 1,
+      "fieldTests": 1,
+      "comments": 1,
+      "openHoleGroundwaterObservations": 1,
+      "lookups": 1,
+      "totalSourceRecords": 8,
+      "sourceFields": 18,
+      "fieldTestColumns": 1,
+      "lookupReferences": 1,
+      "extensionManifestEntries": 1,
+      "extensionObservations": 1,
+      "sourceDiagnostics": 0,
+      "canonicalDiagnostics": 0,
+      "blockedCapabilities": 6
+    },
+    "syntheticEditorField": {
+      "sourceEntityIdentity": "urn:rsrender:source-entity:sha256:d662df5b0e48dc55bf30803530a67340f41e6df76c5da5e0d2de8acae414d589",
+      "sourceFieldIdentity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1",
+      "fieldPath": "mapped:/name",
+      "originalContent": {
+        "kind": "value",
+        "value": "SYNTHETIC-EXPLORATION-001",
+        "originalRepresentation": "SYNTHETIC-EXPLORATION-001"
+      },
+      "association": { "state": "not-applicable" },
+      "finality": { "state": "not-applicable" },
+      "eligibility": { "state": "eligible", "reasonCodes": [] },
+      "unit": { "state": "not-applicable" },
+      "provenance": {
+        "provenanceClass": "source",
+        "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+        "entityIdentity": "urn:rsrender:source-entity:sha256:d662df5b0e48dc55bf30803530a67340f41e6df76c5da5e0d2de8acae414d589",
+        "fieldIdentity": "urn:rsrender:source-field:sha256:81458a2bcdb24c126b5a50c359b020070473590fb2dd8034708b95bdd35023f1",
+        "adapterId": "synthetic.read-only-adapter",
+        "adapterContractVersion": 1,
+        "retrievedAtUtc": "2026-08-19T19:59:00.000Z",
+        "mappingRuleId": "synthetic.mapped:/name",
+        "mappingRuleVersion": 1,
+        "basisCodes": [],
+        "transformations": []
+      }
+    },
+    "propertySeeds": [352321537, 352321538, 352321539],
+    "iterationsPerSeedPerInvariant": 1000,
+    "invariants": [
+      "identity",
+      "parent-cardinality",
+      "immutability",
+      "ordering",
+      "canonical-digest"
+    ],
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "casesPerInvariant": 18000,
+    "totalInvariantAssertions": 90000,
+    "normalizedRepetitionDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828",
+    "processTranscriptDigest": "sha256:e6060bed9fbd84ef4f63a253962751b73237ccd2ba287696fc51017f488bce4f",
+    "freshRuns": [
+      { "process": 1, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" },
+      { "process": 1, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" },
+      { "process": 2, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" },
+      { "process": 2, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" },
+      { "process": 3, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" },
+      { "process": 3, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:c8a9cb3b6e92c547596639d46cc3ee8d7b030baf381f0878785bfb9119546828" }
+    ],
+    "qualifyingTargetedRun": {
+      "startedAtUtc": "2026-08-20T05:59:08.0150629Z",
+      "finishedAtUtc": "2026-08-20T06:00:28.8065378Z",
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "durationMilliseconds": 80625.8482,
+      "warmups": "none",
+      "exclusions": "none; the reported Node test duration includes fixed vectors, inline properties, child-process startup, and all six full property repetitions",
+      "predeclaredValidity": "PASS only if 17/17 tests pass; failures remain empty; exact admitted Node bytes, en-US locale, and UTC are observed in all three children; each of three seeds runs at least 1000 cases for every invariant in two repetitions per each of three fresh processes; normalized repetition and process transcript digests agree"
+    },
+    "failures": [],
+    "fixedVectors": [
+      "exact opaque lexical identity 01 versus 1",
+      "duplicate, wrong-kind, cross-context, missing-parent, and disallowed field paths",
+      "negative, reversed, zero-length, overlap, gap, out-of-exploration, unit-mismatch, null and absent interval ends",
+      "mixed-unit interleaving with same-unit numeric adjacency preserving both gap and overlap detection",
+      "unresolved exact family/native lookup identity retained and diagnosed",
+      "groundwater kind/status/depth/elevation semantics without derived elevation",
+      "plural field-test columns with raw UTF-8 digest and no N/N60/blowCounts formula or fallback",
+      "extension absent, present-null, present-value, runtime-present, hostile structure, and safety limits",
+      "hostile prototype, symbol, hidden/accessor, sparse/extra array, forged identity/digest/order, and post-create mutation",
+      "acceptance timestamp excluded from accepted logical digest while retained in full canonical encoding",
+      "six source-evidence-blocked positive families structurally absent with zero positive records"
+    ]
+  },
+  "hashes": {
+    "source": [
+      { "path": "packages/domain/src/source-snapshot.ts", "sha256": "0c72f4f71e3b2204c3d8b35bb8f644b7bbfe7cb87125d2f2499f4bc9db2bdf1d" },
+      { "path": "packages/domain/src/index.ts", "sha256": "1eaa25084d737fe651064a832b15ccb83b3ac9e500a7038f5eb9542a11b99c59" }
+    ],
+    "fixtureOracleGenerator": [
+      { "path": "tests/bld-015-source-snapshot.test.mjs", "sha256": "efe09599b5ef5d50862d1c76b08fe2886ef4eec3d51caddb29940bc882929e75" },
+      { "path": "tests/helpers/bld-015-fixtures.mjs", "sha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7" },
+      { "path": "tests/helpers/bld-015-property-model.mjs", "sha256": "6f84fb1ebabac8b55d5192fdf948d4cef10d3f7188f1df9c21ca21b692b16b40" },
+      { "path": "tests/helpers/run-bld-015-vectors.mjs", "sha256": "5594dbf9d58f97c9f0f0a3e2df70162b177dbeac9052fff58917939dbed65f87" },
+      { "path": "tests/helpers/run-bld-015-evidence.mjs", "sha256": "3763c50595975296e586d4de824b9ac4b438d1c2fc9cb1205bafb9bb1f8438ac" }
+    ],
+    "executedJavaScript": [
+      { "path": "packages/domain/dist/source-snapshot.js", "sha256": "815ff8ddc22d9e56b2d3823d54853ccfd00f70ecb9c30c76f6d578faa3469269" },
+      { "path": "packages/domain/dist/index.js", "sha256": "52f8df686d5d2001f53d6ee55b372fd8903dcbc8a16cda19ae0128be3f728196" }
+    ],
+    "authorities": [
+      { "path": "docs/planning/specifications/boring-log-domain-model.md", "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35" },
+      { "path": "docs/planning/specifications/rsrender-product-specification.md", "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587" },
+      { "path": "docs/planning/specifications/rsrender-acceptance-strategy.md", "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719" },
+      { "path": "docs/adr/0005-source-snapshot-acceptance-boundary.md", "sha256": "9095b60beff5381b3e2978a53482ba85645c1f0d7e579bf5a907cbe94db882c7" }
+    ]
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "contextReviewedSentinelMatches": 2,
+    "scanner": "literal ripgrep scan for absolute Windows user paths, Authorization headers, bearer-like tokens, private-key headers, assigned password/secret/token values, the restricted go-by label, and the non-synthetic organization-name sentinel across every BLD-015 source/test/helper/evidence/verification path",
+    "scannedPaths": [
+      "packages/domain/src/source-snapshot.ts",
+      "packages/domain/src/index.ts",
+      "tests/bld-015-source-snapshot.test.mjs",
+      "tests/helpers/bld-015-fixtures.mjs",
+      "tests/helpers/bld-015-property-model.mjs",
+      "tests/helpers/run-bld-015-vectors.mjs",
+      "tests/helpers/run-bld-015-evidence.mjs",
+      "artifacts/bld-015-source-snapshot-evidence.json",
+      "docs/planning/evidence/bld-015-source-snapshot-verification.md"
+    ],
+    "scanInterpretation": "PASS; the two restricted-label/organization sentinel occurrences are negative assertions in the oracle proving they are absent from the serialized synthetic Snapshot, not fixture or evidence values",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "nonclaims": [
+    "No vendor wire DTO, transport, authentication, Candidate, Refresh plan/retrieval/diff/acceptance, Supplemental Source, Override, Annotation, Render Dataset, binding, renderer, UI, file, persistence, publication, or network behavior is implemented or claimed.",
+    "No positive piezometer/well, drilling detail/run, interim variation, laboratory API, vendor hatch binary, or sample blow-count mapping is admitted; each remains source-evidence-blocked under #43 with zero positive records.",
+    "Field-test values are retained only as exact source-supplied columns. No N, N60, refusal, correction, formula, duplicate-column interpretation, or blowCounts fallback is derived.",
+    "Extension bounds are fail-closed inert-envelope safety limits, not production workload or provider limits.",
+    "Diagnostics are BLD-014 facts and consequences only; no severity, suppression, acknowledgment, publication, or UI policy is assigned.",
+    "AC-003 is not claimed: this ticket does not implement assignment precedence, project/group/exploration template assignment, duplicate/ambiguity resolution, or Effective Template Resolution.",
+    "AC-005 is claimed only for exact source-baseline identity, original value/state/type/unit, and source provenance retained by Source Snapshot v1; no resolution, override, annotation, package, or refresh round-trip is claimed.",
+    "This is not full D01/D02/D03/S08, MVP, release, security, privacy, performance, vendor-authority, or production acceptance."
+  ],
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "acceptanceOwner": "RSrender domain/source acceptance owner",
+    "custodyOwner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "GitHub #59 claim comment under the user's standing internal-development authorization",
+    "fixtureAdmissionReference": "artifacts/bld-015-source-snapshot-evidence.json#/oracle/fixtureAdmission",
+    "rawLocation": "tests/bld-015-source-snapshot.test.mjs and tests/helpers/bld-015-fixtures.mjs define retained raw fixed vectors; tests/helpers/run-bld-015-vectors.mjs defines the retained raw repetition transcript and failures",
+    "normalizedLocation": "artifacts/bld-015-source-snapshot-evidence.json#/oracle/freshRuns plus normalizedRepetitionDigest/processTranscriptDigest and #/oracle/qualifyingTargetedRun",
+    "retention": "Retain this evidence, fixture, oracle, generator, source, executed JavaScript, prerequisite evidence, lock, and admitted Node revisions together until a recorded invalidation and replacement rerun supersede them.",
+    "deletion": "Delete only after the acceptance owner records superseding evidence or withdraws the bounded claim; deletion invalidates BLD-015 PASS and every downstream claim that cites this evidence."
+  },
+  "rerunCommands": [
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\typescript\\bin\\tsc -b packages\\domain --force --pretty false",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\prettier\\bin\\prettier.cjs --check packages/domain/src/source-snapshot.ts packages/domain/src/index.ts tests/bld-015-source-snapshot.test.mjs tests/helpers/bld-015-fixtures.mjs tests/helpers/bld-015-property-model.mjs tests/helpers/run-bld-015-vectors.mjs tests/helpers/run-bld-015-evidence.mjs artifacts/bld-015-source-snapshot-evidence.json docs/planning/evidence/bld-015-source-snapshot-verification.md",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\eslint\\bin\\eslint.js packages/domain/src/source-snapshot.ts packages/domain/src/index.ts tests/bld-015-source-snapshot.test.mjs tests/helpers/bld-015-fixtures.mjs tests/helpers/bld-015-property-model.mjs tests/helpers/run-bld-015-vectors.mjs tests/helpers/run-bld-015-evidence.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe --test tests\\bld-015-source-snapshot.test.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe tests\\helpers\\run-bld-015-evidence.mjs",
+    "after integration-owner coordination: & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\npm.cmd run verify"
+  ],
+  "rerunTriggers": [
+    "Any Source Snapshot field, family, identity basis, relationship/cardinality, value/provenance axis, extension envelope, Diagnostic derivation, ordering, codec, rejection code, canonical JSON, SHA-256, Unicode, or unit-comparison rule change",
+    "Any fixture admission, fixture, oracle, generator, source, export, executed JavaScript, prerequisite, package manifest, lock, toolchain, compiler, npm, locale, time-zone, retained location, or retained hash change",
+    "Any PI-05, PI-19, D01, D02, D03, S04, bounded AC-005, domain sections 3-8/13-16, ADR-0005, acceptance strategy, roadmap, #43 blocked inventory, or GitHub #59 authority change",
+    "Introduction of vendor DTO, transport, Candidate, Refresh, Supplemental Source, Override, Annotation, Render Dataset, renderer, binding, UI, persistence, publication, file, network, or positive #43-blocked behavior",
+    "Deletion or loss of any retained raw/normalized evidence, fixture admission record, prerequisite evidence, admitted Node bytes, or source/oracle/generator artifact"
+  ]
+}
