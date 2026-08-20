@@ -61,3 +61,25 @@ export type {
   ProjectDomainHistorySnapshot,
   ProjectSourceCommandReplayLookupResult,
 } from "./project-domain-effect-state.js";
+
+export {
+  createInMemoryOverrideRenderDatasetService,
+  inMemoryOverrideRenderDatasetServiceRevision,
+} from "./in-memory-override-render-dataset-service.js";
+
+export {
+  advanceOverrideRenderDatasetProjectionReplica,
+  createOverrideRenderDatasetProjectionReplica,
+  overrideRenderDatasetProjectionReplicaRevision,
+} from "./override-render-dataset-projection-replica.js";
+export type {
+  OverrideRenderDatasetProjectionReplicaAdvanceResult,
+  OverrideRenderDatasetProjectionReplicaCreationResult,
+  OverrideRenderDatasetProjectionReplicaDiscardReason,
+  OverrideRenderDatasetProjectionReplicaState,
+} from "./override-render-dataset-projection-replica.js";
+export type {
+  InMemoryOverrideRenderDatasetService,
+  InMemoryOverrideRenderDatasetServiceCapacities,
+  OverrideRenderDatasetServiceInitializationResult,
+} from "./in-memory-override-render-dataset-service.js";

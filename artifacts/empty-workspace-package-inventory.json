@@ -4,50 +4,50 @@
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts",
-      "bytes": 1965,
-      "sha256": "46f89871503cf97240393d9a6eca717698fd572201be3e8099d4a57b960e7139"
+      "bytes": 2813,
+      "sha256": "676608214ab3cc413cc6559f398c9c99891c28fef4529cc6990d594ff25c96b1"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts.map",
-      "bytes": 940,
-      "sha256": "fd79ad02d41c30788fa5955ed246c7184ad125ffdd8ace590e868e6183bb6dd0"
+      "bytes": 1228,
+      "sha256": "a8ff0141b109148b5752cae49a14b6ee9227740a8f920480f048f5983822b745"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js",
-      "bytes": 648,
-      "sha256": "6accf4788c883ca31b702a2cef35ef1f8e32684f689cbf7a551d648ae194747d"
+      "bytes": 1012,
+      "sha256": "75fd94cec7c2b1ab71be6a24b536217d247eafe6638f95d0745cac533805bbba"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js.map",
-      "bytes": 385,
-      "sha256": "fd26453a3049f5684577eb8fc19dd05590d50996f72feab235bd7930e09876c1"
+      "bytes": 517,
+      "sha256": "801d3332f5311ecc0de8e188a7d18b392da3d467d37ffaafbc57b116feaf28ee"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts",
-      "bytes": 4919,
-      "sha256": "39afd303508f4dea2ec8b06cd97be5a0d512a17b6b8b043fe0ce22e18bde1e43"
+      "bytes": 6819,
+      "sha256": "0b3eee9f4b7bdcb2f59e664e0b928f169828d13e21fa6d3614ac4bd8c7d94800"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts.map",
-      "bytes": 2632,
-      "sha256": "f9db303140f2157ff5e8681053b300ace817e067ca5dffeba241fdbb828832de"
+      "bytes": 3348,
+      "sha256": "3d619d5e9ee5e596ca9666d22dad35f0283f5be3041ad5c608a0a944325be08a"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js",
-      "bytes": 2642,
-      "sha256": "b44000d4f87b64015baa5f87907ae898bb3f820154fa4d60d140b91b771b8646"
+      "bytes": 3473,
+      "sha256": "ba23f51a12abcb5e9c8eb53cdc0db81beb62266042365d4599d09c7784ba362c"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js.map",
-      "bytes": 1474,
-      "sha256": "8116bc54e3eb234cd618c26c128dcf76474bdf05768436f812b00fd6c391cbd8"
+      "bytes": 1767,
+      "sha256": "c5d9451152db15d642a424dd8886e14627bfb64ac2d31c350423c06de78c8735"
     },
     {
       "package": "domain",

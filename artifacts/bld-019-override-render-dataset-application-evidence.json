@@ -1,0 +1,1119 @@
+{
+  "schema": "rsrender.bld-019.override-render-dataset-application-evidence.v1",
+  "ticket": "BLD-019 / GitHub #63",
+  "result": "PASS",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/63#issuecomment-5359649241",
+    "scope": "Early Application Core subset: set one Display Value Override, Undo, Redo, and full-refetch one revision-tagged source-original/effective Render Dataset projection"
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "node": "v24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "manifestLockOrTopologyChanged": false
+  },
+  "acceptance": {
+    "matrixRows": [
+      {
+        "id": "D03",
+        "revision": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+      },
+      {
+        "id": "D04",
+        "revision": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+      },
+      {
+        "id": "S06",
+        "revision": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+      }
+    ],
+    "productSections": [
+      "product specification section 8"
+    ],
+    "admittedBoundedCapabilities": [
+      "D03",
+      "D04",
+      "S06"
+    ],
+    "requiredOracleAxes": [
+      "OA-PROV-001"
+    ],
+    "fixtureIds": [
+      "FX-05",
+      "FX-08"
+    ],
+    "propertyInvariantIds": [
+      "PI-05",
+      "PI-20"
+    ],
+    "acceptanceCriterion": "bounded AC-005",
+    "qualification": "Only the four named early Override/Render Dataset Application Core operations are qualified; full D03/D04/S06, AC-005, registry, packaged UI, MVP, and release acceptance are not claimed."
+  },
+  "contract": {
+    "operations": [
+      "presentation-override.set-display-value",
+      "history.undo",
+      "history.redo",
+      "render-dataset.get"
+    ],
+    "publicFacadeKeys": [
+      "setDisplayValue",
+      "undo",
+      "redo",
+      "getProjection"
+    ],
+    "genericDispatcherExposed": false,
+    "refreshExposed": false,
+    "sourceSnapshotMutationAllowed": false,
+    "reassemblyCreatesStateOrHistory": false
+  },
+  "oracle": {
+    "generatorRevision": "bld-019-override-render-dataset-generator-v1",
+    "oracleRevision": "bld-019-override-render-dataset-oracle-v1",
+    "seeds": [
+      419430401,
+      419430402,
+      419430403
+    ],
+    "iterationsPerSeed": 1000,
+    "invariants": [
+      "command-precondition",
+      "replay-revision",
+      "baseline",
+      "projection-replica",
+      "atomicity",
+      "source-immutability"
+    ],
+    "casesPerInvariantPerRepetition": 3000,
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshExecutions": 6,
+    "totalCasesPerInvariant": 18000,
+    "normalizedRepetitionDigest": "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+    "processTranscriptDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a",
+    "fixedTranscriptDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+    "fixedTranscript": {
+      "schema": "rsrender.bld-019-fixed-command-query-transcript.v1",
+      "sourceSnapshotCanonicalDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+      "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+      "commandDigests": {
+        "set": "sha256:7e7e8d38871f4cc6bf688e92aca0157f34337bd3b34ebecb8a6d37e991ac8809",
+        "undo": "sha256:6706f51c7c4c537c4d81dd592f1fd7ce60497fbcfe9d15034f9f77f13740fef3",
+        "redo": "sha256:2d33e47da4f41366f2c63a454aed0b080df4bf45e441302367d0d026245ea029"
+      },
+      "records": {
+        "initial": {
+          "kind": "render-dataset.projection.result",
+          "requestId": "urn:test:bld-019:runner:initial",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": null,
+          "reason": null,
+          "workingRevision": 0,
+          "previousWorkingRevision": null,
+          "durableRevision": 0,
+          "dirty": false,
+          "canUndo": false,
+          "canRedo": false,
+          "eventSequence": 0,
+          "changed": null,
+          "historyEntryIdentity": null,
+          "eventDigest": null,
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:189eba7e182aca403c6266e5226f257e8d86c1be0ef17ce622d5f11afd7c101b",
+            "projectionDigest": "sha256:189eba7e182aca403c6266e5226f257e8d86c1be0ef17ce622d5f11afd7c101b",
+            "aggregateDigest": "sha256:65fd1f7e63b66653aecb138673e779f58c7b76840e35f1468a2c5057b456e977",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetLogicalDigest": "sha256:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetEncodingDigest": "sha256:cf9c6d7897ff488dacf6fb1dd5ed0f5d763ff6345b65c6ba3ded8fe5d32cb1ed",
+            "presentationOverrideState": "empty",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:7344f64be3687958e70b13c7097fe2be83136045519a7feacbbf1c2dd4417654",
+            "presentationOverrideCollectionIdentity": null,
+            "presentationOverrideCollectionRevision": null,
+            "presentationOverrideCollectionDigest": null,
+            "presentationOverrideCollectionEncodingDigest": null,
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:310ef295fcfec42e64cb2d59bbc146ee74ce703f1ebcc36f916d04f9b7434163",
+            "overridesDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "set": {
+          "kind": "override-render-dataset.committed",
+          "requestId": "urn:test:bld-019:runner:set",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": "mutation",
+          "reason": null,
+          "workingRevision": 1,
+          "previousWorkingRevision": 0,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": true,
+          "canRedo": false,
+          "eventSequence": 1,
+          "changed": true,
+          "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:1030e1af8a234fac558e4fd79566e0bccd2ec0753393140eab053cf1d28461fc",
+          "eventDigest": "sha256:72604e5a270f947d8be6ca0c3fbddcff1c78785958896b15f021202e28597ce2",
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "projectionDigest": "sha256:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "aggregateDigest": "sha256:5966229d48337da15b01d766dfa32f8906839b6a1b2172f0b5e31320ecdc651c",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetLogicalDigest": "sha256:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetEncodingDigest": "sha256:203aa1f5147d9bf6544cbdd27e9d4c871c4300df4c849cd97e694211b687f485",
+            "presentationOverrideState": "current",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+            "presentationOverrideCollectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+            "presentationOverrideCollectionRevision": 1,
+            "presentationOverrideCollectionDigest": "sha256:b8ec08e43c639c8c96950d56ff8caf740ef7db357d939e64b22f77f6c61f5a3f",
+            "presentationOverrideCollectionEncodingDigest": "sha256:92c91b1f82e9ba98358339478ee2b4014316e1f9e6058a1d030b552eb80eafb1",
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:f67b457d4d3812472f464277c92f6540fa6b23feb2ce40c8ddc87ec47d88ab04",
+            "overridesDigest": "sha256:177e0a4866c5b1dbfb091114a695123a89649d9e8217976c38018b7764875f47",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "setQuery": {
+          "kind": "render-dataset.projection.result",
+          "requestId": "urn:test:bld-019:runner:set-query",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": null,
+          "reason": null,
+          "workingRevision": 1,
+          "previousWorkingRevision": null,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": true,
+          "canRedo": false,
+          "eventSequence": 1,
+          "changed": null,
+          "historyEntryIdentity": null,
+          "eventDigest": null,
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "projectionDigest": "sha256:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "aggregateDigest": "sha256:5966229d48337da15b01d766dfa32f8906839b6a1b2172f0b5e31320ecdc651c",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetLogicalDigest": "sha256:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetEncodingDigest": "sha256:203aa1f5147d9bf6544cbdd27e9d4c871c4300df4c849cd97e694211b687f485",
+            "presentationOverrideState": "current",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+            "presentationOverrideCollectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+            "presentationOverrideCollectionRevision": 1,
+            "presentationOverrideCollectionDigest": "sha256:b8ec08e43c639c8c96950d56ff8caf740ef7db357d939e64b22f77f6c61f5a3f",
+            "presentationOverrideCollectionEncodingDigest": "sha256:92c91b1f82e9ba98358339478ee2b4014316e1f9e6058a1d030b552eb80eafb1",
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:f67b457d4d3812472f464277c92f6540fa6b23feb2ce40c8ddc87ec47d88ab04",
+            "overridesDigest": "sha256:177e0a4866c5b1dbfb091114a695123a89649d9e8217976c38018b7764875f47",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "setQueryRepeated": {
+          "kind": "render-dataset.projection.result",
+          "requestId": "urn:test:bld-019:runner:set-query-repeat",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": null,
+          "reason": null,
+          "workingRevision": 1,
+          "previousWorkingRevision": null,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": true,
+          "canRedo": false,
+          "eventSequence": 1,
+          "changed": null,
+          "historyEntryIdentity": null,
+          "eventDigest": null,
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "projectionDigest": "sha256:24adcf988db591cec7663ee3d9ef2278d17bd754bc33ab1d6bd2c93779dbaf33",
+            "aggregateDigest": "sha256:5966229d48337da15b01d766dfa32f8906839b6a1b2172f0b5e31320ecdc651c",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetLogicalDigest": "sha256:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetEncodingDigest": "sha256:203aa1f5147d9bf6544cbdd27e9d4c871c4300df4c849cd97e694211b687f485",
+            "presentationOverrideState": "current",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+            "presentationOverrideCollectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+            "presentationOverrideCollectionRevision": 1,
+            "presentationOverrideCollectionDigest": "sha256:b8ec08e43c639c8c96950d56ff8caf740ef7db357d939e64b22f77f6c61f5a3f",
+            "presentationOverrideCollectionEncodingDigest": "sha256:92c91b1f82e9ba98358339478ee2b4014316e1f9e6058a1d030b552eb80eafb1",
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:f67b457d4d3812472f464277c92f6540fa6b23feb2ce40c8ddc87ec47d88ab04",
+            "overridesDigest": "sha256:177e0a4866c5b1dbfb091114a695123a89649d9e8217976c38018b7764875f47",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "undo": {
+          "kind": "override-render-dataset.committed",
+          "requestId": "urn:test:bld-019:runner:undo",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": "undo",
+          "reason": null,
+          "workingRevision": 2,
+          "previousWorkingRevision": 1,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": false,
+          "canRedo": true,
+          "eventSequence": 2,
+          "changed": true,
+          "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:1030e1af8a234fac558e4fd79566e0bccd2ec0753393140eab053cf1d28461fc",
+          "eventDigest": "sha256:9d2333e04217b8210eb68489f85074f521a799c2649bd502805fdc921cd73d12",
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:ee5f9ad6e080b37ce063ef9c8bee9c24db8e77349e8d132c56c22616c93aa1e9",
+            "projectionDigest": "sha256:ee5f9ad6e080b37ce063ef9c8bee9c24db8e77349e8d132c56c22616c93aa1e9",
+            "aggregateDigest": "sha256:65fd1f7e63b66653aecb138673e779f58c7b76840e35f1468a2c5057b456e977",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetLogicalDigest": "sha256:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetEncodingDigest": "sha256:cf9c6d7897ff488dacf6fb1dd5ed0f5d763ff6345b65c6ba3ded8fe5d32cb1ed",
+            "presentationOverrideState": "empty",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:7344f64be3687958e70b13c7097fe2be83136045519a7feacbbf1c2dd4417654",
+            "presentationOverrideCollectionIdentity": null,
+            "presentationOverrideCollectionRevision": null,
+            "presentationOverrideCollectionDigest": null,
+            "presentationOverrideCollectionEncodingDigest": null,
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:310ef295fcfec42e64cb2d59bbc146ee74ce703f1ebcc36f916d04f9b7434163",
+            "overridesDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "undoQuery": {
+          "kind": "render-dataset.projection.result",
+          "requestId": "urn:test:bld-019:runner:undo-query",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": null,
+          "reason": null,
+          "workingRevision": 2,
+          "previousWorkingRevision": null,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": false,
+          "canRedo": true,
+          "eventSequence": 2,
+          "changed": null,
+          "historyEntryIdentity": null,
+          "eventDigest": null,
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:ee5f9ad6e080b37ce063ef9c8bee9c24db8e77349e8d132c56c22616c93aa1e9",
+            "projectionDigest": "sha256:ee5f9ad6e080b37ce063ef9c8bee9c24db8e77349e8d132c56c22616c93aa1e9",
+            "aggregateDigest": "sha256:65fd1f7e63b66653aecb138673e779f58c7b76840e35f1468a2c5057b456e977",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetLogicalDigest": "sha256:5591ef81f8a2837036c9c0e147f08416fd34d36a04a1b3a78bf24ebafceedf19",
+            "datasetEncodingDigest": "sha256:cf9c6d7897ff488dacf6fb1dd5ed0f5d763ff6345b65c6ba3ded8fe5d32cb1ed",
+            "presentationOverrideState": "empty",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:7344f64be3687958e70b13c7097fe2be83136045519a7feacbbf1c2dd4417654",
+            "presentationOverrideCollectionIdentity": null,
+            "presentationOverrideCollectionRevision": null,
+            "presentationOverrideCollectionDigest": null,
+            "presentationOverrideCollectionEncodingDigest": null,
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:310ef295fcfec42e64cb2d59bbc146ee74ce703f1ebcc36f916d04f9b7434163",
+            "overridesDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "redo": {
+          "kind": "override-render-dataset.committed",
+          "requestId": "urn:test:bld-019:runner:redo",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": "redo",
+          "reason": null,
+          "workingRevision": 3,
+          "previousWorkingRevision": 2,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": true,
+          "canRedo": false,
+          "eventSequence": 3,
+          "changed": true,
+          "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:1030e1af8a234fac558e4fd79566e0bccd2ec0753393140eab053cf1d28461fc",
+          "eventDigest": "sha256:955a274f059a5768a0333d154a2869829d239be927417f2fc19c471748cf2819",
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:cc203375e1b601d4023f63102976192d226eb21b2fda56d908a4704a8a7419fc",
+            "projectionDigest": "sha256:cc203375e1b601d4023f63102976192d226eb21b2fda56d908a4704a8a7419fc",
+            "aggregateDigest": "sha256:5966229d48337da15b01d766dfa32f8906839b6a1b2172f0b5e31320ecdc651c",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetLogicalDigest": "sha256:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetEncodingDigest": "sha256:203aa1f5147d9bf6544cbdd27e9d4c871c4300df4c849cd97e694211b687f485",
+            "presentationOverrideState": "current",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+            "presentationOverrideCollectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+            "presentationOverrideCollectionRevision": 1,
+            "presentationOverrideCollectionDigest": "sha256:b8ec08e43c639c8c96950d56ff8caf740ef7db357d939e64b22f77f6c61f5a3f",
+            "presentationOverrideCollectionEncodingDigest": "sha256:92c91b1f82e9ba98358339478ee2b4014316e1f9e6058a1d030b552eb80eafb1",
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:f67b457d4d3812472f464277c92f6540fa6b23feb2ce40c8ddc87ec47d88ab04",
+            "overridesDigest": "sha256:177e0a4866c5b1dbfb091114a695123a89649d9e8217976c38018b7764875f47",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "redoQuery": {
+          "kind": "render-dataset.projection.result",
+          "requestId": "urn:test:bld-019:runner:redo-query",
+          "documentId": "urn:test:bld-017:document:1",
+          "ownerGeneration": 1,
+          "operation": null,
+          "reason": null,
+          "workingRevision": 3,
+          "previousWorkingRevision": null,
+          "durableRevision": 0,
+          "dirty": true,
+          "canUndo": true,
+          "canRedo": false,
+          "eventSequence": 3,
+          "changed": null,
+          "historyEntryIdentity": null,
+          "eventDigest": null,
+          "projection": {
+            "projectionIdentity": "urn:rsrender:override-render-dataset-projection:cc203375e1b601d4023f63102976192d226eb21b2fda56d908a4704a8a7419fc",
+            "projectionDigest": "sha256:cc203375e1b601d4023f63102976192d226eb21b2fda56d908a4704a8a7419fc",
+            "aggregateDigest": "sha256:5966229d48337da15b01d766dfa32f8906839b6a1b2172f0b5e31320ecdc651c",
+            "datasetIdentity": "urn:rsrender:bounded-override-render-dataset:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetLogicalDigest": "sha256:377a8a4c5c7222b2cc9bd3bb46774c0d4f640d41190fca7eb0cf9ddba4246222",
+            "datasetEncodingDigest": "sha256:203aa1f5147d9bf6544cbdd27e9d4c871c4300df4c849cd97e694211b687f485",
+            "presentationOverrideState": "current",
+            "presentationOverrideRevisionIdentity": "urn:rsrender:project-input-revision:cd2fd726e0f753e91c156bd8ddc4de3ed38d93496efbc2cc31865216b5a65712",
+            "presentationOverrideCollectionIdentity": "urn:rsrender:presentation-override-collection:b69654971f30feffe7b0800ecc163b42ec1ac172d6cb91fe3ded7572de7538ca",
+            "presentationOverrideCollectionRevision": 1,
+            "presentationOverrideCollectionDigest": "sha256:b8ec08e43c639c8c96950d56ff8caf740ef7db357d939e64b22f77f6c61f5a3f",
+            "presentationOverrideCollectionEncodingDigest": "sha256:92c91b1f82e9ba98358339478ee2b4014316e1f9e6058a1d030b552eb80eafb1",
+            "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:1fefd54bf6d95d8307eba236d74194500680ebf47327038e8c9bad33da0616e8",
+            "sourceSnapshotLogicalDigest": "sha256:7eebe9a7511d390da83898ae0b20d506bda9cf9e6a4aeb79fc55e3b206027999",
+            "sourceSnapshotEncodingDigest": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f",
+            "sourceContextIdentity": "urn:rsrender:source-context:sha256:e54870079b46ec97dd8118081b52fd30ae425a8a000d20be6f1e9f6cab751a6a",
+            "sourceProjectIdentity": "urn:test:bld-015:source-project:project-1",
+            "valuesDigest": "sha256:f67b457d4d3812472f464277c92f6540fa6b23feb2ce40c8ddc87ec47d88ab04",
+            "overridesDigest": "sha256:177e0a4866c5b1dbfb091114a695123a89649d9e8217976c38018b7764875f47",
+            "diagnosticsDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        }
+      },
+      "failures": []
+    },
+    "summaries": [
+      {
+        "seed": 419430401,
+        "iterations": 1000,
+        "invariantChecks": {
+          "commandPrecondition": 1000,
+          "replayRevision": 1000,
+          "baseline": 1000,
+          "projectionReplica": 1000,
+          "atomicity": 1000,
+          "sourceImmutability": 1000
+        },
+        "finalReplayProjectionDigest": "sha256:aa330198c6b454fb0906731abc89d3ae938b80a79be6090e7d9f2dc4791a6b9b",
+        "atomicProjectionDigest": "sha256:d6de4c3c69e39c0efbdd1abaa147a512e7722a21da397a154dfb2f9f1e18096c",
+        "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:5171f01d8bf4c128a35f2a4a4a3fe72ce5b4dbc3a48ed3af7a5e2823b0614e28",
+        "sourceSnapshotLogicalDigest": "sha256:ac2acd151ec824e628418683d37b1c52f109a6257d94501cb7eb7072869c96cc",
+        "sourceSnapshotEncodingDigest": "sha256:5cbd76ba8f8d468bbb0b10c906487e6d250a6f94e3fef1894e5ced7c53c44ff9",
+        "failures": []
+      },
+      {
+        "seed": 419430402,
+        "iterations": 1000,
+        "invariantChecks": {
+          "commandPrecondition": 1000,
+          "replayRevision": 1000,
+          "baseline": 1000,
+          "projectionReplica": 1000,
+          "atomicity": 1000,
+          "sourceImmutability": 1000
+        },
+        "finalReplayProjectionDigest": "sha256:aa330198c6b454fb0906731abc89d3ae938b80a79be6090e7d9f2dc4791a6b9b",
+        "atomicProjectionDigest": "sha256:d6de4c3c69e39c0efbdd1abaa147a512e7722a21da397a154dfb2f9f1e18096c",
+        "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:5171f01d8bf4c128a35f2a4a4a3fe72ce5b4dbc3a48ed3af7a5e2823b0614e28",
+        "sourceSnapshotLogicalDigest": "sha256:ac2acd151ec824e628418683d37b1c52f109a6257d94501cb7eb7072869c96cc",
+        "sourceSnapshotEncodingDigest": "sha256:5cbd76ba8f8d468bbb0b10c906487e6d250a6f94e3fef1894e5ced7c53c44ff9",
+        "failures": []
+      },
+      {
+        "seed": 419430403,
+        "iterations": 1000,
+        "invariantChecks": {
+          "commandPrecondition": 1000,
+          "replayRevision": 1000,
+          "baseline": 1000,
+          "projectionReplica": 1000,
+          "atomicity": 1000,
+          "sourceImmutability": 1000
+        },
+        "finalReplayProjectionDigest": "sha256:aa330198c6b454fb0906731abc89d3ae938b80a79be6090e7d9f2dc4791a6b9b",
+        "atomicProjectionDigest": "sha256:d6de4c3c69e39c0efbdd1abaa147a512e7722a21da397a154dfb2f9f1e18096c",
+        "sourceSnapshotIdentity": "urn:rsrender:source-snapshot:sha256:5171f01d8bf4c128a35f2a4a4a3fe72ce5b4dbc3a48ed3af7a5e2823b0614e28",
+        "sourceSnapshotLogicalDigest": "sha256:ac2acd151ec824e628418683d37b1c52f109a6257d94501cb7eb7072869c96cc",
+        "sourceSnapshotEncodingDigest": "sha256:5cbd76ba8f8d468bbb0b10c906487e6d250a6f94e3fef1894e5ced7c53c44ff9",
+        "failures": []
+      }
+    ],
+    "executions": [
+      {
+        "process": 1,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:36:35.854Z",
+        "finishedAtUtc": "2026-08-20T19:43:16.256Z",
+        "durationMilliseconds": 400402,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      },
+      {
+        "process": 2,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:43:16.439Z",
+        "finishedAtUtc": "2026-08-20T19:47:43.037Z",
+        "durationMilliseconds": 266598,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      },
+      {
+        "process": 3,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:47:43.053Z",
+        "finishedAtUtc": "2026-08-20T19:55:27.751Z",
+        "durationMilliseconds": 464698,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      }
+    ],
+    "generatorWindow": {
+      "startedAtUtc": "2026-08-20T19:36:35.854Z",
+      "finishedAtUtc": "2026-08-20T19:55:27.830Z",
+      "failures": []
+    }
+  },
+  "qualificationProtocol": {
+    "comparisonMethod": "Exact decoded structural equality plus canonical JSON SHA-256 digest equality",
+    "comparisonVersion": "bld-019-override-render-dataset-oracle-v1",
+    "tolerance": "zero semantic, revision, ordering, identity, provenance, or digest drift",
+    "warmups": 0,
+    "exclusions": [],
+    "executionOrder": "three fresh child processes executed sequentially; two full repetitions per child",
+    "injectedFaults": [
+      "malformed and hostile command/query structures",
+      "stale revision, replay drift, wrong document/owner, baseline/type/unit/rationale faults",
+      "capacity exhaustion and projection replica sequence/generation/base/source mismatches"
+    ],
+    "predeclaredValidityRule": "PASS only when the admitted Node executable/locale/time zone match, the current targeted suite is 18/18/0, every one of three fresh processes completes two identical full repetitions, all six per-seed counters equal 1,000, stderr and failure inventories are empty, and all process digests agree exactly.",
+    "rawArtifactDigests": {
+      "targetedStdout": "sha256:6baaf79c79020aad47d75871e652b82aba558d03b3ea07efbd79a47c22974f10",
+      "targetedStderr": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "runnerSource": "sha256:2a1481916d5cb60f22a5e15e2dd30932e4d399bcfd39f5447e6fb4c87e93e0ac",
+      "testSource": "sha256:d5c934bdd760504235c1e8ce9a781842d31b5c626ee2befde93feceff82387ce",
+      "processTranscript": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+    },
+    "normalizedArtifactDigests": {
+      "repetition": "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+      "fixedTranscript": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+      "sourceSnapshotEncoding": "sha256:d3a397b7a9ceb94c463af6d979fda3f08465dfc49ae93c42718e4528aaefd52f"
+    },
+    "aggregateResult": "PASS",
+    "failures": []
+  },
+  "qualifyingTargetedRun": {
+    "result": "PASS",
+    "exitCode": 0,
+    "tests": 18,
+    "passed": 18,
+    "failed": 0,
+    "startedAtUtc": "2026-08-20T19:35:15.938Z",
+    "finishedAtUtc": "2026-08-20T19:36:35.848Z",
+    "durationMilliseconds": 79910,
+    "stdoutBytes": 1955,
+    "stderrBytes": 0,
+    "stdoutSha256": "sha256:6baaf79c79020aad47d75871e652b82aba558d03b3ea07efbd79a47c22974f10",
+    "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> --test tests/bld-019-override-render-dataset-application.test.mjs"
+  },
+  "hashes": [
+    {
+      "path": "packages/contracts/src/override-render-dataset-application-contract.ts",
+      "sha256": "a832e6087e4febf0bfa3f1a3a8af633105fdd6b5378302a8d93d4d0b84d0c1f2"
+    },
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "588515a408b187221be0f41d3b7cbb95694818d2e84f89a8131ab1510692f8d7"
+    },
+    {
+      "path": "packages/application/src/in-memory-override-render-dataset-service.ts",
+      "sha256": "096f3ccb3cda1178d7a3890789a9759e5ff2e75adeb309b5c6e9dda2c5fd7115"
+    },
+    {
+      "path": "packages/application/src/override-render-dataset-projection-replica.ts",
+      "sha256": "71c4a1ebec6401d05879ecd6d71d79a8edfc58cff6e1298551d0b07ccd24f173"
+    },
+    {
+      "path": "packages/application/src/index.ts",
+      "sha256": "df08bf910e0d3b4ac844674ec31df5c930ec06dad178bb4d52ed6cff43f9b41c"
+    },
+    {
+      "path": "tests/bld-019-override-render-dataset-application.test.mjs",
+      "sha256": "d5c934bdd760504235c1e8ce9a781842d31b5c626ee2befde93feceff82387ce"
+    },
+    {
+      "path": "tests/helpers/bld-015-fixtures.mjs",
+      "sha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7"
+    },
+    {
+      "path": "tests/helpers/bld-017-fixtures.mjs",
+      "sha256": "bd41def1ca7919deb58ae26a09065a9dd37f05c6170491f85365dff31895df6b"
+    },
+    {
+      "path": "tests/helpers/bld-019-fixtures.mjs",
+      "sha256": "72bce47d7fb6124b022704c6edddeceddcfa010f2bf111ca07ea1d726001621e"
+    },
+    {
+      "path": "tests/helpers/bld-019-property-model.mjs",
+      "sha256": "417c2674a93609b38383c91361fb029cc993f8f8c4a52c1c18ab924f6d8512ea"
+    },
+    {
+      "path": "tests/helpers/run-bld-019-vectors.mjs",
+      "sha256": "2a1481916d5cb60f22a5e15e2dd30932e4d399bcfd39f5447e6fb4c87e93e0ac"
+    },
+    {
+      "path": "tests/helpers/run-bld-019-evidence.mjs",
+      "sha256": "e7fe2257ce8d54dd7e837e869a03d2d161daf16792a040e659cf6c6c8e5bcc58"
+    }
+  ],
+  "prerequisites": [
+    {
+      "path": "artifacts/bld-003-contract-evidence.json",
+      "sha256": "3c019f9059f27e73d5088fb92302cd9c1eca8099885e9bea6dd736b6dde13e12"
+    },
+    {
+      "path": "artifacts/bld-010-application-service-evidence.json",
+      "sha256": "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616"
+    },
+    {
+      "path": "artifacts/bld-013-aggregate-evidence-index.json",
+      "sha256": "8f2ee596f66be3c1011258c8c0364e37ccd2cd633e71bff4a5f54d84b28b432d"
+    },
+    {
+      "path": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
+      "sha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6"
+    },
+    {
+      "path": "artifacts/bld-014-diagnostic-fact-evidence.json",
+      "sha256": "ebbc0c0a82e09e83033222257dcbc78a7b9952360050612b064d80c456d8e477"
+    },
+    {
+      "path": "artifacts/bld-015-source-snapshot-evidence.json",
+      "sha256": "ecc36e0ff350d9029ca8591f52e863eca856dc2e44fd7f6ccf01274116d4e234"
+    },
+    {
+      "path": "artifacts/bld-016-project-input-revisions-evidence.json",
+      "sha256": "7f97458f538595eb25e355baf8b038903e972b85f603741dd445a660626cc300"
+    },
+    {
+      "path": "artifacts/bld-017-display-value-override-evidence.json",
+      "sha256": "50afe9edb6502cd6217ac62f02e380286771151cf7418da52c1fe4e8184e22e4"
+    },
+    {
+      "path": "artifacts/bld-018-project-domain-effect-history-evidence.json",
+      "sha256": "0ec56f9c3e914ed33a99ef93ac33515dea028ee1c75f1794c8c0a0c371a5ecbf"
+    },
+    {
+      "path": "packages/contracts/src/application-service-contract.ts",
+      "sha256": "1aa4a185f54508f115cabe0d91490445b9f855682b894bda2608a6733d5ccc39"
+    },
+    {
+      "path": "packages/contracts/src/project-domain-effect-contract.ts",
+      "sha256": "d22e059fd82e89a654edceed5ead259102ca258d08c43cde1b9380bc6b4cb0b5"
+    },
+    {
+      "path": "packages/domain/src/diagnostic-fact.ts",
+      "sha256": "23d3c7871e240773bfc2a781b3086079a665a0ae4216bf84ba4b272657d34f1e"
+    },
+    {
+      "path": "packages/domain/src/source-snapshot.ts",
+      "sha256": "0c72f4f71e3b2204c3d8b35bb8f644b7bbfe7cb87125d2f2499f4bc9db2bdf1d"
+    },
+    {
+      "path": "packages/domain/src/project-input-revisions.ts",
+      "sha256": "e4002f6d842d5f13b9eff859cefceab1c1489966fcfef1b56d05b66f4f7d557b"
+    },
+    {
+      "path": "packages/domain/src/display-value-override.ts",
+      "sha256": "2e9df39a1c0ecc53465b00ef74614e4a3da5a1c460a3e0da84421444f1f56eb0"
+    },
+    {
+      "path": "packages/domain/src/bounded-override-render-dataset.ts",
+      "sha256": "07a3aed3a7ac6261550478ff3b5b09c36195c0150e008a09fda6f050bc80490e"
+    },
+    {
+      "path": "packages/application/src/in-memory-history-core.ts",
+      "sha256": "fe1d095bd61ea25413fe006055cc37d336761bccd6662c48bc91b6ec75a08b3d"
+    },
+    {
+      "path": "packages/application/src/project-domain-effect-state.ts",
+      "sha256": "9b7c92465f24d86d447b1892de7faac9e7a081e6cc39b2c36c2e51711755d9f4"
+    }
+  ],
+  "executedJavaScript": [
+    {
+      "path": "packages/contracts/dist/override-render-dataset-application-contract.js",
+      "sha256": "43e6baa63ad50d484076ef966a29f0bec794c6f6fa65b7d1fab145eb13fba532"
+    },
+    {
+      "path": "packages/contracts/dist/project-domain-effect-contract.js",
+      "sha256": "af5bab7ac429ba97e5efc4e86d5c1d874efa906b29b1880fd8b1d237c21455fc"
+    },
+    {
+      "path": "packages/contracts/dist/index.js",
+      "sha256": "ba23f51a12abcb5e9c8eb53cdc0db81beb62266042365d4599d09c7784ba362c"
+    },
+    {
+      "path": "packages/domain/dist/display-value-override.js",
+      "sha256": "e326250edbfa8197f8cc7513f1f375fa9396fedd27f42b422aa2a3a9d9052e84"
+    },
+    {
+      "path": "packages/domain/dist/bounded-override-render-dataset.js",
+      "sha256": "b344220457a9411071ddacb6a4cba3ad1fc19d94f300f84583455493a81622d8"
+    },
+    {
+      "path": "packages/domain/dist/diagnostic-fact.js",
+      "sha256": "0f52cdbc39e9b095529977a8c2d14770755a7e5a9d9e185f42620c0073c8ebac"
+    },
+    {
+      "path": "packages/domain/dist/value-record.js",
+      "sha256": "9e2b95833eef22c60749182482ce00f1f83d0e7bd9082faa666e640307ea9e92"
+    },
+    {
+      "path": "packages/domain/dist/project-input-revisions.js",
+      "sha256": "02a048216f1260a991b2bf8a5b2f6a3c0945ec272380f6763254bea3672b4f4c"
+    },
+    {
+      "path": "packages/domain/dist/source-snapshot.js",
+      "sha256": "815ff8ddc22d9e56b2d3823d54853ccfd00f70ecb9c30c76f6d578faa3469269"
+    },
+    {
+      "path": "packages/domain/dist/index.js",
+      "sha256": "32269594bb7374c901b8d1d9d7c64c522155fb22e1533d5e6b7af1c8283adb37"
+    },
+    {
+      "path": "packages/application/dist/in-memory-override-render-dataset-service.js",
+      "sha256": "fc605bbb1ce730db69324d1158690c7ef7e036f0c3ac79d8bdede42236ee9082"
+    },
+    {
+      "path": "packages/application/dist/override-render-dataset-projection-replica.js",
+      "sha256": "73aa254e19862b0a439eef11610baa4de356043710c4ae4625863dab5196726a"
+    },
+    {
+      "path": "packages/application/dist/in-memory-history-core.js",
+      "sha256": "7cbd4075bd661b63ed597de4b2fdbba313e577f8f99b21a2d9a140da87eac39e"
+    },
+    {
+      "path": "packages/application/dist/project-domain-effect-state.js",
+      "sha256": "c185b94c5b901e304d28d36d13fdbfca2cdcdd8343626449dc864d5b1e3fa34d"
+    },
+    {
+      "path": "packages/application/dist/index.js",
+      "sha256": "75fd94cec7c2b1ab71be6a24b536217d247eafe6638f95d0745cac533805bbba"
+    }
+  ],
+  "authorities": [
+    {
+      "path": "docs/planning/specifications/rsrender-architecture.md",
+      "sha256": "22db6559701e814845264bc4a2e82bea8d6e30a269dcfc227a3edff0ff1b723f"
+    },
+    {
+      "path": "docs/planning/specifications/boring-log-domain-model.md",
+      "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-product-specification.md",
+      "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-phased-implementation-roadmap.md",
+      "sha256": "a6c13c347868a43b46489edc9e96cf964966b40071877bae21b1691e29288159"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-acceptance-strategy.md",
+      "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+    },
+    {
+      "path": "docs/adr/0008-main-owned-application-core-and-least-capable-electron-topology.md",
+      "sha256": "c14d060456b17c2ac3be979f8bab60e84233a4a94f3e09bec2520ce8e5651714"
+    }
+  ],
+  "workspaceAndAdmissionInputs": [
+    {
+      "path": "package.json",
+      "sha256": "d2543a55c3b3f3ee7365ce4e9f3b38ddd26992dd72feaa2a65d871461e3f2bd5"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "c6706b42aa66a16f66f56049c8bb5334901d8548033978f565a7668c6aeeabf6"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha256": "a8ea5e128345515c5b3f7515e6d1ce2d40c746cbf7bd32ce1e0cd43de6218c78"
+    },
+    {
+      "path": "packages/contracts/package.json",
+      "sha256": "054ed097fd9e97d65316bff80e6f14c6d64a85eb1f79e26dbc55b5f6f0f8836c"
+    },
+    {
+      "path": "packages/domain/package.json",
+      "sha256": "34ec53599ac542ec3213e1fc991cf6a29be02461146dd3fcc6e75290882d0ab5"
+    },
+    {
+      "path": "packages/application/package.json",
+      "sha256": "2cccb85e4aaf8baf0b055379793c193dd73f247039e2b37bc4d6fa4c4caabb23"
+    },
+    {
+      "path": "docs/governance/bld-001-internal-dependency-admission.json",
+      "sha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a"
+    },
+    {
+      "path": "docs/governance/bld-001-authority-approval-packet.md",
+      "sha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815"
+    },
+    {
+      "path": "docs/governance/bld-007-workspace-topology-approvals.json",
+      "sha256": "31aaeb47e7b380488349392f085f7e68e4454ed616e1bdca137e5bde03c35fd6"
+    },
+    {
+      "path": "artifacts/bld-007-dependency-enforcement-evidence.json",
+      "sha256": "ecad1333c1e4331f5c08a6e7767a5830357da8ae6b8ae19a383946335da8f378"
+    },
+    {
+      "path": "artifacts/bld-007-dependency-custody.json",
+      "sha256": "355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7"
+    },
+    {
+      "path": "artifacts/bld-007-sbom.spdx.json",
+      "sha256": "8b6ed277dfe5ac05dd4cd59c03e9dcc05c310ee495d5d8e12548f369bdf051c6"
+    },
+    {
+      "path": "artifacts/bld-007-third-party-notices.txt",
+      "sha256": "aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
+    },
+    {
+      "path": "artifacts/bld-007-asset-inventory.json",
+      "sha256": "cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b"
+    }
+  ],
+  "fixtureAdmission": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "rightsState": "Repository-safe synthetic fixtures authored for RSrender internal qualification; no client, vendor, credential, restricted go-by, or third-party content",
+    "purpose": "Qualify the exact early Override/Render Dataset Application Core subset and no broader product behavior",
+    "sourcePaths": [
+      "tests/helpers/bld-015-fixtures.mjs",
+      "tests/helpers/bld-017-fixtures.mjs",
+      "tests/helpers/bld-019-fixtures.mjs"
+    ],
+    "sourceHashes": [
+      {
+        "path": "tests/helpers/bld-015-fixtures.mjs",
+        "sha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7"
+      },
+      {
+        "path": "tests/helpers/bld-017-fixtures.mjs",
+        "sha256": "bd41def1ca7919deb58ae26a09065a9dd37f05c6170491f85365dff31895df6b"
+      },
+      {
+        "path": "tests/helpers/bld-019-fixtures.mjs",
+        "sha256": "72bce47d7fb6124b022704c6edddeceddcfa010f2bf111ca07ea1d726001621e"
+      }
+    ],
+    "chain": "BLD-015 supplies the accepted synthetic Source Snapshot; BLD-017 supplies the Override/dataset fixtures and admitted minimal property Snapshot; BLD-019 supplies commands/service initialization. BLD-016 is a frozen aggregate ownership seam, not a fixture source."
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "runtimeProhibitedMatches": 0,
+    "runtimeOutputProhibitedMatches": 0,
+    "runtimeOutputsScanned": {
+      "targeted": {
+        "stdoutBytes": 1955,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:6baaf79c79020aad47d75871e652b82aba558d03b3ea07efbd79a47c22974f10",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "children": [
+        {
+          "process": 1,
+          "stdoutBytes": 46274,
+          "stderrBytes": 0,
+          "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+          "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "process": 2,
+          "stdoutBytes": 46274,
+          "stderrBytes": 0,
+          "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+          "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "process": 3,
+          "stdoutBytes": 46274,
+          "stderrBytes": 0,
+          "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+          "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "scanner": "Literal scan for absolute Windows user paths, authorization/bearer shapes, private-key headers, and assigned password/secret/token values",
+    "scannedPaths": [
+      "packages/contracts/src/override-render-dataset-application-contract.ts",
+      "packages/contracts/src/index.ts",
+      "packages/application/src/in-memory-override-render-dataset-service.ts",
+      "packages/application/src/override-render-dataset-projection-replica.ts",
+      "packages/application/src/index.ts",
+      "tests/bld-019-override-render-dataset-application.test.mjs",
+      "tests/helpers/bld-015-fixtures.mjs",
+      "tests/helpers/bld-017-fixtures.mjs",
+      "tests/helpers/bld-019-fixtures.mjs",
+      "tests/helpers/bld-019-property-model.mjs",
+      "tests/helpers/run-bld-019-vectors.mjs",
+      "tests/helpers/run-bld-019-evidence.mjs"
+    ],
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "sanitizedEnvironment": {
+    "operatingSystemFamily": "Windows",
+    "architecture": "x64",
+    "hardware": "not measured; EP-PURE semantic qualification only",
+    "storage": "not measured; no filesystem/storage behavior in scope",
+    "display": "not exercised",
+    "assistiveTechnology": "not exercised",
+    "network": "not exercised",
+    "usernameHostnameSerialTenantInternalPathRetained": false
+  },
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "acceptanceOwner": "RSrender Application Core acceptance owner",
+    "custodyOwner": "RSrender Application Core evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "https://github.com/blaynesatcentral/RSrender/issues/63#issuecomment-5359649241",
+    "rawLocation": "The bound test and tests/helpers/bld-019-*.mjs files retain fixed vectors, generator, oracle, transcript, and failure conditions.",
+    "normalizedLocation": "artifacts/bld-019-override-render-dataset-application-evidence.json",
+    "retention": "Retain source, fixtures, oracle, generator, evidence, prerequisites, lock, and admitted Node bytes together until a recorded replacement supersedes them.",
+    "deletion": "Deletion or loss invalidates this bounded PASS and downstream citations until replacement qualification is retained."
+  },
+  "integrationGates": {
+    "rootIntegratedVerify": "PENDING_INTEGRATION_OWNER",
+    "dependencyAdmissionAndTopology": "PENDING_ROOT_INTEGRATED_GATES",
+    "boundedEpPureResultIndependentOfPendingGates": true
+  },
+  "qualifyingFreshRun": {
+    "result": "PASS",
+    "startedAtUtc": "2026-08-20T19:36:35.854Z",
+    "finishedAtUtc": "2026-08-20T19:55:27.830Z",
+    "durationMilliseconds": 1131976,
+    "runtime": {
+      "node": "v24.18.1",
+      "executableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+      "locale": "en-US",
+      "timeZone": "UTC"
+    },
+    "processModel": "sequential 3 fresh processes x 2 identical full repetitions",
+    "warmups": 0,
+    "exclusions": [],
+    "exactWork": "Each repetition executes full-Snapshot set->query->repeat-query->Undo->query->Redo->query plus 3 seeds x 1,000 substantive public/schema cases for each of six invariants.",
+    "validity": "Valid only with exact admitted runtime, empty stderr/failure inventories, 18/18 targeted PASS, exact seeds/invariant/key order and counts, two equal repetition digests per process, and one equal process digest across all three processes.",
+    "perProcess": [
+      {
+        "process": 1,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:36:35.854Z",
+        "finishedAtUtc": "2026-08-20T19:43:16.256Z",
+        "durationMilliseconds": 400402,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      },
+      {
+        "process": 2,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:43:16.439Z",
+        "finishedAtUtc": "2026-08-20T19:47:43.037Z",
+        "durationMilliseconds": 266598,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      },
+      {
+        "process": 3,
+        "result": "PASS",
+        "exitCode": 0,
+        "startedAtUtc": "2026-08-20T19:47:43.053Z",
+        "finishedAtUtc": "2026-08-20T19:55:27.751Z",
+        "durationMilliseconds": 464698,
+        "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> tests/helpers/run-bld-019-vectors.mjs",
+        "stdoutBytes": 46274,
+        "stderrBytes": 0,
+        "stdoutSha256": "sha256:544c12be1a012cb55846ab716df23962e7a8f511f61d8b9b8a7da445807bbf45",
+        "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repetitionDigests": [
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187",
+          "sha256:a69127271f3fff2266cf02df4aed701405bc1a051291f887274724e1b71e9187"
+        ],
+        "fixedDigest": "sha256:c4705d9e4438f01edf5ffeba04dc89f50706ddf7fea302278e1579a402bd489d",
+        "processDigest": "sha256:98b1b629323cd246045b4f667d6d66c9e1595426d76915558b1ca4db135dc21a"
+      }
+    ]
+  },
+  "transitiveBindings": {
+    "bld014": "Diagnostic fact DTO and policy-key exclusion bound by retained evidence/source hashes",
+    "bld015": "Accepted Source Snapshot identity/logical/encoding/source-context/source-project bound by retained evidence/source hashes",
+    "bld016": "Phase1 aggregate and exact seven-handle ownership seam bound by retained evidence/source hashes",
+    "bld017": "Display Value Override collection and bounded Render Dataset assembler bound by retained evidence/source hashes",
+    "bld018": "Prepared project effect/history/replay atomicity seam bound by retained evidence/source hashes"
+  },
+  "rerunTriggers": [
+    "Any BLD-003, BLD-010, BLD-013, BLD-017, or BLD-018 prerequisite contract/evidence change",
+    "Any command, query, result, event, projection, Override, collection, assembler, history, replay, atomicity, replica, source, identity, revision, digest, provenance, or Diagnostic change",
+    "Any fixture, oracle, generator, source, export, executed JavaScript, prerequisite, manifest, lock, toolchain, locale, time-zone, authority, or retained hash change",
+    "Introduction of a generic dispatcher, Refresh, broader registry, persistence, Electron/preload, UI, scene, PDF, or publication behavior",
+    "Deletion or loss of retained raw or normalized evidence"
+  ],
+  "rerunCommands": [
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\typescript\\bin\\tsc -b packages\\contracts packages\\domain packages\\application --force",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\prettier\\bin\\prettier.cjs --check <BLD-019 retained source/test/evidence/doc paths>",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\eslint\\bin\\eslint.js <BLD-019 retained source/test/helper paths>",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe --test tests\\bld-019-override-render-dataset-application.test.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe tests\\helpers\\run-bld-019-evidence.mjs",
+    "After integration-owner coordination: & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\npm.cmd run verify"
+  ],
+  "nonclaims": [
+    "No full command registry, generic dispatcher/string command, Refresh, annotation, Supplemental/Resolution/extension command, or Data Track behavior is implemented.",
+    "No filesystem, Electron/preload, source transport/auth, menu/keyboard UI, scene, PDF, or publication decision is implemented.",
+    "The evidence qualifies bounded D03/D04/S06 Application Core behavior only, not full D03/D04/S06, AC-005, packaged UI, MVP, release, security, privacy, performance, or production acceptance.",
+    "The queue yield occurs before the sole serializer reads authoritative state; reduction, prepared core commit, collection retention, and wrapper publication are synchronous with no yield afterward."
+  ],
+  "retainedFailureInventory": {
+    "aggregateFailures": [],
+    "fixedRejectionAndDiscardClasses": [
+      "CONTRACT_MALFORMED",
+      "REQUEST_ID_REUSE_MISMATCH",
+      "DOCUMENT_IDENTITY_MISMATCH",
+      "OWNER_GENERATION_MISMATCH",
+      "STALE_WORKING_REVISION",
+      "INVALID_BASELINE",
+      "INVALID_VALUE_TYPE",
+      "INVALID_UNIT",
+      "INVALID_RATIONALE",
+      "TARGET_NOT_FOUND",
+      "DOMAIN_PRECONDITION_FAILED",
+      "CAPACITY_EXHAUSTED",
+      "NOTHING_TO_UNDO",
+      "NOTHING_TO_REDO",
+      "MINIMUM_WORKING_REVISION_UNAVAILABLE",
+      "UNSUPPORTED_CURRENT_INPUT",
+      "UNKNOWN_COMMAND",
+      "INVALID_REPLICA_STATE",
+      "NO_PROJECTION",
+      "DOCUMENT_IDENTITY_CHANGED",
+      "OWNER_GENERATION_CHANGED",
+      "EVENT_SEQUENCE_GAP",
+      "BASE_WORKING_REVISION_MISMATCH",
+      "BEFORE_AGGREGATE_DIGEST_MISMATCH",
+      "SOURCE_SNAPSHOT_CHANGED",
+      "UNKNOWN_OR_MALFORMED_EVENT"
+    ],
+    "classification": "Covered fixed rejection/discard classes exercised by this bounded suite; not a claim that every future union member exists or is covered."
+  },
+  "evidenceDigest": "sha256:f61910a2bf436ce40cab494a98fc7902e93f417d0a3d7bea16facecd509c0867"
+}
