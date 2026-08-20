@@ -1,0 +1,279 @@
+{
+  "schema": "rsrender.bld014.diagnostic-fact-evidence.v1",
+  "ticket": "BLD-014 / GitHub #58",
+  "generatedAtUtc": "2026-08-20T04:27:43.6184228Z",
+  "result": "PASS",
+  "resultMeaning": "The bounded D06 Diagnostic fact structure, identity, codec, ordering, and remediation-ID kernel passed EP-PURE/G1 exact and property evidence. This is not full D06, Diagnostic policy, publication, accessibility, UI, MVP, release, or production acceptance.",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/58#issuecomment-5300596941",
+    "requirements": [
+      "PI-19",
+      "PI-20",
+      "D06-kernel-only",
+      "OA-DIAG-001-kernel-only",
+      "boring-log-domain-model-4.1",
+      "boring-log-domain-model-13",
+      "boring-log-domain-model-14",
+      "GitHub-58-Objective-Done"
+    ],
+    "scope": "immutable deterministic Diagnostic facts only; product policy and presentation are excluded",
+    "prerequisites": [
+      {
+        "ticket": "BLD-002",
+        "path": "docs/planning/evidence/bld-002-contract-primitives-verification.md",
+        "sha256": "5e1238fbe4294b2d17042d43a8b018911bcc19852a116d7d1675c75ad2db0f51"
+      },
+      {
+        "ticket": "BLD-008",
+        "path": "artifacts/bld-008-domain-value-evidence.json",
+        "sha256": "9e37f13664148802273e4da72384bf652b371c7f59c8e482c25062ffd3dc2b71"
+      },
+      {
+        "ticket": "BLD-013",
+        "path": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
+        "sha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6"
+      }
+    ]
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "nodeExecutableIdentity": "node@24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "icu": "78.3",
+    "unicode": "17.0",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "externalDependencyIdentities": 156,
+    "manifestLockOrTopologyChanged": false
+  },
+  "contract": {
+    "contractRevision": "bld-014-v1",
+    "factVersion": 1,
+    "categories": [
+      "source",
+      "data",
+      "integrity",
+      "template",
+      "binding",
+      "text",
+      "layout",
+      "font",
+      "asset",
+      "document",
+      "publication",
+      "export",
+      "security",
+      "recovery"
+    ],
+    "consequences": [
+      "unavailable",
+      "ignored",
+      "fallback",
+      "conflict",
+      "candidate-ineligible",
+      "render-ineligible",
+      "export-policy-input"
+    ],
+    "identityBasis": [
+      "code",
+      "affected.identityKind",
+      "affected.identity",
+      "affected.path-if-present",
+      "cause.causeKey",
+      "input.revision"
+    ],
+    "identityExclusions": [
+      "category",
+      "cause.evidenceClass",
+      "consequence",
+      "input.digest",
+      "remediationActionIds",
+      "orderingKey",
+      "message-copy",
+      "policy-state"
+    ],
+    "orderingKey": [
+      "category",
+      "code",
+      "affected.identityKind",
+      "affected.identity",
+      "affected.path-or-empty-sentinel",
+      "cause.causeKey",
+      "input.revision",
+      "input.digest",
+      "diagnosticIdentity",
+      "canonical-draft-content-digest"
+    ],
+    "orderingComparison": "exact UTF-16 code-unit lexicographic comparison; no locale API",
+    "collectionSemantics": "validate every full fact, reject duplicate Diagnostic Identity, then sort by the exact ordering key",
+    "canonicalEncoding": "RFC-8785 behavior supplied by the admitted BLD-002 canonical JSON primitive",
+    "canonicalDigest": "lowercase algorithm-qualified SHA-256 over canonical JSON",
+    "publicFunctions": [
+      "createDiagnosticFact",
+      "decodeDiagnosticFact",
+      "encodeDiagnosticFact",
+      "decodeDiagnosticFactSet",
+      "encodeDiagnosticFactSet",
+      "compareDiagnosticFacts"
+    ],
+    "stableRejectionCodes": [
+      "DIAGNOSTIC_FACT_MALFORMED",
+      "DIAGNOSTIC_FACT_MISSING_FIELD",
+      "DIAGNOSTIC_FACT_EXTRA_FIELD",
+      "DIAGNOSTIC_FACT_WRONG_TYPE",
+      "DIAGNOSTIC_FACT_UNKNOWN_TAG",
+      "DIAGNOSTIC_FACT_UNSUPPORTED_VERSION",
+      "DIAGNOSTIC_FACT_INVALID_ATOM",
+      "DIAGNOSTIC_FACT_UNSAFE_UNICODE",
+      "DIAGNOSTIC_FACT_INVALID_COMBINATION",
+      "DIAGNOSTIC_FACT_IDENTITY_MISMATCH",
+      "DIAGNOSTIC_FACT_ORDER_MISMATCH",
+      "DIAGNOSTIC_FACT_DUPLICATE_IDENTITY"
+    ]
+  },
+  "oracle": {
+    "fixtureRevision": "bld-014-diagnostic-fact-fixture-v1",
+    "oracleRevision": "bld-014-diagnostic-fact-oracle-v1",
+    "generatorRevision": "bld-014-diagnostic-fact-generator-v1",
+    "comparison": {
+      "method": "exact structural round-trip, derived-identity basis, rejection code, UTF-16 ordering, canonical JSON, and SHA-256 digest equality",
+      "tolerance": "exact"
+    },
+    "fixedBoundaryFacts": 14,
+    "fixedCategoryAtoms": 14,
+    "fixedConsequenceAtoms": 7,
+    "fixedSetDigest": "sha256:a0b8398400b8428d3ed7f1670abf7dad75944bc3a9b799388ab9b772e90497bc",
+    "fixedFactDigests": [
+      "sha256:7941f49b08e0afa7c87e2dae156e046948ec3411fa3ddb753c75399bcd485540",
+      "sha256:ef81f9acaea8c9593b21edd9af8c5a661978e1fae9dfed0917676f4ed0b0b58d",
+      "sha256:d1848c18a94af0c5754fe8215f0b861d30675611877fade773ceeb803192082d",
+      "sha256:7988eccd756d750ab9334a91dbc254c3e2ba8cb8852bd15a3f4de9f2cd3ab16a",
+      "sha256:458b3d299eabe91570723cf39762296adaa1ad65f6b8879cc4d8b8336f805231",
+      "sha256:b0b375c9c09dc36deb23c57a410f374b1dc22556ccac490f2ee4ec344b503abc",
+      "sha256:1cac9c80fc624ad5df7283cf66b4e66b2204644efa59eb9bcb140e26b0541f8d",
+      "sha256:2ec5a5f7432c8a2c0595063f7c0d276226bf39a9c3bafa6bd37013061c72a6f9",
+      "sha256:dda157ff24665bac3701ee8a0fd25c15100e32d732f7a7e86a2b44cde60fb7c6",
+      "sha256:28583557df344e494bb48d30b4109b7e9444a19953c7f425fe5be62ac163ec24",
+      "sha256:fa734b082e663e7be94bdfdbbdcf80964c4e537991c0a101ecb1af081e197dfe",
+      "sha256:deeffbd78532c83d94ec50a16dcaeabeef4ef45feb10470084f0c2850d57725f",
+      "sha256:6121a42c239ba654bfbeedebb1c1b86c872cd782a508d7bfd4d120dec62b162d",
+      "sha256:6c52e4bcc88ef74b0d64b89245885c6c2df2b503f9e5fb6ae607ac0ba440f93d"
+    ],
+    "propertySeeds": [324508639, 610839776, 1592635412],
+    "iterationsPerSeedPerInvariant": 1000,
+    "invariantsPerRepetition": {
+      "codec": 3000,
+      "identity": 3000,
+      "ordering": 3000
+    },
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshPropertyExecutions": 6,
+    "totalFreshCases": {
+      "codec": 18000,
+      "identity": 18000,
+      "ordering": 18000,
+      "all": 54000
+    },
+    "propertyRunDigests": [
+      "sha256:c64fff9e736d3ebfe7ebda257fa370b7e3eb78454d3784383313d02d233891e2",
+      "sha256:66b90a60bf9d7177629e7b8321b4c3d53596c604db7ab56ad4eef5cb5ea436e7",
+      "sha256:13f36df2c100caf726641513a7f4fc1b6a8b8f95ee978603d173c47355d361e1"
+    ],
+    "normalizedRepetitionDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3",
+    "processTranscriptDigest": "sha256:9a9a1567548a418a09d09549afbea6273116d1fb4cb032e2dbf13dbbc7000a8a",
+    "freshRuns": [
+      { "process": 1, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" },
+      { "process": 1, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" },
+      { "process": 2, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" },
+      { "process": 2, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" },
+      { "process": 3, "repetition": 1, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" },
+      { "process": 3, "repetition": 2, "result": "PASS", "normalizedDigest": "sha256:1ae6cc529350f0ef96d101e843ff1e315b9df63d96dd118206427db8e3097ac3" }
+    ],
+    "qualifyingRun": {
+      "startedAtUtc": "2026-08-20T04:24:08.1558251Z",
+      "finishedAtUtc": "2026-08-20T04:26:49.7480305Z",
+      "targetedTests": 13,
+      "passed": 13,
+      "failed": 0,
+      "durationMilliseconds": 161337.6226
+    },
+    "failures": [],
+    "injectedFaults": [
+      "missing, extra, wrong-type, unknown-category, unknown-consequence, and unsupported-version inputs",
+      "ill-formed surrogate, bidi-control, hostile prototype, symbol, hidden, accessor, sparse-array, and array-extra inputs",
+      "forged Diagnostic Identity, malformed or mismatched ordering key, and duplicate Diagnostic Identity",
+      "zero or duplicate remediation action IDs and noncanonical remediation action ordering",
+      "caller-supplied derived fields, policy/catalog/publication/UI fields, and post-create input mutation",
+      "greater-than-1024-character exact identity, path, revision, and action-ID compatibility",
+      "UTF-16 ordering branch over a, U+00E9, and U+1D11E after equal leading ordering fields"
+    ]
+  },
+  "hashes": {
+    "input": [
+      { "path": "tests/helpers/bld-014-fixtures.mjs", "sha256": "cf64bd313c417feda50dd62ad0685550c40a24a248eeb9eb82c0784175dc23a7" }
+    ],
+    "oracle": [
+      { "path": "tests/bld-014-diagnostic-fact.test.mjs", "sha256": "cedefa821031accb843e5a9b391ec2ca9d14337cbc3c17f0395eb3e1c84b1978" },
+      { "path": "docs/planning/specifications/boring-log-domain-model.md", "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35" },
+      { "path": "docs/planning/specifications/rsrender-product-specification.md", "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587" },
+      { "path": "docs/planning/specifications/rsrender-acceptance-strategy.md", "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719" },
+      { "path": "docs/planning/specifications/rsrender-phased-implementation-roadmap.md", "sha256": "a6c13c347868a43b46489edc9e96cf964966b40071877bae21b1691e29288159" }
+    ],
+    "schemaAndSource": [
+      { "path": "packages/domain/src/diagnostic-fact.ts", "sha256": "23d3c7871e240773bfc2a781b3086079a665a0ae4216bf84ba4b272657d34f1e" },
+      { "path": "packages/domain/src/index.ts", "sha256": "4e5dac36c7e4b68b51b26f9e2bbd2aaffdcec02affeb835b121adc98891187fa" }
+    ],
+    "generator": [
+      { "path": "tests/helpers/bld-014-property-model.mjs", "sha256": "a9783e91914143a06db8f1aec48de913ec3ee3c7e73c71fbe16460409f46b5ec" },
+      { "path": "tests/helpers/run-bld-014-vectors.mjs", "sha256": "2ac29f81a66688d6fe13023cec4af564184f510ae97056284a4d694a78c76715" }
+    ],
+    "executedJavaScript": [
+      { "path": "packages/domain/dist/diagnostic-fact.js", "sha256": "0f52cdbc39e9b095529977a8c2d14770755a7e5a9d9e185f42620c0073c8ebac" },
+      { "path": "packages/domain/dist/index.js", "sha256": "24e8f50e9391881149ab14d5202ee5d199c6648cfa8ed36849ef231e196d2db8" }
+    ]
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "scanner": "absolute user paths, authorization headers, bearer-like tokens, private-key headers, and assigned password-like values over every BLD-014 source/test/helper file",
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "nonclaims": [
+    "No severity, suppressibility, suppression, acknowledgment, blocking scope, publication reachability, human-readable wording, accessibility announcement, UI order, or complete Diagnostic catalog is implemented or claimed.",
+    "The domain model section 13 current-policy-state and suppressibility-owner fields are deliberately deferred by GitHub #58's narrower fact-kernel activation and are absent from this contract.",
+    "No source model, source shape, vendor behavior, command, UI, renderer, preflight, export, publication, file, network, persistence, or product sink behavior is implemented or claimed.",
+    "This is a D06 structural-kernel result only, not full D06, OA-DIAG-001 product policy, AC-011, AC-012, accessibility, publication, MVP, release, or production acceptance.",
+    "Negative tests mention forbidden policy and presentation field names only to prove strict rejection; they do not admit those fields or assign policy semantics."
+  ],
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "owner": "RSrender domain evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "GitHub #58 explicit activation under the user's standing internal-development authorization",
+    "retention": "Retain with the exact BLD-014 source, fixture, oracle, generator, lock, and admitted Node revisions until superseded by a recorded rerun."
+  },
+  "rerunCommands": [
+    "pinned-node node_modules/typescript/bin/tsc -b packages/domain --force --pretty false",
+    "pinned-node node_modules/prettier/bin/prettier.cjs --check packages/domain/src/diagnostic-fact.ts packages/domain/src/index.ts tests/bld-014-diagnostic-fact.test.mjs tests/helpers/bld-014-fixtures.mjs tests/helpers/bld-014-property-model.mjs tests/helpers/run-bld-014-vectors.mjs",
+    "pinned-node node_modules/eslint/bin/eslint.js packages/domain/src/diagnostic-fact.ts packages/domain/src/index.ts tests/bld-014-diagnostic-fact.test.mjs tests/helpers/bld-014-fixtures.mjs tests/helpers/bld-014-property-model.mjs tests/helpers/run-bld-014-vectors.mjs",
+    "LANG=en-US LC_ALL=en-US TZ=UTC pinned-node --test tests/bld-014-diagnostic-fact.test.mjs",
+    "after close-time integration qualification: pinned-npm run verify"
+  ],
+  "rerunTriggers": [
+    "Any Diagnostic fact field, category, consequence, identity basis, ordering key, comparator, codec, rejection code, canonical JSON, SHA-256, or Unicode rule change",
+    "Any fixture, oracle, generator, source, export, executed JavaScript, package manifest, lock, toolchain, locale, time-zone, or retained hash change",
+    "Any D06, OA-DIAG-001, PI-19, PI-20, domain section 4.1/13/14, product section 11, acceptance strategy, roadmap, or GitHub #58 authority change",
+    "Introduction of Diagnostic policy, catalog, UI, accessibility, preflight, publication, persistence, source, or external sink behavior"
+  ]
+}

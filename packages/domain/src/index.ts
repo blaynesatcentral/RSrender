@@ -55,6 +55,35 @@ export {
   templateAssignmentIdentityCodec,
   templateIdentityCodec,
 } from "./aggregate-skeleton.js";
+
+export {
+  compareDiagnosticFacts,
+  createDiagnosticFact,
+  decodeDiagnosticFact,
+  decodeDiagnosticFactSet,
+  diagnosticFactContractRevision,
+  diagnosticFactVersion,
+  DIAGNOSTIC_FACT_CATEGORIES,
+  DIAGNOSTIC_FACT_CONSEQUENCES,
+  encodeDiagnosticFact,
+  encodeDiagnosticFactSet,
+} from "./diagnostic-fact.js";
+export type {
+  DiagnosticFact,
+  DiagnosticFactAffectedIdentity,
+  DiagnosticFactCategory,
+  DiagnosticFactCause,
+  DiagnosticFactComparisonResult,
+  DiagnosticFactConsequence,
+  DiagnosticFactDecodeResult,
+  DiagnosticFactDraft,
+  DiagnosticFactEncodeResult,
+  DiagnosticFactInput,
+  DiagnosticFactOrderingKey,
+  DiagnosticFactRejectionCode,
+  DiagnosticFactSetDecodeResult,
+  DiagnosticFactSetEncodeResult,
+} from "./diagnostic-fact.js";
 export type {
   AggregateDecodeResult,
   AggregateEncodeResult,
