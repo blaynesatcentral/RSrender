@@ -36,6 +36,25 @@ import {
   createInMemoryApplicationService,
   type InMemoryApplicationService,
 } from "./in-memory-application-service.js";
+import {
+  capturePhase1ProjectWorkingRevision,
+  commitPreparedProjectDomainEffectTransition,
+  createPhase1ProjectHistoryState,
+  executeProjectDomainHistoryNavigation,
+  inspectPhase1ProjectHistoryState,
+  lookupProjectSourceCommandReplay,
+  prepareProjectDomainEffectTransition,
+} from "./project-domain-effect-state.js";
+import type {
+  CapturedPhase1ProjectWorkingRevision,
+  Phase1ProjectHistoryState,
+  PreparedProjectDomainEffectTransition,
+  ProjectDomainEffectPreparationResult,
+  ProjectSourceCommandReplayLookupResult,
+  ProjectDomainHistoryCommandResult,
+  ProjectDomainHistoryNavigationCommand,
+  ProjectDomainHistorySnapshot,
+} from "./project-domain-effect-state.js";
 
 export const inMemoryHistoryCoreRevision = "bld-011-v1" as const;
 
@@ -93,6 +112,35 @@ export interface InMemoryHistoryCore {
   readonly captureWorkingRevision: () => CapturedWorkingRevision;
   readonly inspect: () => InMemoryHistoryCoreSnapshot;
 }
+
+/** Phase 1 adapter over the same in-memory history authority used by BLD-011. */
+export interface InMemoryPhase1ProjectHistoryCore {
+  readonly prepareProjectDomainEffect: (input: unknown) => ProjectDomainEffectPreparationResult;
+  readonly commitPreparedProjectDomainEffect: (
+    prepared: PreparedProjectDomainEffectTransition,
+  ) => ProjectDomainHistoryCommandResult;
+  readonly executeProjectDomainEffect: (input: unknown) => ProjectDomainHistoryCommandResult;
+  readonly executeProjectHistoryNavigation: (
+    command: ProjectDomainHistoryNavigationCommand,
+  ) => ProjectDomainHistoryCommandResult;
+  /** Digest-only pre-reducer lookup; full effect composition uses effect identity. */
+  readonly lookupProjectSourceCommandReplay: (
+    input: unknown,
+  ) => ProjectSourceCommandReplayLookupResult;
+  readonly captureProjectWorkingRevision: () => CapturedPhase1ProjectWorkingRevision;
+  readonly inspectProject: () => ProjectDomainHistorySnapshot;
+}
+
+export type Phase1ProjectHistoryCoreInitializationResult =
+  | { readonly accepted: true; readonly core: InMemoryPhase1ProjectHistoryCore }
+  | {
+      readonly accepted: false;
+      readonly code:
+        | "INITIAL_AGGREGATE_INVALID"
+        | "INITIAL_CAPACITIES_INVALID"
+        | "INITIAL_CONFIGURATION_MALFORMED"
+        | "INITIAL_OWNER_GENERATION_INVALID";
+    };
 
 export type HistoryCoreInitializationResult =
   | { readonly accepted: true; readonly core: InMemoryHistoryCore }
@@ -242,8 +290,11 @@ function historyInvariantFailure(): never {
   throw new Error("BLD011_HISTORY_INTEGRITY_INVARIANT");
 }
 
-class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
-  readonly #service: InMemoryApplicationService;
+class InMemoryHistoryCoreImplementation
+  implements InMemoryHistoryCore, InMemoryPhase1ProjectHistoryCore
+{
+  readonly #service: InMemoryApplicationService | null;
+  #projectState: Phase1ProjectHistoryState | null;
   readonly #capacities: InMemoryHistoryCoreCapacities;
   readonly #durableRevision = parseDurableRevision(0);
   readonly #durableAggregateDigest: Sha256Digest;
@@ -252,10 +303,28 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
   #historyCursor = parseHistoryCursor(0);
   #tail: Promise<void> = Promise.resolve();
 
-  constructor(service: InMemoryApplicationService, capacities: InMemoryHistoryCoreCapacities) {
-    this.#service = service;
+  constructor(
+    mode:
+      | { readonly kind: "legacy"; readonly service: InMemoryApplicationService }
+      | { readonly kind: "phase1-project"; readonly state: Phase1ProjectHistoryState },
+    capacities: InMemoryHistoryCoreCapacities,
+  ) {
+    this.#service = mode.kind === "legacy" ? mode.service : null;
+    this.#projectState = mode.kind === "phase1-project" ? mode.state : null;
     this.#capacities = capacities;
-    this.#durableAggregateDigest = sha256CanonicalJson(service.inspect().aggregate);
+    this.#durableAggregateDigest =
+      mode.kind === "legacy"
+        ? sha256CanonicalJson(mode.service.inspect().aggregate)
+        : (inspectPhase1ProjectHistoryState(mode.state)?.durableAggregateDigest ??
+          historyInvariantFailure());
+  }
+
+  #legacyService(): InMemoryApplicationService {
+    return this.#service ?? historyInvariantFailure();
+  }
+
+  #phase1State(): Phase1ProjectHistoryState {
+    return this.#projectState ?? historyInvariantFailure();
   }
 
   execute(input: unknown): Promise<HistoryCoreCommandResult> {
@@ -273,7 +342,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
   }
 
   captureWorkingRevision(): CapturedWorkingRevision {
-    const snapshot = this.#service.inspect();
+    const snapshot = this.#legacyService().inspect();
     const aggregateDigest = sha256CanonicalJson(snapshot.aggregate);
     const captureDigest = sha256CanonicalJson({
       documentId: snapshot.documentId,
@@ -294,7 +363,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
   }
 
   inspect(): InMemoryHistoryCoreSnapshot {
-    const snapshot = this.#service.inspect();
+    const snapshot = this.#legacyService().inspect();
     const aggregateDigest = sha256CanonicalJson(snapshot.aggregate);
     return Object.freeze({
       documentId: snapshot.documentId,
@@ -315,6 +384,50 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
     });
   }
 
+  prepareProjectDomainEffect(input: unknown): ProjectDomainEffectPreparationResult {
+    return prepareProjectDomainEffectTransition(this.#phase1State(), input);
+  }
+
+  commitPreparedProjectDomainEffect(
+    prepared: PreparedProjectDomainEffectTransition,
+  ): ProjectDomainHistoryCommandResult {
+    const committed = commitPreparedProjectDomainEffectTransition(this.#phase1State(), prepared);
+    if (committed.accepted) this.#projectState = committed.state;
+    return committed.result;
+  }
+
+  executeProjectDomainEffect(input: unknown): ProjectDomainHistoryCommandResult {
+    const preparation = this.prepareProjectDomainEffect(input);
+    if (preparation.kind === "replayed" || preparation.prepared === null) {
+      return preparation.result;
+    }
+    return this.commitPreparedProjectDomainEffect(preparation.prepared);
+  }
+
+  executeProjectHistoryNavigation(
+    command: ProjectDomainHistoryNavigationCommand,
+  ): ProjectDomainHistoryCommandResult {
+    const transition = executeProjectDomainHistoryNavigation(this.#phase1State(), command);
+    if (transition.accepted) this.#projectState = transition.state;
+    return transition.result;
+  }
+
+  lookupProjectSourceCommandReplay(input: unknown): ProjectSourceCommandReplayLookupResult {
+    return lookupProjectSourceCommandReplay(this.#phase1State(), input);
+  }
+
+  currentProjectHistoryState(): Phase1ProjectHistoryState {
+    return this.#phase1State();
+  }
+
+  captureProjectWorkingRevision(): CapturedPhase1ProjectWorkingRevision {
+    return capturePhase1ProjectWorkingRevision(this.#phase1State()) ?? historyInvariantFailure();
+  }
+
+  inspectProject(): ProjectDomainHistorySnapshot {
+    return inspectPhase1ProjectHistoryState(this.#phase1State()) ?? historyInvariantFailure();
+  }
+
   async #executeSerial(command: HistoryCoreCommand): Promise<HistoryCoreCommandResult> {
     const canonicalCommand = canonicalHistoryCoreCommand(command);
     const prior = this.#replayEntries.get(command.requestId);
@@ -326,7 +439,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
     if (this.#replayEntries.size >= this.#capacities.replayEntries) {
       return rejected(command.requestId, "CAPACITY_EXHAUSTED");
     }
-    const snapshot = this.#service.inspect();
+    const snapshot = this.#legacyService().inspect();
     let result: HistoryCoreCommandResult;
     if (command.documentId !== snapshot.documentId) {
       result = rejected(command.requestId, "DOCUMENT_IDENTITY_MISMATCH");
@@ -348,7 +461,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
   async #mutate(
     command: SyntheticReplaceTemplateContentCommand,
   ): Promise<HistoryCoreCommandResult> {
-    const before = this.#service.inspect();
+    const before = this.#legacyService().inspect();
     const nextHistoryLength = this.#historyCursor + 1;
     if (nextHistoryLength > this.#capacities.historyEntries) {
       return rejected(command.requestId, "CAPACITY_EXHAUSTED");
@@ -397,7 +510,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
       nextCursor,
       afterDigest,
     );
-    const domainResult = await this.#service.execute(command);
+    const domainResult = await this.#legacyService().execute(command);
     if (domainResult.kind !== "domainCommitted") {
       return rejected(command.requestId, mapDomainRejection(domainResult.reason));
     }
@@ -410,7 +523,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
     if (this.#historyCursor === 0) return rejected(command.requestId, "NOTHING_TO_UNDO");
     const entry = this.#history[this.#historyCursor - 1];
     if (entry === undefined) return historyInvariantFailure();
-    const before = this.#service.inspect();
+    const before = this.#legacyService().inspect();
     if (sha256CanonicalJson(before.aggregate) !== entry.afterAggregateDigest) {
       return historyInvariantFailure();
     }
@@ -441,7 +554,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
       parseHistoryCursor(this.#history.length),
       entry.beforeAggregateDigest,
     );
-    const domainResult = await this.#service.execute(delegate);
+    const domainResult = await this.#legacyService().execute(delegate);
     if (domainResult.kind !== "domainCommitted") {
       return rejected(command.requestId, mapDomainRejection(domainResult.reason));
     }
@@ -455,7 +568,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
     }
     const entry = this.#history[this.#historyCursor];
     if (entry === undefined) return historyInvariantFailure();
-    const before = this.#service.inspect();
+    const before = this.#legacyService().inspect();
     if (sha256CanonicalJson(before.aggregate) !== entry.beforeAggregateDigest) {
       return historyInvariantFailure();
     }
@@ -486,7 +599,7 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
       parseHistoryCursor(this.#history.length),
       entry.afterAggregateDigest,
     );
-    const domainResult = await this.#service.execute(delegate);
+    const domainResult = await this.#legacyService().execute(delegate);
     if (domainResult.kind !== "domainCommitted") {
       return rejected(command.requestId, mapDomainRejection(domainResult.reason));
     }
@@ -526,6 +639,70 @@ class InMemoryHistoryCoreImplementation implements InMemoryHistoryCore {
   }
 }
 
+/** Exact BLD-011 runtime surface; the dual-mode authority is never returned directly. */
+class LegacyHistoryCoreFacade implements InMemoryHistoryCore {
+  readonly #authority: InMemoryHistoryCoreImplementation;
+
+  constructor(authority: InMemoryHistoryCoreImplementation) {
+    this.#authority = authority;
+    Object.freeze(this);
+  }
+
+  execute(command: HistoryCoreCommand): Promise<HistoryCoreCommandResult> {
+    return this.#authority.execute(command);
+  }
+
+  captureWorkingRevision(): CapturedWorkingRevision {
+    return this.#authority.captureWorkingRevision();
+  }
+
+  inspect(): InMemoryHistoryCoreSnapshot {
+    return this.#authority.inspect();
+  }
+}
+
+/** Exact Phase 1 runtime surface; legacy external command methods are absent. */
+class Phase1ProjectHistoryCoreFacade implements InMemoryPhase1ProjectHistoryCore {
+  readonly #authority: InMemoryHistoryCoreImplementation;
+
+  constructor(authority: InMemoryHistoryCoreImplementation) {
+    this.#authority = authority;
+    Object.freeze(this);
+  }
+
+  prepareProjectDomainEffect(input: unknown): ProjectDomainEffectPreparationResult {
+    return this.#authority.prepareProjectDomainEffect(input);
+  }
+
+  commitPreparedProjectDomainEffect(
+    prepared: PreparedProjectDomainEffectTransition,
+  ): ProjectDomainHistoryCommandResult {
+    return this.#authority.commitPreparedProjectDomainEffect(prepared);
+  }
+
+  executeProjectDomainEffect(input: unknown): ProjectDomainHistoryCommandResult {
+    return this.#authority.executeProjectDomainEffect(input);
+  }
+
+  executeProjectHistoryNavigation(
+    command: ProjectDomainHistoryNavigationCommand,
+  ): ProjectDomainHistoryCommandResult {
+    return this.#authority.executeProjectHistoryNavigation(command);
+  }
+
+  lookupProjectSourceCommandReplay(input: unknown): ProjectSourceCommandReplayLookupResult {
+    return this.#authority.lookupProjectSourceCommandReplay(input);
+  }
+
+  captureProjectWorkingRevision(): CapturedPhase1ProjectWorkingRevision {
+    return this.#authority.captureProjectWorkingRevision();
+  }
+
+  inspectProject(): ProjectDomainHistorySnapshot {
+    return this.#authority.inspectProject();
+  }
+}
+
 export function createInMemoryHistoryCore(input: unknown): HistoryCoreInitializationResult {
   const configuration = ownDataRecord(input, ["aggregate", "ownerGeneration", "capacities"]);
   if (configuration === null) {
@@ -556,6 +733,44 @@ export function createInMemoryHistoryCore(input: unknown): HistoryCoreInitializa
   }
   return Object.freeze({
     accepted: true,
-    core: new InMemoryHistoryCoreImplementation(serviceResult.service, capacities),
+    core: new LegacyHistoryCoreFacade(
+      new InMemoryHistoryCoreImplementation(
+        { kind: "legacy", service: serviceResult.service },
+        capacities,
+      ),
+    ),
+  });
+}
+
+export function createInMemoryPhase1ProjectHistoryCore(
+  input: unknown,
+): Phase1ProjectHistoryCoreInitializationResult {
+  const configuration = ownDataRecord(input, ["aggregate", "ownerGeneration", "capacities"]);
+  if (configuration === null) {
+    return Object.freeze({ accepted: false, code: "INITIAL_CONFIGURATION_MALFORMED" });
+  }
+  const capacities = parseCapacities(configuration["capacities"]);
+  if (capacities === null) {
+    return Object.freeze({ accepted: false, code: "INITIAL_CAPACITIES_INVALID" });
+  }
+  const state = createPhase1ProjectHistoryState({
+    aggregate: configuration["aggregate"],
+    ownerGeneration: configuration["ownerGeneration"],
+    capacities: {
+      replayEntries: capacities.replayEntries,
+      historyEntries: capacities.historyEntries,
+      commits: capacities.commits,
+      events: capacities.events,
+    },
+  });
+  if (!state.accepted) return state;
+  return Object.freeze({
+    accepted: true,
+    core: new Phase1ProjectHistoryCoreFacade(
+      new InMemoryHistoryCoreImplementation(
+        { kind: "phase1-project", state: state.state },
+        capacities,
+      ),
+    ),
   });
 }

@@ -1,0 +1,1271 @@
+{
+  "schema": "rsrender.bld-018.project-domain-effect-history-evidence.v1",
+  "ticket": "BLD-018 / GitHub #62",
+  "result": "PASS",
+  "authority": {
+    "claimReference": "https://github.com/blaynesatcentral/RSrender/issues/62#issuecomment-5357998665",
+    "scope": "closed generic declarative Phase1 Project domain effect composition through the single existing in-memory history authority"
+  },
+  "environment": {
+    "executionProfile": "EP-PURE",
+    "evidenceGrade": "G1",
+    "node": "v24.18.1",
+    "nodeExecutableSha256": "sha256:ac51903c4c111815d52280b1fdcc8da067cbb37e2fe1a765097b85c3292c8582",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "npm": "11.16.0",
+    "typescript": "6.0.3",
+    "lockfileVersion": 3,
+    "lockfileSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "manifestLockOrTopologyChanged": false
+  },
+  "acceptance": {
+    "domainCapability": "D04-Undo-Redo-and-revision-history",
+    "evidenceSeam": "bounded-pure-E03-captured-working-revision",
+    "principles": [
+      "PI-20"
+    ],
+    "boundedCriteria": [
+      "AC-001"
+    ],
+    "scopeQualification": "bounded pure project-domain effect/history composition only; not full D04, E03, or AC-001 acceptance"
+  },
+  "contract": {
+    "effectVersion": 1,
+    "applicationKind": "phase1-project.aggregate.replace",
+    "aggregateContract": "Phase1LogProjectAggregate v2 / BLD-016",
+    "commandBytes": "inert canonical source-command JSON; digest derived and independently verified; never dispatched by BLD-018",
+    "directionProof": "before/after and forward/inverse replacement bytes each decode under BLD-016, re-encode canonically, match exact digests, and agree in both directions before preparation",
+    "replay": "source-command preflight is deliberately requestId+sourceCommandDigest only; effect composition replay binds full effectIdentity; retained semantic rejections advance replay metadata only",
+    "atomicity": "synchronous prepared transition rechecks immutable state and publishes aggregate plus exactly one history/event/replay result, or replay-only rejection metadata, through one state reference swap",
+    "publicRuntimeSurface": "mode-specific frozen facade; Phase1 facade has no legacy execute/query surface and raw state functions are not package runtime exports"
+  },
+  "oracle": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "rightsState": "repository-safe synthetic fixtures authored for RSrender internal qualification; no client, vendor, credential, restricted go-by, or third-party content",
+    "fixtureSource": "tests/helpers/bld-018-property-model.mjs",
+    "fixtureSha256": "c55cd3a8f321f4a79a2063ef058804d3a9c42ec7142756b7c63583084a15ae2f",
+    "generatorRevision": "bld-018-project-effect-history-generator-v1",
+    "oracleRevision": "bld-018-project-effect-history-oracle-v1",
+    "seeds": [
+      402653185,
+      402653186,
+      402653187
+    ],
+    "iterationsPerSeed": 1000,
+    "invariants": [
+      "atomicity",
+      "full-effect-replay",
+      "monotonic-revision-event",
+      "bounded-capacity-no-eviction",
+      "undo-redo-branch-model"
+    ],
+    "casesPerRepetition": 3000,
+    "invariantEvaluationsPerRepetition": 15000,
+    "capacityPropertyClaim": "1,000 bounded-capacity upper-bound/no-eviction checks per seed; capacity exhaustion itself is covered by fixed per-axis vectors, not claimed as 3,000 generated exhaustion cases",
+    "freshProcesses": 3,
+    "repetitionsPerFreshProcess": 2,
+    "fullFreshExecutions": 6,
+    "totalGeneratedCases": 18000,
+    "totalInvariantEvaluations": 90000,
+    "fixedTranscriptDigest": "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4",
+    "normalizedRepetitionDigest": "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284",
+    "processTranscriptDigest": "sha256:a7c2290b8a73bd1a4c73f907e40e88b436385135b03f88129473699d0a70fd0f",
+    "executions": [
+      {
+        "process": 1,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284",
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284"
+        ],
+        "fixedDigests": [
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4",
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4"
+        ],
+        "processDigest": "sha256:a7c2290b8a73bd1a4c73f907e40e88b436385135b03f88129473699d0a70fd0f"
+      },
+      {
+        "process": 2,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284",
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284"
+        ],
+        "fixedDigests": [
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4",
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4"
+        ],
+        "processDigest": "sha256:a7c2290b8a73bd1a4c73f907e40e88b436385135b03f88129473699d0a70fd0f"
+      },
+      {
+        "process": 3,
+        "result": "PASS",
+        "repetitionDigests": [
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284",
+          "sha256:9d8415c27a57db40b3d07c663defe32310ccc77cace320ff72039804ede1b284"
+        ],
+        "fixedDigests": [
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4",
+          "sha256:11bb9c41674ad8baa969e5e61ab99f5e0e79c02a4b9bd6517436471a59815ed4"
+        ],
+        "processDigest": "sha256:a7c2290b8a73bd1a4c73f907e40e88b436385135b03f88129473699d0a70fd0f"
+      }
+    ],
+    "propertySummaries": [
+      {
+        "seed": 402653185,
+        "iterations": 1000,
+        "finalAggregateDigest": "sha256:cdb7d23d2223a5e1ec2219aede14db2c2ca1711aeec6b572dd0fa9431a1c999e",
+        "finalWorkingRevision": 1000,
+        "finalHistoryCursor": 612,
+        "finalHistoryLength": 612,
+        "mutationCount": 780,
+        "undoCount": 194,
+        "redoCount": 26,
+        "branchReplacementCount": 142,
+        "invariantChecksPerInvariant": 1000
+      },
+      {
+        "seed": 402653186,
+        "iterations": 1000,
+        "finalAggregateDigest": "sha256:da86f8799091892fdc0a263403e2352c8c84ea749ee1795274b4fbee2a147507",
+        "finalWorkingRevision": 1000,
+        "finalHistoryCursor": 596,
+        "finalHistoryLength": 596,
+        "mutationCount": 772,
+        "undoCount": 202,
+        "redoCount": 26,
+        "branchReplacementCount": 139,
+        "invariantChecksPerInvariant": 1000
+      },
+      {
+        "seed": 402653187,
+        "iterations": 1000,
+        "finalAggregateDigest": "sha256:42660b384d899f58efbf24439a8f46620b2b9e9c83df37dd88cead85b3459169",
+        "finalWorkingRevision": 1000,
+        "finalHistoryCursor": 580,
+        "finalHistoryLength": 580,
+        "mutationCount": 754,
+        "undoCount": 210,
+        "redoCount": 36,
+        "branchReplacementCount": 136,
+        "invariantChecksPerInvariant": 1000
+      }
+    ],
+    "fixedTranscript": {
+      "schema": "rsrender.bld-018-fixed-public-core-transcript.v1",
+      "records": [
+        {
+          "name": "commit",
+          "before": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 0,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-request:10001",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 1,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 1,
+            "sourceCommandDigest": "sha256:22db5dd0e8d2cf71ec12d0d862f5aec4202b1f6d1a8271cff552dca24f06374d",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:9c259d0557ec7f3122fc17e2ad693da6f31ccdc4234b45571d2f287e7dab6023",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:d6551845eab4799fdc8042eccb12462b23b007cdc4567ff75690f0e272764192"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          }
+        },
+        {
+          "name": "exact-full-effect-replay",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-request:10001",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 1,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 1,
+            "sourceCommandDigest": "sha256:22db5dd0e8d2cf71ec12d0d862f5aec4202b1f6d1a8271cff552dca24f06374d",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:9c259d0557ec7f3122fc17e2ad693da6f31ccdc4234b45571d2f287e7dab6023",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:d6551845eab4799fdc8042eccb12462b23b007cdc4567ff75690f0e272764192"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          }
+        },
+        {
+          "name": "full-effect-request-reuse-mismatch",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          },
+          "result": {
+            "kind": "project-domain-history.rejected",
+            "requestId": "urn:rsrender:bld-018-property-request:10001",
+            "reason": "REQUEST_ID_REUSE_MISMATCH",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          }
+        },
+        {
+          "name": "second-commit",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-request:10002",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 2,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "eventSequence": 2,
+            "sourceCommandDigest": "sha256:f6ebcc6f9b5a2a6c98d2063229d1d346602ef1c28d4919569b75148f46b954c1",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:79520d7a5a4f8bfd0eb7d56dc3173f14a96f3d49b8a4ff6b470aeb7be1096bc5",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:e6a3220101bbd4ddb42e70546b10a89891845ede774015fa714325bcc0b8d944"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 2,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 2,
+            "replayEntryCount": 2,
+            "commitCount": 2,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          }
+        },
+        {
+          "name": "retained-stale-rejection",
+          "before": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 2,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 2,
+            "replayEntryCount": 2,
+            "commitCount": 2,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          },
+          "result": {
+            "kind": "project-domain-history.rejected",
+            "requestId": "urn:rsrender:bld-018-property-request:10003",
+            "reason": "STALE_WORKING_REVISION",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          },
+          "after": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 2,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 2,
+            "replayEntryCount": 3,
+            "commitCount": 2,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          }
+        },
+        {
+          "name": "undo",
+          "before": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 2,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 2,
+            "replayEntryCount": 3,
+            "commitCount": 2,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-history.undo:10004",
+            "reason": null,
+            "operation": "undo",
+            "workingRevision": 3,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 3,
+            "sourceCommandDigest": "sha256:f03854529fb0a5d1349416bebfb3678adebb83fee3c1507485266d1ed1356ba8",
+            "sourceCommandIdentity": "history.undo",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:79520d7a5a4f8bfd0eb7d56dc3173f14a96f3d49b8a4ff6b470aeb7be1096bc5",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:e6a3220101bbd4ddb42e70546b10a89891845ede774015fa714325bcc0b8d944"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 3,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "eventCount": 3,
+            "replayEntryCount": 4,
+            "commitCount": 3,
+            "canUndo": true,
+            "canRedo": true,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          }
+        },
+        {
+          "name": "redo",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 3,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "eventCount": 3,
+            "replayEntryCount": 4,
+            "commitCount": 3,
+            "canUndo": true,
+            "canRedo": true,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-history.redo:10005",
+            "reason": null,
+            "operation": "redo",
+            "workingRevision": 4,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "eventSequence": 4,
+            "sourceCommandDigest": "sha256:9d32f72b45f8ef79f98c52256367d6b7e90c9a27d0bb50baacb1f1ecff050860",
+            "sourceCommandIdentity": "history.redo",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:79520d7a5a4f8bfd0eb7d56dc3173f14a96f3d49b8a4ff6b470aeb7be1096bc5",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:e6a3220101bbd4ddb42e70546b10a89891845ede774015fa714325bcc0b8d944"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 4,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 4,
+            "replayEntryCount": 5,
+            "commitCount": 4,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          }
+        },
+        {
+          "name": "undo-before-branch",
+          "before": {
+            "aggregateDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "aggregateCanonicalDigest": "sha256:ab7b480c3b07b5d346ce6f7bb661917edf28986dff7fce05e8a31d672f1d0d1a",
+            "workingRevision": 4,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 4,
+            "replayEntryCount": 5,
+            "commitCount": 4,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-history.undo:10006",
+            "reason": null,
+            "operation": "undo",
+            "workingRevision": 5,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 5,
+            "sourceCommandDigest": "sha256:9d9705f4510b046837f0ab9f5622124c417d2f398600aa678a92963e38724531",
+            "sourceCommandIdentity": "history.undo",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:79520d7a5a4f8bfd0eb7d56dc3173f14a96f3d49b8a4ff6b470aeb7be1096bc5",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:e6a3220101bbd4ddb42e70546b10a89891845ede774015fa714325bcc0b8d944"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 5,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "eventCount": 5,
+            "replayEntryCount": 6,
+            "commitCount": 5,
+            "canUndo": true,
+            "canRedo": true,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          }
+        },
+        {
+          "name": "branch-replacement",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 5,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 2,
+            "eventCount": 5,
+            "replayEntryCount": 6,
+            "commitCount": 5,
+            "canUndo": true,
+            "canRedo": true,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:7835e4d866ae7d7f7120a7cff1ba3552703290fcdf615960edd00736bb92b316"
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-request:10007",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 6,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "aggregateDigest": "sha256:3a852f4975ca57816a7e3affbddbf07cb4fc64376225ace3b411036218bb108e",
+            "eventSequence": 6,
+            "sourceCommandDigest": "sha256:23b4b44a53194ab4c2da90328034383790b27f22b47bfe86804c4f4f6e32cf56",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:dbfdfa3546b137b439c46926954d6e089086048149398b1142b6b60aeca7e014",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:79e19ed6349cee7bea8d29452c5bc912c3411e057033932db1a7294a6b543a62"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:3a852f4975ca57816a7e3affbddbf07cb4fc64376225ace3b411036218bb108e",
+            "aggregateCanonicalDigest": "sha256:3a852f4975ca57816a7e3affbddbf07cb4fc64376225ace3b411036218bb108e",
+            "workingRevision": 6,
+            "durableRevision": 0,
+            "historyCursor": 2,
+            "historyLength": 2,
+            "eventCount": 6,
+            "replayEntryCount": 7,
+            "commitCount": 6,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:95c7d642f9a09898e763ff0090a44544b09d1f320ee3363d139f525857249665"
+          }
+        },
+        {
+          "name": "inverse-invalid-nonretained",
+          "before": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 0,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          },
+          "result": {
+            "kind": "project-domain-history.rejected",
+            "requestId": null,
+            "reason": "EFFECT_CONTRACT_INVALID",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          },
+          "after": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 0,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          }
+        },
+        {
+          "name": "semantic-invalid-retained",
+          "before": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 0,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          },
+          "result": {
+            "kind": "project-domain-history.rejected",
+            "requestId": "urn:rsrender:bld-018-fixed:semantic-invalid",
+            "reason": "AGGREGATE_CONTRACT_INVALID",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          },
+          "after": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 1,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          }
+        },
+        {
+          "name": "commit-capacity-retained",
+          "before": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          },
+          "result": {
+            "kind": "project-domain-history.rejected",
+            "requestId": "urn:rsrender:bld-018-property-request:10002",
+            "reason": "CAPACITY_EXHAUSTED",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 2,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:b32f075ce31641896595fa62ba43c382dae2735a74619b3dd01e36ec6a8b6fd4"
+          }
+        },
+        {
+          "name": "inert-metadata-commit",
+          "before": {
+            "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+            "workingRevision": 0,
+            "durableRevision": 0,
+            "historyCursor": 0,
+            "historyLength": 0,
+            "eventCount": 0,
+            "replayEntryCount": 0,
+            "commitCount": 0,
+            "canUndo": false,
+            "canRedo": false,
+            "tailEffectIdentity": null
+          },
+          "result": {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-fixed:inert",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 1,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 1,
+            "sourceCommandDigest": "sha256:6e83488a328c3115bbc4cea55643f4e6f3781baeb079b61b0ae38b7ceafa8d2c",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:20c7419a24c9151c85fa03ea3e7971924d2777acbd469c23b102c506b9a99855",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "callback:never-dispatch",
+              "payloadDigest": "sha256:a10526300f996ee9f4db20ceba21732e019ba1e3ce1a4571b7853c6829a3d57d"
+            }
+          },
+          "after": {
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "workingRevision": 1,
+            "durableRevision": 0,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "eventCount": 1,
+            "replayEntryCount": 1,
+            "commitCount": 1,
+            "canUndo": true,
+            "canRedo": false,
+            "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:14682dbf053c08d0028cb1e50fd5af9a0d0ffe8b0761bcc7c335031399fbc232"
+          }
+        }
+      ],
+      "capture": {
+        "capturedRevisionIdentity": "urn:rsrender:captured-phase1-project:sha256:0d36afe5328adcf01c718ddbd9f792496ba468ad3d5a633d9b0bccae6b00bfac",
+        "workingRevision": 6,
+        "aggregateDigest": "sha256:3a852f4975ca57816a7e3affbddbf07cb4fc64376225ace3b411036218bb108e",
+        "aggregateCanonicalDigest": "sha256:3a852f4975ca57816a7e3affbddbf07cb4fc64376225ace3b411036218bb108e"
+      },
+      "concurrency": {
+        "before": {
+          "aggregateDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+          "aggregateCanonicalDigest": "sha256:775d61c244dffa2d55fd3e7c5f7b89c02983e463436a0dc03d7b6142ab48e75b",
+          "workingRevision": 0,
+          "durableRevision": 0,
+          "historyCursor": 0,
+          "historyLength": 0,
+          "eventCount": 0,
+          "replayEntryCount": 0,
+          "commitCount": 0,
+          "canUndo": false,
+          "canRedo": false,
+          "tailEffectIdentity": null
+        },
+        "results": [
+          {
+            "kind": "project-domain-history.committed",
+            "requestId": "urn:rsrender:bld-018-property-request:20001",
+            "reason": null,
+            "operation": "mutation",
+            "workingRevision": 1,
+            "historyCursor": 1,
+            "historyLength": 1,
+            "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+            "eventSequence": 1,
+            "sourceCommandDigest": "sha256:ef56cd275a6e28c505550b5c7f2f18fbf18043da159823f45facd0b220edd84e",
+            "sourceCommandIdentity": "urn:rsrender:command:bld-018.property-mutation",
+            "historyEntryIdentity": "urn:rsrender:project-history-entry:sha256:1435f5cc07d950a9ce543dc509a7716d01ca80d87c41cb3fb906527e8ad9eee9",
+            "affectedIdentities": [
+              "urn:test:bld-009:document:1"
+            ],
+            "invalidations": [
+              "render-dataset"
+            ],
+            "eventResult": {
+              "resultCode": "BLD_018_PROPERTY_MUTATION",
+              "payloadDigest": "sha256:2c950ee71a7ff2e25939752e1ff750313505fcf2df296ff4382352cb997eeedb"
+            }
+          },
+          {
+            "kind": "project-domain-history.rejected",
+            "requestId": "urn:rsrender:bld-018-property-request:20002",
+            "reason": "STALE_WORKING_REVISION",
+            "operation": null,
+            "workingRevision": null,
+            "historyCursor": null,
+            "historyLength": null,
+            "aggregateDigest": null,
+            "eventSequence": null,
+            "sourceCommandDigest": null,
+            "sourceCommandIdentity": null,
+            "historyEntryIdentity": null,
+            "affectedIdentities": null,
+            "invalidations": null,
+            "eventResult": null
+          }
+        ],
+        "after": {
+          "aggregateDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+          "aggregateCanonicalDigest": "sha256:c960629a3a20eb014896be4764bb5b64097b65df7a3eb115955114a7f8d65546",
+          "workingRevision": 1,
+          "durableRevision": 0,
+          "historyCursor": 1,
+          "historyLength": 1,
+          "eventCount": 1,
+          "replayEntryCount": 2,
+          "commitCount": 1,
+          "canUndo": true,
+          "canRedo": false,
+          "tailEffectIdentity": "urn:rsrender:project-domain-effect:sha256:1b6b01b58ed51b63c88ed115b85c68f849943ccce27b0cb2e7e8d4bc1f11aed3"
+        }
+      },
+      "rejectionReasons": [
+        "REQUEST_ID_REUSE_MISMATCH",
+        "STALE_WORKING_REVISION",
+        "EFFECT_CONTRACT_INVALID",
+        "AGGREGATE_CONTRACT_INVALID",
+        "CAPACITY_EXHAUSTED"
+      ],
+      "failures": []
+    },
+    "generatorWindow": {
+      "startedAtUtc": "2026-08-20T16:59:26.226Z",
+      "finishedAtUtc": "2026-08-20T17:02:52.229Z",
+      "failures": []
+    }
+  },
+  "hashes": [
+    {
+      "path": "packages/contracts/src/project-domain-effect-contract.ts",
+      "sha256": "d22e059fd82e89a654edceed5ead259102ca258d08c43cde1b9380bc6b4cb0b5"
+    },
+    {
+      "path": "packages/contracts/src/index.ts",
+      "sha256": "03e8221b3c824a885548bddeb0e30367cc63fc78173a4f344512a568946124f2"
+    },
+    {
+      "path": "packages/application/src/project-domain-effect-state.ts",
+      "sha256": "9b7c92465f24d86d447b1892de7faac9e7a081e6cc39b2c36c2e51711755d9f4"
+    },
+    {
+      "path": "packages/application/src/in-memory-history-core.ts",
+      "sha256": "fe1d095bd61ea25413fe006055cc37d336761bccd6662c48bc91b6ec75a08b3d"
+    },
+    {
+      "path": "packages/application/src/index.ts",
+      "sha256": "38d2e074f48cefbd480e187d187d858a4e809c1c5adc8db1974482757ffa1466"
+    },
+    {
+      "path": "tests/bld-018-project-domain-effect-history.test.mjs",
+      "sha256": "78083f4ada64d3becd5b320213583e29574b2545e0f872b18583eaf9250bf722"
+    },
+    {
+      "path": "tests/helpers/bld-009-fixtures.mjs",
+      "sha256": "52dbea3469f6ef8640b0e6e6934320e1f2065c33e9f51dc3884ee9576772c3bc"
+    },
+    {
+      "path": "tests/helpers/bld-015-fixtures.mjs",
+      "sha256": "20908ab9930184a80327859d7f36f1fe7f57f3c179a0b090aee0a3459257dbd7"
+    },
+    {
+      "path": "tests/helpers/bld-016-fixtures.mjs",
+      "sha256": "c4f173bc4f4939466dfcd48368b7b634ce9741b11639e09565ed6ffbcfbfb722"
+    },
+    {
+      "path": "tests/helpers/bld-018-property-model.mjs",
+      "sha256": "c55cd3a8f321f4a79a2063ef058804d3a9c42ec7142756b7c63583084a15ae2f"
+    },
+    {
+      "path": "tests/helpers/run-bld-018-vectors.mjs",
+      "sha256": "f1805bc9e539ec294fea3786a56c919107109b21b8a73ecf770012ad721e80ab"
+    },
+    {
+      "path": "tests/helpers/run-bld-018-evidence.mjs",
+      "sha256": "4ab9eae912d078ee90b2c61b539e19bf87cf0f2fa09d8eb09747211bd3fbc220"
+    }
+  ],
+  "prerequisites": [
+    {
+      "path": "artifacts/bld-010-application-service-evidence.json",
+      "sha256": "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616"
+    },
+    {
+      "path": "artifacts/bld-011-history-core-evidence.json",
+      "sha256": "88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8"
+    },
+    {
+      "path": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
+      "sha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6"
+    },
+    {
+      "path": "artifacts/bld-013-aggregate-evidence-index.json",
+      "sha256": "8f2ee596f66be3c1011258c8c0364e37ccd2cd633e71bff4a5f54d84b28b432d"
+    },
+    {
+      "path": "artifacts/bld-016-project-input-revisions-evidence.json",
+      "sha256": "7f97458f538595eb25e355baf8b038903e972b85f603741dd445a660626cc300"
+    },
+    {
+      "path": "packages/contracts/src/application-service-contract.ts",
+      "sha256": "1aa4a185f54508f115cabe0d91490445b9f855682b894bda2608a6733d5ccc39"
+    },
+    {
+      "path": "packages/contracts/src/history-core-contract.ts",
+      "sha256": "fee9dfab0484e6d81d87a744e955613557f96cf09e363d26d5fb2e6d08b376ca"
+    },
+    {
+      "path": "packages/domain/src/project-input-revisions.ts",
+      "sha256": "e4002f6d842d5f13b9eff859cefceab1c1489966fcfef1b56d05b66f4f7d557b"
+    },
+    {
+      "path": "packages/test-support/src/aggregate-evidence-index.ts",
+      "sha256": "769d12ec2211fc4168d7032dc898052af7db7f94f10b71b928ef0dd724fedfe2"
+    },
+    {
+      "path": "packages/application/src/in-memory-application-service.ts",
+      "sha256": "2477bdb8005d6bfd428dbf3d8ffecb8bbfbe0987c4d947b4635f06b3ce235cc3"
+    }
+  ],
+  "executedJavaScript": [
+    {
+      "path": "packages/contracts/dist/project-domain-effect-contract.js",
+      "sha256": "af5bab7ac429ba97e5efc4e86d5c1d874efa906b29b1880fd8b1d237c21455fc"
+    },
+    {
+      "path": "packages/contracts/dist/index.js",
+      "sha256": "b44000d4f87b64015baa5f87907ae898bb3f820154fa4d60d140b91b771b8646"
+    },
+    {
+      "path": "packages/domain/dist/project-input-revisions.js",
+      "sha256": "02a048216f1260a991b2bf8a5b2f6a3c0945ec272380f6763254bea3672b4f4c"
+    },
+    {
+      "path": "packages/domain/dist/index.js",
+      "sha256": "32269594bb7374c901b8d1d9d7c64c522155fb22e1533d5e6b7af1c8283adb37"
+    },
+    {
+      "path": "packages/application/dist/project-domain-effect-state.js",
+      "sha256": "c185b94c5b901e304d28d36d13fdbfca2cdcdd8343626449dc864d5b1e3fa34d"
+    },
+    {
+      "path": "packages/application/dist/in-memory-history-core.js",
+      "sha256": "7cbd4075bd661b63ed597de4b2fdbba313e577f8f99b21a2d9a140da87eac39e"
+    },
+    {
+      "path": "packages/application/dist/index.js",
+      "sha256": "6accf4788c883ca31b702a2cef35ef1f8e32684f689cbf7a551d648ae194747d"
+    }
+  ],
+  "authorities": [
+    {
+      "path": "docs/planning/specifications/boring-log-domain-model.md",
+      "sha256": "5c0cc26827f7a8d9bc0b3950ec06ba2ff5289960ad6198b877a0a12718adcf35"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-product-specification.md",
+      "sha256": "f5e67ee245978f7a87af90b7bb23c0ae8e5c7a2199a5290cbee805ff94b41587"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-phased-implementation-roadmap.md",
+      "sha256": "a6c13c347868a43b46489edc9e96cf964966b40071877bae21b1691e29288159"
+    },
+    {
+      "path": "docs/planning/specifications/rsrender-acceptance-strategy.md",
+      "sha256": "1b61f28528792869319b4c7f4d0479a59873e968b6f4a933fa6c64aedf8c4719"
+    },
+    {
+      "path": "docs/adr/0008-main-owned-application-core-and-least-capable-electron-topology.md",
+      "sha256": "c14d060456b17c2ac3be979f8bab60e84233a4a94f3e09bec2520ce8e5651714"
+    }
+  ],
+  "compatibility": {
+    "result": "PASS",
+    "receipt": {
+      "result": "PASS",
+      "tests": 28,
+      "passed": 28,
+      "failed": 0,
+      "startedAtUtc": "2026-08-20T16:59:06.487Z",
+      "finishedAtUtc": "2026-08-20T16:59:26.226Z",
+      "stdoutSha256": "sha256:55da6b26fee901beaec421be3c9e87a7cb1f0c7278d80f524702ad511cde5239",
+      "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> --test tests/bld-010-application-service.test.mjs tests/bld-011-history-core.test.mjs"
+    },
+    "frozenBld011Baseline": {
+      "implementationSha256": "f7661c7b97403b67c057cb10ccddc142a68e90899a511e4d0ad95613ee80ff13",
+      "applicationIndexSha256": "d36c1d04cfc985153901d6f8c771c2a0703c77ee939d1b3408fba98cd8f98725"
+    },
+    "currentGeneralizedAuthority": {
+      "implementationSha256": "fe1d095bd61ea25413fe006055cc37d336761bccd6662c48bc91b6ec75a08b3d",
+      "applicationIndexSha256": "38d2e074f48cefbd480e187d187d858a4e809c1c5adc8db1974482757ffa1466",
+      "relationship": "current source extends the same internal authority behind disjoint mode-specific facades; the frozen BLD-011 runtime contract/outcome is guarded by the retained 28/28 receipt"
+    },
+    "frozenHashes": [
+      {
+        "path": "packages/contracts/src/application-service-contract.ts",
+        "sha256": "1aa4a185f54508f115cabe0d91490445b9f855682b894bda2608a6733d5ccc39"
+      },
+      {
+        "path": "packages/contracts/src/history-core-contract.ts",
+        "sha256": "fee9dfab0484e6d81d87a744e955613557f96cf09e363d26d5fb2e6d08b376ca"
+      },
+      {
+        "path": "packages/application/src/in-memory-application-service.ts",
+        "sha256": "2477bdb8005d6bfd428dbf3d8ffecb8bbfbe0987c4d947b4635f06b3ce235cc3"
+      },
+      {
+        "path": "tests/bld-010-application-service.test.mjs",
+        "sha256": "a5388799c63d50fd73471c83b886013f39ab8e64198191a35bc3ece6f311f1c8"
+      },
+      {
+        "path": "tests/bld-011-history-core.test.mjs",
+        "sha256": "d1fdaa1abb06b45491b80816462c4601e0060d6d425de4d5cd344f217c2e3a89"
+      },
+      {
+        "path": "artifacts/bld-010-application-service-evidence.json",
+        "sha256": "3c701cac4638747579903c26a8f24252dea02e18e7e66d7eb1438d2ac52df616"
+      },
+      {
+        "path": "artifacts/bld-011-history-core-evidence.json",
+        "sha256": "88c8b07ffed84911bc4dfe32be4bdd8cd2adc796e491983de213c2f877e3f1d8"
+      }
+    ]
+  },
+  "dependencyAndWorkspace": {
+    "result": "NO_TOPOLOGY_DELTA_BY_BLD_018",
+    "externalIdentityCount": 156,
+    "addedExternalIdentities": 0,
+    "removedExternalIdentities": 0,
+    "changedExternalIdentities": 0,
+    "boundHashes": [
+      {
+        "path": "package.json",
+        "sha256": "d2543a55c3b3f3ee7365ce4e9f3b38ddd26992dd72feaa2a65d871461e3f2bd5"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351"
+      },
+      {
+        "path": "tsconfig.json",
+        "sha256": "c6706b42aa66a16f66f56049c8bb5334901d8548033978f565a7668c6aeeabf6"
+      },
+      {
+        "path": "packages/contracts/package.json",
+        "sha256": "054ed097fd9e97d65316bff80e6f14c6d64a85eb1f79e26dbc55b5f6f0f8836c"
+      },
+      {
+        "path": "packages/domain/package.json",
+        "sha256": "34ec53599ac542ec3213e1fc991cf6a29be02461146dd3fcc6e75290882d0ab5"
+      },
+      {
+        "path": "packages/application/package.json",
+        "sha256": "2cccb85e4aaf8baf0b055379793c193dd73f247039e2b37bc4d6fa4c4caabb23"
+      },
+      {
+        "path": "docs/governance/bld-001-internal-dependency-admission.json",
+        "sha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a"
+      },
+      {
+        "path": "docs/governance/bld-001-authority-approval-packet.md",
+        "sha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815"
+      },
+      {
+        "path": "docs/governance/bld-007-workspace-topology-approvals.json",
+        "sha256": "31aaeb47e7b380488349392f085f7e68e4454ed616e1bdca137e5bde03c35fd6"
+      },
+      {
+        "path": "artifacts/bld-007-dependency-enforcement-evidence.json",
+        "sha256": "ecad1333c1e4331f5c08a6e7767a5830357da8ae6b8ae19a383946335da8f378"
+      },
+      {
+        "path": "artifacts/bld-007-dependency-custody.json",
+        "sha256": "355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7"
+      }
+    ],
+    "integratedVerification": "PENDING_INTEGRATION_OWNER_ROOT_VERIFY: final 156/156 dependency admission, package-boundary, architecture-boundary, and workspace checks are not claimed until the root integrated receipt passes"
+  },
+  "qualifyingFreshRun": {
+    "startedAtUtc": "2026-08-20T16:59:26.226Z",
+    "finishedAtUtc": "2026-08-20T17:02:52.229Z",
+    "warmups": "none",
+    "exclusions": "none",
+    "validity": "PASS only if all three admitted-Node processes complete two identical fixed-plus-property repetitions under en-US/UTC with empty stderr, exact executable digest, 3 seeds x 1,000 operations x 5 named invariants, fail-closed fixed assertions, and identical repetition/process digests"
+  },
+  "qualifyingTargetedRun": {
+    "result": "PASS",
+    "tests": 22,
+    "passed": 22,
+    "failed": 0,
+    "startedAtUtc": "2026-08-20T16:52:34.758Z",
+    "finishedAtUtc": "2026-08-20T16:59:06.484Z",
+    "stdoutSha256": "sha256:22f6b8e1ab88f683b79f98bec0ecf720eed0893db9afb33168bdd09b3added06",
+    "stderrSha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command": "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; <admitted-node> --test tests/bld-018-project-domain-effect-history.test.mjs"
+  },
+  "fixedVectors": [
+    "strict effect create/decode/encode, derived command/effect/payload/aggregate digests, conventional effect URN, recursive freeze and caller detachment",
+    "hostile prototype/accessor/symbol/hidden/sparse/extra-property/Unicode array and record rejection",
+    "BLD-016 before/after/forward/inverse decode, canonical bytes, direction, document/context/project checks, forged inverse nonretention, and semantic invalid aggregate retention",
+    "public commit, exact replay, changed full-effect reuse mismatch, retained wrong-document/owner/stale/before/capacity rejections, and digest-only pre-reducer source-command lookup",
+    "prepared read-only preflight, wrong-token/state rejection, public same-revision one-commit/one-stale serialization, and exact aggregate/history/event/replay atomic deltas",
+    "Undo, Redo, abandoned-branch replacement, monotonic working/event revision, capture immutability, durable baseline, and each bounded capacity axis",
+    "inert lifecycle/storage/Refresh/callback-looking source-command and event-result JSON with retained metadata/digests and no dispatch",
+    "exact legacy/Phase1 runtime facade keys, cross-mode method absence, and unchanged BLD-010/011 outcomes"
+  ],
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "scanResult": "PASS",
+    "prohibitedMatches": 0,
+    "scanner": "literal scan for absolute Windows user paths, authorization/bearer shapes, private-key headers, and assigned password/secret/token values",
+    "scannedPaths": [
+      "packages/contracts/src/project-domain-effect-contract.ts",
+      "packages/contracts/src/index.ts",
+      "packages/application/src/project-domain-effect-state.ts",
+      "packages/application/src/in-memory-history-core.ts",
+      "packages/application/src/index.ts",
+      "tests/bld-018-project-domain-effect-history.test.mjs",
+      "tests/helpers/bld-009-fixtures.mjs",
+      "tests/helpers/bld-015-fixtures.mjs",
+      "tests/helpers/bld-016-fixtures.mjs",
+      "tests/helpers/bld-018-property-model.mjs",
+      "tests/helpers/run-bld-018-vectors.mjs",
+      "tests/helpers/run-bld-018-evidence.mjs"
+    ],
+    "containsHostUserPath": false,
+    "containsClientData": false,
+    "containsCredentials": false,
+    "rejectionEchoesInput": false
+  },
+  "custody": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "acceptanceOwner": "RSrender application/history acceptance owner",
+    "custodyOwner": "RSrender application evidence owner",
+    "executorRole": "implementation agent",
+    "observerRole": "independent adversarial reviewer and integration owner",
+    "approvalReference": "GitHub #62 activation under standing internal-development authorization",
+    "rawLocation": "tests/bld-018-project-domain-effect-history.test.mjs and tests/helpers/bld-018-*.mjs retain fixed vectors, public-core generator/oracle, fail-closed assertions, and repetition transcript",
+    "normalizedLocation": "artifacts/bld-018-project-domain-effect-history-evidence.json",
+    "retention": "Retain bound source, tests, generator/oracle, normalized evidence, prerequisite evidence, lock, and admitted Node bytes until a recorded replacement qualification supersedes them.",
+    "deletion": "Deletion or loss invalidates this bounded PASS and downstream citations until replacement qualification is retained."
+  },
+  "rerunTriggers": [
+    "Any project-domain effect field, digest, identity, canonicalization, BLD-016 aggregate, forward/inverse, rejection, replay, prepared transition, history, event, Undo/Redo, capture, capacity, concurrency, facade, or export change",
+    "Any BLD-010/011/013/016 prerequisite, fixture, oracle, generator, source, executed JavaScript, manifest, lock, topology, toolchain, locale, time-zone, authority, or retained hash change",
+    "Introduction of Override/Refresh command semantics, Save/durable transition, storage/source access, Electron/IPC, renderer/UI, publication policy, lifecycle, workspace, or recovery behavior",
+    "Deletion or loss of retained raw or normalized evidence"
+  ],
+  "rerunCommands": [
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\typescript\\bin\\tsc -b packages\\contracts packages\\domain packages\\application --force --pretty false",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\prettier\\bin\\prettier.cjs --check packages/contracts/src/project-domain-effect-contract.ts packages/contracts/src/index.ts packages/application/src/project-domain-effect-state.ts packages/application/src/in-memory-history-core.ts packages/application/src/index.ts tests/bld-018-project-domain-effect-history.test.mjs tests/helpers/bld-018-property-model.mjs tests/helpers/run-bld-018-vectors.mjs tests/helpers/run-bld-018-evidence.mjs artifacts/bld-018-project-domain-effect-history-evidence.json docs/planning/evidence/bld-018-project-domain-effect-history-verification.md",
+    "& .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe node_modules\\eslint\\bin\\eslint.js packages/contracts/src/project-domain-effect-contract.ts packages/contracts/src/index.ts packages/application/src/project-domain-effect-state.ts packages/application/src/in-memory-history-core.ts packages/application/src/index.ts tests/bld-018-project-domain-effect-history.test.mjs tests/helpers/bld-018-property-model.mjs tests/helpers/run-bld-018-vectors.mjs tests/helpers/run-bld-018-evidence.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe --test tests\\bld-018-project-domain-effect-history.test.mjs",
+    "$env:LANG='en-US'; $env:LC_ALL='en-US'; $env:TZ='UTC'; & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\node.exe tests\\helpers\\run-bld-018-evidence.mjs",
+    "after integration-owner coordination: & .\\.wayfinder-tmp\\admission-resolution\\toolchain\\node-v24.18.1-win-x64\\npm.cmd run verify"
+  ],
+  "nonclaims": [
+    "No Override, Refresh, source retrieval, storage, Save/durable revision transition, publication, lifecycle, workspace, recovery, Electron, IPC, renderer, or UI behavior is implemented.",
+    "Source-command and event-result canonical JSON are inert audit bytes only; BLD-018 exposes no generic executable command, callback, reducer, plugin, script, or event dispatcher.",
+    "The digest-only source-command replay lookup is a read-only pre-reducer seam for BLD-019; it is not full-effect replay authority and never admits an effect.",
+    "No public raw state-machine runtime functions or second history authority are exported; type-only DTO/token exports do not create runtime capabilities.",
+    "No performance, production, packaged, security, privacy, MVP, full D04, full E03, or full AC-001 acceptance is claimed."
+  ],
+  "evidenceDigest": "sha256:ae6f9db34bbb907b82b4b4d4f3c9ec895aba78ee44f6a675ee3eb8a397df27f7"
+}

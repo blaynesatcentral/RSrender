@@ -34,6 +34,7 @@ export type {
 
 export {
   createInMemoryHistoryCore,
+  createInMemoryPhase1ProjectHistoryCore,
   inMemoryHistoryCoreRevision,
 } from "./in-memory-history-core.js";
 export type {
@@ -43,4 +44,20 @@ export type {
   InMemoryHistoryCore,
   InMemoryHistoryCoreCapacities,
   InMemoryHistoryCoreSnapshot,
+  InMemoryPhase1ProjectHistoryCore,
+  Phase1ProjectHistoryCoreInitializationResult,
 } from "./in-memory-history-core.js";
+
+export type {
+  CapturedPhase1ProjectWorkingRevision,
+  PreparedProjectDomainEffectTransition,
+  ProjectDomainEffectPreparationResult,
+  ProjectDomainHistoryCommandResult,
+  ProjectDomainHistoryCommittedResult,
+  ProjectDomainHistoryEvent,
+  ProjectDomainHistoryNavigationCommand,
+  ProjectDomainHistoryRejectedResult,
+  ProjectDomainHistoryRejectionReason,
+  ProjectDomainHistorySnapshot,
+  ProjectSourceCommandReplayLookupResult,
+} from "./project-domain-effect-state.js";

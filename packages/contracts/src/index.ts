@@ -132,6 +132,26 @@ export {
   validateHistoryCoreCommand,
   validateHistoryCoreResult,
 } from "./history-core-contract.js";
+
+export {
+  createProjectDomainEffect,
+  decodeProjectDomainEffect,
+  encodeProjectDomainEffect,
+  projectDomainEffectContractRevision,
+  projectDomainEffectContractVersion,
+  projectDomainEffectIdentityCodec,
+} from "./project-domain-effect-contract.js";
+export type {
+  CanonicalAggregateBytes,
+  EncodedProjectDomainEffect,
+  ProjectAggregateApplicationPayload,
+  ProjectDomainEffect,
+  ProjectDomainEffectContractRejectionCode,
+  ProjectDomainEffectDecodeResult,
+  ProjectDomainEffectDraft,
+  ProjectDomainEffectIdentity,
+  ProjectDomainEventResult,
+} from "./project-domain-effect-contract.js";
 export type {
   CapturedRevisionIdentity,
   DurableRevision,
