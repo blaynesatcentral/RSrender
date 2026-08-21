@@ -89,6 +89,15 @@ export {
   syntheticOverrideRenderDatasetSessionCapacities,
   syntheticOverrideRenderDatasetSessionRevision,
 } from "./synthetic-override-render-dataset-session.js";
+export {
+  createSyntheticBoringLogOverrideSession,
+  syntheticBoringLogOverrideSessionCapacities,
+  syntheticBoringLogOverrideSessionRevision,
+  type SyntheticBoringLogEditableBinding,
+  type SyntheticBoringLogEditableProperty,
+  type SyntheticBoringLogOverrideSession,
+  type SyntheticBoringLogOverrideSessionCreationResult,
+} from "./synthetic-boring-log-override-session.js";
 export type {
   SyntheticOverrideRenderDatasetSession,
   SyntheticOverrideRenderDatasetSessionCreationResult,

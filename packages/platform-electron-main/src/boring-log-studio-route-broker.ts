@@ -1,0 +1,268 @@
+import type { BoringLogStudioProjectionResult } from "./boring-log-studio-projection.js";
+import { DOCUMENT_ROUTE_URL } from "./document-route-contract.js";
+import type { DocumentRouteContext } from "./document-route-broker.js";
+
+export type BoringLogStudioRouteRejectionCode =
+  | "STUDIO_ROUTE_UNAVAILABLE"
+  | "STUDIO_ROUTE_CONTEXT_INVALID"
+  | "STUDIO_ROUTE_CAPABILITY_INVALID"
+  | "STUDIO_ROUTE_GENERATION_INVALID"
+  | "STUDIO_ROUTE_SEQUENCE_INVALID"
+  | "STUDIO_ROUTE_DOCUMENT_INVALID"
+  | "STUDIO_ROUTE_ARGUMENT_INVALID"
+  | "STUDIO_ROUTE_IN_FLIGHT"
+  | "STUDIO_ROUTE_RESULT_INVALID";
+
+export type BoringLogStudioRouteBootstrapResult =
+  | {
+      readonly accepted: true;
+      readonly transportVersion: 1;
+      readonly generation: number;
+      readonly capability: string;
+      readonly documentIdentity: string;
+      readonly ownerGeneration: number;
+    }
+  | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
+
+export type BoringLogStudioRouteResult =
+  | {
+      readonly accepted: true;
+      readonly transportVersion: 1;
+      readonly generation: number;
+      readonly sequence: number;
+      readonly projection: Extract<
+        BoringLogStudioProjectionResult,
+        { readonly accepted: true }
+      >["projection"];
+    }
+  | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
+
+type DataRecord = Readonly<Record<string, unknown>>;
+type Binding = {
+  readonly capability: string;
+  readonly generation: number;
+  readonly frame: object;
+  nextSequence: number;
+  inFlight: boolean;
+};
+
+function rejected(code: BoringLogStudioRouteRejectionCode): BoringLogStudioRouteResult {
+  return Object.freeze({ accepted: false, code });
+}
+
+function exactRecord(input: unknown, fields: readonly string[]): DataRecord | null {
+  try {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
+    const prototype = Object.getPrototypeOf(input) as unknown;
+    if (prototype !== Object.prototype && prototype !== null) return null;
+    const keys = Reflect.ownKeys(input);
+    if (
+      keys.some((key) => typeof key !== "string" || !fields.includes(key)) ||
+      fields.some((field) => !keys.includes(field))
+    ) {
+      return null;
+    }
+    const entries: Array<readonly [string, unknown]> = [];
+    for (const field of fields) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, field);
+      if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable)
+        return null;
+      entries.push([field, descriptor.value]);
+    }
+    return Object.freeze(Object.fromEntries(entries));
+  } catch {
+    return null;
+  }
+}
+
+function validContext(
+  context: DocumentRouteContext,
+  expectedWindow: object,
+  expectedWebContents: object,
+  boundFrame: object | null,
+): boolean {
+  return (
+    context.windowLive &&
+    context.webContentsLive &&
+    context.window === expectedWindow &&
+    context.webContents === expectedWebContents &&
+    context.frame !== null &&
+    context.frame === context.mainFrame &&
+    (boundFrame === null || context.frame === boundFrame) &&
+    context.url === DOCUMENT_ROUTE_URL
+  );
+}
+
+function boundedProjection(input: unknown): boolean {
+  try {
+    const json = JSON.stringify(input);
+    return (
+      typeof json === "string" &&
+      new TextEncoder().encode(json).byteLength <= 1_048_576 &&
+      !json.includes('"kind":"image"') &&
+      !json.includes('"kind":"raster"')
+    );
+  } catch {
+    return false;
+  }
+}
+
+export class BoringLogStudioRouteBroker {
+  readonly #expectedWindow: object;
+  readonly #expectedWebContents: object;
+  readonly #documentIdentity: string;
+  readonly #ownerGeneration: number;
+  readonly #createCapability: () => string;
+  readonly #getProjection: (
+    minimumWorkingRevision: number | null,
+  ) => Promise<BoringLogStudioProjectionResult>;
+  #generation = 0;
+  #binding: Binding | null = null;
+
+  public constructor(input: {
+    readonly expectedWindow: object;
+    readonly expectedWebContents: object;
+    readonly documentIdentity: string;
+    readonly ownerGeneration: number;
+    readonly createCapability: () => string;
+    readonly getProjection: (
+      minimumWorkingRevision: number | null,
+    ) => Promise<BoringLogStudioProjectionResult>;
+  }) {
+    this.#expectedWindow = input.expectedWindow;
+    this.#expectedWebContents = input.expectedWebContents;
+    this.#documentIdentity = input.documentIdentity;
+    this.#ownerGeneration = input.ownerGeneration;
+    this.#createCapability = input.createCapability;
+    this.#getProjection = input.getProjection;
+  }
+
+  public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
+    if (!validContext(context, this.#expectedWindow, this.#expectedWebContents, null)) {
+      return Object.freeze({ accepted: false, code: "STUDIO_ROUTE_CONTEXT_INVALID" });
+    }
+    if (
+      this.#binding !== null ||
+      context.frame === null ||
+      this.#generation >= Number.MAX_SAFE_INTEGER
+    ) {
+      return Object.freeze({ accepted: false, code: "STUDIO_ROUTE_UNAVAILABLE" });
+    }
+    let capability: string;
+    try {
+      capability = this.#createCapability();
+    } catch {
+      return Object.freeze({ accepted: false, code: "STUDIO_ROUTE_CAPABILITY_INVALID" });
+    }
+    if (!/^[0-9a-f]{64}$/u.test(capability)) {
+      return Object.freeze({ accepted: false, code: "STUDIO_ROUTE_CAPABILITY_INVALID" });
+    }
+    this.#generation += 1;
+    this.#binding = {
+      capability,
+      generation: this.#generation,
+      frame: context.frame,
+      nextSequence: 1,
+      inFlight: false,
+    };
+    return Object.freeze({
+      accepted: true,
+      transportVersion: 1,
+      generation: this.#generation,
+      capability,
+      documentIdentity: this.#documentIdentity,
+      ownerGeneration: this.#ownerGeneration,
+    });
+  }
+
+  public invalidate(): void {
+    this.#binding = null;
+  }
+
+  public async getProjection(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioRouteResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return rejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return rejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (request === null || request["transportVersion"] !== 1) {
+      return rejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (request["capability"] !== binding.capability) {
+      return rejected("STUDIO_ROUTE_CAPABILITY_INVALID");
+    }
+    if (request["generation"] !== binding.generation) {
+      return rejected("STUDIO_ROUTE_GENERATION_INVALID");
+    }
+    if (
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration
+    ) {
+      return rejected("STUDIO_ROUTE_DOCUMENT_INVALID");
+    }
+    if (
+      !Number.isSafeInteger(request["sequence"]) ||
+      (request["sequence"] as number) !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return rejected("STUDIO_ROUTE_SEQUENCE_INVALID");
+    }
+    const args = exactRecord(request["args"], ["minimumWorkingRevision"]);
+    const minimum = args?.["minimumWorkingRevision"];
+    if (
+      args === null ||
+      (minimum !== null &&
+        (typeof minimum !== "number" || !Number.isSafeInteger(minimum) || minimum < 0))
+    ) {
+      return rejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return rejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    let result: BoringLogStudioProjectionResult;
+    try {
+      result = await this.#getProjection(minimum);
+    } catch {
+      return rejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+    if (
+      this.#binding !== binding ||
+      !result.accepted ||
+      result.projection.documentIdentity !== this.#documentIdentity ||
+      result.projection.ownerGeneration !== this.#ownerGeneration ||
+      (minimum !== null && result.projection.workingRevision < minimum) ||
+      !boundedProjection(result.projection)
+    ) {
+      return rejected("STUDIO_ROUTE_RESULT_INVALID");
+    }
+    return Object.freeze({
+      accepted: true,
+      transportVersion: 1,
+      generation: binding.generation,
+      sequence,
+      projection: result.projection,
+    });
+  }
+}

@@ -24,6 +24,7 @@ export const internalImportRules = Object.freeze({
     "domain",
     "application",
     "scene",
+    "layout-host",
     "package-contract",
     "source-contract",
     "platform-zipjs",

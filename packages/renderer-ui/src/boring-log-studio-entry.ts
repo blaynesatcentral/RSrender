@@ -1,6 +1,9 @@
 import type {
   BoringLogSceneNode,
   BoringLogValueProvenance,
+  OverrideRenderContentState,
+  OverrideRenderDomainValueProjection,
+  OverrideRenderUnitState,
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
@@ -11,6 +14,56 @@ type TreeItem = Readonly<{
   readonly label: string;
   readonly level: number;
   readonly icon: string;
+}>;
+
+type EditableValue = Readonly<{
+  readonly semanticId: string;
+  readonly property: string;
+  readonly sourceFieldIdentity: string;
+  readonly sourceEntityIdentity: string;
+  readonly sourceBaselineValueDigest: string;
+  readonly valueType: "string" | "number";
+  readonly unit: OverrideRenderUnitState;
+  readonly sourceOriginal: OverrideRenderDomainValueProjection;
+  readonly effectiveDisplay: OverrideRenderDomainValueProjection;
+  readonly application:
+    | { readonly kind: "source" }
+    | {
+        readonly kind: "display-value-override";
+        readonly presentationOverrideIdentity: string;
+      };
+}>;
+
+type StudioProjection = Readonly<{
+  readonly workingRevision: number;
+  readonly durableRevision: number;
+  readonly dirty: boolean;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly editableValues: readonly EditableValue[];
+  readonly scene: ResolvedBoringLogPageScene;
+}>;
+
+type CommandResult = Readonly<{
+  readonly accepted: boolean;
+  readonly code?: string;
+  readonly workingRevision?: number;
+}>;
+
+type StudioApis = Readonly<{
+  readonly studio: {
+    readonly getProjection: (input: {
+      readonly minimumWorkingRevision: number | null;
+    }) => Promise<
+      | { readonly accepted: false; readonly code: string }
+      | { readonly accepted: true; readonly projection: StudioProjection }
+    >;
+  };
+  readonly document: {
+    readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
+    readonly undo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
+    readonly redo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
+  };
 }>;
 
 function element<ElementType extends HTMLElement>(id: string): ElementType {
@@ -94,8 +147,8 @@ if (!initialProjection.accepted) {
   throw new Error(`${initialProjection.code}: ${initialProjection.detail}`);
 }
 
-const scene = initialProjection.scene;
-const page = scene.pages[0]!;
+let scene = initialProjection.scene;
+let page = scene.pages[0]!;
 const pageHost = element<HTMLDivElement>("svg-page");
 const pageShadow = element<HTMLDivElement>("page-shadow");
 const tree = element<HTMLDivElement>("contents-tree");
@@ -109,8 +162,12 @@ const propertySemanticId = element<HTMLElement>("property-semantic-id");
 const propertyRole = element<HTMLElement>("property-role");
 const propertyNodeCount = element<HTMLElement>("property-node-count");
 const propertyContent = element<HTMLTextAreaElement>("property-content");
+const applyProperty = element<HTMLButtonElement>("apply-property");
+const propertyHelp = element<HTMLElement>("property-help");
 const propertyBounds = element<HTMLElement>("property-bounds");
 const propertyProvenance = element<HTMLElement>("property-provenance");
+const propertySourceOriginal = element<HTMLElement>("property-source-original");
+const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
 const selectionStatus = element<HTMLElement>("selection-status");
 const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
 const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
@@ -119,7 +176,40 @@ const sceneSummary = element<HTMLElement>("scene-summary");
 const zoom = element<HTMLInputElement>("zoom");
 const zoomValue = element<HTMLOutputElement>("zoom-value");
 const canvasScale = element<HTMLOutputElement>("canvas-scale");
+const undoButton = element<HTMLButtonElement>("undo");
+const redoButton = element<HTMLButtonElement>("redo");
 let selectedSemanticId: string | null = null;
+let studioProjection: StudioProjection | null = null;
+
+function studioApis(): StudioApis | null {
+  const world = globalThis as typeof globalThis & {
+    readonly rsrender?: StudioApis;
+    readonly rsrenderStudio?: StudioApis["studio"];
+  };
+  return world.rsrender !== undefined && world.rsrenderStudio !== undefined
+    ? Object.freeze({ document: world.rsrender.document, studio: world.rsrenderStudio })
+    : null;
+}
+
+function contentValue(content: OverrideRenderContentState): string | number | null {
+  if (content.kind === "value") {
+    return typeof content.value === "string" || typeof content.value === "number"
+      ? content.value
+      : null;
+  }
+  if (content.kind === "zero") return 0;
+  if (content.kind === "empty-string") return "";
+  return null;
+}
+
+function editableFor(semanticId: string): EditableValue | null {
+  return studioProjection?.editableValues.find((value) => value.semanticId === semanticId) ?? null;
+}
+
+function updateHistoryControls(): void {
+  undoButton.disabled = studioProjection?.canUndo !== true;
+  redoButton.disabled = studioProjection?.canRedo !== true;
+}
 
 function installSvg(): void {
   const projection = projectBoringLogSceneToSvg(scene, selectedSemanticId);
@@ -182,17 +272,147 @@ function select(semanticId: string): void {
   propertySemanticId.textContent = semanticId;
   propertyRole.textContent = representative.role;
   propertyNodeCount.textContent = String(nodes.length);
-  propertyContent.value = nodes
-    .filter(
-      (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
-        node.kind === "text",
-    )
-    .map(({ content }) => content)
-    .join("\n");
+  const editable = editableFor(semanticId);
+  const effective = editable === null ? null : contentValue(editable.effectiveDisplay.content);
+  const sourceOriginal = editable === null ? null : contentValue(editable.sourceOriginal.content);
+  propertyContent.value =
+    effective === null
+      ? nodes
+          .filter(
+            (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+              node.kind === "text",
+          )
+          .map(({ content }) => content)
+          .join("\n")
+      : String(effective);
+  propertyContent.readOnly = editable === null;
+  applyProperty.disabled = editable === null;
+  propertyHelp.textContent =
+    editable === null
+      ? "This element is computed or read-only."
+      : `${humanize(editable.property)} · ${editable.valueType} · edits route through document history.`;
   propertyBounds.textContent = boundsText(nodes);
   propertyProvenance.textContent = provenanceText(representative.provenance);
+  propertySourceOriginal.textContent =
+    sourceOriginal === null ? "Computed" : String(sourceOriginal);
+  propertyEffectiveValue.textContent = effective === null ? "Computed" : String(effective);
   selectionStatus.textContent = `${humanize(semanticId)} · ${nodes.length} scene node${nodes.length === 1 ? "" : "s"}`;
   status.textContent = `Selected ${semanticId}. Canvas, Contents, and Properties synchronized.`;
+}
+
+async function refreshStudioProjection(
+  minimumWorkingRevision: number | null,
+  successStatus: string,
+): Promise<boolean> {
+  const apis = studioApis();
+  if (apis === null) return false;
+  const result = await apis.studio.getProjection({ minimumWorkingRevision });
+  if (!result.accepted) {
+    status.textContent = `Studio scene refresh failed: ${result.code}`;
+    return false;
+  }
+  studioProjection = result.projection;
+  scene = result.projection.scene;
+  page = scene.pages[0]!;
+  renderDiagnostics();
+  if (selectedSemanticId === null) {
+    installSvg();
+    renderTree();
+  } else {
+    select(selectedSemanticId);
+  }
+  updateHistoryControls();
+  sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
+  status.textContent = successStatus;
+  return true;
+}
+
+function replacementContent(
+  editable: EditableValue,
+  raw: string,
+): OverrideRenderContentState | null {
+  if (editable.valueType === "string") {
+    if (
+      editable.property === "lithology-pattern-style" &&
+      !["silt-horizontal-dash", "sand-dot-ring", "gravel-dot-ring"].includes(raw)
+    ) {
+      return null;
+    }
+    return raw.length === 0
+      ? { kind: "empty-string" }
+      : { kind: "value", value: raw, originalRepresentation: raw };
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return null;
+  if (editable.property === "sample-recovery" && (value < 0 || value > 100)) return null;
+  if (
+    editable.property === "description-column-width-mpt" &&
+    (!Number.isSafeInteger(value) || value < 100_000 || value > 175_000)
+  ) {
+    return null;
+  }
+  return value === 0
+    ? { kind: "zero", value: 0, originalRepresentation: raw }
+    : { kind: "value", value, originalRepresentation: raw };
+}
+
+async function applySelectedProperty(): Promise<void> {
+  const apis = studioApis();
+  const editable = selectedSemanticId === null ? null : editableFor(selectedSemanticId);
+  if (apis === null || editable === null || studioProjection === null) return;
+  const replacement = replacementContent(editable, propertyContent.value);
+  if (replacement === null) {
+    status.textContent =
+      editable.property === "sample-recovery"
+        ? "Recovery must be a number from 0 through 100."
+        : editable.property === "description-column-width-mpt"
+          ? "Column width must be an integer from 100000 through 175000 mpt."
+          : editable.property === "lithology-pattern-style"
+            ? "Choose silt-horizontal-dash, sand-dot-ring, or gravel-dot-ring."
+            : "Enter a valid property value.";
+    propertyContent.focus();
+    return;
+  }
+  applyProperty.disabled = true;
+  status.textContent = `Applying ${humanize(editable.property)}…`;
+  const result = await apis.document.setDisplayValue({
+    expectedWorkingRevision: studioProjection.workingRevision,
+    localOverrideIdentity: `urn:rsrender:bld-026:local-override:${editable.sourceFieldIdentity}`,
+    targetSourceFieldIdentity: editable.sourceFieldIdentity,
+    expectedSourceValueDigest: editable.sourceBaselineValueDigest,
+    expectedSourceValueType: editable.sourceOriginal.valueType,
+    expectedSourceUnit: editable.sourceOriginal.unit,
+    replacementContent: replacement,
+    replacementUnit: editable.unit,
+    reason: "Edited in RSrender Boring Log Studio",
+  });
+  if (!result.accepted || result.workingRevision === undefined) {
+    applyProperty.disabled = false;
+    status.textContent = `Property edit rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+    return;
+  }
+  await refreshStudioProjection(
+    result.workingRevision,
+    `${humanize(editable.property)} applied at revision ${result.workingRevision}.`,
+  );
+  propertyContent.focus();
+}
+
+async function navigateHistory(operation: "undo" | "redo"): Promise<void> {
+  const apis = studioApis();
+  if (apis === null || studioProjection === null) return;
+  const result = await apis.document[operation]({
+    expectedWorkingRevision: studioProjection.workingRevision,
+  });
+  if (!result.accepted || result.workingRevision === undefined) {
+    status.textContent = `${humanize(operation)} rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+    return;
+  }
+  await refreshStudioProjection(
+    result.workingRevision,
+    `${humanize(operation)} completed at revision ${result.workingRevision}.`,
+  );
+  (operation === "undo" ? undoButton : redoButton).focus();
 }
 
 function renderDiagnostics(): void {
@@ -241,6 +461,9 @@ element<HTMLButtonElement>("fit-page").addEventListener("click", () => applyZoom
 element<HTMLButtonElement>("validate-document").addEventListener("click", () => {
   status.textContent = `${page.nodes.length} ordered scene nodes validated; ${scene.diagnostics.length} diagnostics visible.`;
 });
+applyProperty.addEventListener("click", () => void applySelectedProperty());
+undoButton.addEventListener("click", () => void navigateHistory("undo"));
+redoButton.addEventListener("click", () => void navigateHistory("redo"));
 
 installSvg();
 renderTree();
@@ -248,3 +471,7 @@ renderDiagnostics();
 applyZoom(80);
 sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
 status.textContent = "Structured boring log scene rendered as semantic SVG.";
+void refreshStudioProjection(
+  null,
+  "Editable structured boring log scene loaded from main authority.",
+);

@@ -103,6 +103,36 @@ export {
 } from "./packaged-semantic-editor-renderer.js";
 export type { PackagedSemanticEditorRendererVerification } from "./packaged-semantic-editor-renderer.js";
 export {
+  boringLogStudioProjectionRevision,
+  resolveBoringLogStudioProjection,
+} from "./boring-log-studio-projection.js";
+export type {
+  BoringLogStudioEditableValue,
+  BoringLogStudioProjection,
+  BoringLogStudioProjectionResult,
+} from "./boring-log-studio-projection.js";
+export {
+  BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  boringLogStudioRouteRevision,
+} from "./boring-log-studio-route-contract.js";
+export { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
+export type {
+  BoringLogStudioRouteBootstrapResult,
+  BoringLogStudioRouteRejectionCode,
+  BoringLogStudioRouteResult,
+} from "./boring-log-studio-route-broker.js";
+export {
+  generateBoringLogStudioPreloadSource,
+  generatedBoringLogStudioPreloadRevision,
+} from "./generated-boring-log-studio-preload.js";
+export {
+  expectedBoringLogStudioPreloadSha256,
+  packagedBoringLogStudioPreloadRelativePath,
+  verifyPackagedBoringLogStudioPreload,
+} from "./packaged-boring-log-studio-preload.js";
+export type { BoringLogStudioPreloadApi } from "./boring-log-studio-preload-runtime.js";
+export {
   BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
   SEMANTIC_EDITOR_SECURITY_PROFILE,

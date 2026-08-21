@@ -616,7 +616,7 @@ test("preload custody, bounded limits, and document security profile are exact",
     maximumStringUtf8Bytes: 16_384,
   });
   assert.deepEqual(DOCUMENT_ROUTE_RESULT_LIMITS, {
-    maximumUtf8Bytes: 1_048_576,
+    maximumUtf8Bytes: 1_310_720,
     maximumDepth: 64,
     maximumNodes: 16_384,
     maximumContainerEntries: 16_384,

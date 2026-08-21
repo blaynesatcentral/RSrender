@@ -974,17 +974,17 @@ export function resolveBoringLogPageScene(
     const resources = {
       visualTokens: prepared.value.job.template.visualTokens,
       textStyles: prepared.value.job.template.styles,
-      patterns: prepared.value.job.document.lithologyIntervals.map((interval) => ({
-        id: interval.patternId,
-        kind: interval.patternId.includes("gravel")
-          ? ("dot-ring" as const)
-          : ("line-hatch" as const),
-        foregroundToken: interval.patternId.includes("blue") ? "selection" : "ink",
-        backgroundToken: interval.patternId.includes("gravel")
-          ? "lithologyGravelFill"
-          : "lithologySiltFill",
-        spacingMpt: asMpt(interval.patternId.includes("gravel") ? 6_000 : 5_000),
-        markSizeMpt: asMpt(interval.patternId.includes("gravel") ? 1_500 : 2_000),
+      patterns: [
+        ...new Set(
+          prepared.value.job.document.lithologyIntervals.map(({ patternId }) => patternId),
+        ),
+      ].map((patternId) => ({
+        id: patternId,
+        kind: patternId.includes("gravel") ? ("dot-ring" as const) : ("line-hatch" as const),
+        foregroundToken: patternId.includes("blue") ? "selection" : "ink",
+        backgroundToken: patternId.includes("gravel") ? "lithologyGravelFill" : "lithologySiltFill",
+        spacingMpt: asMpt(patternId.includes("gravel") ? 6_000 : 5_000),
+        markSizeMpt: asMpt(patternId.includes("gravel") ? 1_500 : 2_000),
         strokeWidthMpt: asMpt(500),
       })),
     };

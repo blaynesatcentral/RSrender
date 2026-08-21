@@ -59,8 +59,8 @@ export function createBoringLogStudioHtml(scene: unknown): string {
         <section id="selection-properties" hidden>
           <div class="selection-card"><span id="selection-role">Page element</span><strong id="selection-name">None</strong><small id="selection-provenance">Computed</small></div>
           <div class="property-group"><h3>Identity</h3><dl><dt>Semantic ID</dt><dd id="property-semantic-id">—</dd><dt>Node role</dt><dd id="property-role">—</dd><dt>Scene nodes</dt><dd id="property-node-count">—</dd></dl></div>
-          <div class="property-group"><h3>Content & geometry</h3><label>Text or value<textarea id="property-content" rows="3" readonly></textarea></label><dl><dt>Bounds</dt><dd id="property-bounds">—</dd></dl></div>
-          <div class="property-group"><h3>Data provenance</h3><p id="property-provenance">—</p></div>
+          <div class="property-group"><h3>Content & geometry</h3><label>Text or value<textarea id="property-content" rows="3" readonly></textarea></label><button id="apply-property" class="apply-property" type="button" disabled>Apply property</button><p id="property-help" class="property-help">Select an editable structured value.</p><dl><dt>Bounds</dt><dd id="property-bounds">—</dd></dl></div>
+          <div class="property-group"><h3>Data provenance</h3><dl><dt>Source</dt><dd id="property-source-original">—</dd><dt>Effective</dt><dd id="property-effective-value">—</dd></dl><p id="property-provenance">—</p></div>
         </section>
         <section class="diagnostics-panel"><h3>Diagnostics</h3><ul id="diagnostics-list"></ul></section>
       </aside>

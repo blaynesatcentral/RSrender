@@ -25,7 +25,7 @@ export const DOCUMENT_ROUTE_INPUT_LIMITS = Object.freeze({
   maximumStringUtf8Bytes: 16_384,
 } as const);
 export const DOCUMENT_ROUTE_RESULT_LIMITS = Object.freeze({
-  maximumUtf8Bytes: 1_048_576,
+  maximumUtf8Bytes: 1_310_720,
   maximumDepth: 64,
   maximumNodes: 16_384,
   maximumContainerEntries: 16_384,

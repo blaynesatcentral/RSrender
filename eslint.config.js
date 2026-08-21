@@ -38,8 +38,11 @@ export default tseslint.config(
     files: ["**/*.mjs", "eslint.config.js"],
     languageOptions: {
       globals: {
+        Buffer: "readonly",
+        URL: "readonly",
         console: "readonly",
         process: "readonly",
+        structuredClone: "readonly",
       },
     },
   },

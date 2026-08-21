@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
+  "currentLockSha256": "125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
   "expectedArtifactDigests": {
-    "spdx": "sha256:caeb7c2eb3c66e5db971a413bd0239369cebc5cd217a06cdc46d456d175c13bf",
-    "custody": "sha256:5986fa7f32fe798fda7cbfa4bbe1ba587502c504cbb7c0962c5441fc7855c6b8",
+    "spdx": "sha256:e7c25151e9448b249a7ee6e8307888387642d287e5dbdf0ca5d9fcc2b6503e15",
+    "custody": "sha256:4a588d43114adba17afdd6ad5f9e7ba0cd8a588c3424533cccb1a4859cc7afd8",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, BLD-024 scene-to-contracts, and BLD-025 renderer-ui-to-contracts",
-    "condition": "effective through BLD-025 only under the product owner's unconditional MVP implementation authorization, the disclosed exact renderer-ui-to-contracts seam, exact qualifying BLD-025 topology evidence, the one newly recorded renderer-ui-to-contracts edge, and this exact lock hash",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, BLD-024 scene-to-contracts, BLD-025 renderer-ui-to-contracts, and BLD-026 layout-host-to-contracts plus platform-electron-main-to-layout-host/scene",
+    "condition": "effective through BLD-026 only under the product owner's unconditional MVP implementation authorization, the disclosed exact renderer-authority seams, exact qualifying BLD-026 topology evidence, the three newly recorded internal edges, and this exact lock hash",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -78,6 +78,20 @@
       "evidenceSha256": "244152865af3a81b641a44220b752e9d738742e959ab8cd7bfab6a6e98e330df",
       "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
       "workspaceEdgesAdded": ["@rsrender/renderer-ui@0.0.0 -> @rsrender/contracts@0.0.0"]
+    },
+    {
+      "ticket": "BLD-026 / GitHub #70",
+      "status": "CLOSED",
+      "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/70#issuecomment-5374943100",
+      "lockSha256": "125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
+      "evidence": "artifacts/bld-026-renderer-authority-topology-evidence.json",
+      "evidenceSha256": "5405b28c64df76c649f58761ac58ff99cbf0232d74a2469dac7b3f94d3d3d175",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/layout-host@0.0.0 -> @rsrender/contracts@0.0.0",
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/layout-host@0.0.0",
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/scene@0.0.0"
+      ]
     }
   ],
   "workspacePackages": [
@@ -105,7 +119,7 @@
     {
       "path": "packages/layout-host",
       "identity": "@rsrender/layout-host@0.0.0",
-      "dependencies": {},
+      "dependencies": { "@rsrender/contracts": "0.0.0" },
       "devDependencies": {},
       "optionalDependencies": {}
     },
@@ -121,7 +135,9 @@
       "identity": "@rsrender/platform-electron-main@0.0.0",
       "dependencies": {
         "@rsrender/application": "0.0.0",
-        "@rsrender/contracts": "0.0.0"
+        "@rsrender/contracts": "0.0.0",
+        "@rsrender/layout-host": "0.0.0",
+        "@rsrender/scene": "0.0.0"
       },
       "devDependencies": {},
       "optionalDependencies": {}

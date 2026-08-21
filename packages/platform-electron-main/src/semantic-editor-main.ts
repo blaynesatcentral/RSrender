@@ -5,7 +5,11 @@ import path from "node:path";
 import { app, BrowserWindow, ipcMain, Menu, protocol, session } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 
-import { createSyntheticOverrideRenderDatasetSession } from "@rsrender/application";
+import {
+  createSyntheticBoringLogOverrideSession,
+  createSyntheticOverrideRenderDatasetSession,
+  type SyntheticBoringLogOverrideSession,
+} from "@rsrender/application";
 
 import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
@@ -17,7 +21,17 @@ import {
   createDocumentRouteBroker,
   type DocumentRouteContext,
 } from "./document-route-broker.js";
+import { resolveBoringLogStudioProjection } from "./boring-log-studio-projection.js";
+import { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
+import {
+  BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+} from "./boring-log-studio-route-contract.js";
 import { DocumentSessionHost } from "./document-session-host.js";
+import {
+  packagedBoringLogStudioPreloadRelativePath,
+  verifyPackagedBoringLogStudioPreload,
+} from "./packaged-boring-log-studio-preload.js";
 import {
   packagedDocumentPreloadRelativePath,
   verifyPackagedDocumentPreload,
@@ -39,6 +53,7 @@ const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
 const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
+const studioEditingMode = globalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__ !== undefined;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT);
 const probeMode = bld021ProbeMode || studioProbeMode;
@@ -58,7 +73,13 @@ const profileRoot =
           studioProbeMode ? STUDIO_PROFILE_ARGUMENT_PREFIX.length : PROFILE_ARGUMENT_PREFIX.length,
         ),
       );
-const preloadPath = path.join(app.getAppPath(), ...packagedDocumentPreloadRelativePath.split("/"));
+const preloadPath = path.join(
+  app.getAppPath(),
+  ...(studioEditingMode
+    ? packagedBoringLogStudioPreloadRelativePath
+    : packagedDocumentPreloadRelativePath
+  ).split("/"),
+);
 const rendererPath = path.join(
   app.getAppPath(),
   ...packagedSemanticEditorRendererRelativePath.split("/"),
@@ -94,7 +115,9 @@ const stylesheetSource = (() => {
     return null;
   }
 })();
-const preloadVerification = verifyPackagedDocumentPreload(preloadBytes);
+const preloadVerification = studioEditingMode
+  ? verifyPackagedBoringLogStudioPreload(preloadBytes)
+  : verifyPackagedDocumentPreload(preloadBytes);
 const rendererVerification = verifyPackagedSemanticEditorRenderer(
   rendererBytes,
   globalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__,
@@ -136,11 +159,14 @@ const handlers = [
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
 ] as const;
 const sessionHost = new DocumentSessionHost();
 let editorWindow: BrowserWindow | null = null;
 let editorSession: Electron.Session | null = null;
 let broker: Broker | null = null;
+let studioBroker: BoringLogStudioRouteBroker | null = null;
 let teardownPromise: Promise<void> | null = null;
 let probeFailure = "UNCLASSIFIED";
 
@@ -591,7 +617,7 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
 async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
   await waitFor(
     window,
-    `document.getElementById("editor-status")?.textContent === "Structured boring log scene rendered as semantic SVG." && document.querySelectorAll("#svg-page > svg").length === 1`,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && ["Structured boring log scene rendered as semantic SVG.", "Editable structured boring log scene loaded from main authority."].includes(document.getElementById("editor-status")?.textContent ?? "")`,
     "WAIT_STUDIO",
   );
   const initial = record(
@@ -650,10 +676,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
   );
   requireProbe(
     typeof selection["semanticId"] === "string" &&
-      (selection["semanticId"] as string).startsWith("lithology:") &&
+      selection["semanticId"].startsWith("lithology:") &&
       typeof selection["role"] === "string" &&
       typeof selection["provenance"] === "string" &&
-      (selection["provenance"] as string).includes("Source original") &&
+      selection["provenance"].includes("Source original") &&
       selection["selectedTreeRows"] === 1 &&
       (selection["selectedSceneNodes"] as number) >= 1,
     "STUDIO_SELECTION_SYNC_INVALID",
@@ -666,13 +692,207 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     )) === true,
     "STUDIO_ZOOM_INVALID",
   );
+  let editing: DataRecord | null = null;
+  if (studioEditingMode) {
+    const before = record(
+      await pageValue(
+        window,
+        `(() => ({
+          documentApi: Object.keys(globalThis.rsrender.document),
+          studioApi: Object.keys(globalThis.rsrenderStudio),
+          readonly: document.getElementById("property-content")?.readOnly,
+          applyDisabled: document.getElementById("apply-property")?.disabled,
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+        }))()`,
+      ),
+    );
+    requireProbe(
+      JSON.stringify(before["documentApi"]) ===
+        '["getProjection","setDisplayValue","undo","redo"]' &&
+        JSON.stringify(before["studioApi"]) === '["getProjection"]' &&
+        before["readonly"] === false &&
+        before["applyDisabled"] === false &&
+        before["source"] === before["effective"],
+      "STUDIO_EDITING_AUTHORITY_INVALID",
+    );
+    const replacement = "Edited in packaged BLD-026 Studio";
+    await typeText(window, "#property-content", replacement);
+    await press(window, "#apply-property", "Space", "FOCUS_STUDIO_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Material Description applied at revision 1." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(replacement)} && document.getElementById("property-provenance")?.textContent?.includes("Effective override") === true && document.getElementById("undo")?.disabled === false`,
+      "WAIT_STUDIO_APPLY",
+    );
+    const applied = record(
+      await pageValue(
+        window,
+        `(() => ({
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+          provenance: document.getElementById("property-provenance")?.textContent,
+          digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
+          selectedSceneNodes: document.querySelectorAll("#svg-page .scene-node.is-selected").length,
+        }))()`,
+      ),
+    );
+    requireProbe(
+      applied["source"] === before["source"] &&
+        applied["effective"] === replacement &&
+        (applied["provenance"] as string).includes("Effective override") &&
+        applied["digest"] !== initial["pageDigest"] &&
+        (applied["selectedSceneNodes"] as number) >= 1,
+      "STUDIO_APPLY_INVALID",
+    );
+    await press(window, "#undo", "Space", "FOCUS_STUDIO_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 2." && document.getElementById("property-effective-value")?.textContent === document.getElementById("property-source-original")?.textContent && document.getElementById("redo")?.disabled === false`,
+      "WAIT_STUDIO_UNDO",
+    );
+    const undo = record(
+      await pageValue(
+        window,
+        `(() => ({
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+          provenance: document.getElementById("property-provenance")?.textContent,
+          digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
+        }))()`,
+      ),
+    );
+    await press(window, "#redo", "Space", "FOCUS_STUDIO_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Redo completed at revision 3." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(replacement)} && document.getElementById("undo")?.disabled === false`,
+      "WAIT_STUDIO_REDO",
+    );
+    const redo = record(
+      await pageValue(
+        window,
+        `(() => ({
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+          provenance: document.getElementById("property-provenance")?.textContent,
+          digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
+          raster: document.querySelectorAll("img,picture,canvas,image").length,
+        }))()`,
+      ),
+    );
+    requireProbe(
+      undo["source"] === before["source"] &&
+        undo["effective"] === before["source"] &&
+        (undo["provenance"] as string).includes("Source original") &&
+        redo["source"] === before["source"] &&
+        redo["effective"] === replacement &&
+        (redo["provenance"] as string).includes("Effective override") &&
+        redo["raster"] === 0,
+      "STUDIO_HISTORY_INVALID",
+    );
+    await press(window, "#undo", "Space", "FOCUS_STUDIO_CLEAR_TEXT_OVERRIDE");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 4."`,
+      "WAIT_STUDIO_CLEAR_TEXT_OVERRIDE",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-lithology"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
+      )) === true,
+      "STUDIO_STYLE_TARGET_INVALID",
+    );
+    const pattern = "gravel-dot-ring";
+    await typeText(window, "#property-content", pattern);
+    await press(window, "#apply-property", "Space", "FOCUS_STUDIO_STYLE_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Lithology Pattern Style applied at revision 5." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(pattern)} && document.querySelector('#svg-page pattern[id=${JSON.stringify(pattern)}]') !== null && [...document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"]')].every((node) => node.getAttribute("fill") === "url(#${pattern})")`,
+      "WAIT_STUDIO_STYLE_APPLY",
+    );
+    const style = record(
+      await pageValue(
+        window,
+        `(() => ({
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+          provenance: document.getElementById("property-provenance")?.textContent,
+          patternedIntervals: document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"][fill="url(#${pattern})"]').length,
+        }))()`,
+      ),
+    );
+    requireProbe(
+      style["source"] === "reference-varied-patterns" &&
+        style["effective"] === pattern &&
+        (style["provenance"] as string).includes("Effective override") &&
+        style["patternedIntervals"] === 3,
+      "STUDIO_STYLE_INVALID",
+    );
+    await press(window, "#undo", "Space", "FOCUS_STUDIO_STYLE_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 6." && document.getElementById("property-effective-value")?.textContent === "reference-varied-patterns"`,
+      "WAIT_STUDIO_STYLE_UNDO",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-description"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
+      )) === true,
+      "STUDIO_LAYOUT_TARGET_INVALID",
+    );
+    const widthMpt = "160000";
+    await typeText(window, "#property-content", widthMpt);
+    await press(window, "#apply-property", "Space", "FOCUS_STUDIO_LAYOUT_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Description Column Width Mpt applied at revision 7." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x") === "263000"`,
+      "WAIT_STUDIO_LAYOUT_APPLY",
+    );
+    const layout = record(
+      await pageValue(
+        window,
+        `(() => ({
+          source: document.getElementById("property-source-original")?.textContent,
+          effective: document.getElementById("property-effective-value")?.textContent,
+          provenance: document.getElementById("property-provenance")?.textContent,
+          width: document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width"),
+          followingX: document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x"),
+        }))()`,
+      ),
+    );
+    requireProbe(
+      layout["source"] === "142000" &&
+        layout["effective"] === widthMpt &&
+        (layout["provenance"] as string).includes("Effective override") &&
+        layout["width"] === widthMpt &&
+        layout["followingX"] === "263000",
+      "STUDIO_LAYOUT_INVALID",
+    );
+    await press(window, "#undo", "Space", "FOCUS_STUDIO_LAYOUT_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 8." && document.getElementById("property-effective-value")?.textContent === "142000" && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === "142000"`,
+      "WAIT_STUDIO_LAYOUT_UNDO",
+    );
+    await press(window, "#redo", "Space", "FOCUS_STUDIO_LAYOUT_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Redo completed at revision 9." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)}`,
+      "WAIT_STUDIO_LAYOUT_REDO",
+    );
+    editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
+  }
   return Object.freeze({
-    schema: "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: studioEditingMode
+      ? "rsrender.bld026.boring-log-editor-probe.v1"
+      : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
     initial,
     selection,
+    editing,
     zoomPercent: 90,
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
@@ -686,6 +906,8 @@ async function teardown(): Promise<void> {
     broker?.invalidate();
     broker?.closeSession();
     broker = null;
+    studioBroker?.invalidate();
+    studioBroker = null;
     sessionHost.close();
     const window = editorWindow;
     editorWindow = null;
@@ -707,7 +929,9 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? "rsrender.bld025.boring-log-studio-probe.v1"
+          ? studioEditingMode
+            ? "rsrender.bld026.boring-log-editor-probe.v1"
+            : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -746,15 +970,31 @@ async function main(): Promise<void> {
   editorSession = electronSession;
   installDenials(electronSession, counters);
   installProtocol(electronSession);
-  const documentIdentity = "urn:rsrender:bld-021:document:semantic-editor-001";
-  const synthetic = createSyntheticOverrideRenderDatasetSession({
-    documentIdentity,
-    ownerGeneration: 1,
-  });
-  if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+  const documentIdentity = studioEditingMode
+    ? "urn:rsrender:bld-026:document:boring-log-studio-001"
+    : "urn:rsrender:bld-021:document:semantic-editor-001";
+  let structuredSession: SyntheticBoringLogOverrideSession | null = null;
+  let service;
+  if (studioEditingMode) {
+    const synthetic = createSyntheticBoringLogOverrideSession({
+      documentIdentity,
+      ownerGeneration: 1,
+      layoutJob: globalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__,
+    });
+    if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+    structuredSession = synthetic.session;
+    service = synthetic.session.service;
+  } else {
+    const synthetic = createSyntheticOverrideRenderDatasetSession({
+      documentIdentity,
+      ownerGeneration: 1,
+    });
+    if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+    service = synthetic.session.service;
+  }
   const hosted = await sessionHost.replace({
     documentIdentity,
-    service: synthetic.session.service,
+    service,
     initialRequestId: "urn:rsrender:bld-021:request:initial-projection",
     clock: probeMode ? () => "2026-08-21T05:00:00.000Z" : () => new Date().toISOString(),
     ownerNonce: randomBytes(32).toString("hex"),
@@ -803,9 +1043,46 @@ async function main(): Promise<void> {
   ipcMain.handle(DOCUMENT_REDO_CHANNEL, (event, input: unknown) =>
     brokerResult.broker.redo(routeContext(window, event), input),
   );
+  if (structuredSession !== null) {
+    const source = structuredSession;
+    let studioQuerySequence = 0;
+    const route = new BoringLogStudioRouteBroker({
+      expectedWindow: window,
+      expectedWebContents: window.webContents,
+      documentIdentity,
+      ownerGeneration: hosted.ownerGeneration,
+      createCapability: () => randomBytes(32).toString("hex"),
+      getProjection: async (minimumWorkingRevision) => {
+        studioQuerySequence += 1;
+        const queried = await hosted.session.getProjection(
+          `urn:rsrender:bld-026:request:studio-scene:${studioQuerySequence}`,
+          { minimumWorkingRevision },
+        );
+        if (!queried.accepted || queried.result.kind !== "render-dataset.projection.result") {
+          return Object.freeze({
+            accepted: false as const,
+            code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
+          });
+        }
+        return resolveBoringLogStudioProjection({
+          layoutJob: source.layoutJob,
+          bindings: source.bindings,
+          dataset: queried.result.projection,
+        });
+      },
+    });
+    studioBroker = route;
+    ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
+      route.bootstrap(routeContext(window, event)),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
+      route.getProjection(routeContext(window, event), input),
+    );
+  }
   const rotate = () => {
     counters.rotation += 1;
     brokerResult.broker.invalidate();
+    studioBroker?.invalidate();
   };
   window.webContents.on("render-process-gone", rotate);
   window.webContents.on("destroyed", rotate);
@@ -859,4 +1136,5 @@ declare global {
   var __RSRENDER_SEMANTIC_EDITOR_HTML__: string;
   var __RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__: string;
   var __RSRENDER_WINDOW_TITLE__: string | undefined;
+  var __RSRENDER_BORING_LOG_LAYOUT_JOB__: unknown;
 }

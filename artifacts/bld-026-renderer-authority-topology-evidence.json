@@ -1,0 +1,23 @@
+{
+  "schema": "rsrender.bld026.renderer-authority-topology-evidence.v1",
+  "ticket": "BLD-026 / GitHub #70",
+  "baseCommit": "7e9863d",
+  "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/70#issuecomment-5374943100",
+  "lockSha256": "125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
+  "workspaceEdgesAdded": [
+    "@rsrender/layout-host@0.0.0 -> @rsrender/contracts@0.0.0",
+    "@rsrender/platform-electron-main@0.0.0 -> @rsrender/layout-host@0.0.0",
+    "@rsrender/platform-electron-main@0.0.0 -> @rsrender/scene@0.0.0"
+  ],
+  "reason": "The Layout Host owns deterministic renderer-neutral text measurement, while the Electron main process composes effective structured data, Layout Host text results, and the scene engine behind the existing capability-bound command authority.",
+  "externalIdentityBaselineCount": 156,
+  "externalDelta": {
+    "added": 0,
+    "removed": 0,
+    "changed": 0
+  },
+  "fontsAdded": 0,
+  "binaryAssetsAdded": 0,
+  "otherWorkspaceEdgesAdded": 0,
+  "result": "ADMITTED"
+}

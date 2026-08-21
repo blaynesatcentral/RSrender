@@ -61,7 +61,7 @@ function exactRecord(input: unknown, fields: readonly string[]): DataRecord | nu
 }
 
 function boundedClone(input: unknown, result: boolean): unknown {
-  const maximumBytes = result ? 1_048_576 : 65_536;
+  const maximumBytes = result ? 1_310_720 : 65_536;
   const maximumDepth = result ? 64 : 32;
   const maximumNodes = result ? 16_384 : 4_096;
   const maximumEntries = result ? 16_384 : 256;

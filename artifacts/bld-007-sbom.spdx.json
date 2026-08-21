@@ -3,7 +3,7 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "RSrender-BLD-007-exact-internal-dependency-snapshot",
-  "documentNamespace": "https://rsrender.invalid/spdx/bld-007/b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
+  "documentNamespace": "https://rsrender.invalid/spdx/bld-007/125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
   "creationInfo": {
     "created": "2026-08-14T00:00:00Z",
     "creators": [
@@ -4243,6 +4243,16 @@
     {
       "spdxElementId": "SPDXRef-Package-6345842887b2575c3485",
       "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-019311f7321f90ebb1cc"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6345842887b2575c3485",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-677144beff6604e52605"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-6345842887b2575c3485",
+      "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
     },
     {
@@ -4254,6 +4264,11 @@
       "spdxElementId": "SPDXRef-Package-6390bf853aed627edd1f",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-Package-2083576c5af805492764"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-677144beff6604e52605",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-8f4b151764845434e70d"
     },
     {
       "spdxElementId": "SPDXRef-Package-6b7fc6e51360fd21bb8c",

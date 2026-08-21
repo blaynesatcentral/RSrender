@@ -309,7 +309,7 @@
   ],
   "inputDigests": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
+    "implementationTopologyLockSha256": "125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
     "admissionSha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
     "authorityPacketSha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "foundationEvidenceSha256": "4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734"
@@ -318,7 +318,7 @@
   "counts": {
     "admittedIdentities": 156,
     "workspacePackageCount": 11,
-    "dependencyEdges": 223,
+    "dependencyEdges": 226,
     "locallyPresentIdentities": 131,
     "platformOptionalAbsentIdentities": 25
   },
@@ -8505,7 +8505,9 @@
     {
       "identity": "@rsrender/layout-host@0.0.0",
       "path": "packages/layout-host",
-      "dependencies": {}
+      "dependencies": {
+        "@rsrender/contracts": "0.0.0"
+      }
     },
     {
       "identity": "@rsrender/package-contract@0.0.0",
@@ -8517,7 +8519,9 @@
       "path": "packages/platform-electron-main",
       "dependencies": {
         "@rsrender/application": "0.0.0",
-        "@rsrender/contracts": "0.0.0"
+        "@rsrender/contracts": "0.0.0",
+        "@rsrender/layout-host": "0.0.0",
+        "@rsrender/scene": "0.0.0"
       }
     },
     {
@@ -8770,12 +8774,24 @@
       "to": "@rsrender/contracts@0.0.0"
     },
     {
+      "from": "@rsrender/layout-host@0.0.0",
+      "to": "@rsrender/contracts@0.0.0"
+    },
+    {
       "from": "@rsrender/platform-electron-main@0.0.0",
       "to": "@rsrender/application@0.0.0"
     },
     {
       "from": "@rsrender/platform-electron-main@0.0.0",
       "to": "@rsrender/contracts@0.0.0"
+    },
+    {
+      "from": "@rsrender/platform-electron-main@0.0.0",
+      "to": "@rsrender/layout-host@0.0.0"
+    },
+    {
+      "from": "@rsrender/platform-electron-main@0.0.0",
+      "to": "@rsrender/scene@0.0.0"
     },
     {
       "from": "@rsrender/renderer-ui@0.0.0",
