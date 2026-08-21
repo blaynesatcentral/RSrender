@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "rsrender.bld-023-evidence.v1",
+  "ticket": "BLD-023 / GitHub #67",
+  "startingCommit": "f9c39d8",
+  "result": "PASS",
+  "evidenceProfile": "EP-PURE / renderer-neutral contract authority",
+  "environment": {
+    "node": "v24.18.1",
+    "npm": "11.16.0",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "platform": "Windows-sanitized"
+  },
+  "acceptedInput": {
+    "schemaVersion": "rsrender.boring-log-layout-job.v1",
+    "fixtureDigest": "sha256:29ffb8de0b85de50ed3403a78a35fc8530dbf3c5d4d41006756fd3ce65aa98b7",
+    "templateDigest": "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775",
+    "physicalUnit": "mpt",
+    "dataTrackAxes": 2,
+    "dataTrackLayers": 3
+  },
+  "contractInventory": {
+    "layoutJob": "rsrender.boring-log-layout-job.v1",
+    "pagePlan": "rsrender.boring-log-page-plan.v1",
+    "resolvedPageScene": "rsrender.resolved-boring-log-page-scene.v1",
+    "sceneNodeKinds": ["group", "rect", "line", "path", "circle", "text"],
+    "textAuthorities": [
+      "measurement request with exact UTF-16 source range",
+      "font face and metrics digests",
+      "fixed logical and ink bounds",
+      "fixed lines, baselines, advances, and overflow outcome"
+    ],
+    "provenanceClasses": ["source", "effective-override-with-source-original"],
+    "rendererSpecificTypes": []
+  },
+  "qualification": {
+    "focusedTests": "7/7 PASS",
+    "wholeRepositoryTests": "267/267 PASS with --test-concurrency=1",
+    "dependencyEnforcement": "PASS; 28/28 drift fixtures",
+    "dependencyAdmission": "PASS; 156/156 exact external identities",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "packageBoundaries": "PASS; 11 packages",
+    "architectureBoundaries": "PASS; 11 packages",
+    "dependencyInventory": "PASS; 156 external packages; 22 workspace entries",
+    "packageInventory": "PASS; 44 outputs"
+  },
+  "negativeOracles": [
+    "non-integer mpt and out-of-page geometry reject",
+    "invalid or discontinuous depth ranges reject",
+    "duplicate semantic, page, region, column, sample, axis, layer, node, or order identities reject",
+    "broken hierarchy, binding, axis, measurement, node, paint-token, and page references reject",
+    "incompatible data-axis quantity and unit pairings reject",
+    "unknown fields and hostile object shapes reject",
+    "image, raster, screenshot, data URL, href, src, and background-image shortcuts reject"
+  ],
+  "retainedFileDigests": {
+    "packages/contracts/src/boring-log-render-contract.ts": "sha256:4e270675733d0a54dba0c7a281cb07a05ab55a53c8e3176e4a70e59a7172b4cb",
+    "packages/contracts/src/index.ts": "sha256:091eb00a1a473ca60b6afb407e36c5ae1f92b45f80e6620f6b9c2faa260ad31a",
+    "tests/bld-023-boring-log-render-contract.test.mjs": "sha256:b5dd26ed95d6a779629780065e9964dc176161e1cdd433d109a9598db51ed366",
+    "artifacts/empty-workspace-package-inventory.json": "sha256:0c4d60fd7462621cb0bf8df85139df32f8cf1038d4cc0d70d59fdfb0e1a3b9c7"
+  },
+  "changeBoundary": {
+    "dependenciesChanged": false,
+    "lockfileChanged": false,
+    "workspaceTopologyChanged": false,
+    "manifestChanged": false,
+    "fontChanged": false,
+    "imageOrBinaryAssetChanged": false,
+    "visualReferencesCommitted": false
+  },
+  "nonclaims": [
+    "not a layout or scene computation implementation",
+    "not an SVG, DOM, PDF, UI, or packaged-workflow implementation",
+    "not visual resemblance, accessibility, performance, representative-data, or release evidence",
+    "not the product-owner MVP"
+  ]
+}
