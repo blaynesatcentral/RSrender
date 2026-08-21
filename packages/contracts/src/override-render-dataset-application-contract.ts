@@ -223,6 +223,7 @@ export interface OverrideRenderValueProjection {
   readonly sourceFieldIdentity: string;
   readonly sourceEntityIdentity: string;
   readonly fieldPath: string;
+  readonly sourceBaselineValueDigest: Sha256Digest;
   readonly sourceOriginal: OverrideRenderDomainValueProjection;
   readonly effectiveDisplay: OverrideRenderDomainValueProjection;
   readonly application:
@@ -1398,6 +1399,7 @@ function parseValueProjection(input: unknown): OverrideRenderValueProjection {
     "sourceFieldIdentity",
     "sourceEntityIdentity",
     "fieldPath",
+    "sourceBaselineValueDigest",
     "sourceOriginal",
     "effectiveDisplay",
     "application",
@@ -1422,11 +1424,29 @@ function parseValueProjection(input: unknown): OverrideRenderValueProjection {
   ) {
     return fail("OVERRIDE_RENDER_CONTRACT_WRONG_TYPE");
   }
+  const sourceOriginal = parseDomainValueProjection(record["sourceOriginal"]);
+  const sourceBaselineValueDigest = sha256Utf8(
+    canonicalizeJson({
+      schema: "rsrender.source-baseline-value.v1",
+      content: sourceOriginal.content,
+      association: sourceOriginal.association,
+      finality: sourceOriginal.finality,
+      eligibility: sourceOriginal.eligibility,
+      unit: sourceOriginal.unit,
+    }),
+  );
+  if (
+    !isSha256Digest(record["sourceBaselineValueDigest"]) ||
+    record["sourceBaselineValueDigest"] !== sourceBaselineValueDigest
+  ) {
+    return fail("OVERRIDE_RENDER_CONTRACT_DIGEST_MISMATCH");
+  }
   return Object.freeze({
     sourceFieldIdentity: readIdentity(record["sourceFieldIdentity"]),
     sourceEntityIdentity: readIdentity(record["sourceEntityIdentity"]),
     fieldPath,
-    sourceOriginal: parseDomainValueProjection(record["sourceOriginal"]),
+    sourceBaselineValueDigest,
+    sourceOriginal,
     effectiveDisplay: parseDomainValueProjection(record["effectiveDisplay"]),
     application: normalizedApplication,
   });
@@ -1768,6 +1788,17 @@ function parseProjection(input: unknown, derivedFields: boolean): OverrideRender
       rawValue["fieldPath"] !== value.fieldPath ||
       value.sourceOriginal.canonicalJson !==
         canonicalizeJson(domainValueBasisFromJson(rawValue["sourceOriginalValue"])) ||
+      value.sourceBaselineValueDigest !==
+        sha256Utf8(
+          canonicalizeJson({
+            schema: "rsrender.source-baseline-value.v1",
+            content: value.sourceOriginal.content,
+            association: value.sourceOriginal.association,
+            finality: value.sourceOriginal.finality,
+            eligibility: value.sourceOriginal.eligibility,
+            unit: value.sourceOriginal.unit,
+          }),
+        ) ||
       value.effectiveDisplay.canonicalJson !==
         canonicalizeJson(domainValueBasisFromJson(rawValue["effectiveDisplayValue"])) ||
       !canonicalEqual(rawValue["application"], value.application)

@@ -17,6 +17,7 @@ import {
   createOverrideRenderDatasetProjection,
   encodeOverrideRenderDatasetCommand,
 } from "../packages/contracts/dist/index.js";
+import { digestSourceBaselineValue } from "../packages/domain/dist/index.js";
 import {
   bld019Capacities,
   makeAggregateForDocument,
@@ -28,6 +29,7 @@ import {
   makeUndo,
   sourceSnapshotEncoding,
 } from "./helpers/bld-019-fixtures.mjs";
+import { bld015ExplorationNameField } from "./helpers/bld-015-fixtures.mjs";
 import {
   makeCollection,
   makeOverride,
@@ -157,6 +159,8 @@ test("initial full-refetch projection is source-original, clean, revision tagged
     result.projection.values.every(
       (value) =>
         value.application.kind === "source" &&
+        /^sha256:[0-9a-f]{64}$/u.test(value.sourceBaselineValueDigest) &&
+        value.sourceBaselineValueDigest !== value.sourceOriginal.digest &&
         value.sourceOriginal.canonicalJson === value.effectiveDisplay.canonicalJson,
     ),
     true,
@@ -167,10 +171,113 @@ test("initial full-refetch projection is source-original, clean, revision tagged
   assert.equal(Object.isFrozen(result.projection), true);
 });
 
+test("projected baseline digest changes with five source axes but ignores source provenance", async () => {
+  const sourceValue = bld015ExplorationNameField.value;
+  const baseline = digestSourceBaselineValue(sourceValue);
+  assert.equal(baseline.accepted, true);
+  const axisVariants = [
+    {
+      ...sourceValue,
+      content: { kind: "value", value: "CHANGED", originalRepresentation: "CHANGED" },
+    },
+    {
+      ...sourceValue,
+      association: { state: "resolved", targetIdentity: "urn:test:bld-019:target" },
+    },
+    { ...sourceValue, finality: { state: "final" } },
+    { ...sourceValue, eligibility: { state: "metadata-only", reasonCodes: ["content"] } },
+    {
+      ...sourceValue,
+      unit: { state: "specified", quantity: "classification", symbol: "text" },
+    },
+  ];
+  for (const variant of axisVariants) {
+    const digest = digestSourceBaselineValue(variant);
+    assert.equal(digest.accepted, true);
+    assert.notEqual(digest.value, baseline.value);
+  }
+  const provenanceOnly = digestSourceBaselineValue({
+    ...sourceValue,
+    provenance: {
+      ...sourceValue.provenance,
+      retrievedAtUtc: "2026-08-20T20:00:00.000Z",
+    },
+  });
+  assert.equal(provenanceOnly.accepted, true);
+  assert.equal(provenanceOnly.value, baseline.value);
+
+  const originalService = makeService();
+  const provenanceRefreshService = makeService({
+    sourceSnapshot: makeRefreshedNameSnapshot({
+      revision: 2,
+      retrievedAtUtc: "2026-08-20T20:01:00.000Z",
+    }),
+  });
+  const contentRefreshService = makeService({
+    sourceSnapshot: makeRefreshedNameSnapshot({
+      revision: 3,
+      content: {
+        kind: "value",
+        value: "SYNTHETIC-EXPLORATION-003",
+        originalRepresentation: "SYNTHETIC-EXPLORATION-003",
+      },
+    }),
+  });
+  const [original, provenanceRefresh, contentRefresh] = await Promise.all([
+    originalService.getProjection(makeQuery({ requestId: "urn:test:bld-019:baseline:original" })),
+    provenanceRefreshService.getProjection(
+      makeQuery({ requestId: "urn:test:bld-019:baseline:provenance" }),
+    ),
+    contentRefreshService.getProjection(
+      makeQuery({ requestId: "urn:test:bld-019:baseline:content" }),
+    ),
+  ]);
+  for (const result of [original, provenanceRefresh, contentRefresh]) {
+    assert.equal(result.kind, "render-dataset.projection.result");
+  }
+  const projectedOriginal = original.projection.values.find(
+    (value) => value.sourceFieldIdentity === bld015ExplorationNameField.sourceFieldIdentity,
+  );
+  const projectedProvenance = provenanceRefresh.projection.values.find(
+    (value) => value.sourceFieldIdentity === bld015ExplorationNameField.sourceFieldIdentity,
+  );
+  const projectedContent = contentRefresh.projection.values.find(
+    (value) => value.sourceFieldIdentity === bld015ExplorationNameField.sourceFieldIdentity,
+  );
+  assert.ok(projectedOriginal && projectedProvenance && projectedContent);
+  assert.equal(
+    projectedOriginal.sourceBaselineValueDigest,
+    projectedProvenance.sourceBaselineValueDigest,
+  );
+  assert.notEqual(
+    projectedOriginal.sourceOriginal.digest,
+    projectedProvenance.sourceOriginal.digest,
+  );
+  assert.notEqual(
+    projectedOriginal.sourceBaselineValueDigest,
+    projectedContent.sourceBaselineValueDigest,
+  );
+});
+
 test("set creates one collection/history/event/revision and retains exact source bytes and provenance", async () => {
   const service = makeService();
   const sourceBefore = sourceSnapshotEncoding();
-  const result = committed(await service.setDisplayValue(makeSetCommand()));
+  const before = await service.getProjection(
+    makeQuery({ requestId: "urn:test:bld-019:query:before-direct-set" }),
+  );
+  assert.equal(before.kind, "render-dataset.projection.result");
+  const projectedValue = before.projection.values.find(
+    (value) => value.sourceOriginal.content.value === "SYNTHETIC-EXPLORATION-001",
+  );
+  assert.ok(projectedValue);
+  const result = committed(
+    await service.setDisplayValue(
+      makeSetCommand({
+        requestId: "urn:test:bld-019:set:from-projected-baseline",
+        projectedValue,
+      }),
+    ),
+  );
   assert.equal(result.operation, "mutation");
   assert.equal(result.previousWorkingRevision, 0);
   assert.equal(result.workingRevision, 1);
@@ -188,6 +295,8 @@ test("set creates one collection/history/event/revision and retains exact source
     (value) => value.sourceFieldIdentity === override.targetSourceFieldIdentity,
   );
   assert.equal(effective.application.kind, "display-value-override");
+  assert.equal(effective.sourceBaselineValueDigest, projectedValue.sourceBaselineValueDigest);
+  assert.equal(override.expectedSourceValueDigest, projectedValue.sourceBaselineValueDigest);
   assert.equal(effective.effectiveDisplay.canonicalJson, override.replacementValue.canonicalJson);
   assert.equal(result.event.projection.projectionDigest, result.projection.projectionDigest);
   assert.deepEqual(sourceSnapshotEncoding(), sourceBefore);
@@ -270,7 +379,7 @@ test("baseline, type, unit, rationale, target, and retarget failures are exact a
         requestId: "urn:test:bld-019:retarget",
         expectedWorkingRevision: 1,
         targetSourceFieldIdentity: otherField.sourceFieldIdentity,
-        expectedSourceValueDigest: otherField.sourceOriginal.digest,
+        expectedSourceValueDigest: otherField.sourceBaselineValueDigest,
         expectedSourceValueType: otherField.sourceOriginal.valueType,
         expectedSourceUnit: otherField.sourceOriginal.unit,
         replacementContent: otherField.sourceOriginal.content,
@@ -428,6 +537,12 @@ test("Undo and Redo each advance revision, restore exact projection, and remain 
   const service = makeService();
   const sourceBefore = sourceSnapshotEncoding();
   const initial = await service.getProjection(makeQuery());
+  const baselineWitness = new Map(
+    initial.projection.values.map((value) => [
+      value.sourceFieldIdentity,
+      value.sourceBaselineValueDigest,
+    ]),
+  );
   const edited = committed(await service.setDisplayValue(makeSetCommand()));
   const editedQuery = await service.getProjection(
     makeQuery({ requestId: "urn:test:bld-019:query:edited" }),
@@ -469,6 +584,15 @@ test("Undo and Redo each advance revision, restore exact projection, and remain 
     redone.projection,
   ]) {
     assertSourceContinuity(projection, sourceBefore);
+    assert.deepEqual(
+      new Map(
+        projection.values.map((value) => [
+          value.sourceFieldIdentity,
+          value.sourceBaselineValueDigest,
+        ]),
+      ),
+      baselineWitness,
+    );
   }
 });
 
@@ -615,6 +739,29 @@ test("projection replica replaces whole validated projections and discards every
     ).reason,
     "INVALID_REPLICA_STATE",
   );
+  const missingBaselineReplicaState = clone(replica.state);
+  delete missingBaselineReplicaState.projection.values[0].sourceBaselineValueDigest;
+  assert.deepEqual(
+    advanceOverrideRenderDatasetProjectionReplica(missingBaselineReplicaState, edit.event),
+    {
+      action: "discard-and-refetch",
+      reason: "INVALID_REPLICA_STATE",
+      discardedState: null,
+    },
+  );
+  const wrongBaselineReplicaState = clone(replica.state);
+  wrongBaselineReplicaState.projection.values[0].sourceBaselineValueDigest = `sha256:${"9".repeat(64)}`;
+  assert.deepEqual(
+    advanceOverrideRenderDatasetProjectionReplica(wrongBaselineReplicaState, edit.event),
+    {
+      action: "discard-and-refetch",
+      reason: "INVALID_REPLICA_STATE",
+      discardedState: null,
+    },
+  );
+  assert.deepEqual(replica.state, originalReplicaState);
+  assert.equal(JSON.stringify(replica.state), originalReplicaStateCanonical);
+  assert.equal(Object.isFrozen(replica.state), true);
 
   const otherDocumentService = makeService({
     aggregate: makeAggregateForDocument("urn:test:bld-019:document:other"),
@@ -722,6 +869,19 @@ test("projection replica replaces whole validated projections and discards every
 test("projection/result codecs reject relation, derived digest, cross-message, and policy-field forgeries", async () => {
   const service = makeService();
   const result = await service.getProjection(makeQuery());
+  assert.equal(result.kind, "render-dataset.projection.result");
+  const projectedValue = result.projection.values.find(
+    (value) => value.sourceOriginal.content.value === "SYNTHETIC-EXPLORATION-001",
+  );
+  assert.ok(projectedValue);
+  const committedResult = committed(
+    await service.setDisplayValue(
+      makeSetCommand({
+        requestId: "urn:test:bld-019:baseline-carrier:set",
+        projectedValue,
+      }),
+    ),
+  );
   const dirty = clone(result);
   dirty.dirty = true;
   assert.equal(decodeOverrideRenderDatasetQueryResult(dirty).accepted, false);
@@ -738,6 +898,35 @@ test("projection/result codecs reject relation, derived digest, cross-message, a
   delete impossiblePath.projectionDigest;
   impossiblePath.values[0].fieldPath = "mapped:/unsafe/../field";
   assert.equal(createOverrideRenderDatasetProjection(impossiblePath).accepted, false);
+  const forgedBaselineProjection = clone(result.projection);
+  delete forgedBaselineProjection.projectionIdentity;
+  delete forgedBaselineProjection.projectionDigest;
+  forgedBaselineProjection.values[0].sourceBaselineValueDigest = `sha256:${"9".repeat(64)}`;
+  assert.equal(createOverrideRenderDatasetProjection(forgedBaselineProjection).accepted, false);
+  const missingBaselineProjection = clone(result.projection);
+  delete missingBaselineProjection.projectionIdentity;
+  delete missingBaselineProjection.projectionDigest;
+  delete missingBaselineProjection.values[0].sourceBaselineValueDigest;
+  assert.equal(createOverrideRenderDatasetProjection(missingBaselineProjection).accepted, false);
+  const forgedBaselineQuery = clone(result);
+  forgedBaselineQuery.projection.values[0].sourceBaselineValueDigest = `sha256:${"9".repeat(64)}`;
+  assert.equal(decodeOverrideRenderDatasetQueryResult(forgedBaselineQuery).accepted, false);
+  const forgedBaselineCommandResult = clone(committedResult);
+  forgedBaselineCommandResult.projection.values[0].sourceBaselineValueDigest = `sha256:${"9".repeat(64)}`;
+  assert.equal(
+    decodeOverrideRenderDatasetCommandResult(forgedBaselineCommandResult).accepted,
+    false,
+  );
+  const forgedBaselineEvent = clone(committedResult.event);
+  forgedBaselineEvent.projection.values[0].sourceBaselineValueDigest = `sha256:${"9".repeat(64)}`;
+  assert.equal(decodeOverrideRenderDatasetEvent(forgedBaselineEvent).accepted, false);
+  const baselineReplica = createOverrideRenderDatasetProjectionReplica(result);
+  assert.equal(baselineReplica.accepted, true);
+  assert.equal(
+    advanceOverrideRenderDatasetProjectionReplica(baselineReplica.state, forgedBaselineEvent)
+      .reason,
+    "UNKNOWN_OR_MALFORMED_EVENT",
+  );
   const policy = clone(result);
   policy.projection.diagnosticFacts = [
     {

@@ -104,6 +104,7 @@ function requireInitializedDomain(result) {
 }
 
 export function makeSetCommand(changes = {}) {
+  const projectedValue = changes.projectedValue;
   const draft = makeOverrideDraft({
     replacementText: changes.replacementText,
     localOverrideIdentity: changes.localOverrideIdentity,
@@ -111,12 +112,23 @@ export function makeSetCommand(changes = {}) {
   });
   const payload = {
     localOverrideIdentity: draft.localOverrideIdentity,
-    targetSourceFieldIdentity: changes.targetSourceFieldIdentity ?? draft.targetSourceFieldIdentity,
-    expectedSourceValueDigest: changes.expectedSourceValueDigest ?? draft.expectedSourceValueDigest,
-    expectedSourceValueType: changes.expectedSourceValueType ?? draft.expectedSourceValueType,
-    expectedSourceUnit: changes.expectedSourceUnit ?? draft.expectedSourceUnit,
+    targetSourceFieldIdentity:
+      changes.targetSourceFieldIdentity ??
+      projectedValue?.sourceFieldIdentity ??
+      draft.targetSourceFieldIdentity,
+    expectedSourceValueDigest:
+      changes.expectedSourceValueDigest ??
+      projectedValue?.sourceBaselineValueDigest ??
+      draft.expectedSourceValueDigest,
+    expectedSourceValueType:
+      changes.expectedSourceValueType ??
+      projectedValue?.sourceOriginal.valueType ??
+      draft.expectedSourceValueType,
+    expectedSourceUnit:
+      changes.expectedSourceUnit ?? projectedValue?.sourceOriginal.unit ?? draft.expectedSourceUnit,
     replacementContent: changes.replacementContent ?? draft.replacementValue.content,
-    replacementUnit: changes.replacementUnit ?? draft.replacementValue.unit,
+    replacementUnit:
+      changes.replacementUnit ?? projectedValue?.sourceOriginal.unit ?? draft.replacementValue.unit,
     reason: changes.reason ?? draft.reason,
     authorIdentity: Object.hasOwn(changes, "authorIdentity")
       ? changes.authorIdentity

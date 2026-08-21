@@ -85,6 +85,19 @@ const workspaceAndAdmissionPaths = [
   "artifacts/bld-007-third-party-notices.txt",
   "artifacts/bld-007-asset-inventory.json",
 ];
+const downstreamSyntheticSessionMarker = "synthetic-override-render-dataset-session";
+if (
+  retainedPaths.some((path) => path.includes(downstreamSyntheticSessionMarker)) ||
+  executedPaths.some((path) => path.includes(downstreamSyntheticSessionMarker)) ||
+  readFileSync("packages/application/src/index.ts", "utf8").includes(
+    downstreamSyntheticSessionMarker,
+  ) ||
+  readFileSync("packages/application/dist/index.js", "utf8").includes(
+    downstreamSyntheticSessionMarker,
+  )
+) {
+  throw new Error("BLD-019 qualification must exclude downstream BLD-020 bootstrap bytes");
+}
 
 function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -132,9 +145,9 @@ const targetedDurationMilliseconds =
   Date.parse(targetedFinishedAtUtc) - Date.parse(targetedStartedAtUtc);
 if (targeted.stderr !== "") throw new Error("BLD-019 targeted suite wrote stderr");
 for (const pattern of [
-  /^ℹ tests 18$/mu,
+  /^ℹ tests 19$/mu,
   /^ℹ suites 0$/mu,
-  /^ℹ pass 18$/mu,
+  /^ℹ pass 19$/mu,
   /^ℹ fail 0$/mu,
   /^ℹ cancelled 0$/mu,
   /^ℹ skipped 0$/mu,
@@ -148,8 +161,8 @@ for (const pattern of [
 const targetedReceipt = Object.freeze({
   result: "PASS",
   exitCode: 0,
-  tests: 18,
-  passed: 18,
+  tests: 19,
+  passed: 19,
   failed: 0,
   startedAtUtc: targetedStartedAtUtc,
   finishedAtUtc: targetedFinishedAtUtc,
@@ -324,6 +337,16 @@ const evidence = {
     refreshExposed: false,
     sourceSnapshotMutationAllowed: false,
     reassemblyCreatesStateOrHistory: false,
+    sourceBaselineValueDigest: {
+      field: "OverrideRenderValueProjection.sourceBaselineValueDigest",
+      schema: "rsrender.source-baseline-value.v1",
+      axes: ["content", "association", "finality", "eligibility", "unit"],
+      excludedAxis: "source provenance",
+      producer: "BLD-017 digestSourceBaselineValue(sourceOriginalValue)",
+      directCommandUse:
+        "The projected field is the exact expectedSourceValueDigest accepted by set-display-value.",
+      carriers: ["projection", "query-result", "command-result", "event", "replica"],
+    },
   },
   oracle: {
     generatorRevision: transcript.generatorRevision,
@@ -357,9 +380,11 @@ const evidence = {
       "malformed and hostile command/query structures",
       "stale revision, replay drift, wrong document/owner, baseline/type/unit/rationale faults",
       "capacity exhaustion and projection replica sequence/generation/base/source mismatches",
+      "omitted and wrong-valid sourceBaselineValueDigest in projection, query result, command result, event, and retained replica-state carriers; invalid retained state is discarded before full refetch",
+      "each of five baseline axes changed independently while source-provenance-only change remained digest-neutral",
     ],
     predeclaredValidityRule:
-      "PASS only when the admitted Node executable/locale/time zone match, the current targeted suite is 18/18/0, every one of three fresh processes completes two identical full repetitions, all six per-seed counters equal 1,000, stderr and failure inventories are empty, and all process digests agree exactly.",
+      "PASS only when the admitted Node executable/locale/time zone match, the current targeted suite is 19/19/0, every one of three fresh processes completes two identical full repetitions, all six per-seed counters equal 1,000, stderr and failure inventories are empty, and all process digests agree exactly.",
     rawArtifactDigests: {
       targetedStdout: targetedReceipt.stdoutSha256,
       targetedStderr: targetedReceipt.stderrSha256,
@@ -465,6 +490,18 @@ const evidence = {
     dependencyAdmissionAndTopology: "PENDING_ROOT_INTEGRATED_GATES",
     boundedEpPureResultIndependentOfPendingGates: true,
   },
+  amendmentIsolation: {
+    supersedesPriorArtifactFileSha256:
+      "8f1152c346ab65cad5cd1c04e67972f54f84ec0b681713b5c3c330a000926b7e",
+    supersedesPriorCanonicalEvidenceDigest:
+      "sha256:f61910a2bf436ce40cab494a98fc7902e93f417d0a3d7bea16facecd509c0867",
+    baselineCommit: "aeddb7d99eef85940f346a8180e68a17be10d2bc",
+    downstreamBld020Retained: false,
+    downstreamBld020Executed: false,
+    downstreamBld020ApplicationIndexExportPresent: false,
+    amendmentPaths:
+      "BLD-019 contract/service/tests/fixtures/property/runner/evidence/doc only; package manifests, lock, topology, and downstream BLD-020 are excluded.",
+  },
   qualifyingFreshRun: {
     result: "PASS",
     startedAtUtc,
@@ -477,7 +514,7 @@ const evidence = {
     exactWork:
       "Each repetition executes full-Snapshot set->query->repeat-query->Undo->query->Redo->query plus 3 seeds x 1,000 substantive public/schema cases for each of six invariants.",
     validity:
-      "Valid only with exact admitted runtime, empty stderr/failure inventories, 18/18 targeted PASS, exact seeds/invariant/key order and counts, two equal repetition digests per process, and one equal process digest across all three processes.",
+      "Valid only with exact admitted runtime, empty stderr/failure inventories, 19/19 targeted PASS, exact seeds/invariant/key order and counts, two equal repetition digests per process, and one equal process digest across all three processes.",
     perProcess: executionReceipts,
   },
   transitiveBindings: {
@@ -541,6 +578,21 @@ const evidence = {
       "BEFORE_AGGREGATE_DIGEST_MISMATCH",
       "SOURCE_SNAPSHOT_CHANGED",
       "UNKNOWN_OR_MALFORMED_EVENT",
+      "SOURCE_BASELINE_DIGEST_OMITTED_PROJECTION",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_PROJECTION",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_QUERY_RESULT",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_COMMAND_RESULT",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_EVENT",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_REPLICA_EVENT",
+      "SOURCE_BASELINE_DIGEST_MISSING_RETAINED_REPLICA_STATE",
+      "SOURCE_BASELINE_DIGEST_WRONG_VALID_RETAINED_REPLICA_STATE",
+    ],
+    amendmentVectorInventory: [
+      "SOURCE_BASELINE_FIVE_AXIS_CHANGE",
+      "SOURCE_BASELINE_PROVENANCE_ONLY_STABLE",
+      "SOURCE_BASELINE_DIRECT_SET_SUCCESS",
+      "SOURCE_BASELINE_SOURCE_OVERRIDE_UNDO_REDO_RETENTION",
+      "SOURCE_SNAPSHOT_CUSTODY_UNCHANGED",
     ],
     classification:
       "Covered fixed rejection/discard classes exercised by this bounded suite; not a claim that every future union member exists or is covered.",

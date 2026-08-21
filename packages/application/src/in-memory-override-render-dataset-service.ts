@@ -27,6 +27,7 @@ import {
   type OverrideRenderEligibilityState,
   type OverrideRenderFinalityState,
   type OverrideRenderUnitState,
+  type OverrideRenderValueProjection,
   type OverrideRenderValueProvenance,
   type OverrideStateProjection,
   type Sha256Digest,
@@ -509,16 +510,27 @@ function projectionFor(
   if (!assembly.assembled) return Object.freeze({ projected: false, code: assembly.code });
   const datasetCanonicalJson = canonicalizeJson(assembly.value);
   const diagnostics = assembly.value.diagnostics.map((fact) => jsonValue(fact));
-  const values = assembly.value.values.map((value) =>
-    Object.freeze({
-      sourceFieldIdentity: value.sourceFieldIdentity,
-      sourceEntityIdentity: value.sourceEntityIdentity,
-      fieldPath: value.fieldPath,
-      sourceOriginal: domainValueProjection(value.sourceOriginalValue),
-      effectiveDisplay: domainValueProjection(value.effectiveDisplayValue),
-      application: value.application,
-    }),
-  );
+  const values: OverrideRenderValueProjection[] = [];
+  for (const value of assembly.value.values) {
+    const sourceBaselineValueDigest = digestSourceBaselineValue(value.sourceOriginalValue);
+    if (!sourceBaselineValueDigest.accepted) {
+      return Object.freeze({
+        projected: false,
+        code: "BLD019_SOURCE_BASELINE_DIGEST_INVALID",
+      });
+    }
+    values.push(
+      Object.freeze({
+        sourceFieldIdentity: value.sourceFieldIdentity,
+        sourceEntityIdentity: value.sourceEntityIdentity,
+        fieldPath: value.fieldPath,
+        sourceBaselineValueDigest: sourceBaselineValueDigest.value,
+        sourceOriginal: domainValueProjection(value.sourceOriginalValue),
+        effectiveDisplay: domainValueProjection(value.effectiveDisplayValue),
+        application: value.application,
+      }),
+    );
+  }
   const created = createOverrideRenderDatasetProjection({
     projectionVersion: 1,
     projectionKind: "render-dataset.projection",

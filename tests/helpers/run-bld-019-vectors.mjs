@@ -71,6 +71,12 @@ function projectionWitness(projection) {
     sourceSnapshotEncodingDigest: projection.sourceSnapshotEncodingDigest,
     sourceContextIdentity: projection.sourceContextIdentity,
     sourceProjectIdentity: projection.sourceProjectIdentity,
+    sourceBaselineValueDigests: projection.values.map((value) =>
+      Object.freeze({
+        sourceFieldIdentity: value.sourceFieldIdentity,
+        sourceBaselineValueDigest: value.sourceBaselineValueDigest,
+      }),
+    ),
     valuesDigest: sha256CanonicalJson(projection.values),
     overridesDigest: sha256CanonicalJson(projection.overrides),
     diagnosticsDigest: projection.diagnosticFactsDigest,
@@ -133,8 +139,15 @@ async function runFixedTranscript() {
   assert.equal(initial.canUndo, false);
   assert.equal(initial.canRedo, false);
   assert.equal(initial.eventSequence, 0);
+  const projectedValue = initial.projection.values.find(
+    (value) => value.sourceOriginal.content.value === "SYNTHETIC-EXPLORATION-001",
+  );
+  assert.ok(projectedValue);
 
-  const setCommand = makeSetCommand({ requestId: "urn:test:bld-019:runner:set" });
+  const setCommand = makeSetCommand({
+    requestId: "urn:test:bld-019:runner:set",
+    projectedValue,
+  });
   const set = requireCommitted(await service.setDisplayValue(setCommand));
   const setQuery = await service.getProjection(
     makeQuery({ requestId: "urn:test:bld-019:runner:set-query" }),
@@ -167,6 +180,16 @@ async function runFixedTranscript() {
     assert.equal(result.projection.sourceSnapshotEncodingDigest, source.digest);
     assert.equal(result.projection.sourceContextIdentity, source.value.sourceContextIdentity);
     assert.equal(result.projection.sourceProjectIdentity, source.value.sourceProjectIdentity);
+    assert.deepEqual(
+      result.projection.values.map((value) => ({
+        sourceFieldIdentity: value.sourceFieldIdentity,
+        sourceBaselineValueDigest: value.sourceBaselineValueDigest,
+      })),
+      initial.projection.values.map((value) => ({
+        sourceFieldIdentity: value.sourceFieldIdentity,
+        sourceBaselineValueDigest: value.sourceBaselineValueDigest,
+      })),
+    );
   }
 
   return Object.freeze({
