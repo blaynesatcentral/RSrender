@@ -32,3 +32,13 @@ export {
   semanticEditorScriptUrl,
   semanticOverrideEditorHtml,
 } from "./semantic-override-editor-route.js";
+export {
+  boringLogSvgProjectionRevision,
+  projectBoringLogSceneToSvg,
+  type BoringLogSvgProjectionResult,
+} from "./boring-log-svg-projection.js";
+export {
+  boringLogStudioScriptUrl,
+  boringLogStudioStylesheetUrl,
+  createBoringLogStudioHtml,
+} from "./boring-log-studio-route.js";

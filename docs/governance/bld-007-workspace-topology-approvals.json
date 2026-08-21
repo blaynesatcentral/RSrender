@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+  "currentLockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
   "expectedArtifactDigests": {
-    "spdx": "sha256:dd2187f7c71c04e85ee540718930977a9d1c6486cbd10e79aa3cd63a90eb2136",
-    "custody": "sha256:b3a87a127cea83e43e39dabf4a0061b3f9bd7ebda3f6882a2fe20444ed7f22cc",
+    "spdx": "sha256:caeb7c2eb3c66e5db971a413bd0239369cebc5cd217a06cdc46d456d175c13bf",
+    "custody": "sha256:5986fa7f32fe798fda7cbfa4bbe1ba587502c504cbb7c0962c5441fc7855c6b8",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, and BLD-024 scene-to-contracts",
-    "condition": "effective for BLD-024 only under the product owner's unconditional MVP implementation authorization, the disclosed exact scene-to-contracts seam, exact qualifying BLD-024 topology evidence, the one recorded scene-to-contracts edge, and this exact lock hash",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, BLD-024 scene-to-contracts, and BLD-025 renderer-ui-to-contracts",
+    "condition": "effective through BLD-025 only under the product owner's unconditional MVP implementation authorization, the disclosed exact renderer-ui-to-contracts seam, exact qualifying BLD-025 topology evidence, the one newly recorded renderer-ui-to-contracts edge, and this exact lock hash",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -57,9 +57,7 @@
       "evidence": "artifacts/bld-013-aggregate-evidence-index-evidence.json",
       "evidenceSha256": "1acdec44b496806ce53dab569428587466310390e43fd91210d5fadb70c741d6",
       "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
-      "workspaceEdgesAdded": [
-        "@rsrender/test-support@0.0.0 -> @rsrender/contracts@0.0.0"
-      ]
+      "workspaceEdgesAdded": ["@rsrender/test-support@0.0.0 -> @rsrender/contracts@0.0.0"]
     },
     {
       "ticket": "BLD-024 / GitHub #68",
@@ -69,9 +67,17 @@
       "evidence": "artifacts/bld-024-scene-contract-topology-evidence.json",
       "evidenceSha256": "30b0747c2810da90bb4a879ce3459625ad4fb6a63394a6e646e6159d80ae01ce",
       "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
-      "workspaceEdgesAdded": [
-        "@rsrender/scene@0.0.0 -> @rsrender/contracts@0.0.0"
-      ]
+      "workspaceEdgesAdded": ["@rsrender/scene@0.0.0 -> @rsrender/contracts@0.0.0"]
+    },
+    {
+      "ticket": "BLD-025 / GitHub #69",
+      "status": "CLOSED",
+      "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/69#issuecomment-5374304227",
+      "lockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
+      "evidence": "artifacts/bld-025-renderer-contract-topology-evidence.json",
+      "evidenceSha256": "244152865af3a81b641a44220b752e9d738742e959ab8cd7bfab6a6e98e330df",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": ["@rsrender/renderer-ui@0.0.0 -> @rsrender/contracts@0.0.0"]
     }
   ],
   "workspacePackages": [
@@ -130,7 +136,7 @@
     {
       "path": "packages/renderer-ui",
       "identity": "@rsrender/renderer-ui@0.0.0",
-      "dependencies": {},
+      "dependencies": { "@rsrender/contracts": "0.0.0" },
       "devDependencies": {},
       "optionalDependencies": {}
     },

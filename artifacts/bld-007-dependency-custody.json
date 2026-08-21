@@ -309,7 +309,7 @@
   ],
   "inputDigests": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+    "implementationTopologyLockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
     "admissionSha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
     "authorityPacketSha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "foundationEvidenceSha256": "4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734"
@@ -318,7 +318,7 @@
   "counts": {
     "admittedIdentities": 156,
     "workspacePackageCount": 11,
-    "dependencyEdges": 222,
+    "dependencyEdges": 223,
     "locallyPresentIdentities": 131,
     "platformOptionalAbsentIdentities": 25
   },
@@ -8528,7 +8528,9 @@
     {
       "identity": "@rsrender/renderer-ui@0.0.0",
       "path": "packages/renderer-ui",
-      "dependencies": {}
+      "dependencies": {
+        "@rsrender/contracts": "0.0.0"
+      }
     },
     {
       "identity": "@rsrender/scene@0.0.0",
@@ -8773,6 +8775,10 @@
     },
     {
       "from": "@rsrender/platform-electron-main@0.0.0",
+      "to": "@rsrender/contracts@0.0.0"
+    },
+    {
+      "from": "@rsrender/renderer-ui@0.0.0",
       "to": "@rsrender/contracts@0.0.0"
     },
     {

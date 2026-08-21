@@ -27,25 +27,43 @@ import {
   verifyPackagedSemanticEditorRenderer,
 } from "./packaged-semantic-editor-renderer.js";
 import {
+  BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
   SEMANTIC_EDITOR_SECURITY_PROFILE,
 } from "./semantic-editor-security-profile.js";
 
 const DOCUMENT_SCHEME = "rsrender-shell";
 const PROBE_ARGUMENT = "--rsrender-bld021-probe";
+const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
+const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
-const probeMode = process.argv.includes(PROBE_ARGUMENT);
-const profileArgument = process.argv.find((value) => value.startsWith(PROFILE_ARGUMENT_PREFIX));
+const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
+const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
+const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT);
+const probeMode = bld021ProbeMode || studioProbeMode;
+const profileArgument = process.argv.find((value) =>
+  value.startsWith(studioProbeMode ? STUDIO_PROFILE_ARGUMENT_PREFIX : PROFILE_ARGUMENT_PREFIX),
+);
 const profileRoot =
   profileArgument === undefined
-    ? path.join(app.getPath("temp"), "rsrender-bld021-semantic-editor-profile")
-    : path.resolve(profileArgument.slice(PROFILE_ARGUMENT_PREFIX.length));
+    ? path.join(
+        app.getPath("temp"),
+        studioProbeMode
+          ? "rsrender-bld025-boring-log-studio-profile"
+          : "rsrender-bld021-semantic-editor-profile",
+      )
+    : path.resolve(
+        profileArgument.slice(
+          studioProbeMode ? STUDIO_PROFILE_ARGUMENT_PREFIX.length : PROFILE_ARGUMENT_PREFIX.length,
+        ),
+      );
 const preloadPath = path.join(app.getAppPath(), ...packagedDocumentPreloadRelativePath.split("/"));
 const rendererPath = path.join(
   app.getAppPath(),
   ...packagedSemanticEditorRendererRelativePath.split("/"),
 );
+const stylesheetPath = path.join(app.getAppPath(), "renderer", "boring-log-studio.css");
 const preloadBytes = (() => {
   try {
     return readFileSync(preloadPath) as Uint8Array;
@@ -69,12 +87,20 @@ const rendererSource = (() => {
     return null;
   }
 })();
+const stylesheetSource = (() => {
+  try {
+    return readFileSync(stylesheetPath, "utf8");
+  } catch {
+    return null;
+  }
+})();
 const preloadVerification = verifyPackagedDocumentPreload(preloadBytes);
 const rendererVerification = verifyPackagedSemanticEditorRenderer(
   rendererBytes,
   globalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__,
 );
 
+app.disableHardwareAcceleration();
 app.setPath("userData", profileRoot);
 app.setPath("sessionData", path.join(profileRoot, "session"));
 protocol.registerSchemesAsPrivileged([
@@ -118,10 +144,11 @@ let broker: Broker | null = null;
 let teardownPromise: Promise<void> | null = null;
 let probeFailure = "UNCLASSIFIED";
 
-function exactRequest(rawUrl: string, method: string): "html" | "script" | null {
+function exactRequest(rawUrl: string, method: string): "html" | "script" | "stylesheet" | null {
   if (method !== "GET") return null;
   if (rawUrl === DOCUMENT_ROUTE_URL) return "html";
   if (rawUrl === SEMANTIC_EDITOR_SCRIPT_URL) return "script";
+  if (rawUrl === BORING_LOG_STUDIO_STYLESHEET_URL && stylesheetSource !== null) return "stylesheet";
   return null;
 }
 
@@ -155,24 +182,31 @@ function installProtocol(electronSession: Electron.Session): void {
         headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
       });
     }
-    return new Response(
-      kind === "html" ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ : rendererSource,
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store",
-          "Content-Security-Policy": SEMANTIC_EDITOR_SECURITY_PROFILE.contentPolicy,
-          "Cross-Origin-Opener-Policy": "same-origin",
-          "Cross-Origin-Resource-Policy": "same-origin",
-          "Content-Type":
-            kind === "html" ? "text/html; charset=utf-8" : "application/javascript; charset=utf-8",
-          "Permissions-Policy":
-            "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
-          "Referrer-Policy": "no-referrer",
-          "X-Content-Type-Options": "nosniff",
-        },
+    const body =
+      kind === "html"
+        ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__
+        : kind === "script"
+          ? rendererSource
+          : stylesheetSource;
+    return new Response(body, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": SEMANTIC_EDITOR_SECURITY_PROFILE.contentPolicy,
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Content-Type":
+          kind === "html"
+            ? "text/html; charset=utf-8"
+            : kind === "script"
+              ? "application/javascript; charset=utf-8"
+              : "text/css; charset=utf-8",
+        "Permissions-Policy":
+          "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
       },
-    );
+    });
   });
 }
 
@@ -202,7 +236,7 @@ function record(input: unknown): DataRecord {
 
 function emitResult(value: unknown): void {
   process.stdout.write(
-    `${RESULT_MARKER}${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}\n`,
+    `${studioProbeMode ? STUDIO_RESULT_MARKER : RESULT_MARKER}${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}\n`,
   );
 }
 
@@ -554,6 +588,97 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
   });
 }
 
+async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
+  await waitFor(
+    window,
+    `document.getElementById("editor-status")?.textContent === "Structured boring log scene rendered as semantic SVG." && document.querySelectorAll("#svg-page > svg").length === 1`,
+    "WAIT_STUDIO",
+  );
+  const initial = record(
+    await pageValue(
+      window,
+      `(() => ({
+        title: document.title,
+        panes: document.querySelectorAll(".contents-pane,.canvas-workspace,.properties-pane").length,
+        svg: document.querySelectorAll("#svg-page > svg").length,
+        sceneNodes: document.querySelectorAll("#svg-page .scene-node").length,
+        semanticElements: new Set([...document.querySelectorAll("#svg-page [data-semantic-id]")].map((node) => node.getAttribute("data-semantic-id"))).size,
+        treeRows: document.querySelectorAll("#contents-tree .tree-row").length,
+        diagnostics: document.querySelectorAll("#diagnostics-list li").length,
+        raster: document.querySelectorAll("img,picture,canvas,image").length,
+        nodeGlobals: [typeof require, typeof process, typeof electron],
+        pageDigest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
+      }))()`,
+    ),
+  );
+  requireProbe(
+    initial["title"] === "RSrender Boring Log Studio" &&
+      initial["panes"] === 3 &&
+      initial["svg"] === 1 &&
+      (initial["sceneNodes"] as number) >= 200 &&
+      (initial["semanticElements"] as number) >= 80 &&
+      (initial["treeRows"] as number) >= 15 &&
+      (initial["diagnostics"] as number) >= 1 &&
+      initial["raster"] === 0 &&
+      JSON.stringify(initial["nodeGlobals"]) === '["undefined","undefined","undefined"]' &&
+      typeof initial["pageDigest"] === "string",
+    "STUDIO_INITIAL_UI_INVALID",
+  );
+  requireProbe(
+    (await pageValue(
+      window,
+      `(() => { const target = document.querySelector('.tree-row[data-semantic-id^="lithology:"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return true; })()`,
+    )) === true,
+    "STUDIO_SELECTION_TARGET_MISSING",
+  );
+  await waitFor(
+    window,
+    `document.getElementById("selection-properties")?.hidden === false && document.getElementById("editor-status")?.textContent?.includes("synchronized") === true`,
+    "WAIT_STUDIO_SELECTION",
+  );
+  const selection = record(
+    await pageValue(
+      window,
+      `(() => ({
+        semanticId: document.getElementById("property-semantic-id")?.textContent,
+        role: document.getElementById("property-role")?.textContent,
+        provenance: document.getElementById("property-provenance")?.textContent,
+        selectedTreeRows: document.querySelectorAll("#contents-tree .tree-row.is-selected").length,
+        selectedSceneNodes: document.querySelectorAll("#svg-page .scene-node.is-selected").length,
+      }))()`,
+    ),
+  );
+  requireProbe(
+    typeof selection["semanticId"] === "string" &&
+      (selection["semanticId"] as string).startsWith("lithology:") &&
+      typeof selection["role"] === "string" &&
+      typeof selection["provenance"] === "string" &&
+      (selection["provenance"] as string).includes("Source original") &&
+      selection["selectedTreeRows"] === 1 &&
+      (selection["selectedSceneNodes"] as number) >= 1,
+    "STUDIO_SELECTION_SYNC_INVALID",
+  );
+  await pageValue(window, `document.getElementById("zoom-in")?.click(); true`);
+  requireProbe(
+    (await pageValue(
+      window,
+      `document.getElementById("zoom-value")?.textContent === "90%" && document.getElementById("page-shadow")?.classList.contains("zoom-90") === true`,
+    )) === true,
+    "STUDIO_ZOOM_INVALID",
+  );
+  return Object.freeze({
+    schema: "rsrender.bld025.boring-log-studio-probe.v1",
+    result: "PASS",
+    electronVersion: process.versions.electron,
+    rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
+    initial,
+    selection,
+    zoomPercent: 90,
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+    securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
+  });
+}
+
 async function teardown(): Promise<void> {
   if (teardownPromise !== null) return teardownPromise;
   teardownPromise = (async () => {
@@ -581,7 +706,9 @@ async function fail(code: string): Promise<void> {
   if (probeMode) {
     emitResult(
       Object.freeze({
-        schema: "rsrender.bld021.semantic-editor-probe.v1",
+        schema: studioProbeMode
+          ? "rsrender.bld025.boring-log-studio-probe.v1"
+          : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
         diagnosticCode: probeFailure,
@@ -638,8 +765,8 @@ async function main(): Promise<void> {
     width: 1180,
     height: 800,
     useContentSize: true,
-    title: "RSrender semantic override editor",
-    backgroundColor: "#ffffff",
+    title: globalThis.__RSRENDER_WINDOW_TITLE__ ?? "RSrender semantic override editor",
+    backgroundColor: "#cbd2d7",
     autoHideMenuBar: true,
     webPreferences: {
       ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
@@ -708,7 +835,9 @@ async function main(): Promise<void> {
   window.on("closed", () => void teardown());
   await window.loadURL(DOCUMENT_ROUTE_URL);
   if (probeMode) {
-    const result = await runProbe(window, counters);
+    const result = studioProbeMode
+      ? await runStudioProbe(window, counters)
+      : await runProbe(window, counters);
     emitResult(result);
     await teardown();
     app.exit(0);
@@ -729,4 +858,5 @@ else {
 declare global {
   var __RSRENDER_SEMANTIC_EDITOR_HTML__: string;
   var __RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__: string;
+  var __RSRENDER_WINDOW_TITLE__: string | undefined;
 }

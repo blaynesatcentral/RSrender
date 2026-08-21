@@ -16,18 +16,18 @@
     "deterministic": true,
     "result": "PASS",
     "artifactDigests": {
-      "spdx": "sha256:dd2187f7c71c04e85ee540718930977a9d1c6486cbd10e79aa3cd63a90eb2136",
-      "custody": "sha256:b3a87a127cea83e43e39dabf4a0061b3f9bd7ebda3f6882a2fe20444ed7f22cc",
+      "spdx": "sha256:caeb7c2eb3c66e5db971a413bd0239369cebc5cd217a06cdc46d456d175c13bf",
+      "custody": "sha256:5986fa7f32fe798fda7cbfa4bbe1ba587502c504cbb7c0962c5441fc7855c6b8",
       "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
       "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
     },
     "identityCount": 156,
-    "dependencyEdgeCount": 222,
+    "dependencyEdgeCount": 223,
     "assetCount": 0
   },
   "baseline": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+    "implementationTopologyLockSha256": "b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
     "implementationTopologyAuthority": "BLD-001 immutable external admission plus reviewed entries in the BLD-007 workspace-topology approval record",
     "admittedExternalIdentityCount": 156,
     "observedExternalIdentityCount": 156,
@@ -870,11 +870,11 @@
     }
   ],
   "sourceDigests": {
-    "package.json": "sha256:d2543a55c3b3f3ee7365ce4e9f3b38ddd26992dd72feaa2a65d871461e3f2bd5",
-    "package-lock.json": "sha256:45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+    "package.json": "sha256:0e756295de9120a33c3edc4730ed5cbf9a81fac68cddbe6308b3e21722f0d80c",
+    "package-lock.json": "sha256:b8d50e320cb929afffc1f8f9d298663129c11fff5607ca95404f96d3736e911f",
     "docs/governance/bld-001-authority-approval-packet.md": "sha256:4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "docs/governance/bld-001-internal-dependency-admission.json": "sha256:52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
-    "docs/governance/bld-007-workspace-topology-approvals.json": "sha256:6ab207e86c2c7d84bd9d4a6d0653f929594f23b50362ada1ab640b0fb73cec95",
+    "docs/governance/bld-007-workspace-topology-approvals.json": "sha256:4ee35426ea111aa3e2db28714f743570fc228e0486f8139d919f0c7511d87f14",
     "docs/planning/evidence/bld-001-foundation-verification.md": "sha256:4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734",
     "tooling/dependency-enforcement-bld007.mjs": "sha256:a07b3f4d0cdc0db304887bf4533b5be808250853e6d8dc05348f2357cfa1c251",
     "tooling/enforce-dependency-admission-bld007.mjs": "sha256:d59f008090945cb927ec4cae8d0f078bde476681e47ed50538bef1edaff93f9f",

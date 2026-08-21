@@ -103,6 +103,7 @@ export {
 } from "./packaged-semantic-editor-renderer.js";
 export type { PackagedSemanticEditorRendererVerification } from "./packaged-semantic-editor-renderer.js";
 export {
+  BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
   SEMANTIC_EDITOR_SECURITY_PROFILE,
   type SemanticEditorSecurityProfile,
