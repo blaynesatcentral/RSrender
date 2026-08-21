@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { app, BrowserWindow, ipcMain, Menu, protocol, session } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 
 import {
@@ -10,6 +10,7 @@ import {
   createSyntheticOverrideRenderDatasetSession,
   type SyntheticBoringLogOverrideSession,
 } from "@rsrender/application";
+import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 
 import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
@@ -22,6 +23,12 @@ import {
   type DocumentRouteContext,
 } from "./document-route-broker.js";
 import { resolveBoringLogStudioProjection } from "./boring-log-studio-projection.js";
+import { publishBoringLogPdf } from "./boring-log-pdf-publication.js";
+import { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
+import {
+  BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
+  BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
+} from "./boring-log-publication-route-contract.js";
 import { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
@@ -47,32 +54,50 @@ import {
 } from "./semantic-editor-security-profile.js";
 
 const DOCUMENT_SCHEME = "rsrender-shell";
+const LAYOUT_HOST_SCHEME = "rsrender-layout";
+const LAYOUT_HOST_URL = "rsrender-layout://publication/index.html";
 const PROBE_ARGUMENT = "--rsrender-bld021-probe";
 const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
+const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
+const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
+const PDF_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld027-output=";
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
 const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
 const studioEditingMode = globalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__ !== undefined;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
-const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT);
+const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT);
+const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode;
 const probeMode = bld021ProbeMode || studioProbeMode;
 const profileArgument = process.argv.find((value) =>
-  value.startsWith(studioProbeMode ? STUDIO_PROFILE_ARGUMENT_PREFIX : PROFILE_ARGUMENT_PREFIX),
+  value.startsWith(
+    pdfProbeMode
+      ? PDF_PROFILE_ARGUMENT_PREFIX
+      : studioProbeMode
+        ? STUDIO_PROFILE_ARGUMENT_PREFIX
+        : PROFILE_ARGUMENT_PREFIX,
+  ),
 );
+const profilePrefix = pdfProbeMode
+  ? PDF_PROFILE_ARGUMENT_PREFIX
+  : studioProbeMode
+    ? STUDIO_PROFILE_ARGUMENT_PREFIX
+    : PROFILE_ARGUMENT_PREFIX;
 const profileRoot =
   profileArgument === undefined
     ? path.join(
         app.getPath("temp"),
-        studioProbeMode
-          ? "rsrender-bld025-boring-log-studio-profile"
-          : "rsrender-bld021-semantic-editor-profile",
+        pdfProbeMode
+          ? "rsrender-bld027-boring-log-pdf-profile"
+          : studioProbeMode
+            ? "rsrender-bld025-boring-log-studio-profile"
+            : "rsrender-bld021-semantic-editor-profile",
       )
-    : path.resolve(
-        profileArgument.slice(
-          studioProbeMode ? STUDIO_PROFILE_ARGUMENT_PREFIX.length : PROFILE_ARGUMENT_PREFIX.length,
-        ),
-      );
+    : path.resolve(profileArgument.slice(profilePrefix.length));
+const pdfProbeOutput = process.argv
+  .find((value) => value.startsWith(PDF_OUTPUT_ARGUMENT_PREFIX))
+  ?.slice(PDF_OUTPUT_ARGUMENT_PREFIX.length);
 const preloadPath = path.join(
   app.getAppPath(),
   ...(studioEditingMode
@@ -137,6 +162,16 @@ protocol.registerSchemesAsPrivileged([
       stream: true,
     },
   },
+  {
+    scheme: LAYOUT_HOST_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: false,
+      corsEnabled: false,
+      stream: true,
+    },
+  },
 ]);
 
 type Broker = Extract<ReturnType<typeof createDocumentRouteBroker>, { accepted: true }>["broker"];
@@ -161,12 +196,15 @@ const handlers = [
   DOCUMENT_REDO_CHANNEL,
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
+  BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
 ] as const;
 const sessionHost = new DocumentSessionHost();
 let editorWindow: BrowserWindow | null = null;
 let editorSession: Electron.Session | null = null;
 let broker: Broker | null = null;
 let studioBroker: BoringLogStudioRouteBroker | null = null;
+let publicationBroker: BoringLogPdfPublicationRouteBroker | null = null;
 let teardownPromise: Promise<void> | null = null;
 let probeFailure = "UNCLASSIFIED";
 
@@ -234,6 +272,93 @@ function installProtocol(electronSession: Electron.Session): void {
       },
     });
   });
+}
+
+async function renderPublicationPdf(
+  projection: BoringLogPublicationProjection,
+): Promise<Uint8Array> {
+  const partition = `rsrender-layout-host-${randomBytes(16).toString("hex")}`;
+  const layoutSession = session.fromPartition(partition, { cache: false });
+  layoutSession.setPermissionCheckHandler(() => false);
+  layoutSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  layoutSession.setDevicePermissionHandler(() => false);
+  layoutSession.on("will-download", (event) => event.preventDefault());
+  layoutSession.webRequest.onBeforeRequest((details, callback) => {
+    callback({ cancel: details.method !== "GET" || details.url !== LAYOUT_HOST_URL });
+  });
+  layoutSession.protocol.handle(LAYOUT_HOST_SCHEME, (request) => {
+    if (request.method !== "GET" || request.url !== LAYOUT_HOST_URL) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+    return new Response(projection.html, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Security-Policy":
+          "default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+        "Content-Type": "text/html; charset=utf-8",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy":
+          "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  });
+  const layoutWindow = new BrowserWindow({
+    show: false,
+    width: 612,
+    height: 792,
+    useContentSize: true,
+    backgroundColor: "#ffffff",
+    autoHideMenuBar: true,
+    webPreferences: {
+      ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
+      partition,
+    },
+  });
+  layoutWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  layoutWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== LAYOUT_HOST_URL) event.preventDefault();
+  });
+  layoutWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
+  try {
+    await layoutWindow.loadURL(LAYOUT_HOST_URL);
+    const state = (await layoutWindow.webContents.executeJavaScript(
+      `(() => ({ sceneDigest: document.querySelector("svg")?.getAttribute("data-scene-digest"), projectionDigest: document.querySelector("svg")?.getAttribute("data-projection-digest"), nodeCount: document.querySelectorAll(".scene-node").length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, title: document.title }))()`,
+      true,
+    )) as Readonly<Record<string, unknown>>;
+    if (
+      state["sceneDigest"] !== projection.manifest.sceneDigest ||
+      state["projectionDigest"] !== projection.projectionDigest ||
+      state["nodeCount"] !== projection.manifest.sceneNodeCount ||
+      state["rasterCount"] !== 0 ||
+      state["title"] !== projection.documentTitle
+    ) {
+      throw new Error("LAYOUT_HOST_PROJECTION_MISMATCH");
+    }
+    const pdf = await layoutWindow.webContents.printToPDF({
+      printBackground: true,
+      preferCSSPageSize: true,
+      generateTaggedPDF: true,
+      generateDocumentOutline: true,
+      displayHeaderFooter: false,
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
+    });
+    await new Promise<void>((resolve) => {
+      layoutWindow.once("closed", resolve);
+      layoutWindow.close();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return pdf;
+  } finally {
+    if (!layoutWindow.isDestroyed()) layoutWindow.destroy();
+    layoutSession.protocol.unhandle(LAYOUT_HOST_SCHEME);
+  }
 }
 
 function routeContext(window: BrowserWindow, event: IpcMainInvokeEvent): DocumentRouteContext {
@@ -883,16 +1008,55 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
   }
+  let publication: DataRecord | null = null;
+  if (pdfProbeMode) {
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => Object.keys(globalThis.rsrenderPublication ?? {}).join(",") === "exportPdf" && document.getElementById("export-pdf")?.disabled === false)()`,
+      )) === true,
+      "PUBLICATION_AUTHORITY_INVALID",
+    );
+    await press(window, "#export-pdf", "Space", "FOCUS_EXPORT_PDF");
+    await waitFor(
+      window,
+      `document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS" && document.getElementById("editor-status")?.textContent?.startsWith("PDF exported and reopened successfully:") === true`,
+      "WAIT_EXPORT_PDF",
+    );
+    publication = record(
+      await pageValue(
+        window,
+        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeId: document.activeElement?.id }; })()`,
+      ),
+    );
+    requireProbe(
+      publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+        publication["destinationPath"] === path.resolve(pdfProbeOutput ?? "") &&
+        typeof publication["pdfDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["pdfDigest"]) &&
+        typeof publication["sceneDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["sceneDigest"]) &&
+        typeof publication["projectionDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["projectionDigest"]) &&
+        typeof publication["pdfBytes"] === "number" &&
+        publication["pdfBytes"] > 1_024 &&
+        publication["activeId"] === "export-pdf",
+      "PUBLICATION_RESULT_INVALID",
+    );
+  }
   return Object.freeze({
-    schema: studioEditingMode
-      ? "rsrender.bld026.boring-log-editor-probe.v1"
-      : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: pdfProbeMode
+      ? "rsrender.bld027.boring-log-pdf-probe.v1"
+      : studioEditingMode
+        ? "rsrender.bld026.boring-log-editor-probe.v1"
+        : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
     initial,
     selection,
     editing,
+    publication,
     zoomPercent: 90,
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
@@ -908,6 +1072,8 @@ async function teardown(): Promise<void> {
     broker = null;
     studioBroker?.invalidate();
     studioBroker = null;
+    publicationBroker?.invalidate();
+    publicationBroker = null;
     sessionHost.close();
     const window = editorWindow;
     editorWindow = null;
@@ -929,9 +1095,11 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? studioEditingMode
-            ? "rsrender.bld026.boring-log-editor-probe.v1"
-            : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? pdfProbeMode
+            ? "rsrender.bld027.boring-log-pdf-probe.v1"
+            : studioEditingMode
+              ? "rsrender.bld026.boring-log-editor-probe.v1"
+              : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -1046,30 +1214,31 @@ async function main(): Promise<void> {
   if (structuredSession !== null) {
     const source = structuredSession;
     let studioQuerySequence = 0;
+    const getStudioProjection = async (minimumWorkingRevision: number | null) => {
+      studioQuerySequence += 1;
+      const queried = await hosted.session.getProjection(
+        `urn:rsrender:bld-026:request:studio-scene:${studioQuerySequence}`,
+        { minimumWorkingRevision },
+      );
+      if (!queried.accepted || queried.result.kind !== "render-dataset.projection.result") {
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
+        });
+      }
+      return resolveBoringLogStudioProjection({
+        layoutJob: source.layoutJob,
+        bindings: source.bindings,
+        dataset: queried.result.projection,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
       documentIdentity,
       ownerGeneration: hosted.ownerGeneration,
       createCapability: () => randomBytes(32).toString("hex"),
-      getProjection: async (minimumWorkingRevision) => {
-        studioQuerySequence += 1;
-        const queried = await hosted.session.getProjection(
-          `urn:rsrender:bld-026:request:studio-scene:${studioQuerySequence}`,
-          { minimumWorkingRevision },
-        );
-        if (!queried.accepted || queried.result.kind !== "render-dataset.projection.result") {
-          return Object.freeze({
-            accepted: false as const,
-            code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
-          });
-        }
-        return resolveBoringLogStudioProjection({
-          layoutJob: source.layoutJob,
-          bindings: source.bindings,
-          dataset: queried.result.projection,
-        });
-      },
+      getProjection: getStudioProjection,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -1078,11 +1247,58 @@ async function main(): Promise<void> {
     ipcMain.handle(BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
       route.getProjection(routeContext(window, event), input),
     );
+    const publicationRoute = new BoringLogPdfPublicationRouteBroker({
+      expectedWindow: window,
+      expectedWebContents: window.webContents,
+      documentIdentity,
+      ownerGeneration: hosted.ownerGeneration,
+      createCapability: () => randomBytes(32).toString("hex"),
+      exportPdf: async ({ expectedWorkingRevision, expectedSceneInputDigest }) => {
+        const current = await getStudioProjection(expectedWorkingRevision);
+        if (
+          !current.accepted ||
+          current.projection.workingRevision !== expectedWorkingRevision ||
+          current.projection.scene.inputDigest !== expectedSceneInputDigest
+        ) {
+          return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
+        }
+        return publishBoringLogPdf({
+          scene: current.projection.scene,
+          workingRevision: current.projection.workingRevision,
+          expectedWorkingRevision,
+          expectedSceneInputDigest,
+          chooseDestination: async () => {
+            if (pdfProbeMode) {
+              return typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0
+                ? path.resolve(pdfProbeOutput)
+                : null;
+            }
+            const selected = await dialog.showSaveDialog(window, {
+              title: "Export boring log PDF - Create New",
+              defaultPath: path.join(app.getPath("documents"), "RSrender-boring-log.pdf"),
+              buttonLabel: "Create PDF",
+              filters: [{ name: "PDF document", extensions: ["pdf"] }],
+              properties: ["createDirectory", "showOverwriteConfirmation"],
+            });
+            return selected.canceled || selected.filePath.length === 0 ? null : selected.filePath;
+          },
+          renderPdf: ({ projection }) => renderPublicationPdf(projection),
+        });
+      },
+    });
+    publicationBroker = publicationRoute;
+    ipcMain.handle(BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL, (event) =>
+      publicationRoute.bootstrap(routeContext(window, event)),
+    );
+    ipcMain.handle(BORING_LOG_PUBLICATION_EXPORT_CHANNEL, (event, input: unknown) =>
+      publicationRoute.exportPdf(routeContext(window, event), input),
+    );
   }
   const rotate = () => {
     counters.rotation += 1;
     brokerResult.broker.invalidate();
     studioBroker?.invalidate();
+    publicationBroker?.invalidate();
   };
   window.webContents.on("render-process-gone", rotate);
   window.webContents.on("destroyed", rotate);

@@ -5,16 +5,16 @@ export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
   "rsrender.boring-log-mvp-template.v1" as const;
 export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
 
-export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r1" as const;
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r2" as const;
 export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r1" as const;
 export const BORING_LOG_MVP_FIXTURE_DIGEST =
-  "sha256:29ffb8de0b85de50ed3403a78a35fc8530dbf3c5d4d41006756fd3ce65aa98b7" as const;
+  "sha256:166ef8a7064274e651a603daa261a76f8e9e43ba060be7887c520442ddc0ee98" as const;
 export const BORING_LOG_MVP_TEMPLATE_DIGEST =
   "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775" as const;
 export const BORING_LOG_MVP_ORACLE_DIGEST =
-  "sha256:5de09ce17a4acdba2496d4b64783f0a537e2a3712416179e8f10fd21707b9782" as const;
+  "sha256:88828d00675c3bf333af09d0c1109640eb6f2c59a6827c7e5afcabb53bb8e58e" as const;
 export const BORING_LOG_MVP_BUNDLE_DIGEST =
-  "sha256:176f1513cd3b621d41400fe0ae745b4029da575c195f53b97a0cbbe83dfbc380" as const;
+  "sha256:90cd5d1a2e36024fb3611a9c3482d2b60de418299558c13d2983fe95fa6c19f1" as const;
 
 const source = (entityId: string, fieldId: string) =>
   Object.freeze({
@@ -52,7 +52,7 @@ const sample = (
 export const boringLogMvpFixture = Object.freeze({
   schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
-  fixtureRevision: 1,
+  fixtureRevision: 2,
   evidenceClass: "synthetic-coverage-only" as const,
   representativeClaimAllowed: false,
   publicationEligibility: "example-dataset-only" as const,
@@ -63,8 +63,8 @@ export const boringLogMvpFixture = Object.freeze({
   }),
   metadata: Object.freeze({
     companyName: "Synthetic Geotechnical Services",
-    documentTitle: "BORING TEST-01",
-    sheetLabel: "SHEET 1 OF 2",
+    documentTitle: "BORING LOG TEST-01",
+    sheetLabel: "SHEET 1 OF 1",
     projectName: "Riverside Mixed-Use Development",
     projectNumber: "SGS-24057",
     location: "Riverview Drive, Dayton, OR",
@@ -274,14 +274,14 @@ export const boringLogMvpFixture = Object.freeze({
     Object.freeze({ id: "legend-groundwater", label: "Groundwater", symbol: "open-down-triangle" }),
   ]),
   notes: Object.freeze([
-    "Elevations referenced to an assumed datum of 100.00 ft.",
-    "Boring location surveyed in the field on 2025-05-14.",
-    "Groundwater was not encountered during drilling to 40.0 ft.",
-    "SPT performed in general accordance with ASTM D1586.",
-    "N is the sum of the last two 6-in. increments.",
-    "Soil classification in general accordance with ASTM D2488.",
-    "Lines between samples represent approximate boundaries; actual transitions may vary.",
-    "This log applies only to the boring at this location and time.",
+    "Elevations use an assumed datum of 100.00 ft.",
+    "Boring location field-surveyed on 2025-05-14.",
+    "No groundwater encountered while drilling to 40.0 ft.",
+    "SPT generally follows ASTM D1586.",
+    "N sums the final two 6-in. increments.",
+    "Soil classification generally follows ASTM D2488.",
+    "Boundaries are approximate; transitions may vary.",
+    "This log applies only at this location and time.",
   ]),
   approval: Object.freeze({
     heading: "REVIEWED & APPROVED",

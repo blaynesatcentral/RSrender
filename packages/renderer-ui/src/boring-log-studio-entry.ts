@@ -50,6 +50,23 @@ type CommandResult = Readonly<{
   readonly workingRevision?: number;
 }>;
 
+type PublicationResult =
+  | Readonly<{ accepted: false; code: string }>
+  | Readonly<{
+      accepted: true;
+      result: Readonly<{
+        code: "EXPORT_VERIFIED_SUCCESS";
+        workingRevision: number;
+        sceneInputDigest: string;
+        sceneDigest: string;
+        projectionDigest: string;
+        pdfDigest: string;
+        pdfBytes: number;
+        pageCount: number;
+        destinationPath: string;
+      }>;
+    }>;
+
 type StudioApis = Readonly<{
   readonly studio: {
     readonly getProjection: (input: {
@@ -64,6 +81,13 @@ type StudioApis = Readonly<{
     readonly undo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
     readonly redo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
   };
+}>;
+
+type PublicationApi = Readonly<{
+  exportPdf: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly expectedSceneInputDigest: string;
+  }) => Promise<PublicationResult>;
 }>;
 
 function element<ElementType extends HTMLElement>(id: string): ElementType {
@@ -178,6 +202,7 @@ const zoomValue = element<HTMLOutputElement>("zoom-value");
 const canvasScale = element<HTMLOutputElement>("canvas-scale");
 const undoButton = element<HTMLButtonElement>("undo");
 const redoButton = element<HTMLButtonElement>("redo");
+const exportPdfButton = element<HTMLButtonElement>("export-pdf");
 let selectedSemanticId: string | null = null;
 let studioProjection: StudioProjection | null = null;
 
@@ -189,6 +214,13 @@ function studioApis(): StudioApis | null {
   return world.rsrender !== undefined && world.rsrenderStudio !== undefined
     ? Object.freeze({ document: world.rsrender.document, studio: world.rsrenderStudio })
     : null;
+}
+
+function publicationApi(): PublicationApi | null {
+  return (
+    (globalThis as typeof globalThis & { readonly rsrenderPublication?: PublicationApi })
+      .rsrenderPublication ?? null
+  );
 }
 
 function contentValue(content: OverrideRenderContentState): string | number | null {
@@ -209,6 +241,7 @@ function editableFor(semanticId: string): EditableValue | null {
 function updateHistoryControls(): void {
   undoButton.disabled = studioProjection?.canUndo !== true;
   redoButton.disabled = studioProjection?.canRedo !== true;
+  exportPdfButton.disabled = studioProjection === null || publicationApi() === null;
 }
 
 function installSvg(): void {
@@ -415,6 +448,37 @@ async function navigateHistory(operation: "undo" | "redo"): Promise<void> {
   (operation === "undo" ? undoButton : redoButton).focus();
 }
 
+async function exportPdf(): Promise<void> {
+  const api = publicationApi();
+  if (api === null || studioProjection === null || exportPdfButton.disabled) return;
+  exportPdfButton.disabled = true;
+  exportPdfButton.removeAttribute("data-result");
+  status.textContent = "Exporting fixed structured scene to PDFâ€¦";
+  const result = await api.exportPdf({
+    expectedWorkingRevision: studioProjection.workingRevision,
+    expectedSceneInputDigest: studioProjection.scene.inputDigest,
+  });
+  if (!result.accepted) {
+    status.textContent =
+      result.code === "EXPORT_CANCELLED"
+        ? "PDF export cancelled; the document is unchanged."
+        : `PDF export failed: ${result.code}`;
+    exportPdfButton.dataset["result"] = result.code;
+    exportPdfButton.disabled = false;
+    exportPdfButton.focus();
+    return;
+  }
+  exportPdfButton.dataset["result"] = result.result.code;
+  exportPdfButton.dataset["destinationPath"] = result.result.destinationPath;
+  exportPdfButton.dataset["pdfDigest"] = result.result.pdfDigest;
+  exportPdfButton.dataset["sceneDigest"] = result.result.sceneDigest;
+  exportPdfButton.dataset["projectionDigest"] = result.result.projectionDigest;
+  exportPdfButton.dataset["pdfBytes"] = String(result.result.pdfBytes);
+  status.textContent = `PDF exported and reopened successfully: ${result.result.destinationPath}`;
+  exportPdfButton.disabled = false;
+  exportPdfButton.focus();
+}
+
 function renderDiagnostics(): void {
   diagnosticsList.replaceChildren();
   diagnosticBadge.textContent = String(scene.diagnostics.length);
@@ -464,6 +528,7 @@ element<HTMLButtonElement>("validate-document").addEventListener("click", () => 
 applyProperty.addEventListener("click", () => void applySelectedProperty());
 undoButton.addEventListener("click", () => void navigateHistory("undo"));
 redoButton.addEventListener("click", () => void navigateHistory("redo"));
+exportPdfButton.addEventListener("click", () => void exportPdf());
 
 installSvg();
 renderTree();

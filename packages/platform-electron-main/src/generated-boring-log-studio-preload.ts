@@ -1,7 +1,7 @@
 import { boringLogStudioPreloadBundleTemplate } from "./boring-log-studio-preload-bundle.js";
 
 export const generatedBoringLogStudioPreloadRevision =
-  "bld-026-generated-studio-preload-v1" as const;
+  "bld-027-generated-studio-publication-preload-v1" as const;
 
 function replaceOne(source: string, placeholder: string, value: number): string {
   const replacement = `Number(${JSON.stringify(String(value))})`;
@@ -14,8 +14,12 @@ function replaceOne(source: string, placeholder: string, value: number): string 
 
 export function generateBoringLogStudioPreloadSource(): string {
   return replaceOne(
-    replaceOne(boringLogStudioPreloadBundleTemplate, "__RSRENDER_INITIAL_SEQUENCE_LITERAL__", 0),
-    "__RSRENDER_STUDIO_INITIAL_SEQUENCE_LITERAL__",
+    replaceOne(
+      replaceOne(boringLogStudioPreloadBundleTemplate, "__RSRENDER_INITIAL_SEQUENCE_LITERAL__", 0),
+      "__RSRENDER_STUDIO_INITIAL_SEQUENCE_LITERAL__",
+      0,
+    ),
+    "__RSRENDER_PUBLICATION_INITIAL_SEQUENCE_LITERAL__",
     0,
   );
 }

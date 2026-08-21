@@ -407,13 +407,13 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   const columnLabels: Readonly<Record<string, string>> = {
     "elevation-ruler": "ELEV.",
     "depth-ruler": "DEPTH",
-    "lithology-pattern": "MATERIAL",
+    "lithology-pattern": "LITH.",
     "material-description": "MATERIAL DESCRIPTION",
     sample: "SAMPLE",
     recovery: "REC.",
-    blows: "BLOWS / 6 in",
+    blows: "BLOWS",
     "n-value": "N",
-    "penetration-moisture-plasticity": "PENETRATION / MOISTURE / PLASTICITY",
+    "penetration-moisture-plasticity": "PENETRATION / WATER / PLASTICITY",
     remarks: "REMARKS",
   };
   for (const column of job.template.columns) {
@@ -644,7 +644,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       `data-axis:${axis.id}`,
       depthGroupId,
       "data-axis-label",
-      `${axis.quantity} (${axis.unit}) ${axis.minimum}–${axis.maximum}`,
+      index === 0
+        ? `N (${axis.unit}) ${axis.minimum}–${axis.maximum}`
+        : `Water content (%) ${axis.minimum}–${axis.maximum}`,
       rect(
         trackColumn.xMpt + index * Math.floor(trackColumn.widthMpt / 2) + 1_000,
         depthBody.yMpt + 13_000,
@@ -794,10 +796,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
 
   const footer = job.template.regions.find(({ role }) => role === "footer")!;
   const footerGroupId = "node:region-footer";
+  const legendColumnOffsetsMpt = [0, 76_000, 152_000, 246_000, 322_000] as const;
   job.document.legend.forEach((item, index) => {
     const column = index % 5;
     const row = Math.floor(index / 5);
-    const x = footer.xMpt + 3_000 + column * 76_000;
+    const x = footer.xMpt + 3_000 + legendColumnOffsetsMpt[column]!;
     const y = footer.yMpt + 3_000 + row * 9_000;
     addCircle(
       `node:legend:${item.id}:symbol`,

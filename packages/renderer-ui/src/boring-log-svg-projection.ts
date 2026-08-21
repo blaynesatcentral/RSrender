@@ -64,10 +64,10 @@ function renderPatterns(scene: ResolvedBoringLogPageScene): string {
       const foreground = tokenPaint(pattern.foregroundToken, tokens, new Set());
       const background = tokenPaint(pattern.backgroundToken, tokens, new Set());
       if (pattern.kind === "line-hatch") {
-        return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect width="100%" height="100%"${attribute("fill", background)}/><path${attribute("d", `M 0 ${pattern.spacingMpt} L ${pattern.spacingMpt} 0`)}${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)} fill="none"/></pattern>`;
+        return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}${attribute("fill", background)}/><path${attribute("d", `M 0 ${pattern.spacingMpt} L ${pattern.spacingMpt} 0`)}${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)} fill="none"/></pattern>`;
       }
       const center = Math.round(pattern.spacingMpt / 2);
-      return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect width="100%" height="100%"${attribute("fill", background)}/><circle${attribute("cx", center)}${attribute("cy", center)}${attribute("r", pattern.markSizeMpt)} fill="none"${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)}/></pattern>`;
+      return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}${attribute("fill", background)}/><circle${attribute("cx", center)}${attribute("cy", center)}${attribute("r", pattern.markSizeMpt)} fill="none"${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)}/></pattern>`;
     })
     .join("");
 }

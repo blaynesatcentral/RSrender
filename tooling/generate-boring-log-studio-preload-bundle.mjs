@@ -43,7 +43,8 @@ export async function buildBoringLogStudioPreloadBundleTemplate() {
   if (
     typeof template !== "string" ||
     template.match(/__RSRENDER_INITIAL_SEQUENCE_LITERAL__/gu)?.length !== 1 ||
-    template.match(/__RSRENDER_STUDIO_INITIAL_SEQUENCE_LITERAL__/gu)?.length !== 1
+    template.match(/__RSRENDER_STUDIO_INITIAL_SEQUENCE_LITERAL__/gu)?.length !== 1 ||
+    template.match(/__RSRENDER_PUBLICATION_INITIAL_SEQUENCE_LITERAL__/gu)?.length !== 1
   ) {
     throw new Error("STUDIO_PRELOAD_BUNDLE_PLACEHOLDER_INVALID");
   }

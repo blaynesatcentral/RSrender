@@ -76,26 +76,26 @@
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.d.ts",
-      "bytes": 362,
-      "sha256": "75d1af1c6ed84bff75a0c59a9bb3b62991d29a426c8bcb683204e0f874e379c2"
+      "bytes": 670,
+      "sha256": "6486c8d67349b4aeba431d5c775b8d4ed9a98c84ccc95b7f990908cf9fd02615"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.d.ts.map",
-      "bytes": 257,
-      "sha256": "f985346995be54207eeee1bfe21aa1782ffc57f30ce53daafee25799602043fb"
+      "bytes": 388,
+      "sha256": "814a7eaaaa05d25b749af0bdf695e6bbd4119cf4d9dd6e640f4485e812ccd718"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.js",
-      "bytes": 269,
-      "sha256": "146534aa9d1d905fddebef362027a83e06ce14f916607b7eaacc698e22734c73"
+      "bytes": 404,
+      "sha256": "92c9e204a64389feabb83c942fcc1fe284dca142d3a2f3242e3234c873adb7c9"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.js.map",
-      "bytes": 215,
-      "sha256": "c7dcabae9245499248f8d758f21ed5f6c59857d142af8331181942a100fb9ec8"
+      "bytes": 274,
+      "sha256": "01591dd6d7edfc078568c21439690d97e48ae962257e6c234acc2ebb3aaaefb7"
     },
     {
       "package": "package-contract",
@@ -124,26 +124,26 @@
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 4840,
-      "sha256": "8c1378755eb5b6002a057989ad2bca5d9fd34f2bdd2c40d700e5f816f2fc53ac"
+      "bytes": 5687,
+      "sha256": "a882dc370499f6a097d68e3a644612b558fcc060343ea098ea8b351068500ef1"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 2337,
-      "sha256": "8998b8b30cf5feef1fa30f65bde43c1154af797a6fcb3fcf0cb9fae201ada9a1"
+      "bytes": 2729,
+      "sha256": "129d88b74770182977fb0b863d747b9abe2fe8ea14a97aba72be62556a915ef8"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js",
-      "bytes": 2959,
-      "sha256": "e47d8b2ab51ec56e8320eed92c3a4523fc4b34d26976f53a4a002d2eaea615b7"
+      "bytes": 3390,
+      "sha256": "3f7ab80c6913e316bc110d163486c47be8512525ec2816409caf5356105215da"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
-      "bytes": 1461,
-      "sha256": "e2acce8f2227529e8b5b508b2d8c79bd4f6fdec043fd837e4559823636e35cc2"
+      "bytes": 1663,
+      "sha256": "dfcba813ff66807f8b8fcdb6138c94d2b29d9cd10a4f27ac0bebb3ac93cda9d0"
     },
     {
       "package": "platform-zipjs",

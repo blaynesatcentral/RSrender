@@ -6,3 +6,13 @@ export {
   measureBoringLogTextRequests,
 } from "./boring-log-text-authority.js";
 export type { BoringLogTextAuthorityResult } from "./boring-log-text-authority.js";
+
+export {
+  boringLogPublicationProjectionRevision,
+  projectBoringLogSceneForPublication,
+} from "./boring-log-publication-projection.js";
+export type {
+  BoringLogPublicationProjection,
+  BoringLogPublicationProjectionManifest,
+  BoringLogPublicationProjectionResult,
+} from "./boring-log-publication-projection.js";

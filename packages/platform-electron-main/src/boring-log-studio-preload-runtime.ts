@@ -4,6 +4,10 @@ import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
+import {
+  BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
+  BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
+} from "./boring-log-publication-route-contract.js";
 import "./document-preload-runtime.js";
 
 declare const require: (name: "electron") => {
@@ -219,6 +223,152 @@ const getProjection = Object.freeze(async function getProjection(input: unknown)
 
 contextBridge.exposeInMainWorld("rsrenderStudio", Object.freeze({ getProjection }));
 
+const publicationUnavailable = Object.freeze({
+  accepted: false,
+  code: "PUBLICATION_ROUTE_UNAVAILABLE",
+});
+
+const publicationBootstrap = ipcRenderer
+  .invoke(BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL)
+  .then((input) => {
+    const record = exactRecord(input, [
+      "accepted",
+      "transportVersion",
+      "generation",
+      "capability",
+      "documentIdentity",
+      "ownerGeneration",
+    ]);
+    if (
+      record === null ||
+      record["accepted"] !== true ||
+      record["transportVersion"] !== 1 ||
+      !isPositiveSafeInteger(record["generation"]) ||
+      typeof record["capability"] !== "string" ||
+      !/^[0-9a-f]{64}$/u.test(record["capability"]) ||
+      typeof record["documentIdentity"] !== "string" ||
+      !isPositiveSafeInteger(record["ownerGeneration"])
+    ) {
+      throw new Error("PUBLICATION_BOOTSTRAP");
+    }
+    return Object.freeze({
+      generation: record["generation"],
+      capability: record["capability"],
+      documentIdentity: record["documentIdentity"],
+      ownerGeneration: record["ownerGeneration"],
+    });
+  })
+  .catch(() => null);
+
+let publicationSequence = Number("__RSRENDER_PUBLICATION_INITIAL_SEQUENCE_LITERAL__");
+let publicationInFlight = false;
+
+const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
+  if (
+    arguments.length !== 1 ||
+    publicationInFlight ||
+    publicationSequence >= Number.MAX_SAFE_INTEGER
+  ) {
+    return publicationUnavailable;
+  }
+  const args = exactRecord(input, ["expectedWorkingRevision", "expectedSceneInputDigest"]);
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    typeof args["expectedSceneInputDigest"] !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/u.test(args["expectedSceneInputDigest"])
+  ) {
+    return publicationUnavailable;
+  }
+  publicationInFlight = true;
+  try {
+    const binding = await publicationBootstrap;
+    if (binding === null) return publicationUnavailable;
+    publicationSequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_PUBLICATION_EXPORT_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence: publicationSequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== publicationSequence
+    ) {
+      return publicationUnavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    const failure = exactRecord(detached, ["accepted", "code"]);
+    if (failure !== null && failure["accepted"] === false && typeof failure["code"] === "string") {
+      return Object.freeze({ accepted: false, code: failure["code"] });
+    }
+    const success = exactRecord(detached, [
+      "accepted",
+      "code",
+      "workingRevision",
+      "sceneInputDigest",
+      "sceneDigest",
+      "projectionDigest",
+      "pdfDigest",
+      "pdfBytes",
+      "pageCount",
+      "pageSizes",
+      "destinationPath",
+      "taggedPdfTarget",
+      "vectorTextTarget",
+    ]);
+    if (
+      success === null ||
+      success["accepted"] !== true ||
+      success["code"] !== "EXPORT_VERIFIED_SUCCESS" ||
+      success["workingRevision"] !== args["expectedWorkingRevision"] ||
+      success["sceneInputDigest"] !== args["expectedSceneInputDigest"] ||
+      typeof success["sceneDigest"] !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/u.test(success["sceneDigest"]) ||
+      typeof success["projectionDigest"] !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/u.test(success["projectionDigest"]) ||
+      typeof success["pdfDigest"] !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/u.test(success["pdfDigest"]) ||
+      !Number.isSafeInteger(success["pdfBytes"]) ||
+      (success["pdfBytes"] as number) < 1 ||
+      success["pageCount"] !== 1 ||
+      !Array.isArray(success["pageSizes"]) ||
+      success["pageSizes"].length !== 1 ||
+      typeof success["destinationPath"] !== "string" ||
+      success["destinationPath"].length < 1 ||
+      success["destinationPath"].length > 1_024 ||
+      success["taggedPdfTarget"] !== true ||
+      success["vectorTextTarget"] !== true
+    ) {
+      return publicationUnavailable;
+    }
+    const size = exactRecord(success["pageSizes"][0], ["widthMpt", "heightMpt"]);
+    if (
+      size === null ||
+      !isPositiveSafeInteger(size["widthMpt"]) ||
+      !isPositiveSafeInteger(size["heightMpt"])
+    ) {
+      return publicationUnavailable;
+    }
+    return Object.freeze({ accepted: true, result: success });
+  } catch {
+    return publicationUnavailable;
+  } finally {
+    publicationInFlight = false;
+  }
+});
+
+contextBridge.exposeInMainWorld("rsrenderPublication", Object.freeze({ exportPdf }));
+
 export interface BoringLogStudioPreloadApi {
   readonly getProjection: (input: { readonly minimumWorkingRevision: number | null }) => Promise<
     | { readonly accepted: false; readonly code: "STUDIO_ROUTE_UNAVAILABLE" }
@@ -226,5 +376,15 @@ export interface BoringLogStudioPreloadApi {
         readonly accepted: true;
         readonly projection: Readonly<Record<string, unknown>>;
       }
+  >;
+}
+
+export interface BoringLogPublicationPreloadApi {
+  readonly exportPdf: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly expectedSceneInputDigest: string;
+  }) => Promise<
+    | { readonly accepted: false; readonly code: string }
+    | { readonly accepted: true; readonly result: Readonly<Record<string, unknown>> }
   >;
 }

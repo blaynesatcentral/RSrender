@@ -131,7 +131,32 @@ export {
   packagedBoringLogStudioPreloadRelativePath,
   verifyPackagedBoringLogStudioPreload,
 } from "./packaged-boring-log-studio-preload.js";
-export type { BoringLogStudioPreloadApi } from "./boring-log-studio-preload-runtime.js";
+export type {
+  BoringLogPublicationPreloadApi,
+  BoringLogStudioPreloadApi,
+} from "./boring-log-studio-preload-runtime.js";
+export {
+  BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
+  BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
+  boringLogPublicationRouteRevision,
+} from "./boring-log-publication-route-contract.js";
+export type { BoringLogPublicationOutcome } from "./boring-log-publication-route-contract.js";
+export { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
+export type {
+  BoringLogPublicationBootstrapResult,
+  BoringLogPublicationRouteRejectionCode,
+  BoringLogPublicationRouteResult,
+} from "./boring-log-publication-route-broker.js";
+export {
+  boringLogPdfPublicationRevision,
+  maximumBoringLogPdfBytes,
+  publishBoringLogPdf,
+  validBoringLogPdfEnvelope,
+} from "./boring-log-pdf-publication.js";
+export type {
+  BoringLogPdfPublicationInput,
+  BoringLogPdfRenderRequest,
+} from "./boring-log-pdf-publication.js";
 export {
   BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
