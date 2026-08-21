@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+  "currentLockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
   "expectedArtifactDigests": {
-    "spdx": "sha256:8b6ed277dfe5ac05dd4cd59c03e9dcc05c310ee495d5d8e12548f369bdf051c6",
-    "custody": "sha256:355c8d3ffe7a2f0db2773807c01288d444878f884db80384b0b19738ac2f5eb7",
+    "spdx": "sha256:dd2187f7c71c04e85ee540718930977a9d1c6486cbd10e79aa3cd63a90eb2136",
+    "custody": "sha256:b3a87a127cea83e43e39dabf4a0061b3f9bd7ebda3f6882a2fe20444ed7f22cc",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, and BLD-013 test-support-to-contracts",
-    "condition": "effective for BLD-013 only under the user's unconditional implementation authorization and explicit current-topology approval, exact qualifying BLD-013 evidence, the one recorded test-support-to-contracts edge, and this exact lock hash",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, and BLD-024 scene-to-contracts",
+    "condition": "effective for BLD-024 only under the product owner's unconditional MVP implementation authorization, the disclosed exact scene-to-contracts seam, exact qualifying BLD-024 topology evidence, the one recorded scene-to-contracts edge, and this exact lock hash",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -59,6 +59,18 @@
       "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
       "workspaceEdgesAdded": [
         "@rsrender/test-support@0.0.0 -> @rsrender/contracts@0.0.0"
+      ]
+    },
+    {
+      "ticket": "BLD-024 / GitHub #68",
+      "status": "CLOSED",
+      "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/68#issuecomment-5373841926",
+      "lockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+      "evidence": "artifacts/bld-024-scene-contract-topology-evidence.json",
+      "evidenceSha256": "30b0747c2810da90bb4a879ce3459625ad4fb6a63394a6e646e6159d80ae01ce",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/scene@0.0.0 -> @rsrender/contracts@0.0.0"
       ]
     }
   ],
@@ -125,7 +137,7 @@
     {
       "path": "packages/scene",
       "identity": "@rsrender/scene@0.0.0",
-      "dependencies": {},
+      "dependencies": { "@rsrender/contracts": "0.0.0" },
       "devDependencies": {},
       "optionalDependencies": {}
     },

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "rsrender.bld-024-evidence.v1",
+  "ticket": "BLD-024 / GitHub #68",
+  "startingCommit": "842c88f",
+  "result": "PASS",
+  "evidenceProfile": "EP-PURE / deterministic renderer-neutral layout and scene",
+  "environment": {
+    "node": "v24.18.1",
+    "npm": "11.16.0",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "platform": "Windows-sanitized"
+  },
+  "frozenInput": {
+    "fixtureDigest": "sha256:29ffb8de0b85de50ed3403a78a35fc8530dbf3c5d4d41006756fd3ce65aa98b7",
+    "templateDigest": "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775"
+  },
+  "normalizedOutput": {
+    "pageCount": 1,
+    "pageWidthMpt": 612000,
+    "pageHeightMpt": 792000,
+    "depthRangeFt": [0, 40],
+    "depthYMpt": [121000, 704000],
+    "textRequestCount": 130,
+    "semanticIdentityCount": 88,
+    "sceneNodeCount": 227,
+    "sceneNodeKinds": ["group", "rect", "line", "path", "circle", "text"],
+    "resolvedPagePlanDigest": "sha256:abe891aa7bf738b2b6ab35c5827817360a2702fa5d791e3ee19dfd670397b7dd",
+    "resolvedSceneDigest": "sha256:e856b7c07b0e76f2d3279d6e17f8c2ac65d60cb6baece853dc43ba45342ca375",
+    "conservativeTestMeasurementDiagnostics": 8
+  },
+  "semanticAccounting": {
+    "lithologyIntervals": "3/3",
+    "lithologyTransitions": "4/4",
+    "samples": "10/10 with label, recovery, blows, and N",
+    "numericPolylinePoints": "17/17 plus two ordered polylines",
+    "numericRangeObservations": "6/6 with both endpoints",
+    "remarks": "7/7",
+    "legendItems": "10/10 with vector symbol and text",
+    "notes": "8/8 retained as source-ranged text requests/nodes",
+    "approvalLines": "4/4"
+  },
+  "qualification": {
+    "focusedTests": "8/8 PASS",
+    "freshProcessRepetitions": "3 processes x 2 repetitions; one exact transcript",
+    "wholeRepositoryTests": "275/275 PASS with --test-concurrency=1",
+    "dependencyEnforcement": "PASS; 28/28 drift fixtures",
+    "dependencyAdmission": "PASS; 156/156 exact external identities",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "packageBoundaries": "PASS; 11 packages",
+    "architectureBoundaries": "PASS; 11 packages",
+    "dependencyInventory": "PASS; 156 external packages; 22 workspace entries",
+    "packageInventory": "PASS; 44 entrypoint outputs"
+  },
+  "topologyAdmission": {
+    "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+    "workspaceEdgeAdded": "@rsrender/scene@0.0.0 -> @rsrender/contracts@0.0.0",
+    "lockSha256": "45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+    "topologyEvidenceSha256": "sha256:30b0747c2810da90bb4a879ce3459625ad4fb6a63394a6e646e6159d80ae01ce",
+    "spdxSha256": "sha256:dd2187f7c71c04e85ee540718930977a9d1c6486cbd10e79aa3cd63a90eb2136",
+    "custodySha256": "sha256:b3a87a127cea83e43e39dabf4a0061b3f9bd7ebda3f6882a2fe20444ed7f22cc"
+  },
+  "retainedFileDigests": {
+    "packages/scene/src/boring-log-layout-engine.ts": "sha256:f34f36f16b224f427d7dd06cb3aa73f21b2b8a110cb1bf8ac860afbb1ae00b68",
+    "packages/scene/src/index.ts": "sha256:d9a704a6d341195df2d73797796cc23a3f1293803c17f87df0a5718951896a25",
+    "packages/scene/package.json": "sha256:aa66a739d9f726f556c5e641dce0569c38e15e1905285b638fcb74461a6b0063",
+    "package-lock.json": "sha256:45541e61b315d9a294723a282ca145bf941ef26b06621875f0949bc79041a620",
+    "tests/bld-024-boring-log-layout-engine.test.mjs": "sha256:c404f13284b52bf6fcbb0af7e25a138031afec2582ed302661c1868fae80f870",
+    "tests/helpers/bld-024-deterministic-text-authority.mjs": "sha256:7f8ec8f1eb5c92f283b1ef4530cf6dad1092b8bb98476e8efbeed09ef6dbd2e4",
+    "tests/helpers/run-bld-024-vectors.mjs": "sha256:cccf7266ecc86c6953420e2ea36dc5852febd026844f44a865b55a286e5fd00a",
+    "artifacts/empty-workspace-package-inventory.json": "sha256:b97476b0b5946444a5594d5c974e99851f8ac6a34d70c623337473b46c84893b"
+  },
+  "changeBoundary": {
+    "externalDependenciesChanged": false,
+    "workspaceTopologyChanged": true,
+    "workspaceTopologyChangeCount": 1,
+    "fontChanged": false,
+    "imageOrBinaryAssetChanged": false,
+    "visualReferencesCommitted": false
+  },
+  "nonclaims": [
+    "the conservative test measurement authority is not an admitted production font or Layout Host implementation",
+    "eight explicit clipped-note outcomes remain under the conservative test metrics and must be resolved or deliberately continued before final visual acceptance",
+    "not SVG, DOM, PDF, interaction, accessibility, performance, packaging-flow, or release evidence",
+    "not the product-owner MVP"
+  ]
+}
