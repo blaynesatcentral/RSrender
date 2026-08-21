@@ -1,0 +1,598 @@
+{
+  "schema": "rsrender.bld020.document-session-route-evidence.v1",
+  "ticket": "BLD-020 / GitHub #64",
+  "result": "PASS",
+  "startedAtUtc": "2026-08-21T04:49:42.263Z",
+  "finishedAtUtc": "2026-08-21T04:52:16.014Z",
+  "environment": {
+    "node": "v24.18.1",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "electron": "43.4.0"
+  },
+  "qualification": {
+    "pureProtocol": "3 fresh processes x 2 identical focused runs",
+    "packagedProtocol": "3 fresh positive sessions plus missing/tampered/wrong-route preload variants",
+    "pure": [
+      {
+        "index": "1.1",
+        "startedAtUtc": "2026-08-21T04:49:42.264Z",
+        "finishedAtUtc": "2026-08-21T04:49:46.102Z",
+        "durationMs": 3838,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1214,
+        "stdoutSha256": "9738376cdbf3acbf7d9825a2083cd11f1fc0e9691f151d9975746611737cf90b",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      },
+      {
+        "index": "1.2",
+        "startedAtUtc": "2026-08-21T04:49:46.102Z",
+        "finishedAtUtc": "2026-08-21T04:49:48.874Z",
+        "durationMs": 2772,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1215,
+        "stdoutSha256": "d9b7a1011d01071f725f968c7e5c84d29d4355d4f46a536e2462aa6d800c1645",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      },
+      {
+        "index": "2.1",
+        "startedAtUtc": "2026-08-21T04:49:48.874Z",
+        "finishedAtUtc": "2026-08-21T04:49:51.950Z",
+        "durationMs": 3076,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1215,
+        "stdoutSha256": "fc1683882a692056f1574082ea51c088d286c674a00f1ef9e886c1a963b84cf3",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      },
+      {
+        "index": "2.2",
+        "startedAtUtc": "2026-08-21T04:49:51.950Z",
+        "finishedAtUtc": "2026-08-21T04:49:54.982Z",
+        "durationMs": 3032,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1214,
+        "stdoutSha256": "6b614e49c2d156fde03a20cd37e4894834a7aef6613bca586be0c8c3ab84c2e4",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      },
+      {
+        "index": "3.1",
+        "startedAtUtc": "2026-08-21T04:49:54.982Z",
+        "finishedAtUtc": "2026-08-21T04:49:57.982Z",
+        "durationMs": 3000,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1212,
+        "stdoutSha256": "3d363ba61498423ef1a0ac1fac1950dbb2c9bbc126ecaa316cbc591390f89bbf",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      },
+      {
+        "index": "3.2",
+        "startedAtUtc": "2026-08-21T04:49:57.983Z",
+        "finishedAtUtc": "2026-08-21T04:50:00.800Z",
+        "durationMs": 2817,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 1213,
+        "stdoutSha256": "1daf767bad47aa64a64a1999a7113efdb9d9a134e4aca32f47eca1e1f437271a",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "repetitions": 2,
+        "fixedTestsPerRepetition": 11
+      }
+    ],
+    "positiveSessions": [
+      {
+        "label": "positive-1",
+        "startedAtUtc": "2026-08-21T04:50:25.862Z",
+        "finishedAtUtc": "2026-08-21T04:50:35.020Z",
+        "durationMs": 9158,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "ownerIdentitySha256": "4deff8bc69d9ff9fde3730999a7732c421d43c9679c3f5576a42253235a296db",
+          "surface": {
+            "root": [
+              "document"
+            ],
+            "document": [
+              "getProjection",
+              "setDisplayValue",
+              "undo",
+              "redo"
+            ],
+            "rootFrozen": true,
+            "documentFrozen": true,
+            "methodFrozen": [
+              true,
+              true,
+              true,
+              true
+            ],
+            "methodArities": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "requireType": "undefined",
+            "processType": "undefined",
+            "electronType": "undefined"
+          },
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "reload": 3
+          },
+          "digests": {
+            "initialDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "setDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "undoDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "redoDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "projection": "sha256:a10ca4c3bc43cb548eda48b51acb11c33d4c5bc7cc5d4ddcfe3b9caa3cc1c7df",
+            "sourceWitness": "e2a93f9c510ee671d5aa09235c3eab1ef2a7a163fe1219c89116b5ef70f3a5ab"
+          },
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 6,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 3,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.document-route-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 3534,
+          "stderrBytes": 0,
+          "stdoutSha256": "fe9e2d032b4ffb4b461c5efd17f824166cc805a18c609077b06378829f1437ed",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "label": "positive-2",
+        "startedAtUtc": "2026-08-21T04:50:36.457Z",
+        "finishedAtUtc": "2026-08-21T04:50:39.868Z",
+        "durationMs": 3411,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "ownerIdentitySha256": "01937b92da19587416b80d753d0998d7673b2d866c62fb6bae2cf935db071597",
+          "surface": {
+            "root": [
+              "document"
+            ],
+            "document": [
+              "getProjection",
+              "setDisplayValue",
+              "undo",
+              "redo"
+            ],
+            "rootFrozen": true,
+            "documentFrozen": true,
+            "methodFrozen": [
+              true,
+              true,
+              true,
+              true
+            ],
+            "methodArities": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "requireType": "undefined",
+            "processType": "undefined",
+            "electronType": "undefined"
+          },
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "reload": 3
+          },
+          "digests": {
+            "initialDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "setDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "undoDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "redoDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "projection": "sha256:a10ca4c3bc43cb548eda48b51acb11c33d4c5bc7cc5d4ddcfe3b9caa3cc1c7df",
+            "sourceWitness": "e2a93f9c510ee671d5aa09235c3eab1ef2a7a163fe1219c89116b5ef70f3a5ab"
+          },
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 6,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 3,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.document-route-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 3534,
+          "stderrBytes": 0,
+          "stdoutSha256": "e385ca7988af8322a7da44c77daf2c704793abe236300c1be18754ec9b6ae2ab",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "label": "positive-3",
+        "startedAtUtc": "2026-08-21T04:50:41.120Z",
+        "finishedAtUtc": "2026-08-21T04:50:44.588Z",
+        "durationMs": 3468,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "ownerIdentitySha256": "7c200ea6fff73f3c29addd8ad86fdb965d752a70bab7d2dbca35db39ecea253d",
+          "surface": {
+            "root": [
+              "document"
+            ],
+            "document": [
+              "getProjection",
+              "setDisplayValue",
+              "undo",
+              "redo"
+            ],
+            "rootFrozen": true,
+            "documentFrozen": true,
+            "methodFrozen": [
+              true,
+              true,
+              true,
+              true
+            ],
+            "methodArities": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "requireType": "undefined",
+            "processType": "undefined",
+            "electronType": "undefined"
+          },
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "reload": 3
+          },
+          "digests": {
+            "initialDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "setDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "undoDataset": "sha256:b43cd8a9210d38c985310fd18015686f851ebc75b1cf20c661583c8e4df2f03c",
+            "redoDataset": "sha256:e8205560a43c9775df8df5e52375dfccd1d905a1624caca9e04e37c04568b117",
+            "projection": "sha256:a10ca4c3bc43cb548eda48b51acb11c33d4c5bc7cc5d4ddcfe3b9caa3cc1c7df",
+            "sourceWitness": "e2a93f9c510ee671d5aa09235c3eab1ef2a7a163fe1219c89116b5ef70f3a5ab"
+          },
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 6,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 3,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.document-route-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 3534,
+          "stderrBytes": 0,
+          "stdoutSha256": "185562bf23e7b3bf42d415e55e3cfe6f532ebcee8042978b1b8ff5c93196247a",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      }
+    ],
+    "negativeSessions": [
+      {
+        "label": "negative-missing",
+        "startedAtUtc": "2026-08-21T04:51:02.508Z",
+        "finishedAtUtc": "2026-08-21T04:51:09.307Z",
+        "durationMs": 6799,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "FAIL",
+          "code": "DOCUMENT_PRELOAD_UNAVAILABLE",
+          "diagnosticCode": "UNCLASSIFIED",
+          "windowCount": 0,
+          "sessionPresent": false
+        },
+        "process": {
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 274,
+          "stderrBytes": 0,
+          "stdoutSha256": "0913f81b8a0d8272e0ab11a5d962f01811644a8dd8cd50b41cbfcb7220fc15f8",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "label": "negative-tampered",
+        "startedAtUtc": "2026-08-21T04:51:34.248Z",
+        "finishedAtUtc": "2026-08-21T04:51:41.553Z",
+        "durationMs": 7305,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "FAIL",
+          "code": "DOCUMENT_PRELOAD_UNAVAILABLE",
+          "diagnosticCode": "UNCLASSIFIED",
+          "windowCount": 0,
+          "sessionPresent": false
+        },
+        "process": {
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 274,
+          "stderrBytes": 0,
+          "stdoutSha256": "0913f81b8a0d8272e0ab11a5d962f01811644a8dd8cd50b41cbfcb7220fc15f8",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "label": "negative-wrong-route",
+        "startedAtUtc": "2026-08-21T04:52:08.288Z",
+        "finishedAtUtc": "2026-08-21T04:52:16.004Z",
+        "durationMs": 7716,
+        "result": {
+          "schema": "rsrender.bld020.packaged-document-route-probe.v1",
+          "result": "FAIL",
+          "code": "DOCUMENT_PRELOAD_UNAVAILABLE",
+          "diagnosticCode": "UNCLASSIFIED",
+          "windowCount": 0,
+          "sessionPresent": false
+        },
+        "process": {
+          "exitCode": 1,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 274,
+          "stderrBytes": 0,
+          "stdoutSha256": "0913f81b8a0d8272e0ab11a5d962f01811644a8dd8cd50b41cbfcb7220fc15f8",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      }
+    ],
+    "normalizedPositiveDigests": [
+      "669a1266ca5667b0556fa022ede335c8c297ec0c3fe24d4776107f83569ca88d",
+      "669a1266ca5667b0556fa022ede335c8c297ec0c3fe24d4776107f83569ca88d",
+      "669a1266ca5667b0556fa022ede335c8c297ec0c3fe24d4776107f83569ca88d"
+    ],
+    "ownerIdentityDigests": [
+      "4deff8bc69d9ff9fde3730999a7732c421d43c9679c3f5576a42253235a296db",
+      "01937b92da19587416b80d753d0998d7673b2d866c62fb6bae2cf935db071597",
+      "7c200ea6fff73f3c29addd8ad86fdb965d752a70bab7d2dbca35db39ecea253d"
+    ],
+    "failures": []
+  },
+  "custody": {
+    "packageLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "packagedExecutableSha256": "bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "packagedAppAsarSha256": "c4bb18f9db6b5dedc15675f09e7d29908f788313dee710fc9b01297ffb6cc6f5",
+    "packagedPreloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+    "sourceSha256": {
+      "package-lock.json": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+      "packages/application/src/synthetic-override-render-dataset-session.ts": "27c4deb79e15b6adaf00a1a58cc04003b2e9441697dfbf90a731b5b7241a8401",
+      "packages/platform-electron-main/src/document-main.ts": "6034ff20b78c23e3c3cc57bd467f76594774af1b5360bdbf913ab4fe6f56f285",
+      "packages/platform-electron-main/src/document-preload-bundle.ts": "0a487bb14f6ccdf69aa6d14f770f2251ba7ad92ea0d29541f964092451a7c7b4",
+      "packages/platform-electron-main/src/document-preload-runtime.ts": "16391d58e293ca397ad971990e9ef21ff61286eb11ef84e9f081c5dee44d503e",
+      "packages/platform-electron-main/src/document-route-broker.ts": "5870922d6f9023350c437b66a265ec6ebf0f7037a3047ff92ffbb42fa2e9ee8b",
+      "packages/platform-electron-main/src/document-route-contract.ts": "1b5129f0488ec8e73f64c23fd0c76d4eda5706fbd0280898610e87cdcee9fd46",
+      "packages/platform-electron-main/src/document-security-profile.ts": "230cff4641cc487ac03eed1a9f5ee8f6c8211f000d29844c4fa8f44a55d00deb",
+      "packages/platform-electron-main/src/document-session-host.ts": "4901ae979b13e2140d75b1ea77041978c3425d57295b59d445abf4174436812b",
+      "packages/platform-electron-main/src/document-session.ts": "9c83ca6733375743f28d469fed351803659354e6d02c52d6ebbdb3be5619581a",
+      "packages/platform-electron-main/src/generated-document-preload.ts": "1f02076ed847a88f3a1976661eabcad044550407be5c838ab569cdaa4945c02b",
+      "packages/platform-electron-main/src/packaged-document-preload.ts": "bbce05baa074a87fef00b4ae226a4ccd75230efe368b82728ff2824bd799a926",
+      "tests/bld-020-document-session-route.test.mjs": "6ec0d7f91da9060d87cc990bc9fefd5c1f3ad7750c5141ad21c6bd1f213a23d2",
+      "tests/bld-020-synthetic-override-render-dataset-session.test.mjs": "119a1c55a6a21f6162b11531736af63516579b169d8c0046d1bbcf8360cd3c15",
+      "tooling/generate-document-preload-bundle.mjs": "60a2f12089eeef4a3e94852811c44edc7ac8550d9fa4e18d3edc12293425ef4f",
+      "tooling/shell-package-bld020.mjs": "97d92d500a5d4e96cbe7cda31c9b6ed1173bcd45f33876a9618676f04e1002ac",
+      "tooling/shell-run-bld020.mjs": "312fc1c9d350e4845f74ff197a076403b0cf722909baf6b4f09037dd6fabcfa2"
+    }
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "capabilityRetained": false,
+    "rawOwnerIdentityRetained": false,
+    "hostPathRetained": false,
+    "stdoutRetained": false,
+    "stderrRetained": false,
+    "clientDataRetained": false,
+    "credentialsRetained": false
+  },
+  "nonclaims": [
+    "No filesystem, Save/Open, package document, source/auth/credential broker, multi-document workflow, generic event bridge, menu/shortcut registry, Canvas/layout/PDF, representative UI, signed release, full P06, or full E01 acceptance.",
+    "Observed Electron fuse bytes are not a fuse-hardening, binary-hardening, distribution, MVP, pilot, or release claim."
+  ]
+}

@@ -83,3 +83,13 @@ export type {
   InMemoryOverrideRenderDatasetServiceCapacities,
   OverrideRenderDatasetServiceInitializationResult,
 } from "./in-memory-override-render-dataset-service.js";
+
+export {
+  createSyntheticOverrideRenderDatasetSession,
+  syntheticOverrideRenderDatasetSessionCapacities,
+  syntheticOverrideRenderDatasetSessionRevision,
+} from "./synthetic-override-render-dataset-session.js";
+export type {
+  SyntheticOverrideRenderDatasetSession,
+  SyntheticOverrideRenderDatasetSessionCreationResult,
+} from "./synthetic-override-render-dataset-session.js";
