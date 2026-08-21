@@ -1,0 +1,732 @@
+import { createHash, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { app, BrowserWindow, ipcMain, Menu, protocol, session } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
+
+import { createSyntheticOverrideRenderDatasetSession } from "@rsrender/application";
+
+import {
+  DOCUMENT_BOOTSTRAP_CHANNEL,
+  DOCUMENT_GET_PROJECTION_CHANNEL,
+  DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_ROUTE_URL,
+  DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
+  DOCUMENT_UNDO_CHANNEL,
+  createDocumentRouteBroker,
+  type DocumentRouteContext,
+} from "./document-route-broker.js";
+import { DocumentSessionHost } from "./document-session-host.js";
+import {
+  packagedDocumentPreloadRelativePath,
+  verifyPackagedDocumentPreload,
+} from "./packaged-document-preload.js";
+import {
+  packagedSemanticEditorRendererRelativePath,
+  verifyPackagedSemanticEditorRenderer,
+} from "./packaged-semantic-editor-renderer.js";
+import {
+  SEMANTIC_EDITOR_SCRIPT_URL,
+  SEMANTIC_EDITOR_SECURITY_PROFILE,
+} from "./semantic-editor-security-profile.js";
+
+const DOCUMENT_SCHEME = "rsrender-shell";
+const PROBE_ARGUMENT = "--rsrender-bld021-probe";
+const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
+const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
+const probeMode = process.argv.includes(PROBE_ARGUMENT);
+const profileArgument = process.argv.find((value) => value.startsWith(PROFILE_ARGUMENT_PREFIX));
+const profileRoot =
+  profileArgument === undefined
+    ? path.join(app.getPath("temp"), "rsrender-bld021-semantic-editor-profile")
+    : path.resolve(profileArgument.slice(PROFILE_ARGUMENT_PREFIX.length));
+const preloadPath = path.join(app.getAppPath(), ...packagedDocumentPreloadRelativePath.split("/"));
+const rendererPath = path.join(
+  app.getAppPath(),
+  ...packagedSemanticEditorRendererRelativePath.split("/"),
+);
+const preloadBytes = (() => {
+  try {
+    return readFileSync(preloadPath) as Uint8Array;
+  } catch {
+    return null;
+  }
+})();
+const rendererBytes = (() => {
+  try {
+    return readFileSync(rendererPath) as Uint8Array;
+  } catch {
+    return null;
+  }
+})();
+const rendererSource = (() => {
+  try {
+    return rendererBytes === null
+      ? null
+      : new TextDecoder("utf-8", { fatal: true }).decode(rendererBytes);
+  } catch {
+    return null;
+  }
+})();
+const preloadVerification = verifyPackagedDocumentPreload(preloadBytes);
+const rendererVerification = verifyPackagedSemanticEditorRenderer(
+  rendererBytes,
+  globalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__,
+);
+
+app.setPath("userData", profileRoot);
+app.setPath("sessionData", path.join(profileRoot, "session"));
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: DOCUMENT_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: false,
+      corsEnabled: false,
+      stream: true,
+    },
+  },
+]);
+
+type Broker = Extract<ReturnType<typeof createDocumentRouteBroker>, { accepted: true }>["broker"];
+type DataRecord = Readonly<Record<string, unknown>>;
+type Counters = {
+  navigation: number;
+  popup: number;
+  permissionCheck: number;
+  permissionRequest: number;
+  download: number;
+  webview: number;
+  network: number;
+  certificate: number;
+  rotation: number;
+};
+
+const handlers = [
+  DOCUMENT_BOOTSTRAP_CHANNEL,
+  DOCUMENT_GET_PROJECTION_CHANNEL,
+  DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
+  DOCUMENT_UNDO_CHANNEL,
+  DOCUMENT_REDO_CHANNEL,
+] as const;
+const sessionHost = new DocumentSessionHost();
+let editorWindow: BrowserWindow | null = null;
+let editorSession: Electron.Session | null = null;
+let broker: Broker | null = null;
+let teardownPromise: Promise<void> | null = null;
+let probeFailure = "UNCLASSIFIED";
+
+function exactRequest(rawUrl: string, method: string): "html" | "script" | null {
+  if (method !== "GET") return null;
+  if (rawUrl === DOCUMENT_ROUTE_URL) return "html";
+  if (rawUrl === SEMANTIC_EDITOR_SCRIPT_URL) return "script";
+  return null;
+}
+
+function installDenials(electronSession: Electron.Session, counters: Counters): void {
+  electronSession.setPermissionCheckHandler(() => {
+    counters.permissionCheck += 1;
+    return false;
+  });
+  electronSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+    counters.permissionRequest += 1;
+    callback(false);
+  });
+  electronSession.setDevicePermissionHandler(() => false);
+  electronSession.on("will-download", (event) => {
+    counters.download += 1;
+    event.preventDefault();
+  });
+  electronSession.webRequest.onBeforeRequest((details, callback) => {
+    const allowed = exactRequest(details.url, details.method) !== null;
+    if (!allowed) counters.network += 1;
+    callback({ cancel: !allowed });
+  });
+}
+
+function installProtocol(electronSession: Electron.Session): void {
+  electronSession.protocol.handle(DOCUMENT_SCHEME, (request) => {
+    const kind = exactRequest(request.url, request.method);
+    if (kind === null) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+    return new Response(
+      kind === "html" ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ : rendererSource,
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Security-Policy": SEMANTIC_EDITOR_SECURITY_PROFILE.contentPolicy,
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Content-Type":
+            kind === "html" ? "text/html; charset=utf-8" : "application/javascript; charset=utf-8",
+          "Permissions-Policy":
+            "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+          "Referrer-Policy": "no-referrer",
+          "X-Content-Type-Options": "nosniff",
+        },
+      },
+    );
+  });
+}
+
+function routeContext(window: BrowserWindow, event: IpcMainInvokeEvent): DocumentRouteContext {
+  return Object.freeze({
+    window: BrowserWindow.fromWebContents(event.sender),
+    webContents: event.sender,
+    frame: event.senderFrame,
+    mainFrame: event.sender.mainFrame,
+    url: event.senderFrame?.url ?? "",
+    windowLive: !window.isDestroyed(),
+    webContentsLive: !event.sender.isDestroyed(),
+  });
+}
+
+function requireProbe(condition: unknown, code: string): asserts condition {
+  if (!condition) {
+    probeFailure = code;
+    throw new Error(code);
+  }
+}
+
+function record(input: unknown): DataRecord {
+  requireProbe(typeof input === "object" && input !== null && !Array.isArray(input), "SHAPE");
+  return input as DataRecord;
+}
+
+function emitResult(value: unknown): void {
+  process.stdout.write(
+    `${RESULT_MARKER}${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}\n`,
+  );
+}
+
+async function pageValue(window: BrowserWindow, expression: string): Promise<unknown> {
+  return window.webContents.executeJavaScript(expression, true);
+}
+
+async function waitFor(window: BrowserWindow, expression: string, code: string): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    if ((await pageValue(window, expression)) === true) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const debug = await pageValue(
+    window,
+    `(() => ({ revision: document.getElementById("working-revision")?.textContent, status: document.getElementById("editor-status")?.textContent, error: document.getElementById("form-error")?.textContent, selected: document.querySelectorAll('input[type="checkbox"]:checked').length, applyDisabled: document.getElementById("apply-override")?.disabled, activeId: document.activeElement?.id }))()`,
+  );
+  requireProbe(false, `${code}:${JSON.stringify(debug)}`);
+}
+
+async function press(
+  window: BrowserWindow,
+  selector: string,
+  keyCode: string,
+  code: string,
+): Promise<void> {
+  window.webContents.focus();
+  let focused = false;
+  for (let attempt = 0; attempt < 40 && !focused; attempt += 1) {
+    focused =
+      (await pageValue(
+        window,
+        `(() => { const node = document.querySelector(${JSON.stringify(selector)}); if (!(node instanceof HTMLElement) || (node instanceof HTMLButtonElement && node.disabled) || (node instanceof HTMLInputElement && node.disabled)) return false; node.focus(); return document.activeElement === node; })()`,
+      )) === true;
+    if (!focused) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  requireProbe(focused, code);
+  window.webContents.sendInputEvent({ type: "keyDown", keyCode });
+  window.webContents.sendInputEvent({ type: "keyUp", keyCode });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
+async function typeText(window: BrowserWindow, selector: string, value: string): Promise<void> {
+  requireProbe(
+    (await pageValue(
+      window,
+      `(() => { const node = document.querySelector(${JSON.stringify(selector)}); if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)) return false; node.focus(); node.value = ""; return true; })()`,
+    )) === true,
+    "INPUT_FOCUS_FAILED",
+  );
+  await window.webContents.insertText(value);
+}
+
+async function uiSnapshot(window: BrowserWindow): Promise<DataRecord> {
+  return record(
+    await pageValue(
+      window,
+      `(() => ({
+        title: document.querySelector("h1")?.textContent,
+        tableCount: document.querySelectorAll("table").length,
+        caption: document.querySelector("caption")?.textContent,
+        rowCount: document.querySelectorAll("tbody tr:not([hidden])").length,
+        workingRevision: document.getElementById("working-revision")?.textContent,
+        durableRevision: document.getElementById("durable-revision")?.textContent,
+        dirty: document.getElementById("dirty-state")?.textContent,
+        history: document.getElementById("history-state")?.textContent,
+        status: document.getElementById("editor-status")?.textContent,
+        error: document.getElementById("form-error")?.textContent,
+        activeId: document.activeElement?.id,
+        apiKeys: Object.keys(globalThis.rsrender.document),
+        nodeGlobals: [typeof require, typeof process, typeof electron],
+        canvasCount: document.querySelectorAll("canvas,svg,img,picture").length,
+        liveRegions: document.querySelectorAll('[role="status"][aria-live="polite"]').length,
+      }))()`,
+    ),
+  );
+}
+
+async function runProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
+  await waitFor(
+    window,
+    `document.getElementById("working-revision")?.textContent === "0" && document.getElementById("editor-status")?.textContent === "Full projection loaded."`,
+    "WAIT_INITIAL",
+  );
+  const initial = await uiSnapshot(window);
+  requireProbe(
+    initial["title"] === "RSrender semantic override editor" &&
+      initial["tableCount"] === 1 &&
+      (initial["rowCount"] as number) >= 1 &&
+      initial["workingRevision"] === "0" &&
+      initial["durableRevision"] === "0" &&
+      initial["dirty"] === "No" &&
+      JSON.stringify(initial["apiKeys"]) === '["getProjection","setDisplayValue","undo","redo"]' &&
+      JSON.stringify(initial["nodeGlobals"]) === '["undefined","undefined","undefined"]' &&
+      initial["canvasCount"] === 0 &&
+      initial["liveRegions"] === 1,
+    "INITIAL_UI_INVALID",
+  );
+  const initialAuthority = record(
+    await pageValue(
+      window,
+      `globalThis.rsrender.document.getProjection({ minimumWorkingRevision: 0 })`,
+    ),
+  );
+  const initialProjection = record(initialAuthority["projection"]);
+  const authorityValues = initialProjection["values"];
+  requireProbe(Array.isArray(authorityValues), "AUTHORITY_VALUES_INVALID");
+  const authorityTarget = authorityValues
+    .map((value) => record(value))
+    .find(
+      (value) =>
+        record(record(value["sourceOriginal"])["content"])["value"] === "SYNTHETIC-EXPLORATION-001",
+    );
+  requireProbe(authorityTarget !== undefined, "AUTHORITY_TARGET_MISSING");
+  const authorityOriginal = record(authorityTarget["sourceOriginal"]);
+
+  const targetSelector = await pageValue(
+    window,
+    `(() => { for (const row of document.querySelectorAll("tbody tr")) { if (row.cells[2]?.textContent === "SYNTHETIC-EXPLORATION-001") return 'input[data-field-identity="' + CSS.escape(row.dataset.fieldIdentity) + '"]'; } return null; })()`,
+  );
+  requireProbe(typeof targetSelector === "string", "TARGET_MISSING");
+  await press(window, targetSelector, "Space", "FOCUS_TARGET");
+  await typeText(window, "#override-value", "SYNTHETIC-EXPLORATION-001-EDITED");
+  await typeText(window, "#override-reason", "User-visible semantic editor proof");
+  await press(window, "#apply-override", "Space", "FOCUS_APPLY");
+  await waitFor(
+    window,
+    `document.getElementById("working-revision")?.textContent === "1" && document.getElementById("editor-status")?.textContent?.startsWith("Override applied") === true && document.getElementById("undo")?.disabled === false`,
+    "WAIT_SET",
+  );
+  const set = await uiSnapshot(window);
+  requireProbe(set["dirty"] === "Yes" && set["activeId"] === "override-value", "SET_UI_INVALID");
+
+  await press(window, "#undo", "Space", "FOCUS_UNDO");
+  await waitFor(
+    window,
+    `document.getElementById("working-revision")?.textContent === "2" && document.getElementById("redo")?.disabled === false`,
+    "WAIT_UNDO",
+  );
+  const undo = await uiSnapshot(window);
+  requireProbe(undo["dirty"] === "Yes" && undo["activeId"] === "redo", "UNDO_UI_INVALID");
+
+  await press(window, "#redo", "Space", "FOCUS_REDO");
+  await waitFor(
+    window,
+    `document.getElementById("working-revision")?.textContent === "3" && document.getElementById("undo")?.disabled === false`,
+    "WAIT_REDO",
+  );
+  const redo = await uiSnapshot(window);
+  requireProbe(redo["dirty"] === "Yes" && redo["activeId"] === "undo", "REDO_UI_INVALID");
+
+  await press(window, "#refetch", "Space", "FOCUS_REFETCH");
+  await waitFor(
+    window,
+    `document.getElementById("editor-status")?.textContent === "Full projection refreshed."`,
+    "WAIT_REFETCH",
+  );
+  const refetch = await uiSnapshot(window);
+  requireProbe(
+    refetch["workingRevision"] === "3" && refetch["activeId"] === "refetch",
+    "REFETCH_INVALID",
+  );
+
+  await typeText(window, "#override-value", "");
+  await press(window, "#apply-override", "Space", "FOCUS_INVALID_APPLY");
+  await waitFor(
+    window,
+    `document.getElementById("form-error")?.textContent === "Enter a replacement display value."`,
+    "WAIT_INVALID",
+  );
+  const invalid = await uiSnapshot(window);
+  requireProbe(
+    invalid["workingRevision"] === "3" && invalid["activeId"] === "override-value",
+    "INVALID_INPUT_MUTATED",
+  );
+
+  await typeText(window, "#override-value", "x".repeat(16_385));
+  await press(window, "#apply-override", "Space", "FOCUS_OVERSIZED_APPLY");
+  await waitFor(
+    window,
+    `document.getElementById("form-error")?.textContent?.startsWith("Replacement values must be at most") === true`,
+    "WAIT_OVERSIZED",
+  );
+  const oversized = await uiSnapshot(window);
+  requireProbe(oversized["workingRevision"] === "3", "OVERSIZED_INPUT_MUTATED");
+
+  const secondTargetSelector = await pageValue(
+    window,
+    `(() => { const selected = document.querySelector('input[type="checkbox"]:checked'); for (const candidate of document.querySelectorAll('input[type="checkbox"]:not(:disabled)')) { if (candidate !== selected) return 'input[data-field-identity="' + CSS.escape(candidate.dataset.fieldIdentity) + '"]'; } return null; })()`,
+  );
+  requireProbe(typeof secondTargetSelector === "string", "MULTI_TARGET_FIXTURE_MISSING");
+  await press(window, secondTargetSelector, "Space", "FOCUS_SECOND_TARGET");
+  await press(window, "#apply-override", "Space", "FOCUS_MULTI_APPLY");
+  await waitFor(
+    window,
+    `document.getElementById("form-error")?.textContent === "Select exactly one eligible field."`,
+    "WAIT_MULTI_TARGET",
+  );
+  const multiple = await uiSnapshot(window);
+  requireProbe(multiple["workingRevision"] === "3", "MULTI_TARGET_MUTATED");
+  await press(window, secondTargetSelector, "Space", "FOCUS_SECOND_TARGET_CLEAR");
+
+  const commonBoundaryInput = {
+    expectedWorkingRevision: 3,
+    localOverrideIdentity: "urn:rsrender:bld-021:local-override:semantic-editor",
+    targetSourceFieldIdentity: authorityTarget["sourceFieldIdentity"],
+    expectedSourceValueDigest: authorityTarget["sourceBaselineValueDigest"],
+    reason: "Synthetic command-boundary rejection proof",
+  };
+  const invalidType = record(
+    await pageValue(
+      window,
+      `globalThis.rsrender.document.setDisplayValue(${JSON.stringify({
+        ...commonBoundaryInput,
+        expectedSourceValueType: "number",
+        expectedSourceUnit: authorityOriginal["unit"],
+        replacementContent: { kind: "value", value: 7, originalRepresentation: "7" },
+        replacementUnit: authorityOriginal["unit"],
+      })})`,
+    ),
+  );
+  requireProbe(
+    invalidType["accepted"] === false && invalidType["code"] === "INVALID_VALUE_TYPE",
+    "INVALID_TYPE_BOUNDARY",
+  );
+  const wrongUnit = { state: "specified", quantity: "length", symbol: "m" };
+  const invalidUnit = record(
+    await pageValue(
+      window,
+      `globalThis.rsrender.document.setDisplayValue(${JSON.stringify({
+        ...commonBoundaryInput,
+        expectedSourceValueType: authorityOriginal["valueType"],
+        expectedSourceUnit: wrongUnit,
+        replacementContent: {
+          kind: "value",
+          value: "SYNTHETIC-EXPLORATION-001-UNIT-CHECK",
+          originalRepresentation: "SYNTHETIC-EXPLORATION-001-UNIT-CHECK",
+        },
+        replacementUnit: wrongUnit,
+      })})`,
+    ),
+  );
+  requireProbe(
+    invalidUnit["accepted"] === false && invalidUnit["code"] === "INVALID_UNIT",
+    "INVALID_UNIT_BOUNDARY",
+  );
+
+  const externalCommit = record(
+    await pageValue(
+      window,
+      `globalThis.rsrender.document.setDisplayValue(${JSON.stringify({
+        ...commonBoundaryInput,
+        expectedSourceValueType: authorityOriginal["valueType"],
+        expectedSourceUnit: authorityOriginal["unit"],
+        replacementContent: {
+          kind: "value",
+          value: "SYNTHETIC-EXPLORATION-001-EXTERNAL",
+          originalRepresentation: "SYNTHETIC-EXPLORATION-001-EXTERNAL",
+        },
+        replacementUnit: authorityOriginal["unit"],
+        reason: "Synthetic stale-projection recovery proof",
+      })})`,
+    ),
+  );
+  requireProbe(
+    externalCommit["accepted"] === true && externalCommit["workingRevision"] === 4,
+    "EXTERNAL_COMMIT_INVALID",
+  );
+  await press(window, "#undo", "Space", "FOCUS_STALE_UNDO");
+  await waitFor(
+    window,
+    `document.getElementById("working-revision")?.textContent === "4" && document.getElementById("editor-status")?.textContent === "Projection refreshed after a stale edit."`,
+    "WAIT_STALE_RECOVERY",
+  );
+  const staleRecovery = await uiSnapshot(window);
+
+  const finalAuthority = record(
+    await pageValue(
+      window,
+      `globalThis.rsrender.document.getProjection({ minimumWorkingRevision: 4 })`,
+    ),
+  );
+  const finalProjection = record(finalAuthority["projection"]);
+  for (const key of [
+    "sourceSnapshotIdentity",
+    "sourceSnapshotLogicalDigest",
+    "sourceSnapshotEncodingDigest",
+    "sourceContextIdentity",
+    "sourceProjectIdentity",
+  ]) {
+    requireProbe(initialProjection[key] === finalProjection[key], "SOURCE_AUTHORITY_CHANGED");
+  }
+
+  const beforeNavigation = window.webContents.getURL();
+  await pageValue(window, `location.assign("https://example.invalid/bld-021-navigation"); true`);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  requireProbe(
+    window.webContents.getURL() === beforeNavigation && counters.navigation > 0,
+    "NAVIGATION_INVALID",
+  );
+  await pageValue(window, `window.open("https://example.invalid/bld-021-popup"); true`);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  requireProbe(counters.popup > 0, "POPUP_INVALID");
+
+  return Object.freeze({
+    schema: "rsrender.bld021.semantic-editor-probe.v1",
+    result: "PASS",
+    electronVersion: process.versions.electron,
+    rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
+    preloadSha256: preloadVerification.accepted ? preloadVerification.sha256 : null,
+    revisions: Object.freeze({
+      initial: 0,
+      set: 1,
+      undo: 2,
+      redo: 3,
+      refetch: 3,
+      staleRecovery: 4,
+    }),
+    semantic: Object.freeze({
+      initial,
+      set,
+      undo,
+      redo,
+      refetch,
+      invalid,
+      oversized,
+      multiple,
+      invalidType: invalidType["code"],
+      invalidUnit: invalidUnit["code"],
+      staleRecovery,
+    }),
+    sourceWitnessSha256: createHash("sha256")
+      .update(
+        JSON.stringify(
+          [
+            "sourceSnapshotIdentity",
+            "sourceSnapshotLogicalDigest",
+            "sourceSnapshotEncodingDigest",
+            "sourceContextIdentity",
+            "sourceProjectIdentity",
+          ].map((key) => finalProjection[key]),
+        ),
+      )
+      .digest("hex"),
+    projectionDigest: finalProjection["projectionDigest"],
+    datasetLogicalDigest: finalProjection["datasetLogicalDigest"],
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+    securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
+  });
+}
+
+async function teardown(): Promise<void> {
+  if (teardownPromise !== null) return teardownPromise;
+  teardownPromise = (async () => {
+    for (const channel of handlers) ipcMain.removeHandler(channel);
+    broker?.invalidate();
+    broker?.closeSession();
+    broker = null;
+    sessionHost.close();
+    const window = editorWindow;
+    editorWindow = null;
+    if (window !== null && !window.isDestroyed()) window.destroy();
+    const electronSession = editorSession;
+    editorSession = null;
+    if (electronSession !== null) {
+      electronSession.protocol.unhandle(DOCUMENT_SCHEME);
+      await electronSession.clearStorageData().catch(() => undefined);
+      await electronSession.clearCache().catch(() => undefined);
+    }
+  })();
+  return teardownPromise;
+}
+
+async function fail(code: string): Promise<void> {
+  await teardown();
+  if (probeMode) {
+    emitResult(
+      Object.freeze({
+        schema: "rsrender.bld021.semantic-editor-probe.v1",
+        result: "FAIL",
+        code,
+        diagnosticCode: probeFailure,
+        windowCount: BrowserWindow.getAllWindows().length,
+        sessionPresent: sessionHost.snapshot().hasSession,
+      }),
+    );
+  }
+  app.exit(1);
+}
+
+async function main(): Promise<void> {
+  if (!preloadVerification.accepted) return fail("DOCUMENT_PRELOAD_UNAVAILABLE");
+  if (!rendererVerification.accepted) return fail("SEMANTIC_EDITOR_RENDERER_UNAVAILABLE");
+  Menu.setApplicationMenu(null);
+  const counters: Counters = {
+    navigation: 0,
+    popup: 0,
+    permissionCheck: 0,
+    permissionRequest: 0,
+    download: 0,
+    webview: 0,
+    network: 0,
+    certificate: 0,
+    rotation: 0,
+  };
+  app.on("certificate-error", (event, _contents, _url, _error, _certificate, callback) => {
+    counters.certificate += 1;
+    event.preventDefault();
+    callback(false);
+  });
+  const electronSession = session.fromPartition(SEMANTIC_EDITOR_SECURITY_PROFILE.partition, {
+    cache: false,
+  });
+  editorSession = electronSession;
+  installDenials(electronSession, counters);
+  installProtocol(electronSession);
+  const documentIdentity = "urn:rsrender:bld-021:document:semantic-editor-001";
+  const synthetic = createSyntheticOverrideRenderDatasetSession({
+    documentIdentity,
+    ownerGeneration: 1,
+  });
+  if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+  const hosted = await sessionHost.replace({
+    documentIdentity,
+    service: synthetic.session.service,
+    initialRequestId: "urn:rsrender:bld-021:request:initial-projection",
+    clock: probeMode ? () => "2026-08-21T05:00:00.000Z" : () => new Date().toISOString(),
+    ownerNonce: randomBytes(32).toString("hex"),
+  });
+  if (!hosted.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+  const window = new BrowserWindow({
+    show: !probeMode,
+    width: 1180,
+    height: 800,
+    useContentSize: true,
+    title: "RSrender semantic override editor",
+    backgroundColor: "#ffffff",
+    autoHideMenuBar: true,
+    webPreferences: {
+      ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
+      partition: SEMANTIC_EDITOR_SECURITY_PROFILE.partition,
+      preload: preloadPath,
+    },
+  });
+  editorWindow = window;
+  const brokerResult = createDocumentRouteBroker({
+    expectedWindow: window,
+    expectedWebContents: window.webContents,
+    session: hosted.session,
+    createCapability: () => randomBytes(32).toString("hex"),
+    createRequestId: (input: {
+      readonly operation: string;
+      readonly generation: number;
+      readonly sequence: number;
+    }) => `urn:rsrender:bld-021:request:${input.generation}:${input.sequence}:${input.operation}`,
+  });
+  if (!brokerResult.accepted) return fail("DOCUMENT_ROUTE_UNAVAILABLE");
+  broker = brokerResult.broker;
+  ipcMain.handle(DOCUMENT_BOOTSTRAP_CHANNEL, (event) =>
+    brokerResult.broker.bootstrap(routeContext(window, event)),
+  );
+  ipcMain.handle(DOCUMENT_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
+    brokerResult.broker.getProjection(routeContext(window, event), input),
+  );
+  ipcMain.handle(DOCUMENT_SET_DISPLAY_VALUE_CHANNEL, (event, input: unknown) =>
+    brokerResult.broker.setDisplayValue(routeContext(window, event), input),
+  );
+  ipcMain.handle(DOCUMENT_UNDO_CHANNEL, (event, input: unknown) =>
+    brokerResult.broker.undo(routeContext(window, event), input),
+  );
+  ipcMain.handle(DOCUMENT_REDO_CHANNEL, (event, input: unknown) =>
+    brokerResult.broker.redo(routeContext(window, event), input),
+  );
+  const rotate = () => {
+    counters.rotation += 1;
+    brokerResult.broker.invalidate();
+  };
+  window.webContents.on("render-process-gone", rotate);
+  window.webContents.on("destroyed", rotate);
+  window.webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
+    if (isMainFrame) rotate();
+  });
+  window.webContents.setWindowOpenHandler(() => {
+    counters.popup += 1;
+    return { action: "deny" };
+  });
+  window.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== DOCUMENT_ROUTE_URL) {
+      counters.navigation += 1;
+      event.preventDefault();
+    }
+  });
+  window.webContents.on("will-redirect", (event, targetUrl) => {
+    if (targetUrl !== DOCUMENT_ROUTE_URL) {
+      counters.navigation += 1;
+      event.preventDefault();
+    }
+  });
+  window.webContents.on("will-attach-webview", (event) => {
+    counters.webview += 1;
+    event.preventDefault();
+  });
+  window.on("closed", () => void teardown());
+  await window.loadURL(DOCUMENT_ROUTE_URL);
+  if (probeMode) {
+    const result = await runProbe(window, counters);
+    emitResult(result);
+    await teardown();
+    app.exit(0);
+  }
+}
+
+const ownsInstance = app.requestSingleInstanceLock();
+if (!ownsInstance) app.quit();
+else {
+  app.on("second-instance", () => undefined);
+  app.on("window-all-closed", () => app.quit());
+  void app
+    .whenReady()
+    .then(main)
+    .catch(() => fail("SEMANTIC_EDITOR_HOST_UNAVAILABLE"));
+}
+
+declare global {
+  var __RSRENDER_SEMANTIC_EDITOR_HTML__: string;
+  var __RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__: string;
+}

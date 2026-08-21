@@ -96,6 +96,17 @@ export type {
   DocumentPreloadSetDisplayValueInput,
 } from "./document-preload-runtime.js";
 export type { PackagedDocumentPreloadVerification } from "./packaged-document-preload.js";
+export {
+  packagedSemanticEditorRendererRelativePath,
+  semanticEditorBundleMarker,
+  verifyPackagedSemanticEditorRenderer,
+} from "./packaged-semantic-editor-renderer.js";
+export type { PackagedSemanticEditorRendererVerification } from "./packaged-semantic-editor-renderer.js";
+export {
+  SEMANTIC_EDITOR_SCRIPT_URL,
+  SEMANTIC_EDITOR_SECURITY_PROFILE,
+  type SemanticEditorSecurityProfile,
+} from "./semantic-editor-security-profile.js";
 
 /** Stable marker for the accepted platform-electron-main package boundary. */
 export const packageBoundary = "@rsrender/platform-electron-main" as const;

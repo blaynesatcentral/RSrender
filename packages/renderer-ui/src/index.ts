@@ -21,3 +21,14 @@ export const inertShellHtml = `<!doctype html>
 </body>
 </html>
 `;
+
+export {
+  semanticEditorMaximumStringUtf8Bytes,
+  semanticEditorRevision,
+  validateReplacement,
+  validateTargetSelection,
+} from "./semantic-override-editor-model.js";
+export {
+  semanticEditorScriptUrl,
+  semanticOverrideEditorHtml,
+} from "./semantic-override-editor-route.js";

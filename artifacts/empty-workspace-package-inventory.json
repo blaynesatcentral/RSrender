@@ -124,26 +124,26 @@
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 3292,
-      "sha256": "b7e18ef577f873c90cfbaf9374a019d4669a37c87e830adc83eeccad920b204f"
+      "bytes": 3721,
+      "sha256": "c995d0a9bf5c53d1dfb0f59a1afebde8952686445ae486470de42ff2a1d4062a"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 1634,
-      "sha256": "3360a6470d7e8708cc59b3c0d77a68d836da17517ed915429eac2b75bf3c857f"
+      "bytes": 1828,
+      "sha256": "63f8574cb0c882f8aec9d7667097efae4cff94dcc5523f661ca110d7b362e868"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js",
-      "bytes": 1950,
-      "sha256": "dfa893d618c927ddbf73e759858b021993ce4092f6f6791d6424a42f91b15980"
+      "bytes": 2237,
+      "sha256": "dac7c9f392a4067dd42cd1cc8201a4b83e241597f1619670642532624ae6e288"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
-      "bytes": 1010,
-      "sha256": "f5280ac61b343afbf13c2c9a22faa5f001ad05e96d01813fd04f5e9f5cce396d"
+      "bytes": 1141,
+      "sha256": "75539cbbe10cb1509e13131e74af57a8770c399f87e4d32e63448a149cc07d4b"
     },
     {
       "package": "platform-zipjs",
@@ -172,26 +172,26 @@
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.d.ts",
-      "bytes": 815,
-      "sha256": "f88afb173ab88bbe3cf09ae2950818b67e484e7d9f538736100bb37c2bf3e588"
+      "bytes": 1086,
+      "sha256": "c5532bff55d1081540492ab8d0f09356aaffe3e2b2774df3802a36a274bb8443"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.d.ts.map",
-      "bytes": 198,
-      "sha256": "cc2324954f4b910c5307e50c13600a878104ba4df417c036ababd8b534bcb9b5"
+      "bytes": 341,
+      "sha256": "76be5dec44a60a266c6ce7dc19e13460527a238b1641688c24d838ad4bc3b5c8"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.js",
-      "bytes": 769,
-      "sha256": "d4f6c6e68c962817926e688e10c61a6bb57281fc8a65e8b0881b09a985327e10"
+      "bytes": 1040,
+      "sha256": "6f616f4c5a78c55eeaee16760a63e26abd107d74f6228200036252a9dd6c3f6f"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.js.map",
-      "bytes": 224,
-      "sha256": "197b4882ae05e303d06968525378b4b081a3e9f15b7b99d39f04ead005b82073"
+      "bytes": 367,
+      "sha256": "95c302bb8605c7218c011e84e91b10be24cfd48698cb5f2da32664f8f6a0aca9"
     },
     {
       "package": "scene",

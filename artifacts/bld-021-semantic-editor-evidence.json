@@ -1,0 +1,1126 @@
+{
+  "schema": "rsrender.bld021.semantic-editor-evidence.v1",
+  "ticket": "BLD-021 / GitHub #65",
+  "activation": "https://github.com/blaynesatcentral/RSrender/issues/65#issuecomment-5371851512",
+  "result": "PASS",
+  "startedAtUtc": "2026-08-21T16:12:32.815Z",
+  "finishedAtUtc": "2026-08-21T16:13:44.074Z",
+  "environment": {
+    "node": "v24.18.1",
+    "locale": "en-US",
+    "timeZone": "America/Los_Angeles",
+    "electron": "43.4.0"
+  },
+  "qualification": {
+    "pureProtocol": "3 fresh processes x 2 focused runs",
+    "packagedProtocol": "3 fresh full semantic editor sessions",
+    "pure": [
+      {
+        "index": "1.1",
+        "startedAtUtc": "2026-08-21T16:12:32.820Z",
+        "finishedAtUtc": "2026-08-21T16:12:33.519Z",
+        "durationMs": 698,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 680,
+        "stdoutSha256": "d840256a3cd5b2e5fcd3de9a1b4a11dbde2f21ded6c4bba040874944c5a5fd09",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      },
+      {
+        "index": "1.2",
+        "startedAtUtc": "2026-08-21T16:12:33.520Z",
+        "finishedAtUtc": "2026-08-21T16:12:34.209Z",
+        "durationMs": 690,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 682,
+        "stdoutSha256": "6e928eea44520c105a0eb61cc6fdb3175f74c021e5900d1480123c772743696d",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      },
+      {
+        "index": "2.1",
+        "startedAtUtc": "2026-08-21T16:12:34.210Z",
+        "finishedAtUtc": "2026-08-21T16:12:34.899Z",
+        "durationMs": 689,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 681,
+        "stdoutSha256": "a4fe821f151ff8598261fede32c892ec95601e9efea0644b699deec0428afe52",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      },
+      {
+        "index": "2.2",
+        "startedAtUtc": "2026-08-21T16:12:34.900Z",
+        "finishedAtUtc": "2026-08-21T16:12:35.794Z",
+        "durationMs": 894,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 681,
+        "stdoutSha256": "b4ce44b9ea24969f8a19be83df73d4074f1990f71bd95ca8793ef835aaf39fc8",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      },
+      {
+        "index": "3.1",
+        "startedAtUtc": "2026-08-21T16:12:35.794Z",
+        "finishedAtUtc": "2026-08-21T16:12:36.808Z",
+        "durationMs": 1014,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 680,
+        "stdoutSha256": "0078d748d6f74b9b619f93c56f646e6fb8c38aedd67f9c7b481340b12be20870",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      },
+      {
+        "index": "3.2",
+        "startedAtUtc": "2026-08-21T16:12:36.808Z",
+        "finishedAtUtc": "2026-08-21T16:12:37.546Z",
+        "durationMs": 738,
+        "exitCode": 0,
+        "signal": null,
+        "stdoutBytes": 682,
+        "stdoutSha256": "01f20c0de1ccd3e12f7029c7efc45b9b23d8a1a2ef9c5c543c93cdc2c5d0c4f6",
+        "stderrBytes": 0,
+        "result": "PASS",
+        "fixedTests": 6
+      }
+    ],
+    "sessions": [
+      {
+        "index": 1,
+        "startedAtUtc": "2026-08-21T16:13:10.457Z",
+        "finishedAtUtc": "2026-08-21T16:13:27.450Z",
+        "durationMs": 16993,
+        "result": {
+          "schema": "rsrender.bld021.semantic-editor-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "rendererSha256": "3a13f0dba03092c5c5a968059906c610b52e983676bcae384bb5fed884bc2c10",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "staleRecovery": 4
+          },
+          "semantic": {
+            "initial": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "0",
+              "durableRevision": "0",
+              "dirty": "No",
+              "history": "Undo unavailable; Redo unavailable",
+              "status": "Full projection loaded.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "set": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "1",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Override applied at revision 1.",
+              "error": "",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "undo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "2",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo unavailable; Redo available",
+              "status": "Undo complete at revision 2.",
+              "error": "",
+              "activeId": "redo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "redo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Redo complete at revision 3.",
+              "error": "",
+              "activeId": "undo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "refetch": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "",
+              "activeId": "refetch",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalid": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Enter a replacement display value.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "oversized": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Replacement values must be at most 16,384 UTF-8 bytes.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "multiple": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Select exactly one eligible field.",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalidType": "INVALID_VALUE_TYPE",
+            "invalidUnit": "INVALID_UNIT",
+            "staleRecovery": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "4",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Projection refreshed after a stale edit.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            }
+          },
+          "sourceWitnessSha256": "809f25b6d41728ac9d05245125b720b0c0daac09792aadd2259f08ee8c39255e",
+          "projectionDigest": "sha256:84da47fc634b1c34faab93534c518e6a95628b27fb783a9685686f3fe934ed46",
+          "datasetLogicalDigest": "sha256:b4e77753cc9662186adcd3a31a708fd743df90d76b6f2225f6d310f995640298",
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 5,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 2,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.semantic-editor-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all",
+            "renderer": "exact-semantic-editor-script-only",
+            "scriptUrl": "rsrender-shell://document/semantic-editor.js"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 9070,
+          "stderrBytes": 0,
+          "stdoutSha256": "5715a213cf6ed1cd703d808f0885e2e73a9ef86134e21fcdf78ec9198a222a16",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "index": 2,
+        "startedAtUtc": "2026-08-21T16:13:29.337Z",
+        "finishedAtUtc": "2026-08-21T16:13:35.824Z",
+        "durationMs": 6488,
+        "result": {
+          "schema": "rsrender.bld021.semantic-editor-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "rendererSha256": "3a13f0dba03092c5c5a968059906c610b52e983676bcae384bb5fed884bc2c10",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "staleRecovery": 4
+          },
+          "semantic": {
+            "initial": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "0",
+              "durableRevision": "0",
+              "dirty": "No",
+              "history": "Undo unavailable; Redo unavailable",
+              "status": "Full projection loaded.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "set": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "1",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Override applied at revision 1.",
+              "error": "",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "undo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "2",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo unavailable; Redo available",
+              "status": "Undo complete at revision 2.",
+              "error": "",
+              "activeId": "redo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "redo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Redo complete at revision 3.",
+              "error": "",
+              "activeId": "undo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "refetch": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "",
+              "activeId": "refetch",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalid": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Enter a replacement display value.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "oversized": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Replacement values must be at most 16,384 UTF-8 bytes.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "multiple": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Select exactly one eligible field.",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalidType": "INVALID_VALUE_TYPE",
+            "invalidUnit": "INVALID_UNIT",
+            "staleRecovery": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "4",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Projection refreshed after a stale edit.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            }
+          },
+          "sourceWitnessSha256": "809f25b6d41728ac9d05245125b720b0c0daac09792aadd2259f08ee8c39255e",
+          "projectionDigest": "sha256:84da47fc634b1c34faab93534c518e6a95628b27fb783a9685686f3fe934ed46",
+          "datasetLogicalDigest": "sha256:b4e77753cc9662186adcd3a31a708fd743df90d76b6f2225f6d310f995640298",
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 5,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 2,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.semantic-editor-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all",
+            "renderer": "exact-semantic-editor-script-only",
+            "scriptUrl": "rsrender-shell://document/semantic-editor.js"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 9070,
+          "stderrBytes": 0,
+          "stdoutSha256": "5715a213cf6ed1cd703d808f0885e2e73a9ef86134e21fcdf78ec9198a222a16",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      },
+      {
+        "index": 3,
+        "startedAtUtc": "2026-08-21T16:13:37.828Z",
+        "finishedAtUtc": "2026-08-21T16:13:43.987Z",
+        "durationMs": 6159,
+        "result": {
+          "schema": "rsrender.bld021.semantic-editor-probe.v1",
+          "result": "PASS",
+          "electronVersion": "43.4.0",
+          "rendererSha256": "3a13f0dba03092c5c5a968059906c610b52e983676bcae384bb5fed884bc2c10",
+          "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+          "revisions": {
+            "initial": 0,
+            "set": 1,
+            "undo": 2,
+            "redo": 3,
+            "refetch": 3,
+            "staleRecovery": 4
+          },
+          "semantic": {
+            "initial": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "0",
+              "durableRevision": "0",
+              "dirty": "No",
+              "history": "Undo unavailable; Redo unavailable",
+              "status": "Full projection loaded.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "set": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "1",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Override applied at revision 1.",
+              "error": "",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "undo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "2",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo unavailable; Redo available",
+              "status": "Undo complete at revision 2.",
+              "error": "",
+              "activeId": "redo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "redo": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Redo complete at revision 3.",
+              "error": "",
+              "activeId": "undo",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "refetch": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "",
+              "activeId": "refetch",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalid": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Enter a replacement display value.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "oversized": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Replacement values must be at most 16,384 UTF-8 bytes.",
+              "activeId": "override-value",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "multiple": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "3",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Full projection refreshed.",
+              "error": "Select exactly one eligible field.",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            },
+            "invalidType": "INVALID_VALUE_TYPE",
+            "invalidUnit": "INVALID_UNIT",
+            "staleRecovery": {
+              "title": "RSrender semantic override editor",
+              "tableCount": 1,
+              "caption": "Select exactly one eligible field to create a Display Value Override.",
+              "rowCount": 2,
+              "workingRevision": "4",
+              "durableRevision": "0",
+              "dirty": "Yes",
+              "history": "Undo available; Redo unavailable",
+              "status": "Projection refreshed after a stale edit.",
+              "error": "",
+              "activeId": "",
+              "apiKeys": [
+                "getProjection",
+                "setDisplayValue",
+                "undo",
+                "redo"
+              ],
+              "nodeGlobals": [
+                "undefined",
+                "undefined",
+                "undefined"
+              ],
+              "canvasCount": 0,
+              "liveRegions": 1
+            }
+          },
+          "sourceWitnessSha256": "809f25b6d41728ac9d05245125b720b0c0daac09792aadd2259f08ee8c39255e",
+          "projectionDigest": "sha256:84da47fc634b1c34faab93534c518e6a95628b27fb783a9685686f3fe934ed46",
+          "datasetLogicalDigest": "sha256:b4e77753cc9662186adcd3a31a708fd743df90d76b6f2225f6d310f995640298",
+          "denials": {
+            "navigation": 1,
+            "popup": 1,
+            "permissionCheck": 5,
+            "permissionRequest": 0,
+            "download": 0,
+            "webview": 0,
+            "network": 0,
+            "certificate": 0,
+            "rotation": 2,
+            "windowCount": 1
+          },
+          "securityProfile": {
+            "schema": "rsrender.semantic-editor-security-profile.v1",
+            "electronVersion": "43.4.0",
+            "url": "rsrender-shell://document/index.html",
+            "partition": "rsrender-document",
+            "persistence": "memory-only",
+            "preload": "generated-document-route-only",
+            "ipcChannels": [
+              "rsrender:document:bootstrap:v1",
+              "rsrender:document:get-projection:v1",
+              "rsrender:document:set-display-value:v1",
+              "rsrender:document:undo:v1",
+              "rsrender:document:redo:v1"
+            ],
+            "rendererCapabilities": [
+              "rsrender.document.getProjection",
+              "rsrender.document.setDisplayValue",
+              "rsrender.document.undo",
+              "rsrender.document.redo"
+            ],
+            "webPreferences": {
+              "sandbox": true,
+              "contextIsolation": true,
+              "nodeIntegration": false,
+              "nodeIntegrationInWorker": false,
+              "nodeIntegrationInSubFrames": false,
+              "webSecurity": true,
+              "allowRunningInsecureContent": false,
+              "experimentalFeatures": false,
+              "devTools": false,
+              "webviewTag": false,
+              "safeDialogs": true,
+              "navigateOnDragDrop": false,
+              "spellcheck": false
+            },
+            "contentPolicy": "default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "navigation": "exact-document-route-only",
+            "windows": "deny-all",
+            "permissions": "deny-all",
+            "downloads": "deny-all",
+            "rendererNetwork": "deny-all",
+            "renderer": "exact-semantic-editor-script-only",
+            "scriptUrl": "rsrender-shell://document/semantic-editor.js"
+          }
+        },
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "stdoutBytes": 9070,
+          "stderrBytes": 0,
+          "stdoutSha256": "5715a213cf6ed1cd703d808f0885e2e73a9ef86134e21fcdf78ec9198a222a16",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "after": 0,
+          "profileRemoved": true
+        }
+      }
+    ],
+    "normalizedDigests": [
+      "c08379ccb57fd1bb454160d0d4efc05087fd3286379b4d632f21fd2ff6e9b336",
+      "c08379ccb57fd1bb454160d0d4efc05087fd3286379b4d632f21fd2ff6e9b336",
+      "c08379ccb57fd1bb454160d0d4efc05087fd3286379b4d632f21fd2ff6e9b336"
+    ],
+    "failures": []
+  },
+  "custody": {
+    "packageLockSha256": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+    "executableSha256": "bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "appAsarSha256": "95e620db56376218fc1f59530195a1b389c3bd2cd90436147518171fe62a0355",
+    "preloadSha256": "cced17754a4f0f08e639a7c0d5dbf8bc79c995f0976bd81bf09dd1c1831efb7c",
+    "rendererSha256": "3a13f0dba03092c5c5a968059906c610b52e983676bcae384bb5fed884bc2c10",
+    "sourceSha256": {
+      "package-lock.json": "c2dbdacab14b924c5566a5ee12d75ce40fa029fa906f8e84d32f17d6bf51d351",
+      "packages/renderer-ui/src/index.ts": "06e0f8f40a358f856489202edc73daa10fd6ea31bfd36c18883478c4a0bd1dd1",
+      "packages/renderer-ui/src/semantic-override-editor-model.ts": "e40f55cd79b3a87e900dbf934d73571e2a50a6dce71b57d048c9ab6dd931ca0e",
+      "packages/renderer-ui/src/semantic-override-editor-route.ts": "14b25c562a76607b271b595266f18d59e76c6b1ec44f96082e2ac0f108cec8c6",
+      "packages/renderer-ui/src/semantic-override-editor-entry.ts": "a23b69a3d750c21bfdbb160e5bcee1f6da69f2366e6c5b880cef555f45285638",
+      "packages/platform-electron-main/src/index.ts": "dd609bb709a5882b2dc1b6db56ae53bf5c08521fe63bb56948234e77f48fcd92",
+      "packages/platform-electron-main/src/semantic-editor-main.ts": "16296e4af19750e1bbb6dca0c166e1d1632aa1a59a207584ea239d3bc0494c3f",
+      "packages/platform-electron-main/src/semantic-editor-security-profile.ts": "c5582ba03c92a538f0d1f652f3f67b091a506d7d73d637b70a93455e0aa415cd",
+      "packages/platform-electron-main/src/packaged-semantic-editor-renderer.ts": "c63582c6b30d78eee5c584fe26fec5043cb2f26323dbdb86466cb4f9c3a00721",
+      "tests/bld-021-semantic-editor.test.mjs": "9c07431f5e8c8d8c9f82ecc04e56a01ea1e328dec492075de738917c4d2089ef",
+      "tooling/shell-package-bld021.mjs": "fae39a01261f2abc6db38de27cbaf0a764d483ae46eba7df8d36ea4232ebc51a",
+      "tooling/shell-run-bld021.mjs": "c65bc62543e2292bc469071765efe1f13d7f88d526e29929a21684a8f4905dba"
+    }
+  },
+  "privacy": {
+    "classification": "SYNTHETIC_REPOSITORY_SAFE",
+    "rawOutputsRetained": false,
+    "hostPathRetained": false,
+    "clientDataRetained": false,
+    "credentialsRetained": false,
+    "screenshotsRetained": false
+  },
+  "nonclaims": [
+    "No Canvas/SVG, Contents tree, layout element, direct manipulation, template authoring, Save/Open/package document, source transport, Refresh, Supplemental/Resolution/Annotation workflow, Data Track, scene/PDF, representative usability, performance, screen-reader/AT acceptance, signed deployment, pilot, or release.",
+    "This is bounded S06/D03/D04 packaged semantic-edit evidence, not full D03, D06, P06, E01, S07, Phase 1 exit, Production workspace acceptance, MVP, v0.9, or release evidence."
+  ]
+}
