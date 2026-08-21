@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "rsrender.bld-022-evidence.v1",
+  "ticket": "BLD-022 / GitHub #66",
+  "startingCommit": "1606a9e",
+  "result": "PASS",
+  "evidenceProfile": "EP-PURE / G1 synthetic coverage",
+  "environment": {
+    "node": "v24.18.1",
+    "npm": "11.16.0",
+    "locale": "en-US",
+    "timeZone": "UTC",
+    "platform": "Windows-sanitized"
+  },
+  "frozenInputs": {
+    "fixtureId": "mvp-boring-log-test-01@r1",
+    "templateId": "mvp-template-reference-shaped@r1",
+    "fixtureDigest": "sha256:29ffb8de0b85de50ed3403a78a35fc8530dbf3c5d4d41006756fd3ce65aa98b7",
+    "templateDigest": "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775",
+    "oracleDigest": "sha256:5de09ce17a4acdba2496d4b64783f0a537e2a3712416179e8f10fd21707b9782",
+    "bundleDigest": "sha256:176f1513cd3b621d41400fe0ae745b4029da575c195f53b97a0cbbe83dfbc380"
+  },
+  "semanticInventory": {
+    "pages": 1,
+    "regions": 3,
+    "columns": 10,
+    "lithologyIntervals": 3,
+    "samples": 10,
+    "dataTrackAxes": 2,
+    "dataLayers": 3,
+    "remarks": 7,
+    "legendItems": 10,
+    "notes": 8,
+    "approvalSections": 1
+  },
+  "qualification": {
+    "focusedTests": "7/7 PASS",
+    "freshProcessRepetitions": "3 processes x 2 repetitions; one exact transcript",
+    "wholeRepositoryTests": "260/260 PASS with --test-concurrency=1",
+    "dependencyAdmission": "PASS; 156/156 exact external identities",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "packageBoundaries": "PASS; 11 packages",
+    "architectureBoundaries": "PASS; 11 packages",
+    "dependencyInventory": "PASS; 156 external packages; 22 workspace entries",
+    "packageInventory": "PASS; 44 outputs"
+  },
+  "negativeOracles": [
+    "non-integer mpt geometry rejects",
+    "gapped or overlapping lithology coverage rejects",
+    "broken sample/axis/layer references reject",
+    "missing required semantic sections or counts reject",
+    "image, raster, screenshot, file reference, and background-image shortcuts reject"
+  ],
+  "retainedFileDigests": {
+    "packages/test-support/src/boring-log-mvp-fixture.ts": "sha256:7d7947cf042a19928a713e00a2eb50bcb7521450226fde698b838bddcafa39f0",
+    "packages/test-support/src/index.ts": "sha256:ca5ecf106687c04635f9d2703f9e937fe6617aab2534bcdf6edba3ab173460f5",
+    "tests/bld-022-boring-log-mvp-fixture.test.mjs": "sha256:bcc1681ecdfdc3abfa2ce14e7b9e144525ceb1f338e310446e6004bfd7214475",
+    "tests/helpers/run-bld-022-vectors.mjs": "sha256:53f33e799c794e1b7e279190b2d309f5d379bcd207eedfb4a90acbab93fdede5",
+    "artifacts/empty-workspace-package-inventory.json": "sha256:6405e270cccb04cdd260db1be57218c02e7a720861ae76766e513e19de6a7da1"
+  },
+  "changeBoundary": {
+    "dependenciesChanged": false,
+    "lockfileChanged": false,
+    "workspaceTopologyChanged": false,
+    "manifestChanged": false,
+    "fontChanged": false,
+    "imageOrBinaryAssetChanged": false,
+    "visualReferencesCommitted": false
+  },
+  "nonclaims": [
+    "not a renderer or Page Plan/Resolved Page Scene implementation",
+    "not SVG, PDF, interaction, accessibility, performance, or release evidence",
+    "not representative production data or a supported workload limit",
+    "not proof based on either visual reference or screenshot resemblance",
+    "not the product-owner MVP"
+  ]
+}

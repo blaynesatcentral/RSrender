@@ -59,6 +59,27 @@ export {
   writeAggregateEvidenceIndex,
 } from "./aggregate-evidence-index.js";
 
+export {
+  BORING_LOG_MVP_BUNDLE_DIGEST,
+  BORING_LOG_MVP_FIXTURE_DIGEST,
+  BORING_LOG_MVP_FIXTURE_ID,
+  BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
+  BORING_LOG_MVP_ORACLE_DIGEST,
+  BORING_LOG_MVP_ORACLE_SCHEMA_VERSION,
+  BORING_LOG_MVP_TEMPLATE_DIGEST,
+  BORING_LOG_MVP_TEMPLATE_ID,
+  BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
+  boringLogMvpFixture,
+  boringLogMvpOracle,
+  boringLogMvpTemplate,
+  validateBoringLogMvpFixtureBundle,
+} from "./boring-log-mvp-fixture.js";
+
+export type {
+  BoringLogMvpFixtureBundle,
+  BoringLogMvpFixtureValidation,
+} from "./boring-log-mvp-fixture.js";
+
 export type {
   AggregateEvidenceIndex,
   AggregateEvidenceIndexDiagnostic,

@@ -1,0 +1,734 @@
+import { sha256CanonicalJson } from "@rsrender/contracts";
+
+export const BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION = "rsrender.boring-log-mvp-fixture.v1" as const;
+export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
+  "rsrender.boring-log-mvp-template.v1" as const;
+export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
+
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r1" as const;
+export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r1" as const;
+export const BORING_LOG_MVP_FIXTURE_DIGEST =
+  "sha256:29ffb8de0b85de50ed3403a78a35fc8530dbf3c5d4d41006756fd3ce65aa98b7" as const;
+export const BORING_LOG_MVP_TEMPLATE_DIGEST =
+  "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775" as const;
+export const BORING_LOG_MVP_ORACLE_DIGEST =
+  "sha256:5de09ce17a4acdba2496d4b64783f0a537e2a3712416179e8f10fd21707b9782" as const;
+export const BORING_LOG_MVP_BUNDLE_DIGEST =
+  "sha256:176f1513cd3b621d41400fe0ae745b4029da575c195f53b97a0cbbe83dfbc380" as const;
+
+const source = (entityId: string, fieldId: string) =>
+  Object.freeze({
+    provenanceClass: "source" as const,
+    sourceContextIdentity: "urn:rsrender:synthetic-context:mvp-r1",
+    sourceProjectIdentity: "urn:rsrender:synthetic-project:riverside-r1",
+    sourceEntityIdentity: entityId,
+    sourceFieldIdentity: fieldId,
+    sourceContractRevision: "rsrender.synthetic.render-dataset.v1",
+  });
+
+const sample = (
+  id: string,
+  label: string,
+  depthFt: number,
+  recoveryPercent: number,
+  blows: readonly [number, number, number],
+  nValue: number,
+) =>
+  Object.freeze({
+    id,
+    label,
+    depthFt,
+    symbol: "split-spoon" as const,
+    recoveryPercent,
+    blowsPerSixInches: blows,
+    nValue,
+    provenance: source(id, "sample-observation"),
+  });
+
+/**
+ * Independently authored repository-safe synthetic renderer input. It is not a
+ * transcription of the restricted client go-by and contains no raster asset.
+ */
+export const boringLogMvpFixture = Object.freeze({
+  schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
+  fixtureId: BORING_LOG_MVP_FIXTURE_ID,
+  fixtureRevision: 1,
+  evidenceClass: "synthetic-coverage-only" as const,
+  representativeClaimAllowed: false,
+  publicationEligibility: "example-dataset-only" as const,
+  identity: Object.freeze({
+    boringLogId: "urn:rsrender:boring-log:test-01",
+    explorationId: "urn:rsrender:exploration:test-01",
+    pageId: "urn:rsrender:page:test-01:1",
+  }),
+  metadata: Object.freeze({
+    companyName: "Synthetic Geotechnical Services",
+    documentTitle: "BORING TEST-01",
+    sheetLabel: "SHEET 1 OF 2",
+    projectName: "Riverside Mixed-Use Development",
+    projectNumber: "SGS-24057",
+    location: "Riverview Drive, Dayton, OR",
+    coordinates: "N 44.123456°  W 122.987654°",
+    groundElevationFt: 182.5,
+    totalDepthFt: 40,
+    completionDepthFt: 40,
+    drilledDate: "2025-05-14",
+    boringMethod: "Hollow-Stem Auger",
+    hammerType: "Automatic 140 lb",
+    hammerDrop: "30 in",
+    loggedBy: "K. Anderson, E.I.",
+    provenance: source("urn:rsrender:exploration:test-01", "metadata"),
+  }),
+  referenceDepthRange: Object.freeze({ startFt: 0, endFt: 40, terminalInclusive: true }),
+  lithologyIntervals: Object.freeze([
+    Object.freeze({
+      id: "stratum-01",
+      depthFromFt: 0,
+      depthToFt: 15,
+      classification: "SILT (ML)",
+      patternId: "pattern-silt-horizontal-dash",
+      description:
+        "Medium stiff, moist, brown SILT (ML); low plasticity; trace fine sand; homogeneous; no odor.",
+      transitions: Object.freeze([
+        Object.freeze({ depthFt: 7.5, text: "Becoming soft, light brown." }),
+        Object.freeze({ depthFt: 13.5, text: "Trace organics." }),
+      ]),
+      boundaryKind: "observed" as const,
+      provenance: source("stratum-01", "stratum"),
+    }),
+    Object.freeze({
+      id: "stratum-02",
+      depthFromFt: 15,
+      depthToFt: 30,
+      classification: "GRAVEL WITH SAND (GW)",
+      patternId: "pattern-gravel-dot-ring",
+      description:
+        "Dense, brown to gray, angular to subrounded gravel up to 1½ in; medium to coarse sand; little silt; well-graded.",
+      transitions: Object.freeze([Object.freeze({ depthFt: 22.5, text: "Becoming very dense." })]),
+      boundaryKind: "gradational" as const,
+      provenance: source("stratum-02", "stratum"),
+    }),
+    Object.freeze({
+      id: "stratum-03",
+      depthFromFt: 30,
+      depthToFt: 40,
+      classification: "SILT (ML)",
+      patternId: "pattern-silt-blue-dash",
+      description:
+        "Very stiff, moist, gray with brown mottling SILT (ML); low plasticity; trace fine sand; blocky structure.",
+      transitions: Object.freeze([Object.freeze({ depthFt: 34, text: "Trace fine gravel." })]),
+      boundaryKind: "observed" as const,
+      provenance: source("stratum-03", "stratum"),
+    }),
+  ]),
+  samples: Object.freeze([
+    sample("sample-01", "S-1", 1.5, 90, [2, 3, 4], 7),
+    sample("sample-02", "S-2", 4, 85, [3, 4, 5], 9),
+    sample("sample-03", "S-3", 7, 80, [4, 5, 6], 11),
+    sample("sample-04", "S-4", 9.8, 95, [6, 8, 10], 18),
+    sample("sample-05", "S-5", 15.8, 95, [7, 9, 12], 21),
+    sample("sample-06", "S-6", 18.8, 90, [14, 20, 24], 44),
+    sample("sample-07", "S-7", 22, 85, [20, 28, 32], 60),
+    sample("sample-08", "S-8", 25, 85, [18, 28, 34], 62),
+    sample("sample-09", "S-9", 31.2, 80, [10, 14, 18], 32),
+    sample("sample-10", "S-10", 34.5, 95, [7, 10, 13], 23),
+  ]),
+  dataTrack: Object.freeze({
+    id: "track-penetration-moisture",
+    depthRange: Object.freeze({ startFt: 0, endFt: 40 }),
+    axes: Object.freeze([
+      Object.freeze({
+        id: "axis-n-value",
+        quantity: "spt-n-value",
+        unit: "blows-per-foot",
+        minimum: 0,
+        maximum: 70,
+      }),
+      Object.freeze({
+        id: "axis-water-percent",
+        quantity: "water-content-percent",
+        unit: "percent",
+        minimum: 0,
+        maximum: 100,
+      }),
+    ]),
+    layers: Object.freeze([
+      Object.freeze({
+        id: "layer-n-value",
+        kind: "numeric-polyline" as const,
+        axisId: "axis-n-value",
+        glyph: "filled-square" as const,
+        values: Object.freeze([
+          ["sample-01", 7],
+          ["sample-02", 9],
+          ["sample-03", 11],
+          ["sample-04", 18],
+          ["sample-05", 21],
+          ["sample-06", 44],
+          ["sample-07", 60],
+          ["sample-08", 62],
+          ["sample-09", 32],
+          ["sample-10", 23],
+        ] as const),
+        provenance: source("track-penetration-moisture", "spt-n-values"),
+      }),
+      Object.freeze({
+        id: "layer-moisture",
+        kind: "numeric-polyline" as const,
+        axisId: "axis-water-percent",
+        glyph: "open-triangle" as const,
+        values: Object.freeze([
+          ["sample-01", 18],
+          ["sample-02", 26],
+          ["sample-03", 32],
+          ["sample-04", 49],
+          ["sample-05", 86],
+          ["sample-09", 37],
+          ["sample-10", 49],
+        ] as const),
+        provenance: source("track-penetration-moisture", "moisture-content"),
+      }),
+      Object.freeze({
+        id: "layer-plasticity-range",
+        kind: "numeric-range" as const,
+        axisId: "axis-water-percent",
+        glyph: "open-circle-range" as const,
+        values: Object.freeze([
+          ["sample-01", 38, 18],
+          ["sample-02", 48, 26],
+          ["sample-03", 55, 32],
+          ["sample-05", 69, 86],
+          ["sample-09", 55, 37],
+          ["sample-10", 76, 49],
+        ] as const),
+        provenance: source("track-penetration-moisture", "plastic-limit-liquid-limit"),
+      }),
+    ]),
+  }),
+  remarks: Object.freeze([
+    Object.freeze({
+      id: "remark-01",
+      depthFromFt: 0,
+      depthToFt: 5,
+      text: "Surface: grass cover. Topsoil 0–6 in. No groundwater encountered.",
+    }),
+    Object.freeze({
+      id: "remark-02",
+      depthFromFt: 8,
+      depthToFt: 16,
+      text: "Boring dry to 15.0 ft.",
+    }),
+    Object.freeze({
+      id: "remark-03",
+      depthFromFt: 15,
+      depthToFt: 20,
+      text: "Gravelly soils begin at 15 ft.",
+    }),
+    Object.freeze({
+      id: "remark-04",
+      depthFromFt: 18,
+      depthToFt: 25,
+      text: "No caving observed. Boring stable.",
+    }),
+    Object.freeze({
+      id: "remark-05",
+      depthFromFt: 22.5,
+      depthToFt: 29,
+      text: "Very dense layer from 22.5 to 28.5 ft.",
+    }),
+    Object.freeze({
+      id: "remark-06",
+      depthFromFt: 30,
+      depthToFt: 35,
+      text: "Slight dampness at 34 ft.",
+    }),
+    Object.freeze({
+      id: "remark-07",
+      depthFromFt: 35,
+      depthToFt: 40,
+      text: "Boring terminated at 40.0 ft. Target depth reached.",
+    }),
+  ]),
+  legend: Object.freeze([
+    Object.freeze({ id: "legend-split-spoon", label: "Split spoon (SPT)", symbol: "split-spoon" }),
+    Object.freeze({
+      id: "legend-silt",
+      label: "SILT (ML)",
+      symbol: "pattern-silt-horizontal-dash",
+    }),
+    Object.freeze({
+      id: "legend-gravel",
+      label: "GRAVEL WITH SAND (GW)",
+      symbol: "pattern-gravel-dot-ring",
+    }),
+    Object.freeze({ id: "legend-observed", label: "Observed contact", symbol: "solid-line" }),
+    Object.freeze({ id: "legend-gradational", label: "Gradational", symbol: "dashed-line" }),
+    Object.freeze({ id: "legend-n", label: "N, blows/ft", symbol: "filled-square-line" }),
+    Object.freeze({ id: "legend-water", label: "Water content, %", symbol: "open-triangle-line" }),
+    Object.freeze({ id: "legend-plll", label: "Plastic range PL–LL", symbol: "open-circle-range" }),
+    Object.freeze({
+      id: "legend-refusal",
+      label: "Sampler refusal",
+      symbol: "filled-down-triangle",
+    }),
+    Object.freeze({ id: "legend-groundwater", label: "Groundwater", symbol: "open-down-triangle" }),
+  ]),
+  notes: Object.freeze([
+    "Elevations referenced to an assumed datum of 100.00 ft.",
+    "Boring location surveyed in the field on 2025-05-14.",
+    "Groundwater was not encountered during drilling to 40.0 ft.",
+    "SPT performed in general accordance with ASTM D1586.",
+    "N is the sum of the last two 6-in. increments.",
+    "Soil classification in general accordance with ASTM D2488.",
+    "Lines between samples represent approximate boundaries; actual transitions may vary.",
+    "This log applies only to the boring at this location and time.",
+  ]),
+  approval: Object.freeze({
+    heading: "REVIEWED & APPROVED",
+    sealPlaceholder: "ENGINEER'S SEAL",
+    reviewerName: "J. M. Carter, P.E.",
+    reviewedDate: "2025-05-20",
+  }),
+});
+
+const textStyle = (id: string, sizeMpt: number, weight: number) =>
+  Object.freeze({
+    id,
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: sizeMpt,
+    fontWeight: weight,
+    lineHeightMpt: Math.round(sizeMpt * 1.25),
+    color: "#17202a",
+  });
+
+export const boringLogMvpTemplate = Object.freeze({
+  schemaVersion: BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
+  templateId: BORING_LOG_MVP_TEMPLATE_ID,
+  templateRevision: 1,
+  physicalUnits: "mpt" as const,
+  page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000, orientation: "portrait" }),
+  regions: Object.freeze([
+    Object.freeze({
+      id: "region-header",
+      role: "header",
+      xMpt: 15_000,
+      yMpt: 14_000,
+      widthMpt: 582_000,
+      heightMpt: 76_000,
+    }),
+    Object.freeze({
+      id: "region-depth-body",
+      role: "depth-body",
+      xMpt: 15_000,
+      yMpt: 94_000,
+      widthMpt: 582_000,
+      heightMpt: 610_000,
+    }),
+    Object.freeze({
+      id: "region-footer",
+      role: "footer",
+      xMpt: 15_000,
+      yMpt: 712_000,
+      widthMpt: 582_000,
+      heightMpt: 66_000,
+    }),
+  ]),
+  depthTransform: Object.freeze({
+    regionId: "region-depth-body",
+    depthStartFt: 0,
+    depthEndFt: 40,
+    yStartMpt: 121_000,
+    yEndMpt: 704_000,
+    mptPerFoot: 14_575,
+  }),
+  columns: Object.freeze([
+    Object.freeze({
+      id: "column-elevation",
+      role: "elevation-ruler",
+      xMpt: 15_000,
+      widthMpt: 28_000,
+    }),
+    Object.freeze({ id: "column-depth", role: "depth-ruler", xMpt: 43_000, widthMpt: 28_000 }),
+    Object.freeze({
+      id: "column-lithology",
+      role: "lithology-pattern",
+      xMpt: 71_000,
+      widthMpt: 32_000,
+    }),
+    Object.freeze({
+      id: "column-description",
+      role: "material-description",
+      xMpt: 103_000,
+      widthMpt: 142_000,
+    }),
+    Object.freeze({ id: "column-sample", role: "sample", xMpt: 245_000, widthMpt: 40_000 }),
+    Object.freeze({ id: "column-recovery", role: "recovery", xMpt: 285_000, widthMpt: 30_000 }),
+    Object.freeze({ id: "column-blows", role: "blows", xMpt: 315_000, widthMpt: 35_000 }),
+    Object.freeze({ id: "column-n-value", role: "n-value", xMpt: 350_000, widthMpt: 30_000 }),
+    Object.freeze({
+      id: "column-data-track",
+      role: "penetration-moisture-plasticity",
+      xMpt: 380_000,
+      widthMpt: 145_000,
+    }),
+    Object.freeze({ id: "column-remarks", role: "remarks", xMpt: 525_000, widthMpt: 72_000 }),
+  ]),
+  styles: Object.freeze([
+    textStyle("style-title", 16_000, 700),
+    textStyle("style-company", 13_000, 700),
+    textStyle("style-heading", 7_500, 700),
+    textStyle("style-body", 7_500, 400),
+    textStyle("style-small", 6_250, 400),
+  ]),
+  hierarchy: Object.freeze({
+    id: "page-root",
+    role: "page",
+    children: Object.freeze([
+      Object.freeze({
+        id: "region-header",
+        role: "header",
+        children: Object.freeze([
+          "header-company",
+          "header-title",
+          "header-sheet",
+          "header-project-metadata",
+        ]),
+      }),
+      Object.freeze({
+        id: "region-depth-body",
+        role: "depth-body",
+        children: Object.freeze([
+          "column-elevation",
+          "column-depth",
+          "column-lithology",
+          "column-description",
+          "column-sample",
+          "column-recovery",
+          "column-blows",
+          "column-n-value",
+          "column-data-track",
+          "column-remarks",
+        ]),
+      }),
+      Object.freeze({
+        id: "region-footer",
+        role: "footer",
+        children: Object.freeze(["footer-legend", "footer-notes", "footer-approval"]),
+      }),
+    ]),
+  }),
+  bindings: Object.freeze([
+    Object.freeze({
+      elementId: "header-company",
+      path: "metadata.companyName",
+      styleId: "style-company",
+    }),
+    Object.freeze({
+      elementId: "header-title",
+      path: "metadata.documentTitle",
+      styleId: "style-title",
+    }),
+    Object.freeze({
+      elementId: "header-sheet",
+      path: "metadata.sheetLabel",
+      styleId: "style-small",
+    }),
+    Object.freeze({
+      elementId: "header-project-metadata",
+      path: "metadata",
+      styleId: "style-small",
+    }),
+    Object.freeze({
+      elementId: "column-elevation",
+      path: "metadata.groundElevationFt",
+      styleId: "style-small",
+    }),
+    Object.freeze({
+      elementId: "column-depth",
+      path: "referenceDepthRange",
+      styleId: "style-small",
+    }),
+    Object.freeze({
+      elementId: "column-lithology",
+      path: "lithologyIntervals",
+      styleId: "style-body",
+    }),
+    Object.freeze({
+      elementId: "column-description",
+      path: "lithologyIntervals",
+      styleId: "style-body",
+    }),
+    Object.freeze({ elementId: "column-sample", path: "samples", styleId: "style-body" }),
+    Object.freeze({
+      elementId: "column-recovery",
+      path: "samples.recoveryPercent",
+      styleId: "style-body",
+    }),
+    Object.freeze({
+      elementId: "column-blows",
+      path: "samples.blowsPerSixInches",
+      styleId: "style-body",
+    }),
+    Object.freeze({ elementId: "column-n-value", path: "samples.nValue", styleId: "style-body" }),
+    Object.freeze({ elementId: "column-data-track", path: "dataTrack", styleId: "style-small" }),
+    Object.freeze({ elementId: "column-remarks", path: "remarks", styleId: "style-body" }),
+    Object.freeze({ elementId: "footer-legend", path: "legend", styleId: "style-small" }),
+    Object.freeze({ elementId: "footer-notes", path: "notes", styleId: "style-small" }),
+    Object.freeze({ elementId: "footer-approval", path: "approval", styleId: "style-small" }),
+  ]),
+  visualTokens: Object.freeze({
+    pageFill: "#ffffff",
+    ink: "#17202a",
+    secondaryInk: "#52606d",
+    rule: "#7b8794",
+    lightRule: "#d8dee6",
+    lithologySiltFill: "#edf4f3",
+    lithologyGravelFill: "#f6efe7",
+    selection: "#2f6f9f",
+  }),
+});
+
+export const boringLogMvpOracle = Object.freeze({
+  schemaVersion: BORING_LOG_MVP_ORACLE_SCHEMA_VERSION,
+  fixtureId: BORING_LOG_MVP_FIXTURE_ID,
+  templateId: BORING_LOG_MVP_TEMPLATE_ID,
+  oracleRevision: 1,
+  oracleIds: Object.freeze(["OA-PROV-001", "OA-GOLD-001", "OA-REP-001"]),
+  requiredSections: Object.freeze(["header", "depth-body", "footer"]),
+  requiredColumnRoles: Object.freeze([
+    "elevation-ruler",
+    "depth-ruler",
+    "lithology-pattern",
+    "material-description",
+    "sample",
+    "recovery",
+    "blows",
+    "n-value",
+    "penetration-moisture-plasticity",
+    "remarks",
+  ]),
+  requiredFooterElements: Object.freeze(["footer-legend", "footer-notes", "footer-approval"]),
+  expectedCounts: Object.freeze({
+    pages: 1,
+    lithologyIntervals: 3,
+    samples: 10,
+    axes: 2,
+    dataLayers: 3,
+    remarks: 7,
+    legendItems: 10,
+    notes: 8,
+  }),
+  geometryAnchors: Object.freeze({
+    page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000 }),
+    depth: Object.freeze({ startFt: 0, endFt: 40, yStartMpt: 121_000, yEndMpt: 704_000 }),
+    majorVerticalEdgesMpt: Object.freeze([
+      15_000, 43_000, 71_000, 103_000, 245_000, 285_000, 315_000, 350_000, 380_000, 525_000,
+      597_000,
+    ]),
+    majorHorizontalEdgesMpt: Object.freeze([
+      14_000, 90_000, 94_000, 121_000, 704_000, 712_000, 778_000,
+    ]),
+  }),
+  comparisonPolicy: Object.freeze({
+    exact: Object.freeze([
+      "canonical-input-digests",
+      "semantic-identities",
+      "node-order",
+      "text-source-ranges",
+      "mpt-geometry",
+      "provenance",
+      "overflow-outcomes",
+    ]),
+    pdfPageEdgeTolerancePt: 0.01,
+    vectorCoordinateTolerancePt: 0.02,
+    textBaselineTolerancePt: 0.02,
+    localGoByRegistrationToleranceMm: 0.25,
+    localGoByMajorEdgeToleranceMm: 0.5,
+    secondaryRasterMaximumChangedPixelPercent: 0.5,
+    secondaryRasterDeltaE00Threshold: 2,
+    screenshotAloneSufficient: false,
+  }),
+  negativeOracles: Object.freeze([
+    "no-raster-page",
+    "no-image-or-background-reference",
+    "no-client-or-restricted-go-by-content",
+    "no-dropped-or-duplicated-source-record",
+    "no-independent-screen-or-pdf-reflow",
+    "no-source-override-provenance-collapse",
+    "no-representative-or-release-claim",
+  ]),
+});
+
+export interface BoringLogMvpFixtureBundle {
+  readonly fixture: typeof boringLogMvpFixture;
+  readonly template: typeof boringLogMvpTemplate;
+  readonly oracle: typeof boringLogMvpOracle;
+}
+
+export interface BoringLogMvpFixtureValidation {
+  readonly accepted: boolean;
+  readonly diagnostics: readonly string[];
+  readonly fixtureDigest: string;
+  readonly templateDigest: string;
+  readonly oracleDigest: string;
+  readonly bundleDigest: string;
+}
+
+function collectStringsAndKeys(value: unknown, keys: string[], strings: string[]): void {
+  if (typeof value === "string") {
+    strings.push(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) collectStringsAndKeys(child, keys, strings);
+    return;
+  }
+  if (typeof value === "object" && value !== null) {
+    for (const [key, child] of Object.entries(value)) {
+      keys.push(key);
+      collectStringsAndKeys(child, keys, strings);
+    }
+  }
+}
+
+export function validateBoringLogMvpFixtureBundle(
+  bundle: BoringLogMvpFixtureBundle = {
+    fixture: boringLogMvpFixture,
+    template: boringLogMvpTemplate,
+    oracle: boringLogMvpOracle,
+  },
+): BoringLogMvpFixtureValidation {
+  const diagnostics = new Set<string>();
+  const { fixture, template, oracle } = bundle;
+  if (fixture.fixtureId !== oracle.fixtureId || template.templateId !== oracle.templateId) {
+    diagnostics.add("MVP_FIXTURE_IDENTITY_MISMATCH");
+  }
+  const allGeometry = [
+    template.page.widthMpt,
+    template.page.heightMpt,
+    ...template.regions.flatMap((region) => [
+      region.xMpt,
+      region.yMpt,
+      region.widthMpt,
+      region.heightMpt,
+    ]),
+    ...template.columns.flatMap((column) => [column.xMpt, column.widthMpt]),
+    template.depthTransform.yStartMpt,
+    template.depthTransform.yEndMpt,
+    template.depthTransform.mptPerFoot,
+    ...template.styles.flatMap((style) => [style.fontSizeMpt, style.lineHeightMpt]),
+  ];
+  if (allGeometry.some((value) => !Number.isSafeInteger(value))) {
+    diagnostics.add("MVP_FIXTURE_GEOMETRY_NOT_INTEGER_MPT");
+  }
+  const depthBody = template.regions.find(({ id }) => id === "region-depth-body");
+  const firstColumn = template.columns[0];
+  const lastColumn = template.columns.at(-1);
+  if (
+    depthBody === undefined ||
+    firstColumn === undefined ||
+    lastColumn === undefined ||
+    firstColumn.xMpt !== depthBody.xMpt ||
+    lastColumn.xMpt + lastColumn.widthMpt !== depthBody.xMpt + depthBody.widthMpt ||
+    template.columns.some(
+      (column, index) =>
+        index > 0 &&
+        template.columns[index - 1]!.xMpt + template.columns[index - 1]!.widthMpt !== column.xMpt,
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_COLUMN_COVERAGE_INVALID");
+  }
+  const intervals = fixture.lithologyIntervals;
+  if (
+    intervals[0]?.depthFromFt !== fixture.referenceDepthRange.startFt ||
+    intervals.at(-1)?.depthToFt !== fixture.referenceDepthRange.endFt ||
+    intervals.some(
+      (interval, index) =>
+        interval.depthFromFt >= interval.depthToFt ||
+        (index > 0 && intervals[index - 1]!.depthToFt !== interval.depthFromFt),
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_DEPTH_COVERAGE_INVALID");
+  }
+  const sampleIds = new Set(fixture.samples.map(({ id }) => id));
+  if (
+    sampleIds.size !== fixture.samples.length ||
+    fixture.samples.some(
+      ({ depthFt }) =>
+        depthFt < fixture.referenceDepthRange.startFt ||
+        depthFt > fixture.referenceDepthRange.endFt,
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_SAMPLE_IDENTITY_OR_DEPTH_INVALID");
+  }
+  const axisIds = new Set(fixture.dataTrack.axes.map(({ id }) => id));
+  if (
+    fixture.dataTrack.layers.some(
+      (layer) => !axisIds.has(layer.axisId) || layer.values.some(([id]) => !sampleIds.has(id)),
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_DATA_TRACK_REFERENCE_INVALID");
+  }
+  const regionRoles = new Set<string>(template.regions.map(({ role }) => role));
+  if (oracle.requiredSections.some((role) => !regionRoles.has(role))) {
+    diagnostics.add("MVP_FIXTURE_REQUIRED_SECTION_MISSING");
+  }
+  const columnRoles = new Set<string>(template.columns.map(({ role }) => role));
+  if (oracle.requiredColumnRoles.some((role) => !columnRoles.has(role))) {
+    diagnostics.add("MVP_FIXTURE_REQUIRED_COLUMN_MISSING");
+  }
+  const footer = template.hierarchy.children.find(({ role }) => role === "footer");
+  if (
+    footer === undefined ||
+    oracle.requiredFooterElements.some((elementId) => !footer.children.includes(elementId))
+  ) {
+    diagnostics.add("MVP_FIXTURE_REQUIRED_FOOTER_ELEMENT_MISSING");
+  }
+  const counts = oracle.expectedCounts;
+  if (
+    counts.lithologyIntervals !== fixture.lithologyIntervals.length ||
+    counts.samples !== fixture.samples.length ||
+    counts.axes !== fixture.dataTrack.axes.length ||
+    counts.dataLayers !== fixture.dataTrack.layers.length ||
+    counts.remarks !== fixture.remarks.length ||
+    counts.legendItems !== fixture.legend.length ||
+    counts.notes !== fixture.notes.length
+  ) {
+    diagnostics.add("MVP_FIXTURE_SEMANTIC_COVERAGE_COUNT_MISMATCH");
+  }
+  const keys: string[] = [];
+  const strings: string[] = [];
+  collectStringsAndKeys({ fixture, template }, keys, strings);
+  const forbiddenKey =
+    /(?:image|raster|bitmap|background(?:image)?|reference(?:path|file)|screenshot)/iu;
+  const forbiddenString = /(?:<img\b|data:image\/|file:\/\/|\.png\b|\.jpe?g\b)/iu;
+  if (
+    keys.some((key) => forbiddenKey.test(key)) ||
+    strings.some((value) => forbiddenString.test(value))
+  ) {
+    diagnostics.add("MVP_FIXTURE_RASTER_OR_REFERENCE_SHORTCUT_FORBIDDEN");
+  }
+  const fixtureDigest = sha256CanonicalJson(fixture);
+  const templateDigest = sha256CanonicalJson(template);
+  const oracleDigest = sha256CanonicalJson(oracle);
+  const bundleDigest = sha256CanonicalJson({ fixtureDigest, templateDigest, oracleDigest });
+  if (
+    bundle.fixture === boringLogMvpFixture &&
+    bundle.template === boringLogMvpTemplate &&
+    bundle.oracle === boringLogMvpOracle &&
+    (fixtureDigest !== BORING_LOG_MVP_FIXTURE_DIGEST ||
+      templateDigest !== BORING_LOG_MVP_TEMPLATE_DIGEST ||
+      oracleDigest !== BORING_LOG_MVP_ORACLE_DIGEST ||
+      bundleDigest !== BORING_LOG_MVP_BUNDLE_DIGEST)
+  ) {
+    diagnostics.add("MVP_FIXTURE_FROZEN_DIGEST_MISMATCH");
+  }
+  return Object.freeze({
+    accepted: diagnostics.size === 0,
+    diagnostics: Object.freeze([...diagnostics].sort()),
+    fixtureDigest,
+    templateDigest,
+    oracleDigest,
+    bundleDigest,
+  });
+}
