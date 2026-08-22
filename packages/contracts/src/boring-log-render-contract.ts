@@ -70,6 +70,24 @@ export interface BoringLogTextStyleInput {
   readonly color: string;
 }
 
+export interface BoringLogTextOccurrenceLayoutInput {
+  readonly id: string;
+  readonly frame: MptRect;
+  readonly paddingMpt: {
+    readonly topMpt: Mpt;
+    readonly rightMpt: Mpt;
+    readonly bottomMpt: Mpt;
+    readonly leftMpt: Mpt;
+  };
+  readonly horizontalAlignment: "start" | "center" | "end";
+  readonly verticalAlignment: "top" | "middle" | "bottom";
+  readonly wrapPolicy: "word-v1" | "no-wrap";
+  readonly overflowPolicy: "clip-with-diagnostic";
+  readonly rotationMilliDegrees: number;
+  readonly positionMode: "depth-bound" | "free";
+  readonly locked: boolean;
+}
+
 export interface BoringLogTemplateRegionInput extends MptRect {
   readonly id: string;
   readonly role: "header" | "depth-body" | "footer";
@@ -117,6 +135,7 @@ export interface BoringLogTemplateInput {
   readonly depthTransform: BoringLogDepthTransformInput;
   readonly columns: readonly BoringLogColumnInput[];
   readonly styles: readonly BoringLogTextStyleInput[];
+  readonly occurrenceLayouts?: readonly BoringLogTextOccurrenceLayoutInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
   readonly bindings: readonly BoringLogTemplateBindingInput[];
   readonly visualTokens: Readonly<Record<string, string>>;
@@ -394,6 +413,7 @@ export interface BoringLogSceneTextNode extends BoringLogSceneNodeBase {
   readonly styleId: string;
   readonly content: string;
   readonly frame: MptRect;
+  readonly presentation?: Omit<BoringLogTextOccurrenceLayoutInput, "id" | "frame">;
 }
 
 export type BoringLogSceneNode =
@@ -658,6 +678,11 @@ function validateTemplateHierarchy(input: unknown, ids: string[], leafIds: strin
 }
 
 function validateTemplate(input: unknown): void {
+  const hasOccurrenceLayouts =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "occurrenceLayouts");
   const value = record(input, [
     "schemaVersion",
     "templateId",
@@ -668,6 +693,7 @@ function validateTemplate(input: unknown): void {
     "depthTransform",
     "columns",
     "styles",
+    ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
     "hierarchy",
     "bindings",
     "visualTokens",
@@ -760,6 +786,53 @@ function validateTemplate(input: unknown): void {
     textValue(style["color"]);
   }
   unique(styleIds);
+  const occurrenceLayoutIds: string[] = [];
+  for (const layoutInput of hasOccurrenceLayouts ? array(value["occurrenceLayouts"]) : []) {
+    const layout = record(layoutInput, [
+      "id",
+      "frame",
+      "paddingMpt",
+      "horizontalAlignment",
+      "verticalAlignment",
+      "wrapPolicy",
+      "overflowPolicy",
+      "rotationMilliDegrees",
+      "positionMode",
+      "locked",
+    ]);
+    occurrenceLayoutIds.push(textValue(layout["id"]));
+    validateRect(layout["frame"]);
+    const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
+    for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
+      if (mpt(padding[side]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    }
+    if (!["start", "center", "end"].includes(textValue(layout["horizontalAlignment"]))) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (!["top", "middle", "bottom"].includes(textValue(layout["verticalAlignment"]))) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (!["word-v1", "no-wrap"].includes(textValue(layout["wrapPolicy"]))) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    literal(layout["overflowPolicy"], "clip-with-diagnostic");
+    const rotation = finite(layout["rotationMilliDegrees"]);
+    if (!Number.isSafeInteger(rotation) || rotation < -180_000 || rotation > 180_000) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (!["depth-bound", "free"].includes(textValue(layout["positionMode"]))) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (typeof layout["locked"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    const frame = layout["frame"] as Readonly<Record<string, number>>;
+    if (
+      (padding["leftMpt"] as number) + (padding["rightMpt"] as number) >= frame["widthMpt"]! ||
+      (padding["topMpt"] as number) + (padding["bottomMpt"] as number) >= frame["heightMpt"]!
+    ) {
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    }
+  }
+  unique(occurrenceLayoutIds);
   const hierarchyIds: string[] = [];
   const leafIds: string[] = [];
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);
@@ -772,10 +845,18 @@ function validateTemplate(input: unknown): void {
     const path = textValue(binding["path"]);
     const occurrenceStyleBinding =
       path === "presentation.text-occurrence-style" && elementId.startsWith("node:");
-    if (!semanticIds.has(elementId) && !occurrenceStyleBinding)
+    const occurrenceLayoutBinding =
+      path === "presentation.text-occurrence-layout" && elementId.startsWith("node:");
+    if (!semanticIds.has(elementId) && !occurrenceStyleBinding && !occurrenceLayoutBinding)
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
-    if (occurrenceStyleBinding) occurrenceBindingIds.push(elementId);
-    if (!styleIds.includes(textValue(binding["styleId"])))
+    if (occurrenceStyleBinding || occurrenceLayoutBinding) {
+      occurrenceBindingIds.push(`${path}\u0000${elementId}`);
+    }
+    const resourceId = textValue(binding["styleId"]);
+    if (
+      (occurrenceLayoutBinding && !occurrenceLayoutIds.includes(resourceId)) ||
+      (!occurrenceLayoutBinding && !styleIds.includes(resourceId))
+    )
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
   }
   unique(occurrenceBindingIds);
@@ -1260,7 +1341,18 @@ function validateSceneNode(input: unknown): {
     line: ["from", "to", "strokeToken", "strokeWidthMpt", "dashMpt"],
     path: ["points", "closed", "fillToken", "strokeToken", "strokeWidthMpt", "dashMpt"],
     circle: ["center", "radiusMpt", "fillToken", "strokeToken", "strokeWidthMpt"],
-    text: ["measurementId", "styleId", "content", "frame"],
+    text: [
+      "measurementId",
+      "styleId",
+      "content",
+      "frame",
+      ...(typeof input === "object" &&
+      input !== null &&
+      !Array.isArray(input) &&
+      Object.hasOwn(input, "presentation")
+        ? ["presentation"]
+        : []),
+    ],
   };
   const extras = extraByKind[tagged.tag];
   if (!extras) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
@@ -1308,6 +1400,40 @@ function validateSceneNode(input: unknown): {
     const styleId = textValue(value["styleId"]);
     const content = textValue(value["content"], true);
     validateRect(value["frame"]);
+    if (Object.hasOwn(value, "presentation")) {
+      const presentation = record(value["presentation"], [
+        "paddingMpt",
+        "horizontalAlignment",
+        "verticalAlignment",
+        "wrapPolicy",
+        "overflowPolicy",
+        "rotationMilliDegrees",
+        "positionMode",
+        "locked",
+      ]);
+      const padding = record(presentation["paddingMpt"], [
+        "topMpt",
+        "rightMpt",
+        "bottomMpt",
+        "leftMpt",
+      ]);
+      for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
+        if (mpt(padding[side]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+      }
+      if (!["start", "center", "end"].includes(textValue(presentation["horizontalAlignment"])))
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (!["top", "middle", "bottom"].includes(textValue(presentation["verticalAlignment"])))
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (!["word-v1", "no-wrap"].includes(textValue(presentation["wrapPolicy"])))
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      literal(presentation["overflowPolicy"], "clip-with-diagnostic");
+      const rotation = finite(presentation["rotationMilliDegrees"]);
+      if (!Number.isSafeInteger(rotation) || rotation < -180_000 || rotation > 180_000)
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (!["depth-bound", "free"].includes(textValue(presentation["positionMode"])))
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (typeof presentation["locked"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     return { id, semanticId, parentId, measurementId, styleId, content };
   }
   return { id, semanticId, parentId };

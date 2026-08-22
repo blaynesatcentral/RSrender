@@ -153,6 +153,16 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
     fontWeight: 700,
     lineHeightMpt: 11_000,
     color: "#b42318",
+    layout: {
+      frame: { xMpt: 120_000, yMpt: 305_000, widthMpt: 150_000, heightMpt: 12_000 },
+      paddingMpt: { topMpt: 0, rightMpt: 0, bottomMpt: 0, leftMpt: 0 },
+      horizontalAlignment: "start",
+      verticalAlignment: "top",
+      wrapPolicy: "word-v1",
+      overflowPolicy: "clip-with-diagnostic",
+      rotationMilliDegrees: 0,
+      positionMode: "depth-bound",
+    },
     locked: false,
   };
   const accepted = await route.setTextOccurrenceStyle(routeContext, {

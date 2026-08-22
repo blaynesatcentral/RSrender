@@ -592,6 +592,14 @@ textarea {
   min-height: 32px;
   padding: 3px;
 }
+.text-style-grid .text-lock-control {
+  grid-column: 1 / -1;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+.text-style-grid .text-lock-control input[type="checkbox"] {
+  width: auto;
+}
 .text-style-grid .apply-property,
 .text-style-grid .property-help {
   grid-column: 1 / -1;

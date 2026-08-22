@@ -2100,23 +2100,31 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     await typeText(window, "#text-font-size", "9");
     await typeText(window, "#text-line-height", "11");
+    await typeText(window, "#text-frame-x", "125");
+    await typeText(window, "#text-frame-width", "150");
+    await typeText(window, "#text-frame-height", "22");
+    await typeText(window, "#text-rotation", "5");
+    await typeText(window, "#text-padding-top", "1");
+    await typeText(window, "#text-padding-right", "2");
+    await typeText(window, "#text-padding-bottom", "1");
+    await typeText(window, "#text-padding-left", "2");
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const weight = document.getElementById("text-font-weight"); const color = document.getElementById("text-color"); if (!(weight instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`,
+        `(() => { const weight = document.getElementById("text-font-weight"); const color = document.getElementById("text-color"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); if (!(weight instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
       )) === true,
       "TEXT_OCCURRENCE_CONTROLS_INVALID",
     );
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Typography applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
       "WAIT_TEXT_OCCURRENCE_APPLY",
     );
     const applied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
     requireProbe(applied["canUndo"] === true, "TEXT_OCCURRENCE_AUTHORITY_UNDO_INVALID");
@@ -2131,26 +2139,50 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#undo", "Space", "FOCUS_TEXT_OCCURRENCE_UNDO");
     await waitFor(
       window,
-      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("redo")?.disabled === false`,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("redo")?.disabled === false`,
       "WAIT_TEXT_OCCURRENCE_UNDO",
     );
     const undo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill") }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_REDO");
     await waitFor(
       window,
-      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700"`,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000"`,
       "WAIT_TEXT_OCCURRENCE_REDO",
     );
     const redo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
       ),
+    );
+    requireProbe(
+      applied["frameX"] === "125000" &&
+        applied["frameWidth"] === "150000" &&
+        applied["horizontalAlignment"] === "center" &&
+        applied["verticalAlignment"] === "middle" &&
+        applied["wrapPolicy"] === "no-wrap" &&
+        applied["locked"] === "true",
+      `TEXT_OCCURRENCE_LAYOUT_APPLY_INVALID:${JSON.stringify(applied)}`,
+    );
+    requireProbe(
+      applied["transform"] === "rotate(5 200000 304338)",
+      `TEXT_OCCURRENCE_ROTATION_INVALID:${String(applied["transform"])}`,
+    );
+    requireProbe(
+      undo["frameX"] === null && undo["firstLineX"] === "114750",
+      `TEXT_OCCURRENCE_LAYOUT_UNDO_INVALID:${JSON.stringify(undo)}`,
+    );
+    requireProbe(
+      redo["frameX"] === "125000" &&
+        redo["horizontalAlignment"] === "center" &&
+        redo["locked"] === "true" &&
+        redo["transform"] === "rotate(5 200000 304338)",
+      `TEXT_OCCURRENCE_LAYOUT_REDO_INVALID:${JSON.stringify(redo)}`,
     );
     requireProbe(
       before["fontSize"] === "5500" &&
@@ -2894,7 +2926,13 @@ async function main(): Promise<void> {
         input.fontSizeMpt > 48_000 ||
         input.lineHeightMpt < input.fontSizeMpt ||
         input.lineHeightMpt > 72_000 ||
-        !/^#[0-9a-f]{6}$/iu.test(input.color)
+        !/^#[0-9a-f]{6}$/iu.test(input.color) ||
+        input.layout.positionMode !== "depth-bound" ||
+        input.layout.frame.yMpt !== node.frame.yMpt ||
+        input.layout.frame.xMpt + input.layout.frame.widthMpt >
+          projected.projection.scene.pages[0]!.widthMpt ||
+        input.layout.frame.yMpt + input.layout.frame.heightMpt >
+          projected.projection.scene.pages[0]!.heightMpt
       ) {
         return Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_STYLE_INVALID" });
       }
@@ -2916,32 +2954,51 @@ async function main(): Promise<void> {
       if (representation === undefined) {
         return Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_STYLE_UNAVAILABLE" });
       }
-      const authored = applyBoringLogTextOccurrenceStyles(currentJob, [
-        {
-          contractVersion: 1,
-          schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
-          kind: "boring-log.text-occurrence-style-override",
-          ownerDocumentIdentity: documentIdentity,
-          boringLogIdentity: document.boringLogIdentity,
-          overrideIdentity: `urn:rsrender:text-style-override:${sha256CanonicalJson({
+      const occurrenceIdentityDigest = sha256CanonicalJson({
+        boringLogIdentity: document.boringLogIdentity,
+        occurrenceNodeId: input.occurrenceNodeId,
+      }).slice("sha256:".length);
+      const authored = applyBoringLogTextOccurrenceStyles(
+        currentJob,
+        [
+          {
+            contractVersion: 1,
+            schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+            kind: "boring-log.text-occurrence-style-override",
+            ownerDocumentIdentity: documentIdentity,
             boringLogIdentity: document.boringLogIdentity,
+            overrideIdentity: `urn:rsrender:text-style-override:${occurrenceIdentityDigest}`,
+            overrideRevision: input.expectedWorkingRevision + 1,
+            scope: "occurrence",
             occurrenceNodeId: input.occurrenceNodeId,
-          }).slice("sha256:".length)}`,
-          overrideRevision: input.expectedWorkingRevision + 1,
-          scope: "occurrence",
-          occurrenceNodeId: input.occurrenceNodeId,
-          semanticId: input.semanticId,
-          baseStyleId: input.baseStyleId,
-          style: {
-            fontFamilyId: input.fontFamilyId,
-            fontSizeMpt: input.fontSizeMpt,
-            fontWeight: input.fontWeight,
-            lineHeightMpt: input.lineHeightMpt,
-            color: input.color.toLowerCase(),
+            semanticId: input.semanticId,
+            baseStyleId: input.baseStyleId,
+            style: {
+              fontFamilyId: input.fontFamilyId,
+              fontSizeMpt: input.fontSizeMpt,
+              fontWeight: input.fontWeight,
+              lineHeightMpt: input.lineHeightMpt,
+              color: input.color.toLowerCase(),
+            },
+            locked: input.locked,
           },
-          locked: input.locked,
-        },
-      ]);
+        ],
+        [
+          {
+            contractVersion: 1,
+            schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+            kind: "boring-log.text-occurrence-layout-override",
+            ownerDocumentIdentity: documentIdentity,
+            boringLogIdentity: document.boringLogIdentity,
+            overrideIdentity: `urn:rsrender:text-layout-override:${occurrenceIdentityDigest}`,
+            overrideRevision: input.expectedWorkingRevision + 1,
+            scope: "occurrence",
+            occurrenceNodeId: input.occurrenceNodeId,
+            semanticId: input.semanticId,
+            layout: { ...input.layout, locked: input.locked },
+          },
+        ],
+      );
       if (!authored.accepted) {
         return Object.freeze({ accepted: false, code: authored.code });
       }

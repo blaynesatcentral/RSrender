@@ -32,7 +32,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
   await rm(projectPath, { force: true });
   await rm(projectLockPath, { force: true });
   await rm(pdfPath, { force: true });
-  process.env.RSRENDER_BORING_LOG_PACKAGE_LABEL = "bld-037-boring-log-editor";
+  process.env.RSRENDER_BORING_LOG_PACKAGE_LABEL = `bld-037-boring-log-editor-${process.pid}`;
   const { packageBoringLogEditor } = await import(
     `${pathToFileURL(path.join(root, "tooling", "shell-package-bld026.mjs")).href}?bld037=${Date.now()}`
   );
@@ -63,12 +63,23 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.fontSize !== "9000" ||
     style?.applied?.fontWeight !== "700" ||
     style?.applied?.fill !== "#b42318" ||
+    style?.applied?.frameX !== "125000" ||
+    style?.applied?.frameWidth !== "150000" ||
+    style?.applied?.horizontalAlignment !== "center" ||
+    style?.applied?.verticalAlignment !== "middle" ||
+    style?.applied?.wrapPolicy !== "no-wrap" ||
+    style?.applied?.locked !== "true" ||
+    style?.applied?.transform !== "rotate(5 200000 304338)" ||
     style?.applied?.sceneInputDigest === style.before.sceneInputDigest ||
     style?.undo?.fontSize !== "5500" ||
     style?.undo?.fontWeight !== "400" ||
+    style?.undo?.frameX !== null ||
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
     style?.redo?.fill !== "#b42318" ||
+    style?.redo?.frameX !== "125000" ||
+    style?.redo?.horizontalAlignment !== "center" ||
+    style?.redo?.locked !== "true" ||
     style?.redo?.sceneInputDigest === style.before.sceneInputDigest ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
@@ -91,16 +102,35 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       elementId === targetNodeId && bindingPath === "presentation.text-occurrence-style",
   );
   const persistedStyle = layoutJob?.template.styles.find(({ id }) => id === binding?.styleId);
+  const layoutBinding = layoutJob?.template.bindings.find(
+    ({ elementId, path: bindingPath }) =>
+      elementId === targetNodeId && bindingPath === "presentation.text-occurrence-layout",
+  );
+  const persistedLayout = layoutJob?.template.occurrenceLayouts?.find(
+    ({ id }) => id === layoutBinding?.styleId,
+  );
   if (
     !layoutJob ||
     !binding ||
     persistedStyle?.fontSizeMpt !== 9_000 ||
     persistedStyle?.fontWeight !== 700 ||
     persistedStyle?.lineHeightMpt !== 11_000 ||
-    persistedStyle?.color !== "#b42318"
+    persistedStyle?.color !== "#b42318" ||
+    !layoutBinding ||
+    persistedLayout?.frame.xMpt !== 125_000 ||
+    persistedLayout?.frame.yMpt !== 293_338 ||
+    persistedLayout?.frame.widthMpt !== 150_000 ||
+    persistedLayout?.frame.heightMpt !== 22_000 ||
+    persistedLayout?.paddingMpt.leftMpt !== 2_000 ||
+    persistedLayout?.horizontalAlignment !== "center" ||
+    persistedLayout?.verticalAlignment !== "middle" ||
+    persistedLayout?.wrapPolicy !== "no-wrap" ||
+    persistedLayout?.rotationMilliDegrees !== 5_000 ||
+    persistedLayout?.positionMode !== "depth-bound" ||
+    persistedLayout?.locked !== true
   ) {
     throw new Error(
-      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle })}`,
+      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, layoutBinding, persistedLayout })}`,
     );
   }
 
@@ -117,6 +147,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       targetNodeId,
       styleId: binding.styleId,
       persistedStyle,
+      layoutId: layoutBinding.styleId,
+      persistedLayout,
     },
     pdf: {
       relativePath: path.relative(root, pdfPath).replaceAll("\\", "/"),
@@ -129,6 +161,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       exactOccurrenceContextSelection: true,
       rendererNeutralTypographyBeforeMeasurement: true,
       sharedHistoryUndoRedo: true,
+      exactFrameAlignmentWrapRotationLock: true,
       projectSaveReopenRetainsStyle: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

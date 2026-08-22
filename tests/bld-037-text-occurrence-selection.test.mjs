@@ -65,7 +65,15 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-line-height"/u);
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(html, /id="text-style-scope"[^>]*>[\s\S]*?This occurrence/u);
-  assert.match(html, /id="apply-text-style"[^>]*>Apply typography/u);
+  assert.match(html, /id="text-layout-properties"/u);
+  assert.match(html, /id="text-frame-x"/u);
+  assert.match(html, /id="text-frame-y"[^>]+readonly/u);
+  assert.match(html, /id="text-frame-width"/u);
+  assert.match(html, /id="text-frame-height"/u);
+  assert.match(html, /id="text-horizontal-alignment"/u);
+  assert.match(html, /id="text-wrap-policy"/u);
+  assert.match(html, /id="text-locked"/u);
+  assert.match(html, /id="apply-text-style"[^>]*>Apply text properties/u);
 });
 
 test("BLD-037 routes canvas click and contextmenu through exact node selection", async () => {
@@ -86,29 +94,57 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
 
 test("BLD-037 resolves one occurrence style before common screen and PDF projection", () => {
   const occurrenceNodeId = "node:lithology:stratum-01:transition:2:text";
-  const prepared = prepareBoringLogLayoutWithTextOccurrenceStyles(boringLogMvpFixtureJob(), [
-    {
-      contractVersion: 1,
-      schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
-      kind: "boring-log.text-occurrence-style-override",
-      ownerDocumentIdentity: "urn:rsrender:document:bld-037-test",
-      boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
-      overrideIdentity: "urn:rsrender:text-style-override:bld-037-test",
-      overrideRevision: 1,
-      scope: "occurrence",
-      occurrenceNodeId,
-      semanticId: "lithology:stratum-01:transition:2",
-      baseStyleId: "style-small",
-      style: {
-        fontFamilyId: "font.logical.rsrender-sans",
-        fontSizeMpt: 9_000,
-        fontWeight: 700,
-        lineHeightMpt: 11_000,
-        color: "#b42318",
+  const prepared = prepareBoringLogLayoutWithTextOccurrenceStyles(
+    boringLogMvpFixtureJob(),
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+        kind: "boring-log.text-occurrence-style-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-test",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-style-override:bld-037-test",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId: "lithology:stratum-01:transition:2",
+        baseStyleId: "style-small",
+        style: {
+          fontFamilyId: "font.logical.rsrender-sans",
+          fontSizeMpt: 9_000,
+          fontWeight: 700,
+          lineHeightMpt: 11_000,
+          color: "#b42318",
+        },
+        locked: false,
       },
-      locked: false,
-    },
-  ]);
+    ],
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+        kind: "boring-log.text-occurrence-layout-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-test",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-layout-override:bld-037-test",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId: "lithology:stratum-01:transition:2",
+        layout: {
+          frame: { xMpt: 125_000, yMpt: 293_338, widthMpt: 150_000, heightMpt: 22_000 },
+          paddingMpt: { topMpt: 1_000, rightMpt: 2_000, bottomMpt: 1_000, leftMpt: 2_000 },
+          horizontalAlignment: "center",
+          verticalAlignment: "middle",
+          wrapPolicy: "no-wrap",
+          overflowPolicy: "clip-with-diagnostic",
+          rotationMilliDegrees: 5_000,
+          positionMode: "depth-bound",
+          locked: true,
+        },
+      },
+    ],
+  );
   assert.equal(prepared.accepted, true);
   const request = prepared.value.textRequests.find(
     ({ measurementId }) => measurementId === `measure:${occurrenceNodeId}`,
@@ -116,6 +152,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.equal(request?.fontSizeMpt, 9_000);
   assert.equal(request?.fontWeight, 700);
   assert.equal(request?.lineHeightMpt, 11_000);
+  assert.equal(request?.maximumWidthMpt, 146_000);
+  assert.equal(request?.maximumLines, 1);
+  assert.equal(request?.wrapPolicy, "no-wrap");
   const resolved = resolveBoringLogPageScene(
     prepared.value,
     deterministicTextResults(prepared.value.textRequests),
@@ -123,6 +162,13 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.equal(resolved.accepted, true);
   const node = resolved.value.pages[0].nodes.find(({ id }) => id === occurrenceNodeId);
   assert.match(node?.kind === "text" ? node.styleId : "", /^style-occurrence-/u);
+  assert.deepEqual(node?.kind === "text" ? node.frame : null, {
+    xMpt: 125_000,
+    yMpt: 293_338,
+    widthMpt: 150_000,
+    heightMpt: 22_000,
+  });
+  assert.equal(node?.kind === "text" ? node.presentation?.locked : null, true);
   const screen = projectBoringLogSceneToSvg(resolved.value);
   const publication = projectBoringLogSceneForPublication(resolved.value);
   assert.equal(screen.accepted, true);
@@ -131,10 +177,14 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     screen.markup,
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9000"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
+  assert.match(screen.markup, /data-horizontal-alignment="center"/u);
+  assert.match(screen.markup, /transform="rotate\(5 200000 304338\)"/u);
   assert.match(
     publication.projection.svgMarkup,
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
+  assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
+  assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
 });
 
 function boringLogMvpFixtureJob() {

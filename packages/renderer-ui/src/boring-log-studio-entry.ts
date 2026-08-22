@@ -97,6 +97,26 @@ type StudioApis = Readonly<{
       readonly fontWeight: number;
       readonly lineHeightMpt: number;
       readonly color: string;
+      readonly layout: {
+        readonly frame: {
+          readonly xMpt: number;
+          readonly yMpt: number;
+          readonly widthMpt: number;
+          readonly heightMpt: number;
+        };
+        readonly paddingMpt: {
+          readonly topMpt: number;
+          readonly rightMpt: number;
+          readonly bottomMpt: number;
+          readonly leftMpt: number;
+        };
+        readonly horizontalAlignment: "start" | "center" | "end";
+        readonly verticalAlignment: "top" | "middle" | "bottom";
+        readonly wrapPolicy: "word-v1" | "no-wrap";
+        readonly overflowPolicy: "clip-with-diagnostic";
+        readonly rotationMilliDegrees: number;
+        readonly positionMode: "depth-bound" | "free";
+      };
       readonly locked: boolean;
     }) => Promise<unknown>;
   };
@@ -221,11 +241,27 @@ async function main(): Promise<void> {
   const propertySourceOriginal = element<HTMLElement>("property-source-original");
   const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
   const textStyleProperties = element<HTMLDetailsElement>("text-style-properties");
+  const textLayoutProperties = element<HTMLDetailsElement>("text-layout-properties");
   const textFontFamily = element<HTMLSelectElement>("text-font-family");
   const textFontSize = element<HTMLInputElement>("text-font-size");
   const textFontWeight = element<HTMLSelectElement>("text-font-weight");
   const textLineHeight = element<HTMLInputElement>("text-line-height");
   const textColor = element<HTMLInputElement>("text-color");
+  const textFrameX = element<HTMLInputElement>("text-frame-x");
+  const textFrameY = element<HTMLInputElement>("text-frame-y");
+  const textFrameWidth = element<HTMLInputElement>("text-frame-width");
+  const textFrameHeight = element<HTMLInputElement>("text-frame-height");
+  const textHorizontalAlignment = element<HTMLSelectElement>("text-horizontal-alignment");
+  const textVerticalAlignment = element<HTMLSelectElement>("text-vertical-alignment");
+  const textWrapPolicy = element<HTMLSelectElement>("text-wrap-policy");
+  const textOverflowPolicy = element<HTMLSelectElement>("text-overflow-policy");
+  const textRotation = element<HTMLInputElement>("text-rotation");
+  const textPaddingTop = element<HTMLInputElement>("text-padding-top");
+  const textPaddingRight = element<HTMLInputElement>("text-padding-right");
+  const textPaddingBottom = element<HTMLInputElement>("text-padding-bottom");
+  const textPaddingLeft = element<HTMLInputElement>("text-padding-left");
+  const textPositionMode = element<HTMLSelectElement>("text-position-mode");
+  const textLocked = element<HTMLInputElement>("text-locked");
   const applyTextStyle = element<HTMLButtonElement>("apply-text-style");
   const textStyleHelp = element<HTMLElement>("text-style-help");
   const selectionStatus = element<HTMLElement>("selection-status");
@@ -728,12 +764,32 @@ async function main(): Promise<void> {
         ? scene.resources.textStyles.find(({ id }) => id === representative.styleId)
         : undefined;
     textStyleProperties.hidden = textStyle === undefined;
+    textLayoutProperties.hidden = textStyle === undefined;
     if (textStyle !== undefined && representative.kind === "text") {
       textFontFamily.value = textStyle.fontFamilyId;
       textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
       textFontWeight.value = String(textStyle.fontWeight);
       textLineHeight.value = String(textStyle.lineHeightMpt / 1_000);
       textColor.value = /^#[0-9a-f]{6}$/iu.test(textStyle.color) ? textStyle.color : "#111827";
+      const presentation = representative.presentation;
+      const request = scene.textRequests.find(
+        ({ measurementId }) => measurementId === representative.measurementId,
+      );
+      textFrameX.value = String(representative.frame.xMpt / 1_000);
+      textFrameY.value = String(representative.frame.yMpt / 1_000);
+      textFrameWidth.value = String(representative.frame.widthMpt / 1_000);
+      textFrameHeight.value = String(representative.frame.heightMpt / 1_000);
+      textHorizontalAlignment.value = presentation?.horizontalAlignment ?? "start";
+      textVerticalAlignment.value = presentation?.verticalAlignment ?? "top";
+      textWrapPolicy.value = presentation?.wrapPolicy ?? request?.wrapPolicy ?? "word-v1";
+      textOverflowPolicy.value = presentation?.overflowPolicy ?? "clip-with-diagnostic";
+      textRotation.value = String((presentation?.rotationMilliDegrees ?? 0) / 1_000);
+      textPaddingTop.value = String((presentation?.paddingMpt.topMpt ?? 0) / 1_000);
+      textPaddingRight.value = String((presentation?.paddingMpt.rightMpt ?? 0) / 1_000);
+      textPaddingBottom.value = String((presentation?.paddingMpt.bottomMpt ?? 0) / 1_000);
+      textPaddingLeft.value = String((presentation?.paddingMpt.leftMpt ?? 0) / 1_000);
+      textPositionMode.value = presentation?.positionMode ?? "depth-bound";
+      textLocked.checked = presentation?.locked ?? false;
       applyTextStyle.disabled = selectedSceneNodeId === null || studioProjection === null;
       textStyleHelp.textContent =
         "This occurrence · inherited values resolve into a project-owned template override · edits use document history.";
@@ -899,12 +955,25 @@ async function main(): Promise<void> {
         ? undefined
         : scene.resources.textStyles.find(({ id }) => id === node.styleId);
     if (apis === null || studioProjection === null || node === undefined || style === undefined) {
-      status.textContent = "Select one exact text occurrence before applying typography.";
+      status.textContent = "Select one exact text occurrence before applying text properties.";
       return;
     }
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
+    const frame = {
+      xMpt: Math.round(Number(textFrameX.value) * 1_000),
+      yMpt: Math.round(Number(textFrameY.value) * 1_000),
+      widthMpt: Math.round(Number(textFrameWidth.value) * 1_000),
+      heightMpt: Math.round(Number(textFrameHeight.value) * 1_000),
+    };
+    const paddingMpt = {
+      topMpt: Math.round(Number(textPaddingTop.value) * 1_000),
+      rightMpt: Math.round(Number(textPaddingRight.value) * 1_000),
+      bottomMpt: Math.round(Number(textPaddingBottom.value) * 1_000),
+      leftMpt: Math.round(Number(textPaddingLeft.value) * 1_000),
+    };
+    const rotationMilliDegrees = Math.round(Number(textRotation.value) * 1_000);
     if (
       !Number.isSafeInteger(fontSizeMpt) ||
       fontSizeMpt < 4_000 ||
@@ -915,15 +984,27 @@ async function main(): Promise<void> {
       !Number.isSafeInteger(lineHeightMpt) ||
       lineHeightMpt < fontSizeMpt ||
       lineHeightMpt > 72_000 ||
-      !/^#[0-9a-f]{6}$/iu.test(textColor.value)
+      !/^#[0-9a-f]{6}$/iu.test(textColor.value) ||
+      !Object.values(frame).every(Number.isSafeInteger) ||
+      frame.xMpt < 0 ||
+      frame.yMpt !== node.frame.yMpt ||
+      frame.widthMpt < 1_000 ||
+      frame.heightMpt < 1_000 ||
+      !Object.values(paddingMpt).every(Number.isSafeInteger) ||
+      Object.values(paddingMpt).some((value) => value < 0) ||
+      paddingMpt.leftMpt + paddingMpt.rightMpt >= frame.widthMpt ||
+      paddingMpt.topMpt + paddingMpt.bottomMpt >= frame.heightMpt ||
+      !Number.isSafeInteger(rotationMilliDegrees) ||
+      rotationMilliDegrees < -180_000 ||
+      rotationMilliDegrees > 180_000
     ) {
       status.textContent =
-        "Typography requires a 4–48 pt size, valid weight, line height at least the font size, and a six-digit color.";
+        "Text properties require valid typography, positive in-page frame geometry, depth-bound Y, and padding smaller than the frame.";
       textFontSize.focus();
       return;
     }
     applyTextStyle.disabled = true;
-    status.textContent = `Applying typography to ${node.id}…`;
+    status.textContent = `Applying text properties to ${node.id}…`;
     const raw = await apis.studio.setTextOccurrenceStyle({
       expectedWorkingRevision: studioProjection.workingRevision,
       occurrenceNodeId: node.id,
@@ -934,22 +1015,32 @@ async function main(): Promise<void> {
       fontWeight,
       lineHeightMpt,
       color: textColor.value,
-      locked: false,
+      layout: {
+        frame,
+        paddingMpt,
+        horizontalAlignment: textHorizontalAlignment.value as "start" | "center" | "end",
+        verticalAlignment: textVerticalAlignment.value as "top" | "middle" | "bottom",
+        wrapPolicy: textWrapPolicy.value as "word-v1" | "no-wrap",
+        overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic",
+        rotationMilliDegrees,
+        positionMode: textPositionMode.value as "depth-bound" | "free",
+      },
+      locked: textLocked.checked,
     });
     if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
       applyTextStyle.disabled = false;
-      status.textContent = "Typography command returned an invalid result.";
+      status.textContent = "Text property command returned an invalid result.";
       return;
     }
     const result = raw as Record<string, unknown>;
     if (result["accepted"] !== true || !Number.isSafeInteger(result["workingRevision"])) {
       applyTextStyle.disabled = false;
-      status.textContent = `Typography edit rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
+      status.textContent = `Text property edit rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
       return;
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
-      `Typography applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+      `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;

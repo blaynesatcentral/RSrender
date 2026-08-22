@@ -1,0 +1,204 @@
+import { isMpt, type Mpt } from "./physical-length.js";
+import type { BoringLogTextOccurrenceLayoutInput } from "./boring-log-render-contract.js";
+
+export const boringLogTextOccurrenceLayoutOverrideSchemaVersion =
+  "rsrender.boring-log-text-occurrence-layout-override.v1" as const;
+
+export interface BoringLogTextOccurrenceLayoutOverride {
+  readonly contractVersion: 1;
+  readonly schemaVersion: typeof boringLogTextOccurrenceLayoutOverrideSchemaVersion;
+  readonly kind: "boring-log.text-occurrence-layout-override";
+  readonly ownerDocumentIdentity: string;
+  readonly boringLogIdentity: string;
+  readonly overrideIdentity: string;
+  readonly overrideRevision: number;
+  readonly scope: "occurrence";
+  readonly occurrenceNodeId: string;
+  readonly semanticId: string;
+  readonly layout: Omit<BoringLogTextOccurrenceLayoutInput, "id">;
+}
+
+export type BoringLogTextOccurrenceLayoutOverrideResult =
+  | { readonly accepted: true; readonly value: BoringLogTextOccurrenceLayoutOverride }
+  | {
+      readonly accepted: false;
+      readonly code:
+        | "BORING_LOG_TEXT_LAYOUT_OVERRIDE_MALFORMED"
+        | "BORING_LOG_TEXT_LAYOUT_OVERRIDE_EXTRA_FIELD"
+        | "BORING_LOG_TEXT_LAYOUT_OVERRIDE_MISSING_FIELD"
+        | "BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE"
+        | "BORING_LOG_TEXT_LAYOUT_OVERRIDE_UNSUPPORTED_VERSION";
+    };
+
+type RejectionCode = Exclude<
+  BoringLogTextOccurrenceLayoutOverrideResult,
+  { readonly accepted: true }
+>["code"];
+
+class LayoutFailure extends Error {
+  public constructor(public readonly code: RejectionCode) {
+    super(code);
+  }
+}
+
+function fail(code: RejectionCode): never {
+  throw new LayoutFailure(code);
+}
+
+function record(input: unknown, fields: readonly string[]): Readonly<Record<string, unknown>> {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_MALFORMED");
+  }
+  const prototype = Object.getPrototypeOf(input) as unknown;
+  if (prototype !== Object.prototype && prototype !== null) {
+    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_MALFORMED");
+  }
+  const keys = Reflect.ownKeys(input);
+  if (keys.some((key) => typeof key !== "string" || !fields.includes(key))) {
+    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_EXTRA_FIELD");
+  }
+  if (fields.some((field) => !Object.hasOwn(input, field))) {
+    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_MISSING_FIELD");
+  }
+  return input as Readonly<Record<string, unknown>>;
+}
+
+function text(input: unknown): string {
+  if (typeof input !== "string" || input.length < 1 || input.length > 512) {
+    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+  }
+  return input;
+}
+
+function nonnegativeMpt(input: unknown): Mpt {
+  if (!isMpt(input) || input < 0) return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+  return input;
+}
+
+function positiveMpt(input: unknown): Mpt {
+  if (!isMpt(input) || input <= 0) return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+  return input;
+}
+
+export function validateBoringLogTextOccurrenceLayoutOverride(
+  input: unknown,
+): BoringLogTextOccurrenceLayoutOverrideResult {
+  try {
+    const value = record(input, [
+      "contractVersion",
+      "schemaVersion",
+      "kind",
+      "ownerDocumentIdentity",
+      "boringLogIdentity",
+      "overrideIdentity",
+      "overrideRevision",
+      "scope",
+      "occurrenceNodeId",
+      "semanticId",
+      "layout",
+    ]);
+    if (
+      value["contractVersion"] !== 1 ||
+      value["schemaVersion"] !== boringLogTextOccurrenceLayoutOverrideSchemaVersion ||
+      value["kind"] !== "boring-log.text-occurrence-layout-override" ||
+      value["scope"] !== "occurrence"
+    ) {
+      return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_UNSUPPORTED_VERSION");
+    }
+    if (
+      !Number.isSafeInteger(value["overrideRevision"]) ||
+      (value["overrideRevision"] as number) < 1
+    ) {
+      return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+    }
+    const layout = record(value["layout"], [
+      "frame",
+      "paddingMpt",
+      "horizontalAlignment",
+      "verticalAlignment",
+      "wrapPolicy",
+      "overflowPolicy",
+      "rotationMilliDegrees",
+      "positionMode",
+      "locked",
+    ]);
+    const frame = record(layout["frame"], ["xMpt", "yMpt", "widthMpt", "heightMpt"]);
+    const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
+    const decodedFrame = Object.freeze({
+      xMpt: nonnegativeMpt(frame["xMpt"]),
+      yMpt: nonnegativeMpt(frame["yMpt"]),
+      widthMpt: positiveMpt(frame["widthMpt"]),
+      heightMpt: positiveMpt(frame["heightMpt"]),
+    });
+    const decodedPadding = Object.freeze({
+      topMpt: nonnegativeMpt(padding["topMpt"]),
+      rightMpt: nonnegativeMpt(padding["rightMpt"]),
+      bottomMpt: nonnegativeMpt(padding["bottomMpt"]),
+      leftMpt: nonnegativeMpt(padding["leftMpt"]),
+    });
+    if (
+      decodedPadding.leftMpt + decodedPadding.rightMpt >= decodedFrame.widthMpt ||
+      decodedPadding.topMpt + decodedPadding.bottomMpt >= decodedFrame.heightMpt
+    ) {
+      return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+    }
+    const horizontalAlignment = layout["horizontalAlignment"];
+    const verticalAlignment = layout["verticalAlignment"];
+    const wrapPolicy = layout["wrapPolicy"];
+    const rotationMilliDegrees = layout["rotationMilliDegrees"];
+    const positionMode = layout["positionMode"];
+    if (
+      !(
+        horizontalAlignment === "start" ||
+        horizontalAlignment === "center" ||
+        horizontalAlignment === "end"
+      ) ||
+      !(
+        verticalAlignment === "top" ||
+        verticalAlignment === "middle" ||
+        verticalAlignment === "bottom"
+      ) ||
+      !(wrapPolicy === "word-v1" || wrapPolicy === "no-wrap") ||
+      layout["overflowPolicy"] !== "clip-with-diagnostic" ||
+      !Number.isSafeInteger(rotationMilliDegrees) ||
+      (rotationMilliDegrees as number) < -180_000 ||
+      (rotationMilliDegrees as number) > 180_000 ||
+      !(positionMode === "depth-bound" || positionMode === "free") ||
+      typeof layout["locked"] !== "boolean"
+    ) {
+      return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
+    }
+    return Object.freeze({
+      accepted: true,
+      value: Object.freeze({
+        contractVersion: 1,
+        schemaVersion: boringLogTextOccurrenceLayoutOverrideSchemaVersion,
+        kind: "boring-log.text-occurrence-layout-override",
+        ownerDocumentIdentity: text(value["ownerDocumentIdentity"]),
+        boringLogIdentity: text(value["boringLogIdentity"]),
+        overrideIdentity: text(value["overrideIdentity"]),
+        overrideRevision: value["overrideRevision"] as number,
+        scope: "occurrence",
+        occurrenceNodeId: text(value["occurrenceNodeId"]),
+        semanticId: text(value["semanticId"]),
+        layout: Object.freeze({
+          frame: decodedFrame,
+          paddingMpt: decodedPadding,
+          horizontalAlignment,
+          verticalAlignment,
+          wrapPolicy,
+          overflowPolicy: "clip-with-diagnostic",
+          rotationMilliDegrees: rotationMilliDegrees as number,
+          positionMode,
+          locked: layout["locked"],
+        }),
+      }),
+    });
+  } catch (error) {
+    return Object.freeze({
+      accepted: false,
+      code:
+        error instanceof LayoutFailure ? error.code : "BORING_LOG_TEXT_LAYOUT_OVERRIDE_MALFORMED",
+    });
+  }
+}

@@ -1,8 +1,10 @@
 import {
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
+  validateBoringLogTextOccurrenceLayoutOverride,
   validateBoringLogTextOccurrenceStyleOverride,
   type BoringLogLayoutJobInput,
+  type BoringLogTextOccurrenceLayoutOverride,
   type BoringLogTextOccurrenceStyleOverride,
 } from "@rsrender/contracts";
 
@@ -20,6 +22,7 @@ export type BoringLogTextOccurrenceAuthoringResult =
       readonly accepted: true;
       readonly job: BoringLogLayoutJobInput;
       readonly overrides: readonly BoringLogTextOccurrenceStyleOverride[];
+      readonly layoutOverrides: readonly BoringLogTextOccurrenceLayoutOverride[];
     }
   | {
       readonly accepted: false;
@@ -41,11 +44,21 @@ function rejected(
 export function applyBoringLogTextOccurrenceStyles(
   jobInput: unknown,
   overrideInputs: unknown,
+  layoutOverrideInputs: unknown = [],
 ): BoringLogTextOccurrenceAuthoringResult {
   const job = validateBoringLogLayoutJobInput(jobInput);
   if (!job.accepted) return rejected("BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED");
-  if (!Array.isArray(overrideInputs)) {
+  if (!Array.isArray(overrideInputs) || !Array.isArray(layoutOverrideInputs)) {
     return rejected("BORING_LOG_TEXT_OCCURRENCE_OVERRIDE_REJECTED");
+  }
+  const layoutOverrides: BoringLogTextOccurrenceLayoutOverride[] = [];
+  for (const input of layoutOverrideInputs) {
+    const decoded = validateBoringLogTextOccurrenceLayoutOverride(input);
+    if (!decoded.accepted) return rejected("BORING_LOG_TEXT_OCCURRENCE_OVERRIDE_REJECTED");
+    if (decoded.value.boringLogIdentity !== job.value.document.identity.boringLogId) {
+      return rejected("BORING_LOG_TEXT_OCCURRENCE_SCOPE_MISMATCH");
+    }
+    layoutOverrides.push(decoded.value);
   }
   const overrides: BoringLogTextOccurrenceStyleOverride[] = [];
   for (const input of overrideInputs) {
@@ -58,26 +71,53 @@ export function applyBoringLogTextOccurrenceStyles(
   }
   overrides.sort((left, right) => left.occurrenceNodeId.localeCompare(right.occurrenceNodeId));
   if (
-    new Set(overrides.map(({ occurrenceNodeId }) => occurrenceNodeId)).size !== overrides.length
+    new Set(overrides.map(({ occurrenceNodeId }) => occurrenceNodeId)).size !== overrides.length ||
+    new Set(layoutOverrides.map(({ occurrenceNodeId }) => occurrenceNodeId)).size !==
+      layoutOverrides.length
   ) {
     return rejected("BORING_LOG_TEXT_OCCURRENCE_DUPLICATE");
   }
-  const targetNodeIds = new Set(overrides.map(({ occurrenceNodeId }) => occurrenceNodeId));
+  layoutOverrides.sort((left, right) =>
+    left.occurrenceNodeId.localeCompare(right.occurrenceNodeId),
+  );
+  const styleTargetNodeIds = new Set(overrides.map(({ occurrenceNodeId }) => occurrenceNodeId));
+  const layoutTargetNodeIds = new Set(
+    layoutOverrides.map(({ occurrenceNodeId }) => occurrenceNodeId),
+  );
   const replacedStyleIds = new Set(
     job.value.template.bindings
       .filter(
         ({ elementId, path }) =>
-          path === "presentation.text-occurrence-style" && targetNodeIds.has(elementId),
+          path === "presentation.text-occurrence-style" && styleTargetNodeIds.has(elementId),
+      )
+      .map(({ styleId }) => styleId),
+  );
+  const replacedLayoutIds = new Set(
+    job.value.template.bindings
+      .filter(
+        ({ elementId, path }) =>
+          path === "presentation.text-occurrence-layout" && layoutTargetNodeIds.has(elementId),
       )
       .map(({ styleId }) => styleId),
   );
   const bindings = job.value.template.bindings.filter(
     ({ elementId, path }) =>
-      path !== "presentation.text-occurrence-style" || !targetNodeIds.has(elementId),
+      !(
+        (path === "presentation.text-occurrence-style" && styleTargetNodeIds.has(elementId)) ||
+        (path === "presentation.text-occurrence-layout" && layoutTargetNodeIds.has(elementId))
+      ),
   );
   const retainedStyleIds = new Set(bindings.map(({ styleId }) => styleId));
   const styles = job.value.template.styles.filter(
     ({ id }) => !replacedStyleIds.has(id) || retainedStyleIds.has(id),
+  );
+  const retainedLayoutIds = new Set(
+    bindings
+      .filter(({ path }) => path === "presentation.text-occurrence-layout")
+      .map(({ styleId }) => styleId),
+  );
+  const occurrenceLayouts = (job.value.template.occurrenceLayouts ?? []).filter(
+    ({ id }) => !replacedLayoutIds.has(id) || retainedLayoutIds.has(id),
   );
   for (const override of overrides) {
     if (!job.value.template.styles.some(({ id }) => id === override.baseStyleId)) {
@@ -97,22 +137,52 @@ export function applyBoringLogTextOccurrenceStyles(
       }),
     );
   }
-  const effectiveTemplate = { ...job.value.template, styles, bindings };
+  for (const override of layoutOverrides) {
+    const digest = sha256CanonicalJson(override).slice("sha256:".length, "sha256:".length + 24);
+    const layoutId = `layout-occurrence-${digest}`;
+    if (occurrenceLayouts.some(({ id }) => id === layoutId)) {
+      return rejected("BORING_LOG_TEXT_OCCURRENCE_STYLE_COLLISION");
+    }
+    occurrenceLayouts.push(Object.freeze({ id: layoutId, ...override.layout }));
+    bindings.push(
+      Object.freeze({
+        elementId: override.occurrenceNodeId,
+        path: "presentation.text-occurrence-layout",
+        styleId: layoutId,
+      }),
+    );
+  }
+  const effectiveTemplate = {
+    ...job.value.template,
+    styles,
+    occurrenceLayouts,
+    bindings,
+  };
   const effective = validateBoringLogLayoutJobInput({
     ...job.value,
     templateDigest: sha256CanonicalJson(effectiveTemplate),
     template: effectiveTemplate,
   });
   return effective.accepted
-    ? Object.freeze({ accepted: true, job: effective.value, overrides: Object.freeze(overrides) })
+    ? Object.freeze({
+        accepted: true,
+        job: effective.value,
+        overrides: Object.freeze(overrides),
+        layoutOverrides: Object.freeze(layoutOverrides),
+      })
     : rejected("BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED");
 }
 
 export function prepareBoringLogLayoutWithTextOccurrenceStyles(
   jobInput: unknown,
   overrideInputs: unknown,
+  layoutOverrideInputs: unknown = [],
 ): BoringLogLayoutEngineResult<BoringLogLayoutPreparation> {
-  const authored = applyBoringLogTextOccurrenceStyles(jobInput, overrideInputs);
+  const authored = applyBoringLogTextOccurrenceStyles(
+    jobInput,
+    overrideInputs,
+    layoutOverrideInputs,
+  );
   if (!authored.accepted) {
     return Object.freeze({
       accepted: false,
@@ -126,6 +196,15 @@ export function prepareBoringLogLayoutWithTextOccurrenceStyles(
     prepared.value.textRequests.map(({ measurementId }) => measurementId),
   );
   for (const override of authored.overrides) {
+    if (!measurementIds.has(`measure:${override.occurrenceNodeId}`)) {
+      return Object.freeze({
+        accepted: false,
+        code: "BORING_LOG_LAYOUT_INPUT_REJECTED",
+        contractCode: "BORING_LOG_TEXT_OCCURRENCE_NOT_FOUND",
+      });
+    }
+  }
+  for (const override of authored.layoutOverrides) {
     if (!measurementIds.has(`measure:${override.occurrenceNodeId}`)) {
       return Object.freeze({
         accepted: false,

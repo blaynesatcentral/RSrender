@@ -119,13 +119,37 @@ function renderNode(
   const measurement = measurements.get(node.measurementId);
   const style = scene.resources.textStyles.find(({ id }) => id === node.styleId);
   if (measurement === undefined || style === undefined) return "";
+  const presentation = node.presentation;
+  const padding = presentation?.paddingMpt ?? {
+    topMpt: 0,
+    rightMpt: 0,
+    bottomMpt: 0,
+    leftMpt: 0,
+  };
+  const innerWidth = node.frame.widthMpt - padding.leftMpt - padding.rightMpt;
+  const innerHeight = node.frame.heightMpt - padding.topMpt - padding.bottomMpt;
+  const verticalOffset =
+    presentation?.verticalAlignment === "middle"
+      ? Math.round((innerHeight - measurement.logicalBounds.heightMpt) / 2)
+      : presentation?.verticalAlignment === "bottom"
+        ? innerHeight - measurement.logicalBounds.heightMpt
+        : 0;
   const lines = measurement.lines
-    .map(
-      (line) =>
-        `<tspan${attribute("x", node.frame.xMpt + line.xMpt)}${attribute("y", node.frame.yMpt + line.baselineMpt)}${attribute("data-source-start", line.sourceStartUtf16)}${attribute("data-source-end", line.sourceEndUtf16)}${attribute("data-advance-mpt", line.advanceMpt)}>${escapeText(line.text)}</tspan>`,
-    )
+    .map((line) => {
+      const horizontalOffset =
+        presentation?.horizontalAlignment === "center"
+          ? Math.round((innerWidth - line.advanceMpt) / 2)
+          : presentation?.horizontalAlignment === "end"
+            ? innerWidth - line.advanceMpt
+            : 0;
+      return `<tspan${attribute("x", node.frame.xMpt + padding.leftMpt + horizontalOffset + line.xMpt)}${attribute("y", node.frame.yMpt + padding.topMpt + verticalOffset + line.baselineMpt)}${attribute("data-source-start", line.sourceStartUtf16)}${attribute("data-source-end", line.sourceEndUtf16)}${attribute("data-advance-mpt", line.advanceMpt)}>${escapeText(line.text)}</tspan>`;
+    })
     .join("");
-  return `<text${common}${attribute("font-family", "RSrender Qualified Arial")}${attribute("font-size", style.fontSizeMpt)}${attribute("font-weight", style.fontWeight)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}>${lines}</text>`;
+  const presentationAttributes =
+    presentation === undefined
+      ? ""
+      : `${attribute("data-horizontal-alignment", presentation.horizontalAlignment)}${attribute("data-vertical-alignment", presentation.verticalAlignment)}${attribute("data-wrap-policy", presentation.wrapPolicy)}${attribute("data-position-mode", presentation.positionMode)}${attribute("data-locked", String(presentation.locked))}${attribute("data-frame-x-mpt", node.frame.xMpt)}${attribute("data-frame-y-mpt", node.frame.yMpt)}${attribute("data-frame-width-mpt", node.frame.widthMpt)}${attribute("data-frame-height-mpt", node.frame.heightMpt)}${presentation.rotationMilliDegrees === 0 ? "" : attribute("transform", `rotate(${presentation.rotationMilliDegrees / 1_000} ${node.frame.xMpt + Math.round(node.frame.widthMpt / 2)} ${node.frame.yMpt + Math.round(node.frame.heightMpt / 2)})`)}`;
+  return `<text${common}${attribute("font-family", "RSrender Qualified Arial")}${attribute("font-size", style.fontSizeMpt)}${attribute("font-weight", style.fontWeight)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
 }
 
 export function projectBoringLogSceneToSvg(

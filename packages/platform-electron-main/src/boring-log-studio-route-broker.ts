@@ -68,6 +68,26 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly fontWeight: number;
   readonly lineHeightMpt: number;
   readonly color: string;
+  readonly layout: {
+    readonly frame: {
+      readonly xMpt: number;
+      readonly yMpt: number;
+      readonly widthMpt: number;
+      readonly heightMpt: number;
+    };
+    readonly paddingMpt: {
+      readonly topMpt: number;
+      readonly rightMpt: number;
+      readonly bottomMpt: number;
+      readonly leftMpt: number;
+    };
+    readonly horizontalAlignment: "start" | "center" | "end";
+    readonly verticalAlignment: "top" | "middle" | "bottom";
+    readonly wrapPolicy: "word-v1" | "no-wrap";
+    readonly overflowPolicy: "clip-with-diagnostic";
+    readonly rotationMilliDegrees: number;
+    readonly positionMode: "depth-bound" | "free";
+  };
   readonly locked: boolean;
 }
 
@@ -465,8 +485,30 @@ export class BoringLogStudioRouteBroker {
       "fontWeight",
       "lineHeightMpt",
       "color",
+      "layout",
       "locked",
     ]);
+    const layout =
+      args === null
+        ? null
+        : exactRecord(args["layout"], [
+            "frame",
+            "paddingMpt",
+            "horizontalAlignment",
+            "verticalAlignment",
+            "wrapPolicy",
+            "overflowPolicy",
+            "rotationMilliDegrees",
+            "positionMode",
+          ]);
+    const frame =
+      layout === null
+        ? null
+        : exactRecord(layout["frame"], ["xMpt", "yMpt", "widthMpt", "heightMpt"]);
+    const padding =
+      layout === null
+        ? null
+        : exactRecord(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
     const boundedText = (value: unknown): value is string =>
       typeof value === "string" && value.length > 0 && value.length <= 512;
     if (
@@ -485,6 +527,25 @@ export class BoringLogStudioRouteBroker {
       !Number.isSafeInteger(args["lineHeightMpt"]) ||
       (args["lineHeightMpt"] as number) < 1 ||
       !boundedText(args["color"]) ||
+      layout === null ||
+      frame === null ||
+      padding === null ||
+      !Object.values(frame).every(
+        (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0,
+      ) ||
+      (frame["widthMpt"] as number) < 1 ||
+      (frame["heightMpt"] as number) < 1 ||
+      !Object.values(padding).every(
+        (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0,
+      ) ||
+      !["start", "center", "end"].includes(String(layout["horizontalAlignment"])) ||
+      !["top", "middle", "bottom"].includes(String(layout["verticalAlignment"])) ||
+      !["word-v1", "no-wrap"].includes(String(layout["wrapPolicy"])) ||
+      layout["overflowPolicy"] !== "clip-with-diagnostic" ||
+      !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
+      (layout["rotationMilliDegrees"] as number) < -180_000 ||
+      (layout["rotationMilliDegrees"] as number) > 180_000 ||
+      !["depth-bound", "free"].includes(String(layout["positionMode"])) ||
       typeof args["locked"] !== "boolean"
     ) {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");

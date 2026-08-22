@@ -72,6 +72,7 @@ export type {
   BoringLogTemplateRegionInput,
   BoringLogTextMeasurementRequest,
   BoringLogTextMeasurementResult,
+  BoringLogTextOccurrenceLayoutInput,
   BoringLogTextStyleInput,
   BoringLogValueProvenance,
   BoringLogVectorPatternResource,
@@ -83,6 +84,12 @@ export {
   boringLogTextOccurrenceStyleOverrideSchemaVersion,
   validateBoringLogTextOccurrenceStyleOverride,
 } from "./boring-log-text-occurrence-style-contract.js";
+export {
+  boringLogTextOccurrenceLayoutOverrideSchemaVersion,
+  validateBoringLogTextOccurrenceLayoutOverride,
+  type BoringLogTextOccurrenceLayoutOverride,
+  type BoringLogTextOccurrenceLayoutOverrideResult,
+} from "./boring-log-text-occurrence-layout-contract.js";
 export type {
   BoringLogTextOccurrenceStyle,
   BoringLogTextOccurrenceStyleOverride,

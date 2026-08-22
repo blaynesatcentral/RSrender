@@ -298,8 +298,27 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       (binding) =>
         binding.elementId === id && binding.path === "presentation.text-occurrence-style",
     );
+    const occurrenceLayoutBinding = job.template.bindings.find(
+      (binding) =>
+        binding.elementId === id && binding.path === "presentation.text-occurrence-layout",
+    );
+    const occurrenceLayout = job.template.occurrenceLayouts?.find(
+      ({ id: layoutId }) => layoutId === occurrenceLayoutBinding?.styleId,
+    );
     const effectiveStyleId = occurrenceStyle?.styleId ?? styleId;
     const style = styleById(job, effectiveStyleId);
+    const effectiveFrame = occurrenceLayout?.frame ?? frame;
+    const horizontalPadding =
+      (occurrenceLayout?.paddingMpt.leftMpt ?? 0) + (occurrenceLayout?.paddingMpt.rightMpt ?? 0);
+    const verticalPadding =
+      (occurrenceLayout?.paddingMpt.topMpt ?? 0) + (occurrenceLayout?.paddingMpt.bottomMpt ?? 0);
+    const effectiveMaximumLines =
+      occurrenceLayout === undefined
+        ? maximumLines
+        : Math.max(
+            1,
+            Math.floor((effectiveFrame.heightMpt - verticalPadding) / style.lineHeightMpt),
+          );
     const measurementId = `measure:${id}`;
     textRequests.push({
       measurementId,
@@ -311,9 +330,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       fontSizeMpt: style.fontSizeMpt,
       fontWeight: style.fontWeight,
       lineHeightMpt: style.lineHeightMpt,
-      maximumWidthMpt: frame.widthMpt,
-      maximumLines,
-      wrapPolicy,
+      maximumWidthMpt: asMpt(effectiveFrame.widthMpt - horizontalPadding),
+      maximumLines: effectiveMaximumLines,
+      wrapPolicy: occurrenceLayout?.wrapPolicy ?? wrapPolicy,
     });
     append({
       id,
@@ -326,7 +345,21 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       measurementId,
       styleId: effectiveStyleId,
       content,
-      frame,
+      frame: effectiveFrame,
+      ...(occurrenceLayout === undefined
+        ? {}
+        : {
+            presentation: {
+              paddingMpt: occurrenceLayout.paddingMpt,
+              horizontalAlignment: occurrenceLayout.horizontalAlignment,
+              verticalAlignment: occurrenceLayout.verticalAlignment,
+              wrapPolicy: occurrenceLayout.wrapPolicy,
+              overflowPolicy: occurrenceLayout.overflowPolicy,
+              rotationMilliDegrees: occurrenceLayout.rotationMilliDegrees,
+              positionMode: occurrenceLayout.positionMode,
+              locked: occurrenceLayout.locked,
+            },
+          }),
     });
   };
 
