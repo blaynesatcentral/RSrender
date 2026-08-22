@@ -8,6 +8,7 @@ import { createSyntheticBoringLogOverrideSession } from "../packages/application
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_ROUTE_URL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
@@ -155,6 +156,7 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
     color: "#b42318",
     layout: {
       frame: { xMpt: 120_000, yMpt: 305_000, widthMpt: 150_000, heightMpt: 12_000 },
+      frameAnchor: "top-left",
       paddingMpt: { topMpt: 0, rightMpt: 0, bottomMpt: 0, leftMpt: 0 },
       horizontalAlignment: "start",
       verticalAlignment: "top",
@@ -176,6 +178,18 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   });
   assert.equal(accepted.accepted, true, accepted.code);
   assert.deepEqual(received, args);
+  assert.deepEqual(
+    await route.setTextOccurrenceStyle(routeContext, {
+      transportVersion: 1,
+      capability: binding.capability,
+      generation: binding.generation,
+      sequence: 2,
+      documentIdentity,
+      ownerGeneration: 1,
+      args: { ...args, layout: { ...args.layout, frameAnchor: "baseline" } },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
   assert.deepEqual(
     await route.setTextOccurrenceStyle(routeContext, {
       transportVersion: 1,
@@ -326,6 +340,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setTextOccurrenceStyle(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -360,6 +382,34 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.projection.scene.kind, "boring-log.resolved-page-scene");
   assert.equal(result.projection.editableValues.length, 24);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
+  const occurrenceResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.setTextOccurrenceStyle(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+      semanticId: "lithology:stratum-01:transition:2",
+      baseStyleId: "style-small",
+      fontFamilyId: "font.logical.rsrender-sans",
+      fontSizeMpt: 9_000,
+      fontWeight: 700,
+      lineHeightMpt: 11_000,
+      color: "#b42318",
+      layout: {
+        frame: { xMpt: 125_000, yMpt: 293_338, widthMpt: 150_000, heightMpt: 22_000 },
+        frameAnchor: "bottom-center",
+        paddingMpt: { topMpt: 1_000, rightMpt: 2_000, bottomMpt: 1_000, leftMpt: 2_000 },
+        horizontalAlignment: "center",
+        verticalAlignment: "middle",
+        wrapPolicy: "no-wrap",
+        overflowPolicy: "clip-with-diagnostic",
+        rotationMilliDegrees: 5_000,
+        positionMode: "depth-bound",
+      },
+      locked: true,
+    })})`,
+    vmContext,
+  );
+  assert.equal(occurrenceResult.accepted, false);
+  assert.equal(occurrenceResult.code, "TEXT_OCCURRENCE_STYLE_UNAVAILABLE");
   const editable = result.projection.editableValues.find(
     ({ semanticId }) => semanticId === "lithology:stratum-01",
   );

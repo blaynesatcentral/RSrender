@@ -1,11 +1,57 @@
 import type {
   BoringLogSceneNode,
+  BoringLogTextFrameAnchor,
   BoringLogValueProvenance,
   OverrideRenderContentState,
   OverrideRenderDomainValueProjection,
   OverrideRenderUnitState,
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
+
+type TextFrame = Readonly<{
+  xMpt: number;
+  yMpt: number;
+  widthMpt: number;
+  heightMpt: number;
+}>;
+
+function frameAnchorPoint(frame: TextFrame, anchor: BoringLogTextFrameAnchor) {
+  const horizontal = anchor.endsWith("left")
+    ? 0
+    : anchor.endsWith("right")
+      ? frame.widthMpt
+      : Math.round(frame.widthMpt / 2);
+  const vertical = anchor.startsWith("top")
+    ? 0
+    : anchor.startsWith("bottom")
+      ? frame.heightMpt
+      : Math.round(frame.heightMpt / 2);
+  return Object.freeze({ xMpt: frame.xMpt + horizontal, yMpt: frame.yMpt + vertical });
+}
+
+function frameFromAnchor(
+  point: Readonly<{ xMpt: number; yMpt: number }>,
+  widthMpt: number,
+  heightMpt: number,
+  anchor: BoringLogTextFrameAnchor,
+): TextFrame {
+  const horizontal = anchor.endsWith("left")
+    ? 0
+    : anchor.endsWith("right")
+      ? widthMpt
+      : Math.round(widthMpt / 2);
+  const vertical = anchor.startsWith("top")
+    ? 0
+    : anchor.startsWith("bottom")
+      ? heightMpt
+      : Math.round(heightMpt / 2);
+  return Object.freeze({
+    xMpt: point.xMpt - horizontal,
+    yMpt: point.yMpt - vertical,
+    widthMpt,
+    heightMpt,
+  });
+}
 
 import { projectBoringLogSceneToSvg } from "./boring-log-svg-projection.js";
 import {
@@ -110,6 +156,7 @@ type StudioApis = Readonly<{
           readonly widthMpt: number;
           readonly heightMpt: number;
         };
+        readonly frameAnchor: BoringLogTextFrameAnchor;
         readonly paddingMpt: {
           readonly topMpt: number;
           readonly rightMpt: number;
@@ -260,6 +307,7 @@ async function main(): Promise<void> {
   const textColor = element<HTMLInputElement>("text-color");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
+  const textFrameAnchor = element<HTMLSelectElement>("text-frame-anchor");
   const textFrameWidth = element<HTMLInputElement>("text-frame-width");
   const textFrameHeight = element<HTMLInputElement>("text-frame-height");
   const textHorizontalAlignment = element<HTMLSelectElement>("text-horizontal-alignment");
@@ -315,6 +363,7 @@ async function main(): Promise<void> {
   const lastBoringButton = element<HTMLButtonElement>("last-boring");
   let selectedSemanticId: string | null = null;
   let selectedSceneNodeId: string | null = null;
+  let currentTextFrameAnchor: BoringLogTextFrameAnchor = "top-left";
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
   const selectionByBoring = new Map<
@@ -791,8 +840,11 @@ async function main(): Promise<void> {
       const request = scene.textRequests.find(
         ({ measurementId }) => measurementId === representative.measurementId,
       );
-      textFrameX.value = String(representative.frame.xMpt / 1_000);
-      textFrameY.value = String(representative.frame.yMpt / 1_000);
+      currentTextFrameAnchor = presentation?.frameAnchor ?? "top-left";
+      textFrameAnchor.value = currentTextFrameAnchor;
+      const anchorPoint = frameAnchorPoint(representative.frame, currentTextFrameAnchor);
+      textFrameX.value = String(anchorPoint.xMpt / 1_000);
+      textFrameY.value = String(anchorPoint.yMpt / 1_000);
       textFrameWidth.value = String(representative.frame.widthMpt / 1_000);
       textFrameHeight.value = String(representative.frame.heightMpt / 1_000);
       textHorizontalAlignment.value = presentation?.horizontalAlignment ?? "start";
@@ -989,12 +1041,16 @@ async function main(): Promise<void> {
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
-    const frame = {
-      xMpt: Math.round(Number(textFrameX.value) * 1_000),
-      yMpt: Math.round(Number(textFrameY.value) * 1_000),
-      widthMpt: Math.round(Number(textFrameWidth.value) * 1_000),
-      heightMpt: Math.round(Number(textFrameHeight.value) * 1_000),
-    };
+    const frameAnchor = textFrameAnchor.value as BoringLogTextFrameAnchor;
+    const frame = frameFromAnchor(
+      {
+        xMpt: Math.round(Number(textFrameX.value) * 1_000),
+        yMpt: Math.round(Number(textFrameY.value) * 1_000),
+      },
+      Math.round(Number(textFrameWidth.value) * 1_000),
+      Math.round(Number(textFrameHeight.value) * 1_000),
+      frameAnchor,
+    );
     const paddingMpt = {
       topMpt: Math.round(Number(textPaddingTop.value) * 1_000),
       rightMpt: Math.round(Number(textPaddingRight.value) * 1_000),
@@ -1018,6 +1074,8 @@ async function main(): Promise<void> {
       frame.yMpt !== node.frame.yMpt ||
       frame.widthMpt < 1_000 ||
       frame.heightMpt < 1_000 ||
+      frame.xMpt + frame.widthMpt > page.widthMpt ||
+      frame.yMpt + frame.heightMpt > page.heightMpt ||
       !Object.values(paddingMpt).every(Number.isSafeInteger) ||
       Object.values(paddingMpt).some((value) => value < 0) ||
       paddingMpt.leftMpt + paddingMpt.rightMpt >= frame.widthMpt ||
@@ -1045,6 +1103,7 @@ async function main(): Promise<void> {
       color: textColor.value,
       layout: {
         frame,
+        frameAnchor,
         paddingMpt,
         horizontalAlignment: textHorizontalAlignment.value as "start" | "center" | "end",
         verticalAlignment: textVerticalAlignment.value as "top" | "middle" | "bottom",
@@ -1295,6 +1354,20 @@ async function main(): Promise<void> {
     }
   };
   boringSelector.addEventListener("change", () => void chooseBoringFromSelector());
+  textFrameAnchor.addEventListener("change", () => {
+    const widthMpt = Math.round(Number(textFrameWidth.value) * 1_000);
+    const heightMpt = Math.round(Number(textFrameHeight.value) * 1_000);
+    const point = {
+      xMpt: Math.round(Number(textFrameX.value) * 1_000),
+      yMpt: Math.round(Number(textFrameY.value) * 1_000),
+    };
+    const frame = frameFromAnchor(point, widthMpt, heightMpt, currentTextFrameAnchor);
+    currentTextFrameAnchor = textFrameAnchor.value as BoringLogTextFrameAnchor;
+    const nextPoint = frameAnchorPoint(frame, currentTextFrameAnchor);
+    textFrameX.value = String(nextPoint.xMpt / 1_000);
+    textFrameY.value = String(nextPoint.yMpt / 1_000);
+    status.textContent = `Frame anchor changed to ${humanize(currentTextFrameAnchor)}; frame bounds are unchanged until Apply.`;
+  });
   const commandRegistry: Readonly<Record<string, () => void>> = Object.freeze({
     "ribbon-tab-home": () => activateRibbonTab("home"),
     "ribbon-tab-layout": () => activateRibbonTab("layout"),

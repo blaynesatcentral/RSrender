@@ -140,6 +140,7 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
         semanticId: "lithology:stratum-01:transition:2",
         layout: {
           frame: { xMpt: 125_000, yMpt: 293_338, widthMpt: 150_000, heightMpt: 22_000 },
+          frameAnchor: "bottom-center",
           paddingMpt: { topMpt: 1_000, rightMpt: 2_000, bottomMpt: 1_000, leftMpt: 2_000 },
           horizontalAlignment: "center",
           verticalAlignment: "middle",
@@ -176,6 +177,7 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     heightMpt: 22_000,
   });
   assert.equal(node?.kind === "text" ? node.presentation?.locked : null, true);
+  assert.equal(node?.kind === "text" ? node.presentation?.frameAnchor : null, "bottom-center");
   const screen = projectBoringLogSceneToSvg(resolved.value);
   const publication = projectBoringLogSceneForPublication(resolved.value);
   assert.equal(screen.accepted, true);
@@ -185,12 +187,14 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9000"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(screen.markup, /data-horizontal-alignment="center"/u);
+  assert.match(screen.markup, /data-frame-anchor="bottom-center"/u);
   assert.match(screen.markup, /transform="rotate\(5 200000 304338\)"/u);
   assert.match(
     publication.projection.svgMarkup,
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
+  assert.match(publication.projection.svgMarkup, /data-frame-anchor="bottom-center"/u);
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
 });
 
@@ -249,6 +253,7 @@ test("BLD-037 reset removes only one occurrence presentation and restores inheri
     ],
   );
   assert.equal(authored.accepted, true);
+  assert.equal(authored.job.template.occurrenceLayouts?.[0]?.frameAnchor, "top-left");
   const reset = clearBoringLogTextOccurrencePresentation(
     authored.job,
     occurrenceNodeId,

@@ -111,8 +111,13 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
     ) {
       return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
     }
+    const hasFrameAnchor =
+      typeof value["layout"] === "object" &&
+      value["layout"] !== null &&
+      Object.hasOwn(value["layout"], "frameAnchor");
     const layout = record(value["layout"], [
       "frame",
+      ...(hasFrameAnchor ? ["frameAnchor"] : []),
       "paddingMpt",
       "horizontalAlignment",
       "verticalAlignment",
@@ -144,6 +149,7 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
     }
     const horizontalAlignment = layout["horizontalAlignment"];
     const verticalAlignment = layout["verticalAlignment"];
+    const frameAnchor = hasFrameAnchor ? layout["frameAnchor"] : "top-left";
     const wrapPolicy = layout["wrapPolicy"];
     const rotationMilliDegrees = layout["rotationMilliDegrees"];
     const positionMode = layout["positionMode"];
@@ -157,6 +163,17 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
         verticalAlignment === "top" ||
         verticalAlignment === "middle" ||
         verticalAlignment === "bottom"
+      ) ||
+      !(
+        frameAnchor === "top-left" ||
+        frameAnchor === "top-center" ||
+        frameAnchor === "top-right" ||
+        frameAnchor === "center-left" ||
+        frameAnchor === "center" ||
+        frameAnchor === "center-right" ||
+        frameAnchor === "bottom-left" ||
+        frameAnchor === "bottom-center" ||
+        frameAnchor === "bottom-right"
       ) ||
       !(wrapPolicy === "word-v1" || wrapPolicy === "no-wrap") ||
       layout["overflowPolicy"] !== "clip-with-diagnostic" ||
@@ -183,6 +200,7 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
         semanticId: text(value["semanticId"]),
         layout: Object.freeze({
           frame: decodedFrame,
+          frameAnchor,
           paddingMpt: decodedPadding,
           horizontalAlignment,
           verticalAlignment,

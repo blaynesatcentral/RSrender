@@ -350,6 +350,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         ? {}
         : {
             presentation: {
+              frameAnchor: occurrenceLayout.frameAnchor ?? "top-left",
               paddingMpt: occurrenceLayout.paddingMpt,
               horizontalAlignment: occurrenceLayout.horizontalAlignment,
               verticalAlignment: occurrenceLayout.verticalAlignment,

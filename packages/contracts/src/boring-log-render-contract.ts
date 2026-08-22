@@ -70,9 +70,22 @@ export interface BoringLogTextStyleInput {
   readonly color: string;
 }
 
+export type BoringLogTextFrameAnchor =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "center-left"
+  | "center"
+  | "center-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
 export interface BoringLogTextOccurrenceLayoutInput {
   readonly id: string;
   readonly frame: MptRect;
+  /** Absent only in legacy v1 projects, where top-left is the exact default. */
+  readonly frameAnchor?: BoringLogTextFrameAnchor;
   readonly paddingMpt: {
     readonly topMpt: Mpt;
     readonly rightMpt: Mpt;
@@ -788,9 +801,11 @@ function validateTemplate(input: unknown): void {
   unique(styleIds);
   const occurrenceLayoutIds: string[] = [];
   for (const layoutInput of hasOccurrenceLayouts ? array(value["occurrenceLayouts"]) : []) {
+    const hasFrameAnchor = Object.hasOwn(layoutInput as object, "frameAnchor");
     const layout = record(layoutInput, [
       "id",
       "frame",
+      ...(hasFrameAnchor ? ["frameAnchor"] : []),
       "paddingMpt",
       "horizontalAlignment",
       "verticalAlignment",
@@ -802,6 +817,22 @@ function validateTemplate(input: unknown): void {
     ]);
     occurrenceLayoutIds.push(textValue(layout["id"]));
     validateRect(layout["frame"]);
+    if (
+      hasFrameAnchor &&
+      ![
+        "top-left",
+        "top-center",
+        "top-right",
+        "center-left",
+        "center",
+        "center-right",
+        "bottom-left",
+        "bottom-center",
+        "bottom-right",
+      ].includes(textValue(layout["frameAnchor"]))
+    ) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
     for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
       if (mpt(padding[side]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
@@ -1401,8 +1432,10 @@ function validateSceneNode(input: unknown): {
     const content = textValue(value["content"], true);
     validateRect(value["frame"]);
     if (Object.hasOwn(value, "presentation")) {
+      const hasFrameAnchor = Object.hasOwn(value["presentation"] as object, "frameAnchor");
       const presentation = record(value["presentation"], [
         "paddingMpt",
+        ...(hasFrameAnchor ? ["frameAnchor"] : []),
         "horizontalAlignment",
         "verticalAlignment",
         "wrapPolicy",
@@ -1419,6 +1452,22 @@ function validateSceneNode(input: unknown): {
       ]);
       for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
         if (mpt(padding[side]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+      }
+      if (
+        hasFrameAnchor &&
+        ![
+          "top-left",
+          "top-center",
+          "top-right",
+          "center-left",
+          "center",
+          "center-right",
+          "bottom-left",
+          "bottom-center",
+          "bottom-right",
+        ].includes(textValue(presentation["frameAnchor"]))
+      ) {
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
       }
       if (!["start", "center", "end"].includes(textValue(presentation["horizontalAlignment"])))
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");

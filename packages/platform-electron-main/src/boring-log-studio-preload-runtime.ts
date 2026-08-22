@@ -323,6 +323,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
       ? null
       : exactRecord(args["layout"], [
           "frame",
+          "frameAnchor",
           "paddingMpt",
           "horizontalAlignment",
           "verticalAlignment",
@@ -360,6 +361,17 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     !isPositiveSafeInteger(frame["widthMpt"]) ||
     !isPositiveSafeInteger(frame["heightMpt"]) ||
     !Object.values(padding).every(isNonnegativeSafeInteger) ||
+    ![
+      "top-left",
+      "top-center",
+      "top-right",
+      "center-left",
+      "center",
+      "center-right",
+      "bottom-left",
+      "bottom-center",
+      "bottom-right",
+    ].includes(String(layout["frameAnchor"])) ||
     !["start", "center", "end"].includes(String(layout["horizontalAlignment"])) ||
     !["top", "middle", "bottom"].includes(String(layout["verticalAlignment"])) ||
     !["word-v1", "no-wrap"].includes(String(layout["wrapPolicy"])) ||
@@ -652,6 +664,16 @@ export interface BoringLogStudioPreloadApi {
         readonly widthMpt: number;
         readonly heightMpt: number;
       };
+      readonly frameAnchor:
+        | "top-left"
+        | "top-center"
+        | "top-right"
+        | "center-left"
+        | "center"
+        | "center-right"
+        | "bottom-left"
+        | "bottom-center"
+        | "bottom-right";
       readonly paddingMpt: {
         readonly topMpt: number;
         readonly rightMpt: number;

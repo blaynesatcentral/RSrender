@@ -65,6 +65,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.fill !== "#b42318" ||
     style?.applied?.frameX !== "125000" ||
     style?.applied?.frameWidth !== "150000" ||
+    style?.applied?.frameAnchor !== "bottom-center" ||
     style?.applied?.horizontalAlignment !== "center" ||
     style?.applied?.verticalAlignment !== "middle" ||
     style?.applied?.wrapPolicy !== "no-wrap" ||
@@ -161,6 +162,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       rendererNeutralTypographyBeforeMeasurement: true,
       sharedHistoryUndoRedo: true,
       exactFrameAlignmentWrapRotationLock: true,
+      explicitNinePointFrameAnchor: true,
       occurrenceResetToInherited: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
