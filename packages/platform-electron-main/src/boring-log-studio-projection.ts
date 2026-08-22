@@ -41,7 +41,7 @@ export interface BoringLogStudioEditableValue {
 }
 
 export interface BoringLogStudioProjection {
-  readonly schema: "rsrender.boring-log-studio-projection.v1";
+  readonly schema: "rsrender.boring-log-studio-projection.v2";
   readonly documentIdentity: string;
   readonly ownerGeneration: number;
   readonly workingRevision: number;
@@ -50,12 +50,23 @@ export interface BoringLogStudioProjection {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly BoringLogStudioEditableValue[];
+  readonly textOccurrencePresentationStates: readonly BoringLogStudioTextOccurrencePresentationState[];
   readonly scene: ResolvedBoringLogPageScene;
+}
+
+export interface BoringLogStudioTextOccurrencePresentationState {
+  readonly occurrenceNodeId: string;
+  readonly semanticId: string;
+  readonly typography: "inherited" | "occurrence";
+  readonly layout: "inherited" | "occurrence";
 }
 
 export interface BoringLogStudioProjectionPreparation {
   readonly layout: BoringLogLayoutPreparation;
-  readonly projection: Omit<BoringLogStudioProjection, "scene">;
+  readonly projection: Omit<
+    BoringLogStudioProjection,
+    "scene" | "textOccurrencePresentationStates"
+  >;
   readonly provenanceEntries: readonly Readonly<{
     readonly key: string;
     readonly provenance: BoringLogValueProvenance;
@@ -63,6 +74,11 @@ export interface BoringLogStudioProjectionPreparation {
   readonly textOccurrenceStyleEntries: readonly Readonly<{
     readonly nodeId: string;
     readonly styleId: string;
+  }>[];
+  readonly textOccurrencePresentationEntries: readonly Readonly<{
+    readonly nodeId: string;
+    readonly style: "inherited" | "occurrence";
+    readonly layout: "inherited" | "occurrence";
   }>[];
 }
 
@@ -289,7 +305,7 @@ export function prepareBoringLogStudioProjection(
       preparation: Object.freeze({
         layout: prepared.value,
         projection: Object.freeze({
-          schema: "rsrender.boring-log-studio-projection.v1" as const,
+          schema: "rsrender.boring-log-studio-projection.v2" as const,
           documentIdentity: input.dataset.documentId,
           ownerGeneration: input.dataset.ownerGeneration,
           workingRevision: input.dataset.workingRevision,
@@ -308,6 +324,38 @@ export function prepareBoringLogStudioProjection(
           effectiveJob.value.template.bindings
             .filter(({ path }) => path === "presentation.text-occurrence-style")
             .map(({ elementId, styleId }) => Object.freeze({ nodeId: elementId, styleId })),
+        ),
+        textOccurrencePresentationEntries: Object.freeze(
+          [
+            ...new Set(
+              effectiveJob.value.template.bindings
+                .filter(({ path }) =>
+                  [
+                    "presentation.text-occurrence-style",
+                    "presentation.text-occurrence-layout",
+                  ].includes(path),
+                )
+                .map(({ elementId }) => elementId),
+            ),
+          ]
+            .sort()
+            .map((nodeId) =>
+              Object.freeze({
+                nodeId,
+                style: effectiveJob.value.template.bindings.some(
+                  ({ elementId, path }) =>
+                    elementId === nodeId && path === "presentation.text-occurrence-style",
+                )
+                  ? ("occurrence" as const)
+                  : ("inherited" as const),
+                layout: effectiveJob.value.template.bindings.some(
+                  ({ elementId, path }) =>
+                    elementId === nodeId && path === "presentation.text-occurrence-layout",
+                )
+                  ? ("occurrence" as const)
+                  : ("inherited" as const),
+              }),
+            ),
         ),
       }),
     });
@@ -359,10 +407,26 @@ export function completeBoringLogStudioProjection(
     };
     const scene = validateResolvedBoringLogPageScene(sceneWithExactProvenance);
     if (!scene.accepted) return rejected("BORING_LOG_STUDIO_SCENE_REJECTED");
+    const presentationByNode = new Map(
+      preparation.textOccurrencePresentationEntries.map((entry) => [entry.nodeId, entry]),
+    );
+    const textOccurrencePresentationStates = scene.value.pages
+      .flatMap(({ nodes }) => nodes)
+      .filter((node) => node.kind === "text")
+      .map((node) => {
+        const entry = presentationByNode.get(node.id);
+        return Object.freeze({
+          occurrenceNodeId: node.id,
+          semanticId: node.semanticId,
+          typography: entry?.style ?? ("inherited" as const),
+          layout: entry?.layout ?? ("inherited" as const),
+        });
+      });
     return Object.freeze({
       accepted: true,
       projection: Object.freeze({
         ...preparation.projection,
+        textOccurrencePresentationStates: Object.freeze(textOccurrencePresentationStates),
         scene: scene.value,
       }),
     });

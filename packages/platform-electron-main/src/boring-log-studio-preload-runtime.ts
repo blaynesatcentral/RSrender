@@ -4,6 +4,7 @@ import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
@@ -84,11 +85,12 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "canUndo",
     "canRedo",
     "editableValues",
+    "textOccurrencePresentationStates",
     "scene",
   ]);
   if (
     projection === null ||
-    projection["schema"] !== "rsrender.boring-log-studio-projection.v1" ||
+    projection["schema"] !== "rsrender.boring-log-studio-projection.v2" ||
     projection["documentIdentity"] !== documentIdentity ||
     projection["ownerGeneration"] !== ownerGeneration ||
     !Number.isSafeInteger(projection["workingRevision"]) ||
@@ -99,7 +101,9 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     typeof projection["canUndo"] !== "boolean" ||
     typeof projection["canRedo"] !== "boolean" ||
     !Array.isArray(projection["editableValues"]) ||
-    projection["editableValues"].length > 256
+    projection["editableValues"].length > 256 ||
+    !Array.isArray(projection["textOccurrencePresentationStates"]) ||
+    projection["textOccurrencePresentationStates"].length > 512
   ) {
     return null;
   }
@@ -129,6 +133,27 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
       value["sourceOriginal"] === null ||
       typeof value["effectiveDisplay"] !== "object" ||
       value["effectiveDisplay"] === null
+    ) {
+      return null;
+    }
+  }
+  for (const inputState of projection["textOccurrencePresentationStates"]) {
+    const state = exactRecord(inputState, [
+      "occurrenceNodeId",
+      "semanticId",
+      "typography",
+      "layout",
+    ]);
+    if (
+      state === null ||
+      typeof state["occurrenceNodeId"] !== "string" ||
+      state["occurrenceNodeId"].length < 1 ||
+      state["occurrenceNodeId"].length > 512 ||
+      typeof state["semanticId"] !== "string" ||
+      state["semanticId"].length < 1 ||
+      state["semanticId"].length > 512 ||
+      !["inherited", "occurrence"].includes(String(state["typography"])) ||
+      !["inherited", "occurrence"].includes(String(state["layout"]))
     ) {
       return null;
     }
@@ -382,9 +407,65 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
   }
 });
 
+const resetTextOccurrencePresentation = Object.freeze(
+  async function resetTextOccurrencePresentation(input: unknown) {
+    if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER)
+      return unavailable;
+    const args = exactRecord(input, ["expectedWorkingRevision", "occurrenceNodeId", "semanticId"]);
+    const boundedText = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && value.length <= 512;
+    if (
+      args === null ||
+      !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+      !boundedText(args["occurrenceNodeId"]) ||
+      !boundedText(args["semanticId"])
+    ) {
+      return unavailable;
+    }
+    inFlight = true;
+    try {
+      const binding = await bootstrap;
+      if (binding === null) return unavailable;
+      sequence += 1;
+      const response = exactRecord(
+        await ipcRenderer.invoke(BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL, {
+          transportVersion: 1,
+          capability: binding.capability,
+          generation: binding.generation,
+          sequence,
+          documentIdentity: binding.documentIdentity,
+          ownerGeneration: binding.ownerGeneration,
+          args,
+        }),
+        ["accepted", "transportVersion", "generation", "sequence", "result"],
+      );
+      if (
+        response === null ||
+        response["accepted"] !== true ||
+        response["transportVersion"] !== 1 ||
+        response["generation"] !== binding.generation ||
+        response["sequence"] !== sequence
+      ) {
+        return unavailable;
+      }
+      const detached = boundedClone(response["result"]);
+      return detached === null ? unavailable : detached;
+    } catch {
+      return unavailable;
+    } finally {
+      inFlight = false;
+    }
+  },
+);
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
-  Object.freeze({ getProjection, lifecycle, setTextOccurrenceStyle }),
+  Object.freeze({
+    getProjection,
+    lifecycle,
+    setTextOccurrenceStyle,
+    resetTextOccurrencePresentation,
+  }),
 );
 
 const publicationUnavailable = Object.freeze({
@@ -585,6 +666,11 @@ export interface BoringLogStudioPreloadApi {
       readonly positionMode: "depth-bound" | "free";
     };
     readonly locked: boolean;
+  }) => Promise<unknown>;
+  readonly resetTextOccurrencePresentation: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly occurrenceNodeId: string;
+    readonly semanticId: string;
   }) => Promise<unknown>;
 }
 

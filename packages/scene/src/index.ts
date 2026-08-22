@@ -19,6 +19,10 @@ export type { BoringLogTextResolutionResult } from "./boring-log-text-resolution
 export {
   applyBoringLogTextOccurrenceStyles,
   boringLogTextOccurrenceAuthoringRevision,
+  clearBoringLogTextOccurrencePresentation,
   prepareBoringLogLayoutWithTextOccurrenceStyles,
 } from "./boring-log-text-occurrence-authoring.js";
-export type { BoringLogTextOccurrenceAuthoringResult } from "./boring-log-text-occurrence-authoring.js";
+export type {
+  BoringLogTextOccurrenceAuthoringResult,
+  BoringLogTextOccurrencePresentationResetResult,
+} from "./boring-log-text-occurrence-authoring.js";

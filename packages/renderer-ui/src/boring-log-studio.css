@@ -737,6 +737,14 @@ textarea {
   background: #e5e9eb;
   color: #8a959b;
 }
+.secondary-property:not(:disabled) {
+  border-color: #8eb8cc;
+  background: #fff;
+  color: #17688f;
+}
+.secondary-property:hover:not(:disabled) {
+  background: #eef7fb;
+}
 .property-group .property-help {
   margin: 0 0 8px;
   color: #6b7880;

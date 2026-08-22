@@ -35,10 +35,118 @@ export type BoringLogTextOccurrenceAuthoringResult =
         | "BORING_LOG_TEXT_OCCURRENCE_STYLE_COLLISION";
     };
 
+export type BoringLogTextOccurrencePresentationResetResult =
+  | {
+      readonly accepted: true;
+      readonly job: BoringLogLayoutJobInput;
+      readonly removedStyle: boolean;
+      readonly removedLayout: boolean;
+    }
+  | {
+      readonly accepted: false;
+      readonly code:
+        | "BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED"
+        | "BORING_LOG_TEXT_OCCURRENCE_NOT_FOUND"
+        | "BORING_LOG_TEXT_OCCURRENCE_SCOPE_MISMATCH"
+        | "BORING_LOG_TEXT_OCCURRENCE_ALREADY_INHERITED";
+    };
+
 function rejected(
   code: Exclude<BoringLogTextOccurrenceAuthoringResult, { readonly accepted: true }>["code"],
 ): Exclude<BoringLogTextOccurrenceAuthoringResult, { readonly accepted: true }> {
   return Object.freeze({ accepted: false, code });
+}
+
+function resetRejected(
+  code: Exclude<
+    BoringLogTextOccurrencePresentationResetResult,
+    { readonly accepted: true }
+  >["code"],
+): Exclude<BoringLogTextOccurrencePresentationResetResult, { readonly accepted: true }> {
+  return Object.freeze({ accepted: false, code });
+}
+
+export function clearBoringLogTextOccurrencePresentation(
+  jobInput: unknown,
+  occurrenceNodeId: unknown,
+  semanticId: unknown,
+): BoringLogTextOccurrencePresentationResetResult {
+  const job = validateBoringLogLayoutJobInput(jobInput);
+  if (!job.accepted) return resetRejected("BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED");
+  if (
+    typeof occurrenceNodeId !== "string" ||
+    occurrenceNodeId.length === 0 ||
+    occurrenceNodeId.length > 512 ||
+    typeof semanticId !== "string" ||
+    semanticId.length === 0 ||
+    semanticId.length > 512
+  ) {
+    return resetRejected("BORING_LOG_TEXT_OCCURRENCE_NOT_FOUND");
+  }
+  const prepared = prepareBoringLogLayout(job.value);
+  if (!prepared.accepted) return resetRejected("BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED");
+  const request = prepared.value.textRequests.find(
+    ({ measurementId }) => measurementId === `measure:${occurrenceNodeId}`,
+  );
+  if (request === undefined) return resetRejected("BORING_LOG_TEXT_OCCURRENCE_NOT_FOUND");
+  if (request.sourceIdentity !== semanticId) {
+    return resetRejected("BORING_LOG_TEXT_OCCURRENCE_SCOPE_MISMATCH");
+  }
+  const removablePaths = new Set([
+    "presentation.text-occurrence-style",
+    "presentation.text-occurrence-layout",
+  ]);
+  const removedBindings = job.value.template.bindings.filter(
+    ({ elementId, path }) => elementId === occurrenceNodeId && removablePaths.has(path),
+  );
+  if (removedBindings.length === 0) {
+    return resetRejected("BORING_LOG_TEXT_OCCURRENCE_ALREADY_INHERITED");
+  }
+  const bindings = job.value.template.bindings.filter(
+    ({ elementId, path }) => !(elementId === occurrenceNodeId && removablePaths.has(path)),
+  );
+  const retainedResourceIds = new Set(bindings.map(({ styleId }) => styleId));
+  const removedStyleIds = new Set(
+    removedBindings
+      .filter(({ path }) => path === "presentation.text-occurrence-style")
+      .map(({ styleId }) => styleId),
+  );
+  const removedLayoutIds = new Set(
+    removedBindings
+      .filter(({ path }) => path === "presentation.text-occurrence-layout")
+      .map(({ styleId }) => styleId),
+  );
+  const occurrenceLayouts = (job.value.template.occurrenceLayouts ?? []).filter(
+    ({ id }) =>
+      !removedLayoutIds.has(id) ||
+      retainedResourceIds.has(id) ||
+      !id.startsWith("layout-occurrence-"),
+  );
+  const template = {
+    ...job.value.template,
+    styles: job.value.template.styles.filter(
+      ({ id }) =>
+        !removedStyleIds.has(id) ||
+        retainedResourceIds.has(id) ||
+        !id.startsWith("style-occurrence-"),
+    ),
+    occurrenceLayouts,
+    bindings,
+  };
+  if (occurrenceLayouts.length === 0) Reflect.deleteProperty(template, "occurrenceLayouts");
+  const effective = validateBoringLogLayoutJobInput({
+    ...job.value,
+    templateDigest: sha256CanonicalJson(template),
+    template,
+  });
+  return effective.accepted
+    ? Object.freeze({
+        accepted: true,
+        job: effective.value,
+        removedStyle: removedStyleIds.size > 0,
+        removedLayout: removedLayoutIds.size > 0,
+      })
+    : resetRejected("BORING_LOG_TEXT_OCCURRENCE_JOB_REJECTED");
 }
 
 export function applyBoringLogTextOccurrenceStyles(

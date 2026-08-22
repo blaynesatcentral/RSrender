@@ -38,6 +38,12 @@ type StudioProjection = Readonly<{
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly EditableValue[];
+  readonly textOccurrencePresentationStates: readonly Readonly<{
+    readonly occurrenceNodeId: string;
+    readonly semanticId: string;
+    readonly typography: "inherited" | "occurrence";
+    readonly layout: "inherited" | "occurrence";
+  }>[];
   readonly scene: ResolvedBoringLogPageScene;
 }>;
 
@@ -118,6 +124,11 @@ type StudioApis = Readonly<{
         readonly positionMode: "depth-bound" | "free";
       };
       readonly locked: boolean;
+    }) => Promise<unknown>;
+    readonly resetTextOccurrencePresentation: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly occurrenceNodeId: string;
+      readonly semanticId: string;
     }) => Promise<unknown>;
   };
   readonly document: {
@@ -264,6 +275,10 @@ async function main(): Promise<void> {
   const textLocked = element<HTMLInputElement>("text-locked");
   const applyTextStyle = element<HTMLButtonElement>("apply-text-style");
   const textStyleHelp = element<HTMLElement>("text-style-help");
+  const textInheritanceProperties = element<HTMLDetailsElement>("text-inheritance-properties");
+  const textStyleInheritance = element<HTMLElement>("text-style-inheritance");
+  const textLayoutInheritance = element<HTMLElement>("text-layout-inheritance");
+  const resetTextPresentation = element<HTMLButtonElement>("reset-text-presentation");
   const selectionStatus = element<HTMLElement>("selection-status");
   const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
   const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
@@ -765,6 +780,7 @@ async function main(): Promise<void> {
         : undefined;
     textStyleProperties.hidden = textStyle === undefined;
     textLayoutProperties.hidden = textStyle === undefined;
+    textInheritanceProperties.hidden = textStyle === undefined;
     if (textStyle !== undefined && representative.kind === "text") {
       textFontFamily.value = textStyle.fontFamilyId;
       textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
@@ -790,6 +806,18 @@ async function main(): Promise<void> {
       textPaddingLeft.value = String((presentation?.paddingMpt.leftMpt ?? 0) / 1_000);
       textPositionMode.value = presentation?.positionMode ?? "depth-bound";
       textLocked.checked = presentation?.locked ?? false;
+      const presentationState = studioProjection?.textOccurrencePresentationStates.find(
+        ({ occurrenceNodeId }) => occurrenceNodeId === representative.id,
+      );
+      const inheritedStyle = presentationState?.typography !== "occurrence";
+      const inheritedLayout = presentationState?.layout !== "occurrence";
+      textStyleInheritance.textContent = inheritedStyle ? "Inherited" : "This occurrence";
+      textLayoutInheritance.textContent = inheritedLayout ? "Inherited" : "This occurrence";
+      resetTextPresentation.disabled =
+        selectedSceneNodeId === null ||
+        studioProjection === null ||
+        lifecycleState?.readOnly === true ||
+        (inheritedStyle && inheritedLayout);
       applyTextStyle.disabled = selectedSceneNodeId === null || studioProjection === null;
       textStyleHelp.textContent =
         "This occurrence · inherited values resolve into a project-owned template override · edits use document history.";
@@ -1047,6 +1075,53 @@ async function main(): Promise<void> {
     textFontSize.focus();
   }
 
+  async function resetSelectedTextPresentation(): Promise<void> {
+    const apis = studioApis();
+    const node =
+      selectedSceneNodeId === null
+        ? undefined
+        : page.nodes.find(
+            (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+              candidate.id === selectedSceneNodeId && candidate.kind === "text",
+          );
+    const state = studioProjection?.textOccurrencePresentationStates.find(
+      ({ occurrenceNodeId }) => occurrenceNodeId === node?.id,
+    );
+    if (
+      apis === null ||
+      studioProjection === null ||
+      node === undefined ||
+      state === undefined ||
+      (state.typography === "inherited" && state.layout === "inherited")
+    ) {
+      status.textContent = "The selected text occurrence already uses inherited presentation.";
+      return;
+    }
+    resetTextPresentation.disabled = true;
+    status.textContent = `Resetting ${node.id} to inherited presentation…`;
+    const raw = await apis.studio.resetTextOccurrencePresentation({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      occurrenceNodeId: node.id,
+      semanticId: node.semanticId,
+    });
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      resetTextPresentation.disabled = false;
+      status.textContent = "Reset to inherited returned an invalid result.";
+      return;
+    }
+    const result = raw as Record<string, unknown>;
+    if (result["accepted"] !== true || !Number.isSafeInteger(result["workingRevision"])) {
+      resetTextPresentation.disabled = false;
+      status.textContent = `Reset to inherited rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
+      return;
+    }
+    const refreshed = await refreshStudioProjection(
+      result["workingRevision"] as number,
+      `Presentation reset to inherited for ${node.id} at revision ${String(result["workingRevision"])}.`,
+    );
+    if (refreshed) await refreshLifecycleStateSilently();
+  }
+
   async function navigateHistory(operation: "undo" | "redo"): Promise<void> {
     const apis = studioApis();
     if (apis === null || studioProjection === null) return;
@@ -1259,6 +1334,7 @@ async function main(): Promise<void> {
     "context-properties": focusSelectedProperties,
     "apply-property": () => void applySelectedProperty(),
     "apply-text-style": () => void applySelectedTextStyle(),
+    "reset-text-presentation": () => void resetSelectedTextPresentation(),
     "zoom-out": () => applyZoom(Number(zoom.value) - 10),
     "zoom-in": () => applyZoom(Number(zoom.value) + 10),
   });

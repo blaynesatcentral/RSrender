@@ -25,7 +25,10 @@ import {
   type BoringLogTextMeasurementResult,
 } from "@rsrender/contracts";
 import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
-import { applyBoringLogTextOccurrenceStyles } from "@rsrender/scene";
+import {
+  applyBoringLogTextOccurrenceStyles,
+  clearBoringLogTextOccurrencePresentation,
+} from "@rsrender/scene";
 
 import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
@@ -55,12 +58,14 @@ import {
 import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioLifecycleOperation,
+  type BoringLogStudioTextOccurrencePresentationResetInput,
   type BoringLogStudioTextOccurrenceStyleInput,
 } from "./boring-log-studio-route-broker.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
@@ -358,6 +363,7 @@ const handlers = [
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
@@ -1688,7 +1694,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -2205,6 +2211,57 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         redo["sceneInputDigest"] !== before["sceneInputDigest"],
       "TEXT_OCCURRENCE_STYLE_HISTORY_INVALID",
     );
+    await press(window, "#reset-text-presentation", "Space", "FOCUS_TEXT_OCCURRENCE_RESET");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Presentation reset to inherited for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited" && document.getElementById("reset-text-presentation")?.disabled === true`,
+      "WAIT_TEXT_OCCURRENCE_RESET",
+    );
+    const reset = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const state = value.accepted ? value.projection.textOccurrencePresentationStates.find((candidate) => candidate.occurrenceNodeId === "node:lithology:stratum-01:transition:2:text") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), styleInheritance: state?.typography, layoutInheritance: state?.layout, resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_TEXT_OCCURRENCE_RESET_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("text-style-inheritance")?.textContent === "This occurrence" && document.getElementById("text-layout-inheritance")?.textContent === "This occurrence"`,
+      "WAIT_TEXT_OCCURRENCE_RESET_UNDO",
+    );
+    const resetUndo = record(
+      await pageValue(
+        window,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
+      ),
+    );
+    await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_RESET_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited"`,
+      "WAIT_TEXT_OCCURRENCE_RESET_REDO",
+    );
+    const resetRedo = record(
+      await pageValue(
+        window,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
+      ),
+    );
+    requireProbe(
+      reset["workingRevision"] === (redo["workingRevision"] as number) + 1 &&
+        reset["fontSize"] === "5500" &&
+        reset["frameX"] === null &&
+        reset["styleInheritance"] === "inherited" &&
+        reset["layoutInheritance"] === "inherited" &&
+        reset["resetDisabled"] === true &&
+        resetUndo["fontSize"] === "9000" &&
+        resetUndo["frameX"] === "125000" &&
+        resetUndo["resetDisabled"] === false &&
+        resetRedo["fontSize"] === "5500" &&
+        resetRedo["frameX"] === null &&
+        resetRedo["resetDisabled"] === true,
+      `TEXT_OCCURRENCE_RESET_HISTORY_INVALID:${JSON.stringify({ reset, resetUndo, resetRedo })}`,
+    );
     requireProbe(
       (await pageValue(
         window,
@@ -2224,7 +2281,15 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
       ),
     );
-    textOccurrenceStyle = Object.freeze({ before, applied, undo, redo });
+    textOccurrenceStyle = Object.freeze({
+      before,
+      applied,
+      undo,
+      redo,
+      reset,
+      resetUndo,
+      resetRedo,
+    });
     requireProbe(
       (await pageValue(
         window,
@@ -2893,6 +2958,7 @@ async function main(): Promise<void> {
       return lifecycleResponse(true, "PROJECT_OPEN_RESTARTING", current);
     };
     let textStyleCommandSequence = 0;
+    let textPresentationResetCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -3033,6 +3099,74 @@ async function main(): Promise<void> {
         )?.styleId,
       });
     };
+    const handleTextOccurrencePresentationReset = async (
+      input: BoringLogStudioTextOccurrencePresentationResetInput,
+    ) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null) {
+        return Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_RESET_UNAVAILABLE" });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_RESET_UNAVAILABLE" });
+      }
+      const reset = clearBoringLogTextOccurrencePresentation(
+        currentJob,
+        input.occurrenceNodeId,
+        input.semanticId,
+      );
+      if (!reset.accepted) return Object.freeze({ accepted: false, code: reset.code });
+      textPresentationResetCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-037:request:text-occurrence-reset:${textPresentationResetCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: reset.job.templateDigest,
+        reason: "Reset text occurrence presentation to inherited in Boring Log Studio",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${reset.job.templateDigest}`,
+        reset.job,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "TEXT_OCCURRENCE_PRESENTATION_RESET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        occurrenceNodeId: input.occurrenceNodeId,
+        removedStyle: reset.removedStyle,
+        removedLayout: reset.removedLayout,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -3042,6 +3176,7 @@ async function main(): Promise<void> {
       getProjection: getStudioProjection,
       lifecycle: handleLifecycle,
       setTextOccurrenceStyle: handleTextOccurrenceStyle,
+      resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -3055,6 +3190,11 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL, (event, input: unknown) =>
       route.setTextOccurrenceStyle(routeContext(window, event), input),
+    );
+    ipcMain.handle(
+      BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+      (event, input: unknown) =>
+        route.resetTextOccurrencePresentation(routeContext(window, event), input),
     );
     let closeAllowed = false;
     let closePromptInFlight = false;

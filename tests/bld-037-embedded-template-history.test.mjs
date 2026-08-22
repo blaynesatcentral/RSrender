@@ -7,7 +7,10 @@ import {
   createSyntheticBoringLogProjectSession,
 } from "../packages/application/dist/index.js";
 import { sha256CanonicalJson } from "../packages/contracts/dist/index.js";
-import { applyBoringLogTextOccurrenceStyles } from "../packages/scene/dist/index.js";
+import {
+  applyBoringLogTextOccurrenceStyles,
+  clearBoringLogTextOccurrencePresentation,
+} from "../packages/scene/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
   BORING_LOG_MVP_TEMPLATE_DIGEST,
@@ -151,5 +154,52 @@ test("BLD-037 occurrence style replacement uses the shared document history auth
       explorationIdentity,
     ),
     replacementDigest,
+  );
+
+  const reset = clearBoringLogTextOccurrencePresentation(
+    authored.job,
+    "node:lithology:stratum-01:transition:2:text",
+    "lithology:stratum-01:transition:2",
+  );
+  assert.equal(reset.accepted, true, reset.code);
+  assert.equal(reset.job.templateDigest, initialDigest);
+  const resetCommitted = await commitEmbeddedTemplateReplacement(created.session.service, {
+    requestId: "urn:rsrender:bld-037:request:reset-occurrence-presentation:1",
+    documentId,
+    ownerGeneration: 1,
+    expectedWorkingRevision: 3,
+    explorationIdentity,
+    expectedEffectiveContentDigest: replacementDigest,
+    replacementEffectiveContentDigest: reset.job.templateDigest,
+    reason: "Reset exact occurrence presentation to inherited",
+  });
+  assert.equal(resetCommitted.accepted, true, JSON.stringify(resetCommitted));
+  assert.equal(resetCommitted.workingRevision, 4);
+  assert.equal(
+    assignedDigest(
+      await captureOverrideRenderDatasetWorkingState(created.session.service),
+      explorationIdentity,
+    ),
+    initialDigest,
+  );
+  const resetUndone = await created.session.service.undo(navigationCommand("history.undo", 4));
+  assert.equal(resetUndone.kind, "override-render-dataset.committed");
+  assert.equal(resetUndone.workingRevision, 5);
+  assert.equal(
+    assignedDigest(
+      await captureOverrideRenderDatasetWorkingState(created.session.service),
+      explorationIdentity,
+    ),
+    replacementDigest,
+  );
+  const resetRedone = await created.session.service.redo(navigationCommand("history.redo", 5));
+  assert.equal(resetRedone.kind, "override-render-dataset.committed");
+  assert.equal(resetRedone.workingRevision, 6);
+  assert.equal(
+    assignedDigest(
+      await captureOverrideRenderDatasetWorkingState(created.session.service),
+      explorationIdentity,
+    ),
+    initialDigest,
   );
 });

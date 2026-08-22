@@ -40,6 +40,7 @@ const expectedCommandIds = Object.freeze([
   "apply-property",
   "apply-text-style",
   "context-properties",
+  "reset-text-presentation",
   "zoom-out",
   "zoom-in",
 ]);

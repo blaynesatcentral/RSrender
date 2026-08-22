@@ -7,3 +7,5 @@ export const BORING_LOG_STUDIO_LIFECYCLE_CHANNEL =
   "rsrender:boring-log-studio:lifecycle:v1" as const;
 export const BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL =
   "rsrender:boring-log-studio:set-text-occurrence-style:v1" as const;
+export const BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL =
+  "rsrender:boring-log-studio:reset-text-occurrence-presentation:v1" as const;

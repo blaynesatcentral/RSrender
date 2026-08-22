@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  applyBoringLogTextOccurrenceStyles,
+  clearBoringLogTextOccurrencePresentation,
   prepareBoringLogLayout,
   prepareBoringLogLayoutWithTextOccurrenceStyles,
   resolveBoringLogPageScene,
@@ -74,6 +76,9 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-wrap-policy"/u);
   assert.match(html, /id="text-locked"/u);
   assert.match(html, /id="apply-text-style"[^>]*>Apply text properties/u);
+  assert.match(html, /id="text-style-inheritance"/u);
+  assert.match(html, /id="text-layout-inheritance"/u);
+  assert.match(html, /id="reset-text-presentation"[^>]*>Reset to inherited/u);
 });
 
 test("BLD-037 routes canvas click and contextmenu through exact node selection", async () => {
@@ -88,6 +93,8 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /propertiesScroll\.focus\(\)/u);
   assert.match(entry, /selectionByBoring[\s\S]+nodeId: selectedSceneNodeId/u);
   assert.match(entry, /setTextOccurrenceStyle/u);
+  assert.match(entry, /resetTextOccurrencePresentation/u);
+  assert.match(entry, /resetSelectedTextPresentation/u);
   assert.match(entry, /applySelectedTextStyle/u);
   assert.match(entry, /expectedWorkingRevision: studioProjection\.workingRevision/u);
 });
@@ -185,6 +192,107 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   );
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
+});
+
+test("BLD-037 reset removes only one occurrence presentation and restores inheritance", () => {
+  const occurrenceNodeId = "node:lithology:stratum-01:transition:2:text";
+  const semanticId = "lithology:stratum-01:transition:2";
+  const authored = applyBoringLogTextOccurrenceStyles(
+    boringLogMvpFixtureJob(),
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+        kind: "boring-log.text-occurrence-style-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-reset",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-style-override:bld-037-reset",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId,
+        baseStyleId: "style-small",
+        style: {
+          fontFamilyId: "font.logical.rsrender-sans",
+          fontSizeMpt: 9_000,
+          fontWeight: 700,
+          lineHeightMpt: 11_000,
+          color: "#b42318",
+        },
+        locked: false,
+      },
+    ],
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+        kind: "boring-log.text-occurrence-layout-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-reset",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-layout-override:bld-037-reset",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId,
+        layout: {
+          frame: { xMpt: 125_000, yMpt: 293_338, widthMpt: 150_000, heightMpt: 22_000 },
+          paddingMpt: { topMpt: 1_000, rightMpt: 2_000, bottomMpt: 1_000, leftMpt: 2_000 },
+          horizontalAlignment: "center",
+          verticalAlignment: "middle",
+          wrapPolicy: "no-wrap",
+          overflowPolicy: "clip-with-diagnostic",
+          rotationMilliDegrees: 5_000,
+          positionMode: "depth-bound",
+          locked: true,
+        },
+      },
+    ],
+  );
+  assert.equal(authored.accepted, true);
+  const reset = clearBoringLogTextOccurrencePresentation(
+    authored.job,
+    occurrenceNodeId,
+    semanticId,
+  );
+  assert.equal(reset.accepted, true);
+  assert.equal(reset.removedStyle, true);
+  assert.equal(reset.removedLayout, true);
+  assert.equal(reset.job.templateDigest, BORING_LOG_MVP_TEMPLATE_DIGEST);
+  assert.equal(
+    reset.job.template.bindings.some(
+      ({ elementId, path }) =>
+        elementId === occurrenceNodeId && path.startsWith("presentation.text-occurrence-"),
+    ),
+    false,
+  );
+  assert.equal(
+    reset.job.template.styles.some(({ id }) => id.startsWith("style-occurrence-")),
+    false,
+  );
+  assert.equal(
+    reset.job.template.occurrenceLayouts?.some(({ id }) => id.startsWith("layout-occurrence-")) ??
+      false,
+    false,
+  );
+  const prepared = prepareBoringLogLayout(reset.job);
+  assert.equal(prepared.accepted, true);
+  const baseline = prepareBoringLogLayout(boringLogMvpFixtureJob());
+  assert.equal(baseline.accepted, true);
+  const request = prepared.value.textRequests.find(
+    ({ measurementId }) => measurementId === `measure:${occurrenceNodeId}`,
+  );
+  const baselineRequest = baseline.value.textRequests.find(
+    ({ measurementId }) => measurementId === `measure:${occurrenceNodeId}`,
+  );
+  assert.deepEqual(request, baselineRequest);
+  assert.equal(
+    clearBoringLogTextOccurrencePresentation(reset.job, occurrenceNodeId, semanticId).code,
+    "BORING_LOG_TEXT_OCCURRENCE_ALREADY_INHERITED",
+  );
+  assert.equal(
+    clearBoringLogTextOccurrencePresentation(authored.job, occurrenceNodeId, "wrong:semantic").code,
+    "BORING_LOG_TEXT_OCCURRENCE_SCOPE_MISMATCH",
+  );
 });
 
 function boringLogMvpFixtureJob() {

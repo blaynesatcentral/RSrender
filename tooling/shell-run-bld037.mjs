@@ -81,6 +81,18 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.redo?.horizontalAlignment !== "center" ||
     style?.redo?.locked !== "true" ||
     style?.redo?.sceneInputDigest === style.before.sceneInputDigest ||
+    style?.reset?.workingRevision !== style.redo.workingRevision + 1 ||
+    style?.reset?.fontSize !== "5500" ||
+    style?.reset?.frameX !== null ||
+    style?.reset?.styleInheritance !== "inherited" ||
+    style?.reset?.layoutInheritance !== "inherited" ||
+    style?.reset?.resetDisabled !== true ||
+    style?.resetUndo?.fontSize !== "9000" ||
+    style?.resetUndo?.frameX !== "125000" ||
+    style?.resetUndo?.resetDisabled !== false ||
+    style?.resetRedo?.fontSize !== "5500" ||
+    style?.resetRedo?.frameX !== null ||
+    style?.resetRedo?.resetDisabled !== true ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -111,23 +123,10 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
   );
   if (
     !layoutJob ||
-    !binding ||
-    persistedStyle?.fontSizeMpt !== 9_000 ||
-    persistedStyle?.fontWeight !== 700 ||
-    persistedStyle?.lineHeightMpt !== 11_000 ||
-    persistedStyle?.color !== "#b42318" ||
-    !layoutBinding ||
-    persistedLayout?.frame.xMpt !== 125_000 ||
-    persistedLayout?.frame.yMpt !== 293_338 ||
-    persistedLayout?.frame.widthMpt !== 150_000 ||
-    persistedLayout?.frame.heightMpt !== 22_000 ||
-    persistedLayout?.paddingMpt.leftMpt !== 2_000 ||
-    persistedLayout?.horizontalAlignment !== "center" ||
-    persistedLayout?.verticalAlignment !== "middle" ||
-    persistedLayout?.wrapPolicy !== "no-wrap" ||
-    persistedLayout?.rotationMilliDegrees !== 5_000 ||
-    persistedLayout?.positionMode !== "depth-bound" ||
-    persistedLayout?.locked !== true
+    binding !== undefined ||
+    persistedStyle !== undefined ||
+    layoutBinding !== undefined ||
+    persistedLayout !== undefined
   ) {
     throw new Error(
       `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, layoutBinding, persistedLayout })}`,
@@ -145,10 +144,10 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       bytes: (await stat(projectPath)).size,
       authoritativeDigest: reopened.value.project.authoritativeDigest,
       targetNodeId,
-      styleId: binding.styleId,
-      persistedStyle,
-      layoutId: layoutBinding.styleId,
-      persistedLayout,
+      styleId: null,
+      persistedStyle: null,
+      layoutId: null,
+      persistedLayout: null,
     },
     pdf: {
       relativePath: path.relative(root, pdfPath).replaceAll("\\", "/"),
@@ -162,7 +161,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       rendererNeutralTypographyBeforeMeasurement: true,
       sharedHistoryUndoRedo: true,
       exactFrameAlignmentWrapRotationLock: true,
-      projectSaveReopenRetainsStyle: true,
+      occurrenceResetToInherited: true,
+      projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,
       directManipulationImplemented: false,

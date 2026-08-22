@@ -190,6 +190,57 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   );
 });
 
+test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "f".repeat(64),
+    getProjection: source.getProjection,
+    resetTextOccurrencePresentation: async (input) => {
+      received = input;
+      return { accepted: true, code: "TEXT_OCCURRENCE_PRESENTATION_RESET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  assert.equal(binding.accepted, true, binding.code);
+  const args = {
+    expectedWorkingRevision: 0,
+    occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+    semanticId: "lithology:stratum-01:transition:2",
+  };
+  const accepted = await route.resetTextOccurrencePresentation(routeContext, {
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence: 1,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  assert.equal(accepted.accepted, true, accepted.code);
+  assert.deepEqual(received, args);
+  assert.deepEqual(
+    await route.resetTextOccurrencePresentation(routeContext, {
+      transportVersion: 1,
+      capability: binding.capability,
+      generation: binding.generation,
+      sequence: 2,
+      documentIdentity,
+      ownerGeneration: 1,
+      args: { ...args, occurrenceNodeId: "" },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
+});
+
 test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene-bounded", async () => {
   const routedAuthority = await routed();
   assert.equal(boringLogStudioRouteRevision, "bld-026-studio-route-v1");
@@ -200,6 +251,13 @@ test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene
   assert.equal(first.accepted, true, first.code);
   assert.equal(first.projection.scene.pages[0].nodes.length, 328);
   assert.equal(first.projection.editableValues.length, 24);
+  assert.equal(first.projection.textOccurrencePresentationStates.length, 135);
+  assert.equal(
+    first.projection.textOccurrencePresentationStates.every(
+      ({ typography, layout }) => typography === "inherited" && layout === "inherited",
+    ),
+    true,
+  );
   assert.deepEqual(
     await routedAuthority.route.getProjection(
       routedAuthority.routeContext,
@@ -292,6 +350,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "getProjection",
     "lifecycle",
     "setTextOccurrenceStyle",
+    "resetTextOccurrencePresentation",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
@@ -300,6 +359,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.accepted, true);
   assert.equal(result.projection.scene.kind, "boring-log.resolved-page-scene");
   assert.equal(result.projection.editableValues.length, 24);
+  assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
   const editable = result.projection.editableValues.find(
     ({ semanticId }) => semanticId === "lithology:stratum-01",
   );

@@ -91,6 +91,12 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly locked: boolean;
 }
 
+export interface BoringLogStudioTextOccurrencePresentationResetInput {
+  readonly expectedWorkingRevision: number;
+  readonly occurrenceNodeId: string;
+  readonly semanticId: string;
+}
+
 type DataRecord = Readonly<Record<string, unknown>>;
 type Binding = {
   readonly capability: string;
@@ -183,6 +189,9 @@ export class BoringLogStudioRouteBroker {
   readonly #setTextOccurrenceStyle: (
     input: BoringLogStudioTextOccurrenceStyleInput,
   ) => Promise<unknown>;
+  readonly #resetTextOccurrencePresentation: (
+    input: BoringLogStudioTextOccurrencePresentationResetInput,
+  ) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -201,6 +210,9 @@ export class BoringLogStudioRouteBroker {
     }) => Promise<unknown>;
     readonly setTextOccurrenceStyle?: (
       input: BoringLogStudioTextOccurrenceStyleInput,
+    ) => Promise<unknown>;
+    readonly resetTextOccurrencePresentation?: (
+      input: BoringLogStudioTextOccurrencePresentationResetInput,
     ) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
@@ -223,6 +235,12 @@ export class BoringLogStudioRouteBroker {
       (() =>
         Promise.resolve(
           Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_STYLE_UNAVAILABLE" }),
+        ));
+    this.#resetTextOccurrencePresentation =
+      input.resetTextOccurrencePresentation ??
+      (() =>
+        Promise.resolve(
+          Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_RESET_UNAVAILABLE" }),
         ));
   }
 
@@ -557,6 +575,85 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setTextOccurrenceStyle(
         args as unknown as BoringLogStudioTextOccurrenceStyleInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async resetTextOccurrencePresentation(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "occurrenceNodeId",
+      "semanticId",
+    ]);
+    const boundedText = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && value.length <= 512;
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !boundedText(args["occurrenceNodeId"]) ||
+      !boundedText(args["semanticId"])
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#resetTextOccurrencePresentation(
+        args as unknown as BoringLogStudioTextOccurrencePresentationResetInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
