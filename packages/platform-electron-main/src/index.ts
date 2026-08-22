@@ -118,6 +118,7 @@ export {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   boringLogStudioRouteRevision,
 } from "./boring-log-studio-route-contract.js";
 export { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
@@ -126,6 +127,7 @@ export type {
   BoringLogStudioRouteRejectionCode,
   BoringLogStudioRouteResult,
   BoringLogStudioLifecycleOperation,
+  BoringLogStudioTextOccurrenceStyleInput,
   BoringLogStudioLifecycleResult,
 } from "./boring-log-studio-route-broker.js";
 export {

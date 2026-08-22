@@ -4,6 +4,7 @@ import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
@@ -277,7 +278,77 @@ const lifecycle = Object.freeze(async function lifecycle(input: unknown) {
   }
 });
 
-contextBridge.exposeInMainWorld("rsrenderStudio", Object.freeze({ getProjection, lifecycle }));
+const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceStyle(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, [
+    "expectedWorkingRevision",
+    "occurrenceNodeId",
+    "semanticId",
+    "baseStyleId",
+    "fontFamilyId",
+    "fontSizeMpt",
+    "fontWeight",
+    "lineHeightMpt",
+    "color",
+    "locked",
+  ]);
+  const boundedText = (value: unknown): value is string =>
+    typeof value === "string" && value.length > 0 && value.length <= 512;
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    !boundedText(args["occurrenceNodeId"]) ||
+    !boundedText(args["semanticId"]) ||
+    !boundedText(args["baseStyleId"]) ||
+    !boundedText(args["fontFamilyId"]) ||
+    !isPositiveSafeInteger(args["fontSizeMpt"]) ||
+    !isPositiveSafeInteger(args["fontWeight"]) ||
+    args["fontWeight"] > 1_000 ||
+    !isPositiveSafeInteger(args["lineHeightMpt"]) ||
+    !boundedText(args["color"]) ||
+    typeof args["locked"] !== "boolean"
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
+contextBridge.exposeInMainWorld(
+  "rsrenderStudio",
+  Object.freeze({ getProjection, lifecycle, setTextOccurrenceStyle }),
+);
 
 const publicationUnavailable = Object.freeze({
   accepted: false,
@@ -445,6 +516,18 @@ export interface BoringLogStudioPreloadApi {
       | "next-boring"
       | "last-boring";
     readonly expectedWorkingRevision: number | null;
+  }) => Promise<unknown>;
+  readonly setTextOccurrenceStyle: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly occurrenceNodeId: string;
+    readonly semanticId: string;
+    readonly baseStyleId: string;
+    readonly fontFamilyId: string;
+    readonly fontSizeMpt: number;
+    readonly fontWeight: number;
+    readonly lineHeightMpt: number;
+    readonly color: string;
+    readonly locked: boolean;
   }) => Promise<unknown>;
 }
 

@@ -60,6 +60,10 @@ export interface BoringLogStudioProjectionPreparation {
     readonly key: string;
     readonly provenance: BoringLogValueProvenance;
   }>[];
+  readonly textOccurrenceStyleEntries: readonly Readonly<{
+    readonly nodeId: string;
+    readonly styleId: string;
+  }>[];
 }
 
 export type BoringLogStudioProjectionPreparationResult =
@@ -300,6 +304,11 @@ export function prepareBoringLogStudioProjection(
             Object.freeze({ key, provenance }),
           ),
         ),
+        textOccurrenceStyleEntries: Object.freeze(
+          effectiveJob.value.template.bindings
+            .filter(({ path }) => path === "presentation.text-occurrence-style")
+            .map(({ elementId, styleId }) => Object.freeze({ nodeId: elementId, styleId })),
+        ),
       }),
     });
   } catch {
@@ -319,17 +328,33 @@ export function completeBoringLogStudioProjection(
     const provenanceByNode = new Map(
       preparation.provenanceEntries.map(({ key, provenance }) => [key, provenance]),
     );
+    const occurrenceStyles = new Map(
+      preparation.textOccurrenceStyleEntries.map(({ nodeId, styleId }) => [nodeId, styleId]),
+    );
     const sceneWithExactProvenance = {
       ...gated.scene,
       pages: gated.scene.pages.map((page) => ({
         ...page,
-        nodes: page.nodes.map((node) => ({
-          ...node,
-          provenance:
+        nodes: page.nodes.map((node) => {
+          const valueProvenance =
             provenanceByNode.get(`${node.semanticId}\u0000${node.role}`) ??
             provenanceByNode.get(`${node.semanticId}\u0000*`) ??
-            node.provenance,
-        })),
+            node.provenance;
+          const styleOverrideIdentity = occurrenceStyles.get(node.id);
+          return {
+            ...node,
+            provenance:
+              styleOverrideIdentity !== undefined && valueProvenance?.provenanceClass === "source"
+                ? Object.freeze({
+                    provenanceClass: "effective-override" as const,
+                    original: valueProvenance,
+                    overrideIdentity: styleOverrideIdentity,
+                    overrideRevision: 1,
+                    transformation: "replace-style-token" as const,
+                  })
+                : valueProvenance,
+          };
+        }),
       })),
     };
     const scene = validateResolvedBoringLogPageScene(sceneWithExactProvenance);

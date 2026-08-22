@@ -7,9 +7,13 @@ import {
   createEmptyPhase1LogProject,
   createSourceSnapshot,
   decodePhase1LogProjectAggregate,
+  deriveEmbeddedTemplateRepresentationIdentity,
   deriveExplorationMembershipIdentity,
+  deriveTemplateAssignmentIdentity,
   documentIdentityCodec,
+  localAssignmentIdentityCodec,
   sourceExplorationIdentityCodec,
+  templateIdentityCodec,
   type DocumentIdentity,
   type Phase1LogProjectAggregate,
   type PresentationOverrideCollection,
@@ -183,9 +187,61 @@ function buildProjectAggregate(
       groupIdentity: null,
     });
   });
+  const embeddedTemplateRepresentations = new Map<
+    string,
+    Readonly<{
+      embeddedTemplateRepresentationIdentity: ReturnType<
+        typeof deriveEmbeddedTemplateRepresentationIdentity
+      >;
+      admittedTemplateIdentity: ReturnType<typeof templateIdentityCodec.parse>;
+      effectiveContentDigest: ReturnType<typeof sha256CanonicalJson>;
+      origin: Readonly<{ kind: "admitted-template" }>;
+    }>
+  >();
+  const templateAssignments = documents.map(({ layoutJob }, index) => {
+    const membership = memberships[index]!;
+    const admittedTemplateIdentity = templateIdentityCodec.parse(layoutJob.template.templateId);
+    const effectiveContentDigest = sha256CanonicalJson(layoutJob.template);
+    const embeddedTemplateRepresentationIdentity = deriveEmbeddedTemplateRepresentationIdentity(
+      documentIdentity,
+      admittedTemplateIdentity,
+      effectiveContentDigest,
+    );
+    embeddedTemplateRepresentations.set(
+      embeddedTemplateRepresentationIdentity,
+      Object.freeze({
+        embeddedTemplateRepresentationIdentity,
+        admittedTemplateIdentity,
+        effectiveContentDigest,
+        origin: Object.freeze({ kind: "admitted-template" as const }),
+      }),
+    );
+    const localAssignmentIdentity = localAssignmentIdentityCodec.parse(
+      `urn:rsrender:local-template-assignment:${layoutJob.document.identity.boringLogId}`,
+    );
+    const scope = Object.freeze({
+      kind: "exploration" as const,
+      targetIdentity: membership.membershipIdentity,
+    });
+    return Object.freeze({
+      assignmentIdentity: deriveTemplateAssignmentIdentity(
+        documentIdentity,
+        localAssignmentIdentity,
+        scope,
+      ),
+      localAssignmentIdentity,
+      scope,
+      embeddedTemplateRepresentationIdentity,
+    });
+  });
   const decoded = decodePhase1LogProjectAggregate({
     ...empty.value,
-    logSet: { ...empty.value.logSet, memberships },
+    logSet: {
+      ...empty.value.logSet,
+      memberships,
+      embeddedTemplateRepresentations: [...embeddedTemplateRepresentations.values()],
+      templateAssignments,
+    },
     phase1Inputs: {
       acceptedSourceSnapshot: snapshot,
       revisionHandles: empty.value.phase1Inputs.revisionHandles,

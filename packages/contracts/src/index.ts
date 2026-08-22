@@ -80,6 +80,16 @@ export type {
   ResolvedBoringLogPageScene,
 } from "./boring-log-render-contract.js";
 export {
+  boringLogTextOccurrenceStyleOverrideSchemaVersion,
+  validateBoringLogTextOccurrenceStyleOverride,
+} from "./boring-log-text-occurrence-style-contract.js";
+export type {
+  BoringLogTextOccurrenceStyle,
+  BoringLogTextOccurrenceStyleOverride,
+  BoringLogTextOccurrenceStyleOverrideRejectionCode,
+  BoringLogTextOccurrenceStyleOverrideResult,
+} from "./boring-log-text-occurrence-style-contract.js";
+export {
   isSha256Digest,
   parseSha256Digest,
   SHA256_ALGORITHM,

@@ -10,6 +10,7 @@ import {
   historyRedoCommandId,
   historyUndoCommandId,
   maximumOverrideRenderDatasetProjectionOverrides,
+  isSha256Digest,
   sha256Utf8,
   type CanonicalJsonValue,
   type OverrideRenderDatasetCommand,
@@ -41,6 +42,7 @@ import {
   createProjectInputRevisionHandle,
   decodePhase1LogProjectAggregate,
   decodePresentationOverrideCollection,
+  deriveEmbeddedTemplateRepresentationIdentity,
   derivePresentationOverrideIdentity,
   digestSourceBaselineValue,
   displayValueTypeOf,
@@ -48,6 +50,7 @@ import {
   encodePresentationOverrideCollection,
   encodeSourceSnapshot,
   getProjectInputRevisionHandle,
+  separationOperationIdentityCodec,
   type DisplayValueOverride,
   type BoundedOverrideAssemblyResult,
   type DomainValueRecord,
@@ -92,6 +95,32 @@ export interface CapturedOverrideRenderDatasetWorkingState {
   readonly project: CapturedPhase1ProjectWorkingRevision;
   readonly presentationOverrideCollections: readonly PresentationOverrideCollection[];
 }
+
+export type EmbeddedTemplateReplacementCommitResult =
+  | Readonly<{
+      readonly accepted: true;
+      readonly previousWorkingRevision: number;
+      readonly workingRevision: number;
+      readonly durableRevision: number;
+      readonly dirty: boolean;
+      readonly canUndo: boolean;
+      readonly canRedo: boolean;
+      readonly embeddedTemplateRepresentationIdentity: string;
+    }>
+  | Readonly<{
+      readonly accepted: false;
+      readonly detail?: string;
+      readonly code:
+        | "AUTHORING_COMMAND_MALFORMED"
+        | "DOCUMENT_IDENTITY_MISMATCH"
+        | "OWNER_GENERATION_MISMATCH"
+        | "STALE_WORKING_REVISION"
+        | "EXPLORATION_ASSIGNMENT_MISSING"
+        | "TEMPLATE_BASELINE_MISMATCH"
+        | "TEMPLATE_REPLACEMENT_INVALID"
+        | "CAPACITY_EXHAUSTED"
+        | "INTERNAL_STATE_INVALID";
+    }>;
 
 export type OverrideRenderDatasetServiceInitializationResult =
   | { readonly accepted: true; readonly service: InMemoryOverrideRenderDatasetService }
@@ -775,6 +804,216 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     });
   }
 
+  public replaceEmbeddedTemplateRepresentation(
+    input: unknown,
+  ): Promise<EmbeddedTemplateReplacementCommitResult> {
+    return this.#serialize(async () => {
+      await Promise.resolve();
+      const command = ownDataRecord(input, [
+        "requestId",
+        "documentId",
+        "ownerGeneration",
+        "expectedWorkingRevision",
+        "explorationIdentity",
+        "expectedEffectiveContentDigest",
+        "replacementEffectiveContentDigest",
+        "reason",
+      ]);
+      if (
+        command === null ||
+        typeof command["requestId"] !== "string" ||
+        command["requestId"].length < 1 ||
+        typeof command["documentId"] !== "string" ||
+        !Number.isSafeInteger(command["ownerGeneration"]) ||
+        !Number.isSafeInteger(command["expectedWorkingRevision"]) ||
+        typeof command["explorationIdentity"] !== "string" ||
+        !isSha256Digest(command["expectedEffectiveContentDigest"]) ||
+        !isSha256Digest(command["replacementEffectiveContentDigest"]) ||
+        typeof command["reason"] !== "string" ||
+        command["reason"].trim().length < 1
+      ) {
+        return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
+      }
+      const snapshot = this.#core.inspectProject();
+      if (command["documentId"] !== snapshot.documentId) {
+        return Object.freeze({ accepted: false, code: "DOCUMENT_IDENTITY_MISMATCH" });
+      }
+      if (command["ownerGeneration"] !== snapshot.ownerGeneration) {
+        return Object.freeze({ accepted: false, code: "OWNER_GENERATION_MISMATCH" });
+      }
+      if (command["expectedWorkingRevision"] !== snapshot.workingRevision) {
+        return Object.freeze({ accepted: false, code: "STALE_WORKING_REVISION" });
+      }
+      if (snapshot.workingRevision === Number.MAX_SAFE_INTEGER) {
+        return Object.freeze({ accepted: false, code: "CAPACITY_EXHAUSTED" });
+      }
+      const membership = snapshot.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === command["explorationIdentity"],
+      );
+      const assignment = snapshot.aggregate.logSet.templateAssignments.find(
+        (candidate) =>
+          membership !== undefined &&
+          candidate.scope.kind === "exploration" &&
+          candidate.scope.targetIdentity === membership.membershipIdentity,
+      );
+      const prior = snapshot.aggregate.logSet.embeddedTemplateRepresentations.find(
+        (candidate) =>
+          candidate.embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (membership === undefined || assignment === undefined || prior === undefined) {
+        return Object.freeze({ accepted: false, code: "EXPLORATION_ASSIGNMENT_MISSING" });
+      }
+      if (prior.effectiveContentDigest !== command["expectedEffectiveContentDigest"]) {
+        return Object.freeze({ accepted: false, code: "TEMPLATE_BASELINE_MISMATCH" });
+      }
+      if (prior.effectiveContentDigest === command["replacementEffectiveContentDigest"]) {
+        return Object.freeze({ accepted: false, code: "TEMPLATE_REPLACEMENT_INVALID" });
+      }
+      const replacementIdentity = deriveEmbeddedTemplateRepresentationIdentity(
+        snapshot.aggregate.documentIdentity,
+        prior.admittedTemplateIdentity,
+        command["replacementEffectiveContentDigest"],
+      );
+      const replacement = Object.freeze({
+        embeddedTemplateRepresentationIdentity: replacementIdentity,
+        admittedTemplateIdentity: prior.admittedTemplateIdentity,
+        effectiveContentDigest: command["replacementEffectiveContentDigest"],
+        origin:
+          prior.origin.kind === "separate-template"
+            ? prior.origin
+            : Object.freeze({
+                kind: "separate-template" as const,
+                separationOperationIdentity: separationOperationIdentityCodec.parse(
+                  command["requestId"],
+                ),
+              }),
+      });
+      const assignments = snapshot.aggregate.logSet.templateAssignments.map((candidate) =>
+        candidate.assignmentIdentity === assignment.assignmentIdentity
+          ? Object.freeze({
+              ...candidate,
+              embeddedTemplateRepresentationIdentity: replacementIdentity,
+            })
+          : candidate,
+      );
+      const retainedPrior = assignments.some(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity === prior.embeddedTemplateRepresentationIdentity,
+      );
+      const after = decodePhase1LogProjectAggregate({
+        ...snapshot.aggregate,
+        logSet: {
+          ...snapshot.aggregate.logSet,
+          embeddedTemplateRepresentations: [
+            ...snapshot.aggregate.logSet.embeddedTemplateRepresentations.filter(
+              ({ embeddedTemplateRepresentationIdentity }) =>
+                embeddedTemplateRepresentationIdentity !== replacementIdentity &&
+                (retainedPrior ||
+                  embeddedTemplateRepresentationIdentity !==
+                    prior.embeddedTemplateRepresentationIdentity),
+            ),
+            replacement,
+          ],
+          templateAssignments: assignments,
+        },
+      });
+      if (!after.accepted) {
+        return Object.freeze({ accepted: false, code: "TEMPLATE_REPLACEMENT_INVALID" });
+      }
+      const beforeEncoded = encodePhase1LogProjectAggregate(snapshot.aggregate);
+      const afterEncoded = encodePhase1LogProjectAggregate(after.value);
+      if (!beforeEncoded.accepted || !afterEncoded.accepted) {
+        return Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID", detail: "encode" });
+      }
+      const canonicalCommand = canonicalizeJson(command);
+      const commandDigest = sha256Utf8(canonicalCommand);
+      const replay = this.#core.lookupProjectSourceCommandReplay({
+        requestId: command["requestId"],
+        sourceCommandDigest: commandDigest,
+      });
+      if (replay.kind !== "miss") {
+        return Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID", detail: "replay" });
+      }
+      const eventPayload = canonicalizeJson({
+        kind: "embedded-template.text-occurrence-style-set",
+        explorationIdentity: command["explorationIdentity"],
+        priorEmbeddedTemplateRepresentationIdentity: prior.embeddedTemplateRepresentationIdentity,
+        embeddedTemplateRepresentationIdentity: replacementIdentity,
+        effectiveContentDigest: command["replacementEffectiveContentDigest"],
+      });
+      const effect = createProjectDomainEffect({
+        sourceRequestId: command["requestId"],
+        sourceCommandCanonicalJson: canonicalCommand,
+        sourceCommandIdentity: "embedded-template.text-occurrence-style-set",
+        commandLabel: "Set text occurrence style",
+        documentId: snapshot.documentId,
+        ownerGeneration: snapshot.ownerGeneration,
+        expectedWorkingRevision: snapshot.workingRevision,
+        beforeAggregateCanonicalJson: beforeEncoded.canonicalJson,
+        afterAggregateCanonicalJson: afterEncoded.canonicalJson,
+        affectedIdentities: [
+          assignment.assignmentIdentity,
+          prior.embeddedTemplateRepresentationIdentity,
+          replacementIdentity,
+        ].sort(),
+        invalidations: [
+          "urn:rsrender:projection:boring-log-scene",
+          "urn:rsrender:projection:effective-template",
+        ],
+        eventResult: {
+          resultCode: "embedded-template.text-occurrence-style-set",
+          canonicalPayload: eventPayload,
+        },
+      });
+      if (!effect.accepted) {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `effect:${effect.code}`,
+        });
+      }
+      const preparation = this.#core.prepareProjectDomainEffect(effect.value);
+      if (preparation.kind !== "ready") {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `prepare:${preparation.result.kind === "project-domain-history.rejected" ? preparation.result.reason : preparation.kind}`,
+        });
+      }
+      const projected = projectionFor(
+        this.#state,
+        simulatedSnapshot(snapshot, after.value, preparation.result),
+      );
+      if (!projected.projected) {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `projection:${projected.code}`,
+        });
+      }
+      const committed = this.#core.commitPreparedProjectDomainEffect(preparation.prepared);
+      if (committed.kind === "project-domain-history.rejected") {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `commit:${committed.reason}`,
+        });
+      }
+      return Object.freeze({
+        accepted: true,
+        previousWorkingRevision: committed.previousWorkingRevision,
+        workingRevision: committed.workingRevision,
+        durableRevision: committed.durableRevision,
+        dirty: committed.dirty,
+        canUndo: committed.historyCursor > 0,
+        canRedo: committed.historyCursor < committed.historyLength,
+        embeddedTemplateRepresentationIdentity: replacementIdentity,
+      });
+    });
+  }
+
   public markDurable(capture: CapturedPhase1ProjectWorkingRevision): Promise<boolean> {
     return this.#serialize(() =>
       Promise.resolve(markInMemoryPhase1ProjectHistoryCoreDurableRevision(this.#core, capture)),
@@ -1294,6 +1533,16 @@ export async function markOverrideRenderDatasetDurable(
   capture: CapturedPhase1ProjectWorkingRevision,
 ): Promise<boolean> {
   return (await persistenceAuthorities.get(service)?.markDurable(capture)) ?? false;
+}
+
+export async function commitEmbeddedTemplateReplacement(
+  service: InMemoryOverrideRenderDatasetService,
+  input: unknown,
+): Promise<EmbeddedTemplateReplacementCommitResult> {
+  return (
+    (await persistenceAuthorities.get(service)?.replaceEmbeddedTemplateRepresentation(input)) ??
+    Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID" as const })
+  );
 }
 
 export function createInMemoryOverrideRenderDatasetService(

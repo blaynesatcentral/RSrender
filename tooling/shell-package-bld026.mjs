@@ -11,7 +11,11 @@ import { build } from "esbuild";
 import { PACKAGING_PROFILE } from "./shell-package-bld006.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const temporaryRoot = path.join(root, ".tmp", "bld-026-boring-log-editor");
+const temporaryLabel = process.env.RSRENDER_BORING_LOG_PACKAGE_LABEL ?? "bld-026-boring-log-editor";
+if (!/^bld-[0-9a-z-]+$/u.test(temporaryLabel)) {
+  throw new Error("BLD026_TEMPORARY_LABEL_INVALID");
+}
+const temporaryRoot = path.join(root, ".tmp", temporaryLabel);
 const stageDirectory = path.join(temporaryRoot, "stage");
 const outputDirectory = path.join(temporaryRoot, "out");
 const applicationName = "RSrender";

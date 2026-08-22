@@ -37,6 +37,7 @@ function semanticAttributes(node: BoringLogSceneNode, selectedSemanticId: string
   const provenance = node.provenance === null ? "computed" : node.provenance.provenanceClass;
   return [
     attribute("id", node.id),
+    attribute("data-node-id", node.id),
     attribute("data-semantic-id", node.semanticId),
     attribute("data-node-role", node.role),
     attribute("data-provenance", provenance),

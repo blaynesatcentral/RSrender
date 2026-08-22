@@ -765,14 +765,20 @@ function validateTemplate(input: unknown): void {
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);
   unique([...hierarchyIds, ...leafIds]);
   const semanticIds = new Set([...hierarchyIds, ...leafIds]);
+  const occurrenceBindingIds: string[] = [];
   for (const bindingInput of array(value["bindings"])) {
     const binding = record(bindingInput, ["elementId", "path", "styleId"]);
-    if (!semanticIds.has(textValue(binding["elementId"])))
+    const elementId = textValue(binding["elementId"]);
+    const path = textValue(binding["path"]);
+    const occurrenceStyleBinding =
+      path === "presentation.text-occurrence-style" && elementId.startsWith("node:");
+    if (!semanticIds.has(elementId) && !occurrenceStyleBinding)
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
-    textValue(binding["path"]);
+    if (occurrenceStyleBinding) occurrenceBindingIds.push(elementId);
     if (!styleIds.includes(textValue(binding["styleId"])))
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
   }
+  unique(occurrenceBindingIds);
   validateStringMap(value["visualTokens"]);
   assertNoForbiddenRaster(value);
 }

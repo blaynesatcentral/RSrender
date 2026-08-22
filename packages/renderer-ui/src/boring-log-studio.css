@@ -540,6 +540,62 @@ textarea {
   stroke: #168ac0 !important;
   stroke-width: 1800 !important;
 }
+.canvas-context-menu {
+  position: fixed;
+  top: 124px;
+  right: 292px;
+  z-index: 40;
+  min-width: 168px;
+  padding: 5px;
+  border: 1px solid #8998a2;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 5px 18px #1d2b3540;
+}
+.canvas-context-menu button {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #263944;
+  text-align: left;
+}
+.canvas-context-menu button:hover,
+.canvas-context-menu button:focus-visible {
+  background: #dcecf5;
+  outline: 1px solid #7eb2cc;
+}
+.text-style-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.text-style-grid label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: #53636d;
+  font-size: 11px;
+}
+.text-style-grid input,
+.text-style-grid select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid #aab6bd;
+  border-radius: 2px;
+  background: #fff;
+  color: #263944;
+}
+.text-style-grid input[type="color"] {
+  min-height: 32px;
+  padding: 3px;
+}
+.text-style-grid .apply-property,
+.text-style-grid .property-help {
+  grid-column: 1 / -1;
+}
 .property-tabs {
   display: flex;
   background: #fff;

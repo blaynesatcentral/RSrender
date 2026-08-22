@@ -122,6 +122,64 @@ async function routed() {
   return { ...source, route, routeContext, binding };
 }
 
+test("BLD-037 Studio route admits only bounded exact-occurrence typography commands", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "e".repeat(64),
+    getProjection: source.getProjection,
+    setTextOccurrenceStyle: async (input) => {
+      received = input;
+      return { accepted: true, code: "TEXT_OCCURRENCE_STYLE_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  assert.equal(binding.accepted, true, binding.code);
+  const args = {
+    expectedWorkingRevision: 0,
+    occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+    semanticId: "lithology:stratum-01:transition:2",
+    baseStyleId: "style-small",
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: 9_000,
+    fontWeight: 700,
+    lineHeightMpt: 11_000,
+    color: "#b42318",
+    locked: false,
+  };
+  const accepted = await route.setTextOccurrenceStyle(routeContext, {
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence: 1,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  assert.equal(accepted.accepted, true, accepted.code);
+  assert.deepEqual(received, args);
+  assert.deepEqual(
+    await route.setTextOccurrenceStyle(routeContext, {
+      transportVersion: 1,
+      capability: binding.capability,
+      generation: binding.generation,
+      sequence: 2,
+      documentIdentity,
+      ownerGeneration: 1,
+      args: { ...args, fontSizeMpt: 0 },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
+});
+
 test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene-bounded", async () => {
   const routedAuthority = await routed();
   assert.equal(boringLogStudioRouteRevision, "bld-026-studio-route-v1");
@@ -159,7 +217,7 @@ test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene
   );
 });
 
-test("BLD-026 generated Studio preload preserves the four document methods and adds one scene method", async () => {
+test("BLD-026 generated Studio preload preserves document methods and exposes bounded Studio methods", async () => {
   const routedAuthority = await routed();
   let vmContext;
   let documentSetInput;
@@ -220,7 +278,11 @@ test("BLD-026 generated Studio preload preserves the four document methods and a
     "undo",
     "redo",
   ]);
-  assert.deepEqual(Object.keys(sandbox.rsrenderStudio), ["getProjection", "lifecycle"]);
+  assert.deepEqual(Object.keys(sandbox.rsrenderStudio), [
+    "getProjection",
+    "lifecycle",
+    "setTextOccurrenceStyle",
+  ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
     vmContext,

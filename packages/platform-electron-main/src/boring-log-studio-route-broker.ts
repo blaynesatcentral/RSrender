@@ -58,6 +58,19 @@ export type BoringLogStudioLifecycleResult =
     }
   | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
 
+export interface BoringLogStudioTextOccurrenceStyleInput {
+  readonly expectedWorkingRevision: number;
+  readonly occurrenceNodeId: string;
+  readonly semanticId: string;
+  readonly baseStyleId: string;
+  readonly fontFamilyId: string;
+  readonly fontSizeMpt: number;
+  readonly fontWeight: number;
+  readonly lineHeightMpt: number;
+  readonly color: string;
+  readonly locked: boolean;
+}
+
 type DataRecord = Readonly<Record<string, unknown>>;
 type Binding = {
   readonly capability: string;
@@ -147,6 +160,9 @@ export class BoringLogStudioRouteBroker {
     readonly operation: BoringLogStudioLifecycleOperation;
     readonly expectedWorkingRevision: number | null;
   }) => Promise<unknown>;
+  readonly #setTextOccurrenceStyle: (
+    input: BoringLogStudioTextOccurrenceStyleInput,
+  ) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -163,6 +179,9 @@ export class BoringLogStudioRouteBroker {
       readonly operation: BoringLogStudioLifecycleOperation;
       readonly expectedWorkingRevision: number | null;
     }) => Promise<unknown>;
+    readonly setTextOccurrenceStyle?: (
+      input: BoringLogStudioTextOccurrenceStyleInput,
+    ) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -178,6 +197,12 @@ export class BoringLogStudioRouteBroker {
             accepted: false,
             code: "PROJECT_LIFECYCLE_UNAVAILABLE",
           }),
+        ));
+    this.#setTextOccurrenceStyle =
+      input.setTextOccurrenceStyle ??
+      (() =>
+        Promise.resolve(
+          Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_STYLE_UNAVAILABLE" }),
         ));
   }
 
@@ -378,6 +403,103 @@ export class BoringLogStudioRouteBroker {
       });
       if (this.#binding !== binding || !boundedProjection(result))
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setTextOccurrenceStyle(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "occurrenceNodeId",
+      "semanticId",
+      "baseStyleId",
+      "fontFamilyId",
+      "fontSizeMpt",
+      "fontWeight",
+      "lineHeightMpt",
+      "color",
+      "locked",
+    ]);
+    const boundedText = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && value.length <= 512;
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !boundedText(args["occurrenceNodeId"]) ||
+      !boundedText(args["semanticId"]) ||
+      !boundedText(args["baseStyleId"]) ||
+      !boundedText(args["fontFamilyId"]) ||
+      !Number.isSafeInteger(args["fontSizeMpt"]) ||
+      (args["fontSizeMpt"] as number) < 1 ||
+      !Number.isSafeInteger(args["fontWeight"]) ||
+      (args["fontWeight"] as number) < 1 ||
+      (args["fontWeight"] as number) > 1_000 ||
+      !Number.isSafeInteger(args["lineHeightMpt"]) ||
+      (args["lineHeightMpt"] as number) < 1 ||
+      !boundedText(args["color"]) ||
+      typeof args["locked"] !== "boolean"
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setTextOccurrenceStyle(
+        args as unknown as BoringLogStudioTextOccurrenceStyleInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
       return Object.freeze({
         accepted: true,
         transportVersion: 1,

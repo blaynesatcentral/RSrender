@@ -67,9 +67,11 @@ export type {
 export {
   createInMemoryOverrideRenderDatasetService,
   captureOverrideRenderDatasetWorkingState,
+  commitEmbeddedTemplateReplacement,
   inMemoryOverrideRenderDatasetServiceRevision,
   markOverrideRenderDatasetDurable,
 } from "./in-memory-override-render-dataset-service.js";
+export type { EmbeddedTemplateReplacementCommitResult } from "./in-memory-override-render-dataset-service.js";
 
 export {
   advanceOverrideRenderDatasetProjectionReplica,

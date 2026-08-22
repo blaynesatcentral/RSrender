@@ -87,6 +87,18 @@ type StudioApis = Readonly<{
       readonly operation: LifecycleOperation;
       readonly expectedWorkingRevision: number | null;
     }) => Promise<unknown>;
+    readonly setTextOccurrenceStyle: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly occurrenceNodeId: string;
+      readonly semanticId: string;
+      readonly baseStyleId: string;
+      readonly fontFamilyId: string;
+      readonly fontSizeMpt: number;
+      readonly fontWeight: number;
+      readonly lineHeightMpt: number;
+      readonly color: string;
+      readonly locked: boolean;
+    }) => Promise<unknown>;
   };
   readonly document: {
     readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
@@ -198,6 +210,7 @@ async function main(): Promise<void> {
   const selectionRole = element<HTMLElement>("selection-role");
   const selectionProvenance = element<HTMLElement>("selection-provenance");
   const propertySemanticId = element<HTMLElement>("property-semantic-id");
+  const propertyNodeId = element<HTMLElement>("property-node-id");
   const propertyRole = element<HTMLElement>("property-role");
   const propertyNodeCount = element<HTMLElement>("property-node-count");
   const propertyContent = element<HTMLTextAreaElement>("property-content");
@@ -207,6 +220,14 @@ async function main(): Promise<void> {
   const propertyProvenance = element<HTMLElement>("property-provenance");
   const propertySourceOriginal = element<HTMLElement>("property-source-original");
   const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
+  const textStyleProperties = element<HTMLDetailsElement>("text-style-properties");
+  const textFontFamily = element<HTMLSelectElement>("text-font-family");
+  const textFontSize = element<HTMLInputElement>("text-font-size");
+  const textFontWeight = element<HTMLSelectElement>("text-font-weight");
+  const textLineHeight = element<HTMLInputElement>("text-line-height");
+  const textColor = element<HTMLInputElement>("text-color");
+  const applyTextStyle = element<HTMLButtonElement>("apply-text-style");
+  const textStyleHelp = element<HTMLElement>("text-style-help");
   const selectionStatus = element<HTMLElement>("selection-status");
   const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
   const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
@@ -216,6 +237,8 @@ async function main(): Promise<void> {
   const propertyElementTab = element<HTMLButtonElement>("property-tab-element");
   const propertyDiagnosticsTab = element<HTMLButtonElement>("property-tab-diagnostics");
   const propertiesOptions = element<HTMLButtonElement>("properties-options");
+  const canvasContextMenu = element<HTMLDivElement>("canvas-context-menu");
+  const contextProperties = element<HTMLButtonElement>("context-properties");
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
   const documentState = element<HTMLElement>("document-state");
@@ -240,9 +263,13 @@ async function main(): Promise<void> {
   const nextBoringButton = element<HTMLButtonElement>("next-boring");
   const lastBoringButton = element<HTMLButtonElement>("last-boring");
   let selectedSemanticId: string | null = null;
+  let selectedSceneNodeId: string | null = null;
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
-  const selectionByBoring = new Map<string, string | null>();
+  const selectionByBoring = new Map<
+    string,
+    Readonly<{ readonly semanticId: string; readonly nodeId: string | null }> | null
+  >();
   const collapsedTreeItems = new Set<string>();
   let contentsMode: "drawing" | "source" = "drawing";
   let interactionMode: "select" | "pan" = "select";
@@ -410,7 +437,12 @@ async function main(): Promise<void> {
     );
     const priorBoringIdentity = lifecycleState?.activeBoringLogIdentity ?? null;
     if (navigation && priorBoringIdentity !== null) {
-      selectionByBoring.set(priorBoringIdentity, selectedSemanticId);
+      selectionByBoring.set(
+        priorBoringIdentity,
+        selectedSemanticId === null
+          ? null
+          : Object.freeze({ semanticId: selectedSemanticId, nodeId: selectedSceneNodeId }),
+      );
     }
     const expected = operation === "get-state" ? null : (studioProjection?.workingRevision ?? null);
     status.textContent = `${humanize(operation)}…`;
@@ -436,7 +468,9 @@ async function main(): Promise<void> {
       return;
     }
     if (result.code === "PROJECT_BORING_CHANGED" && result.state !== null) {
-      selectedSemanticId = selectionByBoring.get(result.state.activeBoringLogIdentity) ?? null;
+      const selection = selectionByBoring.get(result.state.activeBoringLogIdentity) ?? null;
+      selectedSemanticId = selection?.semanticId ?? null;
+      selectedSceneNodeId = selection?.nodeId ?? null;
       await refreshStudioProjection(
         result.state.workingRevision,
         `${boringPosition.value}: ${boringSelector.value}`,
@@ -459,6 +493,15 @@ async function main(): Promise<void> {
     if (parsed.querySelector("parsererror") !== null)
       throw new Error("SVG projection parse failed");
     pageHost.replaceChildren(document.importNode(parsed.documentElement, true));
+    if (selectedSceneNodeId !== null) {
+      for (const selected of pageHost.querySelectorAll<SVGElement>(".scene-node.is-selected")) {
+        selected.classList.remove("is-selected");
+      }
+      const occurrence = [...pageHost.querySelectorAll<SVGElement>("[data-node-id]")].find(
+        (candidate) => candidate.dataset["nodeId"] === selectedSceneNodeId,
+      );
+      occurrence?.classList.add("is-selected");
+    }
     pageHost.setAttribute("aria-busy", "false");
   }
 
@@ -606,6 +649,25 @@ async function main(): Promise<void> {
     propertiesScroll.scrollTo({ top: 0, behavior: "auto" });
   }
 
+  function hideCanvasContextMenu(): void {
+    canvasContextMenu.hidden = true;
+  }
+
+  function openCanvasContextMenu(): void {
+    canvasContextMenu.hidden = false;
+    contextProperties.focus();
+  }
+
+  function focusSelectedProperties(): void {
+    hideCanvasContextMenu();
+    showPropertyPanel("element");
+    propertiesScroll.focus();
+    status.textContent =
+      selectedSceneNodeId === null
+        ? "Properties opened for the selected element."
+        : `Properties opened for exact occurrence ${selectedSceneNodeId}.`;
+  }
+
   function activateRibbonTab(tabId: string): void {
     const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")];
     const panels = [...document.querySelectorAll<HTMLElement>("[data-ribbon-panel]")];
@@ -623,11 +685,22 @@ async function main(): Promise<void> {
     status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
   }
 
-  function select(semanticId: string): void {
+  function select(semanticId: string, nodeId: string | null = null): void {
     selectedSemanticId = semanticId;
+    selectedSceneNodeId = nodeId;
     showPropertyPanel("element");
     const nodes = page.nodes.filter((node) => node.semanticId === semanticId);
-    const representative = nodes.find((node) => node.kind === "text") ?? nodes[0];
+    const representative =
+      (nodeId === null ? undefined : nodes.find((node) => node.id === nodeId)) ??
+      nodes.find((node) => node.kind === "text") ??
+      nodes[0];
+    if (
+      nodeId === null &&
+      representative?.kind === "text" &&
+      nodes.filter((node) => node.kind === "text").length === 1
+    ) {
+      selectedSceneNodeId = representative.id;
+    }
     installSvg();
     renderTree();
     if (representative === undefined) {
@@ -647,8 +720,24 @@ async function main(): Promise<void> {
           ? "Source original"
           : "Computed layout";
     propertySemanticId.textContent = semanticId;
+    propertyNodeId.textContent = representative.id;
     propertyRole.textContent = representative.role;
     propertyNodeCount.textContent = String(nodes.length);
+    const textStyle =
+      representative.kind === "text"
+        ? scene.resources.textStyles.find(({ id }) => id === representative.styleId)
+        : undefined;
+    textStyleProperties.hidden = textStyle === undefined;
+    if (textStyle !== undefined && representative.kind === "text") {
+      textFontFamily.value = textStyle.fontFamilyId;
+      textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
+      textFontWeight.value = String(textStyle.fontWeight);
+      textLineHeight.value = String(textStyle.lineHeightMpt / 1_000);
+      textColor.value = /^#[0-9a-f]{6}$/iu.test(textStyle.color) ? textStyle.color : "#111827";
+      applyTextStyle.disabled = selectedSceneNodeId === null || studioProjection === null;
+      textStyleHelp.textContent =
+        "This occurrence · inherited values resolve into a project-owned template override · edits use document history.";
+    }
     const editable = editableFor(semanticId);
     const effective = editable === null ? null : contentValue(editable.effectiveDisplay.content);
     const sourceOriginal = editable === null ? null : contentValue(editable.sourceOriginal.content);
@@ -668,13 +757,13 @@ async function main(): Promise<void> {
       editable === null
         ? "This element is computed or read-only."
         : `${humanize(editable.property)} · ${editable.valueType} · edits route through document history.`;
-    propertyBounds.textContent = boundsText(nodes);
+    propertyBounds.textContent = boundsText([representative]);
     propertyProvenance.textContent = provenanceText(representative.provenance);
     propertySourceOriginal.textContent =
       sourceOriginal === null ? "Computed" : String(sourceOriginal);
     propertyEffectiveValue.textContent = effective === null ? "Computed" : String(effective);
-    selectionStatus.textContent = `${humanize(semanticId)} · ${nodes.length} scene node${nodes.length === 1 ? "" : "s"}`;
-    status.textContent = `Selected ${semanticId}. Canvas, Contents, and Properties synchronized.`;
+    selectionStatus.textContent = `${humanize(semanticId)} · ${representative.id}`;
+    status.textContent = `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
   }
 
   async function refreshStudioProjection(
@@ -796,6 +885,77 @@ async function main(): Promise<void> {
     propertyContent.focus();
   }
 
+  async function applySelectedTextStyle(): Promise<void> {
+    const apis = studioApis();
+    const node =
+      selectedSceneNodeId === null
+        ? undefined
+        : page.nodes.find(
+            (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+              candidate.id === selectedSceneNodeId && candidate.kind === "text",
+          );
+    const style =
+      node === undefined
+        ? undefined
+        : scene.resources.textStyles.find(({ id }) => id === node.styleId);
+    if (apis === null || studioProjection === null || node === undefined || style === undefined) {
+      status.textContent = "Select one exact text occurrence before applying typography.";
+      return;
+    }
+    const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
+    const fontWeight = Number(textFontWeight.value);
+    const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
+    if (
+      !Number.isSafeInteger(fontSizeMpt) ||
+      fontSizeMpt < 4_000 ||
+      fontSizeMpt > 48_000 ||
+      !Number.isSafeInteger(fontWeight) ||
+      fontWeight < 1 ||
+      fontWeight > 1_000 ||
+      !Number.isSafeInteger(lineHeightMpt) ||
+      lineHeightMpt < fontSizeMpt ||
+      lineHeightMpt > 72_000 ||
+      !/^#[0-9a-f]{6}$/iu.test(textColor.value)
+    ) {
+      status.textContent =
+        "Typography requires a 4–48 pt size, valid weight, line height at least the font size, and a six-digit color.";
+      textFontSize.focus();
+      return;
+    }
+    applyTextStyle.disabled = true;
+    status.textContent = `Applying typography to ${node.id}…`;
+    const raw = await apis.studio.setTextOccurrenceStyle({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      occurrenceNodeId: node.id,
+      semanticId: node.semanticId,
+      baseStyleId: node.styleId,
+      fontFamilyId: textFontFamily.value,
+      fontSizeMpt,
+      fontWeight,
+      lineHeightMpt,
+      color: textColor.value,
+      locked: false,
+    });
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      applyTextStyle.disabled = false;
+      status.textContent = "Typography command returned an invalid result.";
+      return;
+    }
+    const result = raw as Record<string, unknown>;
+    if (result["accepted"] !== true || !Number.isSafeInteger(result["workingRevision"])) {
+      applyTextStyle.disabled = false;
+      status.textContent = `Typography edit rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
+      return;
+    }
+    const refreshed = await refreshStudioProjection(
+      result["workingRevision"] as number,
+      `Typography applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+    );
+    if (refreshed) await refreshLifecycleStateSilently();
+    applyTextStyle.disabled = false;
+    textFontSize.focus();
+  }
+
   async function navigateHistory(operation: "undo" | "redo"): Promise<void> {
     const apis = studioApis();
     if (apis === null || studioProjection === null) return;
@@ -892,11 +1052,30 @@ async function main(): Promise<void> {
   }
 
   pageHost.addEventListener("click", (event) => {
+    hideCanvasContextMenu();
     if (interactionMode !== "select") return;
     const target = event.target;
     if (!(target instanceof Element)) return;
-    const semantic = target.closest<SVGElement>("[data-semantic-id]")?.dataset["semanticId"];
-    if (semantic !== undefined) select(semantic);
+    const occurrence = target.closest<SVGElement>("[data-semantic-id][data-node-id]");
+    const semantic = occurrence?.dataset["semanticId"];
+    if (semantic !== undefined) select(semantic, occurrence?.dataset["nodeId"] ?? null);
+  });
+  pageHost.addEventListener("contextmenu", (event) => {
+    if (interactionMode !== "select") return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const occurrence = target.closest<SVGElement>("[data-semantic-id][data-node-id]");
+    const semantic = occurrence?.dataset["semanticId"];
+    const nodeId = occurrence?.dataset["nodeId"];
+    if (semantic === undefined || nodeId === undefined) return;
+    event.preventDefault();
+    select(semantic, nodeId);
+    openCanvasContextMenu();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!canvasContextMenu.hidden && !canvasContextMenu.contains(event.target as Node)) {
+      hideCanvasContextMenu();
+    }
   });
   canvasStage.addEventListener("pointerdown", (event) => {
     if (interactionMode !== "pan" || event.button !== 0) return;
@@ -986,7 +1165,9 @@ async function main(): Promise<void> {
     "properties-options": toggleAllPropertyGroups,
     "property-tab-element": () => showPropertyPanel("element"),
     "property-tab-diagnostics": showDiagnostics,
+    "context-properties": focusSelectedProperties,
     "apply-property": () => void applySelectedProperty(),
+    "apply-text-style": () => void applySelectedTextStyle(),
     "zoom-out": () => applyZoom(Number(zoom.value) - 10),
     "zoom-in": () => applyZoom(Number(zoom.value) + 10),
   });
@@ -1005,6 +1186,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !canvasContextMenu.hidden) {
+      event.preventDefault();
+      hideCanvasContextMenu();
+      return;
+    }
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
     if (key === "pageup" || key === "pagedown") {

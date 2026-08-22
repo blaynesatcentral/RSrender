@@ -294,7 +294,12 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     maximumLines: number,
     wrapPolicy: "word-v1" | "no-wrap" = "word-v1",
   ): void => {
-    const style = styleById(job, styleId);
+    const occurrenceStyle = job.template.bindings.find(
+      (binding) =>
+        binding.elementId === id && binding.path === "presentation.text-occurrence-style",
+    );
+    const effectiveStyleId = occurrenceStyle?.styleId ?? styleId;
+    const style = styleById(job, effectiveStyleId);
     const measurementId = `measure:${id}`;
     textRequests.push({
       measurementId,
@@ -319,7 +324,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       order: nodes.length,
       provenance,
       measurementId,
-      styleId,
+      styleId: effectiveStyleId,
       content,
       frame,
     });
