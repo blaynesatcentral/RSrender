@@ -10,7 +10,7 @@ export const SEMANTIC_EDITOR_SECURITY_PROFILE = Object.freeze({
   renderer: "exact-semantic-editor-script-only",
   scriptUrl: SEMANTIC_EDITOR_SCRIPT_URL,
   contentPolicy:
-    "default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+    "default-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'none'; connect-src 'none'; media-src 'none'; font-src 'self'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
 } as const);
 
 export type SemanticEditorSecurityProfile = typeof SEMANTIC_EDITOR_SECURITY_PROFILE;

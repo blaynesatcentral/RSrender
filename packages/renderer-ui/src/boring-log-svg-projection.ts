@@ -115,10 +115,10 @@ function renderNode(
   const lines = measurement.lines
     .map(
       (line) =>
-        `<tspan${attribute("x", node.frame.xMpt + line.xMpt)}${attribute("y", node.frame.yMpt + line.baselineMpt)}${attribute("data-source-start", line.sourceStartUtf16)}${attribute("data-source-end", line.sourceEndUtf16)}>${escapeText(line.text)}</tspan>`,
+        `<tspan${attribute("x", node.frame.xMpt + line.xMpt)}${attribute("y", node.frame.yMpt + line.baselineMpt)}${attribute("data-source-start", line.sourceStartUtf16)}${attribute("data-source-end", line.sourceEndUtf16)}${attribute("data-advance-mpt", line.advanceMpt)}>${escapeText(line.text)}</tspan>`,
     )
     .join("");
-  return `<text${common}${attribute("font-family", "Arial, sans-serif")}${attribute("font-size", style.fontSizeMpt)}${attribute("font-weight", style.fontWeight)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}>${lines}</text>`;
+  return `<text${common}${attribute("font-family", "RSrender Qualified Arial")}${attribute("font-size", style.fontSizeMpt)}${attribute("font-weight", style.fontWeight)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}>${lines}</text>`;
 }
 
 export function projectBoringLogSceneToSvg(

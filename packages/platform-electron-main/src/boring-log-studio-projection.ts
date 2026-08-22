@@ -13,8 +13,12 @@ import type {
   SyntheticBoringLogEditableBinding,
   SyntheticBoringLogEditableProperty,
 } from "@rsrender/application";
-import { measureBoringLogTextRequests } from "@rsrender/layout-host";
-import { prepareBoringLogLayout, resolveBoringLogPageScene } from "@rsrender/scene";
+import {
+  applyBoringLogTextMeasurements,
+  prepareBoringLogLayout,
+  resolveBoringLogPageScene,
+  type BoringLogLayoutPreparation,
+} from "@rsrender/scene";
 
 export const boringLogStudioProjectionRevision = "bld-026-studio-projection-v1" as const;
 
@@ -49,6 +53,19 @@ export interface BoringLogStudioProjection {
   readonly scene: ResolvedBoringLogPageScene;
 }
 
+export interface BoringLogStudioProjectionPreparation {
+  readonly layout: BoringLogLayoutPreparation;
+  readonly projection: Omit<BoringLogStudioProjection, "scene">;
+  readonly provenanceEntries: readonly Readonly<{
+    readonly key: string;
+    readonly provenance: BoringLogValueProvenance;
+  }>[];
+}
+
+export type BoringLogStudioProjectionPreparationResult =
+  | { readonly accepted: true; readonly preparation: BoringLogStudioProjectionPreparation }
+  | Exclude<BoringLogStudioProjectionResult, { readonly accepted: true }>;
+
 export type BoringLogStudioProjectionResult =
   | { readonly accepted: true; readonly projection: BoringLogStudioProjection }
   | {
@@ -63,7 +80,7 @@ export type BoringLogStudioProjectionResult =
 
 function rejected(
   code: Exclude<BoringLogStudioProjectionResult, { readonly accepted: true }>["code"],
-): BoringLogStudioProjectionResult {
+): Exclude<BoringLogStudioProjectionResult, { readonly accepted: true }> {
   return Object.freeze({ accepted: false, code });
 }
 
@@ -108,13 +125,13 @@ function sceneProvenance(
       });
 }
 
-export function resolveBoringLogStudioProjection(
+export function prepareBoringLogStudioProjection(
   input: Readonly<{
     readonly layoutJob: BoringLogLayoutJobInput;
     readonly bindings: readonly SyntheticBoringLogEditableBinding[];
     readonly dataset: OverrideRenderDatasetProjection;
   }>,
-): BoringLogStudioProjectionResult {
+): BoringLogStudioProjectionPreparationResult {
   try {
     if (
       typeof input !== "object" ||
@@ -263,13 +280,48 @@ export function resolveBoringLogStudioProjection(
     if (!effectiveJob.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
     const prepared = prepareBoringLogLayout(effectiveJob.value);
     if (!prepared.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
-    const measured = measureBoringLogTextRequests(prepared.value.textRequests);
-    if (!measured.accepted) return rejected("BORING_LOG_STUDIO_TEXT_REJECTED");
-    const resolved = resolveBoringLogPageScene(prepared.value, measured.results);
+    return Object.freeze({
+      accepted: true as const,
+      preparation: Object.freeze({
+        layout: prepared.value,
+        projection: Object.freeze({
+          schema: "rsrender.boring-log-studio-projection.v1" as const,
+          documentIdentity: input.dataset.documentId,
+          ownerGeneration: input.dataset.ownerGeneration,
+          workingRevision: input.dataset.workingRevision,
+          durableRevision: input.dataset.durableRevision,
+          dirty: input.dataset.dirty,
+          canUndo: input.dataset.canUndo,
+          canRedo: input.dataset.canRedo,
+          editableValues: Object.freeze(editableValues),
+        }),
+        provenanceEntries: Object.freeze(
+          [...provenanceByNode.entries()].map(([key, provenance]) =>
+            Object.freeze({ key, provenance }),
+          ),
+        ),
+      }),
+    });
+  } catch {
+    return rejected("BORING_LOG_STUDIO_CONFIGURATION_INVALID");
+  }
+}
+
+export function completeBoringLogStudioProjection(
+  preparation: BoringLogStudioProjectionPreparation,
+  textResults: unknown,
+): BoringLogStudioProjectionResult {
+  try {
+    const resolved = resolveBoringLogPageScene(preparation.layout, textResults);
     if (!resolved.accepted) return rejected("BORING_LOG_STUDIO_SCENE_REJECTED");
+    const gated = applyBoringLogTextMeasurements(resolved.value, textResults);
+    if (!gated.accepted) return rejected("BORING_LOG_STUDIO_TEXT_REJECTED");
+    const provenanceByNode = new Map(
+      preparation.provenanceEntries.map(({ key, provenance }) => [key, provenance]),
+    );
     const sceneWithExactProvenance = {
-      ...resolved.value,
-      pages: resolved.value.pages.map((page) => ({
+      ...gated.scene,
+      pages: gated.scene.pages.map((page) => ({
         ...page,
         nodes: page.nodes.map((node) => ({
           ...node,
@@ -285,15 +337,7 @@ export function resolveBoringLogStudioProjection(
     return Object.freeze({
       accepted: true,
       projection: Object.freeze({
-        schema: "rsrender.boring-log-studio-projection.v1",
-        documentIdentity: input.dataset.documentId,
-        ownerGeneration: input.dataset.ownerGeneration,
-        workingRevision: input.dataset.workingRevision,
-        durableRevision: input.dataset.durableRevision,
-        dirty: input.dataset.dirty,
-        canUndo: input.dataset.canUndo,
-        canRedo: input.dataset.canRedo,
-        editableValues: Object.freeze(editableValues),
+        ...preparation.projection,
         scene: scene.value,
       }),
     });

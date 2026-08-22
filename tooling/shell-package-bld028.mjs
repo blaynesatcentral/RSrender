@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { packageBoringLogPdfStudio } from "./shell-package-bld027.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const temporaryRoot = path.join(root, ".tmp", "bld-028-integrated-mvp");
+const temporaryRoot = path.join(root, ".tmp", "bld-028-integrated-mvp-r2");
 const outputDirectory = path.join(temporaryRoot, "out");
 const packagedDirectory = path.join(outputDirectory, "RSrender-win32-x64");
 const packagedExecutable = path.join(packagedDirectory, "RSrender.exe");

@@ -128,6 +128,40 @@ test("BLD-027 publication fails closed before render for cancellation and stale 
   assert.equal(validBoringLogPdfEnvelope(Buffer.from("%PDF-1.7\n%%EOF")), false);
 });
 
+test("BLD-033 publication preflight blocks layout errors before destination or render", async () => {
+  const scene = structuredClone(resolvedScene());
+  const diagnostic = {
+    code: "BORING_LOG_TEXT_COLLISION",
+    severity: "error",
+    message: "Deliberate text collision gate vector",
+    semanticId: "header-company",
+  };
+  scene.diagnostics = [diagnostic];
+  scene.pagePlan.diagnostics = [diagnostic];
+  scene.pagePlan.overflow = "clipped-with-diagnostic";
+  let destinations = 0;
+  let renders = 0;
+  assert.deepEqual(
+    await publishBoringLogPdf({
+      scene,
+      workingRevision: 1,
+      expectedWorkingRevision: 1,
+      expectedSceneInputDigest: scene.inputDigest,
+      chooseDestination: async () => {
+        destinations += 1;
+        return "C:\\ignored.pdf";
+      },
+      renderPdf: async () => {
+        renders += 1;
+        return fakePdf();
+      },
+    }),
+    { accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" },
+  );
+  assert.equal(destinations, 0);
+  assert.equal(renders, 0);
+});
+
 test("BLD-027 publication route is capability-bound, ordered, and scene-specific", async () => {
   const expectedWindow = {};
   const expectedWebContents = {};

@@ -6,7 +6,7 @@ function embeddedSceneJson(scene: unknown): string {
   return JSON.stringify(scene).replaceAll("<", "\\u003c");
 }
 
-export function createBoringLogStudioHtml(scene: unknown): string {
+export function createBoringLogStudioHtml(scene: unknown = null): string {
   return `<!doctype html>
 <html lang="en">
 <head>

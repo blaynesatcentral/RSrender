@@ -4,7 +4,8 @@ import test from "node:test";
 import { createSyntheticBoringLogOverrideSession } from "../packages/application/dist/index.js";
 import {
   boringLogStudioProjectionRevision,
-  resolveBoringLogStudioProjection,
+  completeBoringLogStudioProjection,
+  prepareBoringLogStudioProjection,
 } from "../packages/platform-electron-main/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
@@ -12,6 +13,7 @@ import {
   boringLogMvpFixture,
   boringLogMvpTemplate,
 } from "../packages/test-support/dist/index.js";
+import { strictCoverageTextResults } from "./helpers/bld-033-strict-text-authority.mjs";
 
 const documentIdentity = "urn:test:bld-026:document:studio-projection-001";
 
@@ -55,11 +57,16 @@ async function dataset(session, requestId) {
 }
 
 function resolve(session, projection) {
-  return resolveBoringLogStudioProjection({
+  const prepared = prepareBoringLogStudioProjection({
     layoutJob: session.layoutJob,
     bindings: session.bindings,
     dataset: projection,
   });
+  if (!prepared.accepted) return prepared;
+  return completeBoringLogStudioProjection(
+    prepared.preparation,
+    strictCoverageTextResults(prepared.preparation.layout.textRequests),
+  );
 }
 
 function displayCommand(session, projection, editable, replacementContent, suffix) {
@@ -166,7 +173,7 @@ test("BLD-026 Studio projection fails closed on mismatched structured bindings",
   const hostile = structuredClone(session.bindings);
   hostile[0].sourceFieldIdentity = "urn:test:bld-026:unknown-field";
   assert.deepEqual(
-    resolveBoringLogStudioProjection({
+    prepareBoringLogStudioProjection({
       layoutJob: session.layoutJob,
       bindings: hostile,
       dataset: projection,

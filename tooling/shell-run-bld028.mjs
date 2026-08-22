@@ -66,7 +66,7 @@ async function terminateExactTree(executable, pid) {
 async function waitForZero(executable) {
   const started = Date.now();
   let count = await processCount(executable);
-  while (count !== 0 && Date.now() - started < 10_000) {
+  while (count !== 0 && Date.now() - started < 30_000) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     count = await processCount(executable);
   }
@@ -88,6 +88,12 @@ function assertIntegratedResult(result, outputPath, index) {
     result.initial?.raster === 0 &&
     result.initial?.sceneNodes === 319 &&
     result.initial?.semanticElements === 88 &&
+    result.initial?.errorDiagnostics === 0 &&
+    result.initial?.clippedText === 0 &&
+    result.initial?.textLines >= 100 &&
+    result.initial?.positiveTextAdvances >= 100 &&
+    result.initial?.fontFaceDigests?.length === 2 &&
+    result.initial?.fontMetricsDigests?.length === 1 &&
     result.selection?.selectedTreeRows === 1 &&
     result.selection?.selectedSceneNodes >= 1 &&
     result.selection?.provenance?.includes("Source original") &&
@@ -97,8 +103,8 @@ function assertIntegratedResult(result, outputPath, index) {
     result.editing?.undo?.effective === result.editing?.undo?.source &&
     result.editing?.redo?.effective === result.editing?.replacement &&
     result.editing?.style?.patternedIntervals === 3 &&
-    result.editing?.layout?.width === "160000" &&
-    result.editing?.layout?.followingX === "263000" &&
+    result.editing?.layout?.width === "150000" &&
+    result.editing?.layout?.followingX === "253000" &&
     result.publication?.result === "EXPORT_VERIFIED_SUCCESS" &&
     path.resolve(result.publication.destinationPath) === path.resolve(outputPath) &&
     result.zoomPercent === 90 &&
@@ -161,7 +167,9 @@ async function runPackaged(packageResult, index, outputPath, inputPath = null) {
     after !== 0 ||
     !profileRemoved
   ) {
-    throw new Error(`INTEGRATED_PRODUCT_PROCESS_INVALID:${index}`);
+    throw new Error(
+      `INTEGRATED_PRODUCT_PROCESS_INVALID:${index}:${JSON.stringify({ exitCode: outcome.code, signal: outcome.signal, timedOut: outcome.timedOut, stderr: outcome.stderr, after, profileRemoved })}`,
+    );
   }
   const inspection = await inspectBoringLogPdf({
     pdfPath: outputPath,

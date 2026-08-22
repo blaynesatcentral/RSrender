@@ -119,6 +119,7 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
     return [
       "EXPORT_CANCELLED",
       "EXPORT_STALE_SCENE",
+      "EXPORT_PREFLIGHT_BLOCKED",
       "EXPORT_PROJECTION_REJECTED",
       "EXPORT_LAYOUT_HOST_FAILED",
       "EXPORT_PDF_ENVELOPE_INVALID",

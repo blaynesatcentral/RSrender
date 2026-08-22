@@ -52,28 +52,14 @@ async function electronZip() {
 
 async function structuredInputs() {
   const stamp = Date.now();
-  const [platformModule, sceneModule, layoutHostModule] = await Promise.all([
-    import(
-      `${pathToFileURL(path.join(root, "packages", "platform-electron-main", "dist", "index.js")).href}?bld032=${stamp}`
-    ),
-    import(
-      `${pathToFileURL(path.join(root, "packages", "scene", "dist", "index.js")).href}?bld026=${stamp}`
-    ),
-    import(
-      `${pathToFileURL(path.join(root, "packages", "layout-host", "dist", "index.js")).href}?bld026=${stamp}`
-    ),
-  ]);
+  const platformModule = await import(
+    `${pathToFileURL(path.join(root, "packages", "platform-electron-main", "dist", "index.js")).href}?bld032=${stamp}`
+  );
   const inputBytes = Buffer.from(platformModule.boringLogExampleDocumentSource, "utf8");
   const decoded = platformModule.decodeBoringLogDocumentBundle(inputBytes);
   if (!decoded.accepted) throw new Error(`BLD032_EXAMPLE_INPUT_REJECTED:${decoded.code}`);
   const layoutJob = decoded.layoutJob;
-  const prepared = sceneModule.prepareBoringLogLayout(layoutJob);
-  if (!prepared.accepted) throw new Error(`BLD026_PAGE_PLAN_REJECTED:${prepared.code}`);
-  const measured = layoutHostModule.measureBoringLogTextRequests(prepared.value.textRequests);
-  if (!measured.accepted) throw new Error(`BLD026_TEXT_REJECTED:${measured.code}`);
-  const resolved = sceneModule.resolveBoringLogPageScene(prepared.value, measured.results);
-  if (!resolved.accepted) throw new Error(`BLD026_SCENE_REJECTED:${resolved.code}`);
-  return Object.freeze({ layoutJob, scene: resolved.value, inputBytes });
+  return Object.freeze({ layoutJob, inputBytes });
 }
 
 async function rendererBundle() {
@@ -134,7 +120,7 @@ async function prepareStage() {
   await writeFile(generatedExampleInputPath, inputs.inputBytes);
   const rendererUrl = `${pathToFileURL(path.join(root, "packages", "renderer-ui", "dist", "index.js")).href}?bld026=${Date.now()}`;
   const { createBoringLogStudioHtml } = await import(rendererUrl);
-  const html = createBoringLogStudioHtml(inputs.scene);
+  const html = createBoringLogStudioHtml();
   const platformUrl = `${pathToFileURL(path.join(root, "packages", "platform-electron-main", "dist", "index.js")).href}?bld026=${Date.now()}`;
   const platform = await import(platformUrl);
   const preloadDirectory = path.join(stageDirectory, "preload");
@@ -180,11 +166,11 @@ async function prepareStage() {
     preloadBytes: Buffer.byteLength(preload, "utf8"),
     stylesheetSha256: sha256(stylesheet),
     layoutJobSha256: sha256(Buffer.from(JSON.stringify(inputs.layoutJob), "utf8")),
-    initialSceneSha256: sha256(Buffer.from(JSON.stringify(inputs.scene), "utf8")),
+    initialSceneSha256: null,
     runtimeInputSha256: sha256(inputs.inputBytes),
     runtimeInputBytes: inputs.inputBytes.byteLength,
     runtimeInputRelativePath: exampleInputRelativePath.replaceAll("\\", "/"),
-    sceneNodes: inputs.scene.pages[0].nodes.length,
+    sceneNodes: null,
     editableValues: 24,
   });
 }

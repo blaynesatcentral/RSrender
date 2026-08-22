@@ -11,3 +11,8 @@ export type {
   BoringLogLayoutEngineResult,
   BoringLogLayoutPreparation,
 } from "./boring-log-layout-engine.js";
+export {
+  applyBoringLogTextMeasurements,
+  boringLogTextResolutionRevision,
+} from "./boring-log-text-resolution.js";
+export type { BoringLogTextResolutionResult } from "./boring-log-text-resolution.js";

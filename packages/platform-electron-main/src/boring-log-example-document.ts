@@ -7,12 +7,12 @@ export const boringLogExampleDocumentSource = `
   "kind": "boring-log.layout-job",
   "jobId": "job:rsrender-example-boring-log@r1",
   "inputRevision": 1,
-  "fixtureDigest": "sha256:e93e5352f12c8ea89e92dc2dcb7ae9d3762897ca734ec36eebcc37b29276b771",
-  "templateDigest": "sha256:04035bdc50c92f54d54d7eb5f677b76e16259eae08fe0c7f2d76a423c46a12fb",
+  "fixtureDigest": "sha256:9853df40150de5e11d77a73deb5ba0d4193e56ef43c96e8ba543aaafacced574",
+  "templateDigest": "sha256:359fffb3caa9218e3fd916c1fe87868777149ab3e4448bc7e0d322d673ebaad2",
   "document": {
     "schemaVersion": "rsrender.boring-log-mvp-fixture.v1",
-    "fixtureId": "mvp-boring-log-test-01@r3",
-    "fixtureRevision": 3,
+    "fixtureId": "mvp-boring-log-test-01@r4",
+    "fixtureRevision": 4,
     "evidenceClass": "synthetic-coverage-only",
     "representativeClaimAllowed": false,
     "publicationEligibility": "example-dataset-only",
@@ -96,7 +96,7 @@ export const boringLogExampleDocumentSource = `
         "classification": "GRAVEL WITH SAND (GW)",
         "patternId": "pattern-gravel-dot-ring",
         "materialFillToken": "materialGravelFill",
-        "description": "Dense, brown to gray, angular to subrounded gravel up to 1½ in; medium to coarse sand; little silt; well-graded.",
+        "description": "Dense, brown to gray GRAVEL WITH SAND (GW); angular to subrounded gravel up to 1½ in; little silt.",
         "transitions": [
           {
             "depthFt": 22.5,
@@ -720,8 +720,8 @@ export const boringLogExampleDocumentSource = `
   },
   "template": {
     "schemaVersion": "rsrender.boring-log-mvp-template.v1",
-    "templateId": "mvp-template-reference-shaped@r2",
-    "templateRevision": 2,
+    "templateId": "mvp-template-reference-shaped@r3",
+    "templateRevision": 3,
     "physicalUnits": "mpt",
     "page": {
       "widthMpt": 612000,
@@ -852,17 +852,17 @@ export const boringLogExampleDocumentSource = `
       {
         "id": "style-body",
         "fontFamilyId": "font.logical.rsrender-sans",
-        "fontSizeMpt": 7500,
+        "fontSizeMpt": 7000,
         "fontWeight": 400,
-        "lineHeightMpt": 9375,
+        "lineHeightMpt": 8750,
         "color": "#17202a"
       },
       {
         "id": "style-small",
         "fontFamilyId": "font.logical.rsrender-sans",
-        "fontSizeMpt": 6250,
+        "fontSizeMpt": 5500,
         "fontWeight": 400,
-        "lineHeightMpt": 7813,
+        "lineHeightMpt": 6875,
         "color": "#17202a"
       }
     ],

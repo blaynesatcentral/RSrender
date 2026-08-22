@@ -15,7 +15,8 @@ import {
   boringLogStudioRouteRevision,
   expectedBoringLogStudioPreloadSha256,
   generateBoringLogStudioPreloadSource,
-  resolveBoringLogStudioProjection,
+  completeBoringLogStudioProjection,
+  prepareBoringLogStudioProjection,
   verifyPackagedBoringLogStudioPreload,
 } from "../packages/platform-electron-main/dist/index.js";
 import {
@@ -24,6 +25,7 @@ import {
   boringLogMvpFixture,
   boringLogMvpTemplate,
 } from "../packages/test-support/dist/index.js";
+import { strictCoverageTextResults } from "./helpers/bld-033-strict-text-authority.mjs";
 
 const documentIdentity = "urn:test:bld-026:document:studio-route-001";
 
@@ -61,11 +63,16 @@ async function authority() {
         minimumWorkingRevision,
       });
       assert.equal(queried.kind, "render-dataset.projection.result");
-      return resolveBoringLogStudioProjection({
+      const prepared = prepareBoringLogStudioProjection({
         layoutJob,
         bindings: created.session.bindings,
         dataset: queried.projection,
       });
+      if (!prepared.accepted) return prepared;
+      return completeBoringLogStudioProjection(
+        prepared.preparation,
+        strictCoverageTextResults(prepared.preparation.layout.textRequests),
+      );
     },
   };
 }

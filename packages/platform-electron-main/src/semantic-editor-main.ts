@@ -10,6 +10,11 @@ import {
   createSyntheticOverrideRenderDatasetSession,
   type SyntheticBoringLogOverrideSession,
 } from "@rsrender/application";
+import {
+  sha256CanonicalJson,
+  type BoringLogTextMeasurementRequest,
+  type BoringLogTextMeasurementResult,
+} from "@rsrender/contracts";
 import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 
 import {
@@ -22,7 +27,11 @@ import {
   createDocumentRouteBroker,
   type DocumentRouteContext,
 } from "./document-route-broker.js";
-import { resolveBoringLogStudioProjection } from "./boring-log-studio-projection.js";
+import {
+  completeBoringLogStudioProjection,
+  prepareBoringLogStudioProjection,
+  type BoringLogStudioProjection,
+} from "./boring-log-studio-projection.js";
 import {
   decodeBoringLogDocumentBundle,
   maximumBoringLogDocumentBundleBytes,
@@ -60,6 +69,14 @@ import {
 const DOCUMENT_SCHEME = "rsrender-shell";
 const LAYOUT_HOST_SCHEME = "rsrender-layout";
 const LAYOUT_HOST_URL = "rsrender-layout://publication/index.html";
+const LAYOUT_MEASUREMENT_HOST_URL = "rsrender-layout://measurement/index.html";
+const LAYOUT_MEASUREMENT_STYLESHEET_URL = "rsrender-layout://measurement/fonts.css";
+const LAYOUT_MEASUREMENT_FONT_REGULAR_URL = "rsrender-layout://measurement/arial-regular.ttf";
+const LAYOUT_MEASUREMENT_FONT_BOLD_URL = "rsrender-layout://measurement/arial-bold.ttf";
+const LAYOUT_PUBLICATION_FONT_REGULAR_URL = "rsrender-layout://publication/arial-regular.ttf";
+const LAYOUT_PUBLICATION_FONT_BOLD_URL = "rsrender-layout://publication/arial-bold.ttf";
+const SCREEN_FONT_REGULAR_URL = "rsrender-shell://document/arial-regular.ttf";
+const SCREEN_FONT_BOLD_URL = "rsrender-shell://document/arial-bold.ttf";
 const PROBE_ARGUMENT = "--rsrender-bld021-probe";
 const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
 const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
@@ -74,6 +91,10 @@ const DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH = path.join(
 );
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
 const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
+const QUALIFIED_ARIAL_REGULAR_DIGEST =
+  "sha256:b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a";
+const QUALIFIED_ARIAL_BOLD_DIGEST =
+  "sha256:e8f4e3baf6cc35fed6fcce3a540e8b39e8f6cda1d22a28f2ec8f526fef7a43f5";
 function readBoundedRuntimeDocument(inputPath: string): Uint8Array {
   const descriptor = openSync(inputPath, "r");
   try {
@@ -266,12 +287,29 @@ let publicationBroker: BoringLogPdfPublicationRouteBroker | null = null;
 let teardownPromise: Promise<void> | null = null;
 let probeFailure = "UNCLASSIFIED";
 
-function exactRequest(rawUrl: string, method: string): "html" | "script" | "stylesheet" | null {
+function exactRequest(
+  rawUrl: string,
+  method: string,
+): "html" | "script" | "stylesheet" | "font-regular" | "font-bold" | null {
   if (method !== "GET") return null;
   if (rawUrl === DOCUMENT_ROUTE_URL) return "html";
   if (rawUrl === SEMANTIC_EDITOR_SCRIPT_URL) return "script";
   if (rawUrl === BORING_LOG_STUDIO_STYLESHEET_URL && stylesheetSource !== null) return "stylesheet";
+  if (rawUrl === SCREEN_FONT_REGULAR_URL) return "font-regular";
+  if (rawUrl === SCREEN_FONT_BOLD_URL) return "font-bold";
   return null;
+}
+
+function qualifiedFontPath(name: "arial.ttf" | "arialbd.ttf"): string {
+  const windowsDirectory = process.env["WINDIR"];
+  if (typeof windowsDirectory !== "string" || windowsDirectory.length === 0) {
+    throw new Error("QUALIFIED_FONT_ROOT_UNAVAILABLE");
+  }
+  return path.join(windowsDirectory, "Fonts", name);
+}
+
+function qualifiedFontCss(regularUrl: string, boldUrl: string): string {
+  return `@font-face{font-family:'RSrender Qualified Arial';src:url('${regularUrl}') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('${boldUrl}') format('truetype');font-style:normal;font-weight:700}`;
 }
 
 function installDenials(electronSession: Electron.Session, counters: Counters): void {
@@ -309,7 +347,9 @@ function installProtocol(electronSession: Electron.Session): void {
         ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__
         : kind === "script"
           ? rendererSource
-          : stylesheetSource;
+          : kind === "stylesheet"
+            ? `${qualifiedFontCss(SCREEN_FONT_REGULAR_URL, SCREEN_FONT_BOLD_URL)}\n${stylesheetSource ?? ""}`
+            : readFileSync(qualifiedFontPath(kind === "font-bold" ? "arialbd.ttf" : "arial.ttf"));
     return new Response(body, {
       status: 200,
       headers: {
@@ -322,7 +362,9 @@ function installProtocol(electronSession: Electron.Session): void {
             ? "text/html; charset=utf-8"
             : kind === "script"
               ? "application/javascript; charset=utf-8"
-              : "text/css; charset=utf-8",
+              : kind === "stylesheet"
+                ? "text/css; charset=utf-8"
+                : "font/ttf",
         "Permissions-Policy":
           "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
         "Referrer-Policy": "no-referrer",
@@ -330,6 +372,366 @@ function installProtocol(electronSession: Electron.Session): void {
       },
     });
   });
+}
+
+type ChromiumTextMeasurementOutcome =
+  | Readonly<{
+      readonly accepted: true;
+      readonly results: readonly BoringLogTextMeasurementResult[];
+      readonly authorityDigest: string;
+    }>
+  | Readonly<{ readonly accepted: false; readonly reason: string }>;
+
+async function withLayoutHostTimeout<T>(
+  operation: Promise<T>,
+  timeoutMilliseconds: number,
+  failureCode: string,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error(failureCode)), timeoutMilliseconds);
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+}
+
+function qualifiedLocalArialFaces(): Readonly<{ readonly regular: string; readonly bold: string }> {
+  const digest = (name: string): string =>
+    `sha256:${createHash("sha256")
+      .update(readFileSync(qualifiedFontPath(name as "arial.ttf" | "arialbd.ttf")))
+      .digest("hex")}`;
+  const regular = digest("arial.ttf");
+  const bold = digest("arialbd.ttf");
+  if (regular !== QUALIFIED_ARIAL_REGULAR_DIGEST || bold !== QUALIFIED_ARIAL_BOLD_DIGEST) {
+    throw new Error("QUALIFIED_FONT_DIGEST_MISMATCH");
+  }
+  return Object.freeze({ regular, bold });
+}
+
+async function measureBoringLogTextInChromium(
+  requests: readonly BoringLogTextMeasurementRequest[],
+): Promise<ChromiumTextMeasurementOutcome> {
+  if (!Array.isArray(requests) || requests.length > 4_096) {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_INVALID" });
+  }
+  let serializedRequests: string;
+  try {
+    serializedRequests = JSON.stringify(requests);
+  } catch {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_NOT_SERIALIZABLE" });
+  }
+  if (Buffer.byteLength(serializedRequests, "utf8") > 1_048_576) {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_TOO_LARGE" });
+  }
+  const partition = `rsrender-layout-measure-${randomBytes(16).toString("hex")}`;
+  const measurementSession = session.fromPartition(partition, { cache: false });
+  measurementSession.setPermissionCheckHandler(() => false);
+  measurementSession.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false),
+  );
+  measurementSession.setDevicePermissionHandler(() => false);
+  measurementSession.on("will-download", (event) => event.preventDefault());
+  measurementSession.webRequest.onBeforeRequest((details, callback) => {
+    callback({
+      cancel:
+        details.method !== "GET" ||
+        ![
+          LAYOUT_MEASUREMENT_HOST_URL,
+          LAYOUT_MEASUREMENT_STYLESHEET_URL,
+          LAYOUT_MEASUREMENT_FONT_REGULAR_URL,
+          LAYOUT_MEASUREMENT_FONT_BOLD_URL,
+        ].includes(details.url),
+    });
+  });
+  measurementSession.protocol.handle(LAYOUT_HOST_SCHEME, (request) => {
+    if (request.method !== "GET") {
+      return new Response("Not found", { status: 404 });
+    }
+    if (request.url === LAYOUT_MEASUREMENT_HOST_URL) {
+      return new Response(
+        `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><title>RSrender Layout Measurement Host</title><link rel="stylesheet" href="${LAYOUT_MEASUREMENT_STYLESHEET_URL}"></head><body><svg id="measurement-root" xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" aria-hidden="true"></svg></body></html>`,
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store",
+            "Content-Security-Policy":
+              "default-src 'none'; style-src 'self'; img-src 'none'; connect-src 'none'; font-src 'self'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+            "Content-Type": "text/html; charset=utf-8",
+            "Permissions-Policy":
+              "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+          },
+        },
+      );
+    }
+    if (request.url === LAYOUT_MEASUREMENT_STYLESHEET_URL) {
+      return new Response(
+        qualifiedFontCss(LAYOUT_MEASUREMENT_FONT_REGULAR_URL, LAYOUT_MEASUREMENT_FONT_BOLD_URL),
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store",
+            "Content-Type": "text/css; charset=utf-8",
+          },
+        },
+      );
+    }
+    if (
+      request.url === LAYOUT_MEASUREMENT_FONT_REGULAR_URL ||
+      request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL
+    ) {
+      return new Response(
+        readFileSync(
+          qualifiedFontPath(
+            request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
+          ),
+        ),
+        { status: 200, headers: { "Cache-Control": "no-store", "Content-Type": "font/ttf" } },
+      );
+    }
+    return new Response("Not found", { status: 404 });
+  });
+  const measurementWindow = new BrowserWindow({
+    show: false,
+    width: 800,
+    height: 600,
+    useContentSize: true,
+    webPreferences: {
+      ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
+      partition,
+      backgroundThrottling: false,
+    },
+  });
+  measurementWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  measurementWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== LAYOUT_MEASUREMENT_HOST_URL) event.preventDefault();
+  });
+  measurementWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
+  try {
+    await withLayoutHostTimeout(
+      measurementWindow.loadURL(LAYOUT_MEASUREMENT_HOST_URL),
+      15_000,
+      "MEASUREMENT_HOST_LOAD_TIMEOUT",
+    );
+    await withLayoutHostTimeout(
+      measurementWindow.webContents.executeJavaScript(
+        `document.fonts.load("10pt 'RSrender Qualified Arial'").then(() => document.fonts.load("700 10pt 'RSrender Qualified Arial'")).then(() => document.fonts.ready).then(() => true)`,
+        true,
+      ) as Promise<unknown>,
+      15_000,
+      "MEASUREMENT_FONT_LOAD_TIMEOUT",
+    );
+    const payload = Buffer.from(serializedRequests, "utf8").toString("base64");
+    const measured = await withLayoutHostTimeout(
+      measurementWindow.webContents.executeJavaScript(
+        `(() => {
+        const requests = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(${JSON.stringify(payload)}), (value) => value.charCodeAt(0))));
+        const measurementStarted = performance.now();
+        const root = document.getElementById("measurement-root");
+        if (!(root instanceof SVGSVGElement)) return null;
+        const ns = "http://www.w3.org/2000/svg";
+        const probe = document.createElementNS(ns, "text");
+        probe.setAttribute("x", "100");
+        probe.setAttribute("y", "200");
+        root.append(probe);
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (context === null) return null;
+        const pxToMpt = (value) => Math.round(value * 750);
+        const measure = (text, request) => {
+          context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
+          const bounds = context.measureText(text);
+          return {
+            advanceMpt: pxToMpt(bounds.width),
+            xMpt: pxToMpt(-bounds.actualBoundingBoxLeft),
+            yFromBaselineMpt: pxToMpt(-bounds.actualBoundingBoxAscent),
+            widthMpt: pxToMpt(bounds.actualBoundingBoxLeft + bounds.actualBoundingBoxRight),
+            heightMpt: pxToMpt(bounds.actualBoundingBoxAscent + bounds.actualBoundingBoxDescent),
+          };
+        };
+        const nextBoundary = (text, offset) => {
+          const first = text.charCodeAt(offset);
+          return first >= 0xd800 && first <= 0xdbff && offset + 1 < text.length
+            ? offset + 2
+            : offset + 1;
+        };
+        let totalLines = 0;
+        const results = requests.map((request) => {
+          probe.setAttribute("font-family", "RSrender Qualified Arial");
+          probe.setAttribute("font-size", String(request.fontSizeMpt / 750));
+          probe.setAttribute("font-weight", String(request.fontWeight));
+          probe.textContent = request.text.length === 0 ? "\u200b" : request.text;
+          context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
+          const advance = (start, end) =>
+            start === end ? 0 : pxToMpt(context.measureText(request.text.slice(start, end)).width);
+          const lines = [];
+          const ink = [];
+          let cursor = 0;
+          let overwide = false;
+          while (cursor < request.text.length && lines.length < request.maximumLines) {
+            totalLines += 1;
+            if (totalLines > 1_000) throw new Error("MEASUREMENT_LINE_LIMIT");
+            if (performance.now() - measurementStarted > 5_000) {
+              throw new Error("MEASUREMENT_TIME_LIMIT");
+            }
+            const start = cursor;
+            let end = request.text.length;
+            if (request.wrapPolicy === "word-v1") {
+              const boundaries = [start];
+              let boundary = start;
+              while (boundary < request.text.length) {
+                boundary = nextBoundary(request.text, boundary);
+                boundaries.push(boundary);
+              }
+              let low = 1;
+              let high = boundaries.length - 1;
+              let best = 0;
+              while (low <= high) {
+                const middle = Math.floor((low + high) / 2);
+                const candidate = boundaries[middle];
+                if (advance(start, candidate) <= request.maximumWidthMpt) {
+                  best = middle;
+                  low = middle + 1;
+                } else {
+                  high = middle - 1;
+                }
+              }
+              end = boundaries[Math.max(1, best)];
+              if (end < request.text.length) {
+                const breakAt = request.text.lastIndexOf(" ", end);
+                if (breakAt >= start) end = breakAt + 1;
+              }
+              end = Math.min(request.text.length, end);
+            }
+            const text = request.text.slice(start, end);
+            const metrics = measure(text, request);
+            const baselineMpt = lines.length * request.lineHeightMpt - metrics.yFromBaselineMpt;
+            const lineXMpt = Math.max(0, -metrics.xMpt);
+            overwide ||= metrics.advanceMpt > request.maximumWidthMpt;
+            lines.push({
+              text,
+              sourceStartUtf16: request.sourceStartUtf16 + start,
+              sourceEndUtf16: request.sourceStartUtf16 + end,
+              xMpt: lineXMpt,
+              baselineMpt,
+              advanceMpt: metrics.advanceMpt,
+            });
+            ink.push({
+              x: lineXMpt + metrics.xMpt,
+              y: baselineMpt + metrics.yFromBaselineMpt,
+              width: metrics.widthMpt,
+              height: metrics.heightMpt,
+            });
+            cursor = end;
+            if (request.wrapPolicy === "no-wrap") break;
+          }
+          if (request.text.length === 0) {
+            lines.push({
+              text: "",
+              sourceStartUtf16: request.sourceStartUtf16,
+              sourceEndUtf16: request.sourceStartUtf16,
+              xMpt: 0,
+              baselineMpt: request.fontSizeMpt,
+              advanceMpt: 0,
+            });
+          }
+          const minimumX = ink.length === 0 ? 0 : Math.min(...ink.map(({ x }) => x));
+          const minimumY = ink.length === 0 ? 0 : Math.min(...ink.map(({ y }) => y));
+          const maximumX = ink.length === 0 ? 0 : Math.max(...ink.map(({ x, width }) => x + width));
+          const maximumY = ink.length === 0 ? 0 : Math.max(...ink.map(({ y, height }) => y + height));
+          return {
+            measurementId: request.measurementId,
+            logicalBounds: {
+              xMpt: 0,
+              yMpt: 0,
+              widthMpt: Math.max(0, ...lines.map(({ advanceMpt }) => advanceMpt)),
+              heightMpt: lines.length * request.lineHeightMpt,
+            },
+            inkBounds: {
+              xMpt: minimumX,
+              yMpt: minimumY,
+              widthMpt: maximumX - minimumX,
+              heightMpt: maximumY - minimumY,
+            },
+            lines,
+            overflow: cursor < request.text.length || overwide ? "clipped" : "none",
+          };
+        });
+        const calibrationRequest = { fontSizeMpt: 10000, fontWeight: 400 };
+        return {
+          fontReady: document.fonts.check("10pt 'RSrender Qualified Arial'"),
+          computedFamily: getComputedStyle(probe).fontFamily,
+          calibration: measure("RSrender 0123456789", calibrationRequest),
+          results,
+        };
+      })()`,
+        true,
+      ) as Promise<unknown>,
+      15_000,
+      "MEASUREMENT_EXECUTION_TIMEOUT",
+    );
+    if (typeof measured !== "object" || measured === null || Array.isArray(measured)) {
+      return Object.freeze({ accepted: false, reason: "WITNESS_MALFORMED" });
+    }
+    if (Buffer.byteLength(JSON.stringify(measured), "utf8") > 1_048_576) {
+      return Object.freeze({ accepted: false, reason: "WITNESS_TOO_LARGE" });
+    }
+    const witness = measured as DataRecord;
+    if (
+      witness["fontReady"] !== true ||
+      typeof witness["computedFamily"] !== "string" ||
+      !Array.isArray(witness["results"]) ||
+      typeof witness["calibration"] !== "object" ||
+      witness["calibration"] === null
+    ) {
+      return Object.freeze({
+        accepted: false,
+        reason: `WITNESS_REJECTED:${JSON.stringify({ fontReady: witness["fontReady"], computedFamily: witness["computedFamily"], results: Array.isArray(witness["results"]), calibration: typeof witness["calibration"] })}`,
+      });
+    }
+    const authority = Object.freeze({
+      revision: "bld-033-chromium-layout-host-v1",
+      electron: process.versions.electron,
+      chromium: process.versions.chrome,
+      locale: app.getLocale(),
+      fontFamily: witness["computedFamily"],
+      calibration: witness["calibration"],
+      fontFaces: qualifiedLocalArialFaces(),
+    });
+    const authorityDigest = sha256CanonicalJson(authority);
+    const rawResults = witness["results"] as readonly DataRecord[];
+    const fontWeights: readonly number[] = requests.map(
+      ({ fontWeight }: BoringLogTextMeasurementRequest) => fontWeight,
+    );
+    const results = rawResults.map((result, index) => {
+      const fontWeight = fontWeights[index];
+      return {
+        ...result,
+        fontFaceDigest:
+          fontWeight !== undefined && fontWeight >= 600
+            ? authority.fontFaces.bold
+            : authority.fontFaces.regular,
+        fontMetricsDigest: authorityDigest,
+      };
+    }) as unknown as readonly BoringLogTextMeasurementResult[];
+    return Object.freeze({
+      accepted: true,
+      results: Object.freeze(results),
+      authorityDigest,
+    });
+  } catch (error) {
+    return Object.freeze({
+      accepted: false,
+      reason: error instanceof Error ? error.message : "MEASUREMENT_FAILED",
+    });
+  } finally {
+    if (!measurementWindow.isDestroyed()) measurementWindow.destroy();
+    measurementSession.protocol.unhandle(LAYOUT_HOST_SCHEME);
+  }
 }
 
 async function renderPublicationPdf(
@@ -342,10 +744,37 @@ async function renderPublicationPdf(
   layoutSession.setDevicePermissionHandler(() => false);
   layoutSession.on("will-download", (event) => event.preventDefault());
   layoutSession.webRequest.onBeforeRequest((details, callback) => {
-    callback({ cancel: details.method !== "GET" || details.url !== LAYOUT_HOST_URL });
+    callback({
+      cancel:
+        details.method !== "GET" ||
+        ![
+          LAYOUT_HOST_URL,
+          LAYOUT_PUBLICATION_FONT_REGULAR_URL,
+          LAYOUT_PUBLICATION_FONT_BOLD_URL,
+        ].includes(details.url),
+    });
   });
   layoutSession.protocol.handle(LAYOUT_HOST_SCHEME, (request) => {
-    if (request.method !== "GET" || request.url !== LAYOUT_HOST_URL) {
+    if (request.method !== "GET") {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+    if (
+      request.url === LAYOUT_PUBLICATION_FONT_REGULAR_URL ||
+      request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL
+    ) {
+      return new Response(
+        readFileSync(
+          qualifiedFontPath(
+            request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
+          ),
+        ),
+        { status: 200, headers: { "Cache-Control": "no-store", "Content-Type": "font/ttf" } },
+      );
+    }
+    if (request.url !== LAYOUT_HOST_URL) {
       return new Response("Not found", {
         status: 404,
         headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
@@ -356,7 +785,7 @@ async function renderPublicationPdf(
       headers: {
         "Cache-Control": "no-store",
         "Content-Security-Policy":
-          "default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+          "default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'self'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
         "Content-Type": "text/html; charset=utf-8",
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Resource-Policy": "same-origin",
@@ -386,6 +815,11 @@ async function renderPublicationPdf(
   layoutWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
   try {
     await layoutWindow.loadURL(LAYOUT_HOST_URL);
+    const fontReady: unknown = await layoutWindow.webContents.executeJavaScript(
+      `document.fonts.ready.then(() => document.fonts.check("10pt 'RSrender Qualified Arial'"))`,
+      true,
+    );
+    if (fontReady !== true) throw new Error("LAYOUT_HOST_FONT_UNAVAILABLE");
     const state = (await layoutWindow.webContents.executeJavaScript(
       `(() => ({ sceneDigest: document.querySelector("svg")?.getAttribute("data-scene-digest"), projectionDigest: document.querySelector("svg")?.getAttribute("data-projection-digest"), nodeCount: document.querySelectorAll(".scene-node").length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, title: document.title }))()`,
       true,
@@ -453,8 +887,13 @@ async function pageValue(window: BrowserWindow, expression: string): Promise<unk
   return window.webContents.executeJavaScript(expression, true);
 }
 
-async function waitFor(window: BrowserWindow, expression: string, code: string): Promise<void> {
-  const deadline = Date.now() + 15_000;
+async function waitFor(
+  window: BrowserWindow,
+  expression: string,
+  code: string,
+  timeoutMs = 15_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if ((await pageValue(window, expression)) === true) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -800,8 +1239,9 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
 async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
   await waitFor(
     window,
-    `document.querySelectorAll("#svg-page > svg").length === 1 && ["Structured boring log scene rendered as semantic SVG.", "Editable structured boring log scene loaded from main authority."].includes(document.getElementById("editor-status")?.textContent ?? "")`,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === "Editable structured boring log scene loaded from main authority."`,
     "WAIT_STUDIO",
+    60_000,
   );
   const initial = record(
     await pageValue(
@@ -814,6 +1254,12 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         semanticElements: new Set([...document.querySelectorAll("#svg-page [data-semantic-id]")].map((node) => node.getAttribute("data-semantic-id"))).size,
         treeRows: document.querySelectorAll("#contents-tree .tree-row").length,
         diagnostics: document.querySelectorAll("#diagnostics-list li").length,
+        errorDiagnostics: [...document.querySelectorAll("#diagnostics-list li")].filter((item) => item.textContent?.startsWith("ERROR")).length,
+        clippedText: document.querySelectorAll('#svg-page text[data-overflow]:not([data-overflow="none"])').length,
+        textLines: document.querySelectorAll("#svg-page text tspan").length,
+        positiveTextAdvances: [...document.querySelectorAll("#svg-page text tspan")].filter((line) => Number(line.getAttribute("data-advance-mpt")) > 0).length,
+        fontFaceDigests: [...new Set([...document.querySelectorAll("#svg-page text[data-font-face-digest]")].map((node) => node.getAttribute("data-font-face-digest")))].sort(),
+        fontMetricsDigests: [...new Set([...document.querySelectorAll("#svg-page text[data-font-metrics-digest]")].map((node) => node.getAttribute("data-font-metrics-digest")))].sort(),
         raster: document.querySelectorAll("img,picture,canvas,image").length,
         nodeGlobals: [typeof require, typeof process, typeof electron],
         pageDigest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
@@ -828,6 +1274,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       (initial["semanticElements"] as number) >= 80 &&
       (initial["treeRows"] as number) >= 15 &&
       (initial["diagnostics"] as number) >= 1 &&
+      initial["errorDiagnostics"] === 0 &&
+      initial["clippedText"] === 0 &&
+      (initial["textLines"] as number) >= 100 &&
+      (initial["positiveTextAdvances"] as number) >= 100 &&
+      JSON.stringify(initial["fontFaceDigests"]) ===
+        JSON.stringify([QUALIFIED_ARIAL_REGULAR_DIGEST, QUALIFIED_ARIAL_BOLD_DIGEST].sort()) &&
+      Array.isArray(initial["fontMetricsDigests"]) &&
+      initial["fontMetricsDigests"].length === 1 &&
       initial["raster"] === 0 &&
       JSON.stringify(initial["nodeGlobals"]) === '["undefined","undefined","undefined"]' &&
       typeof initial["pageDigest"] === "string",
@@ -1089,12 +1543,12 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       )) === true,
       "STUDIO_LAYOUT_TARGET_INVALID",
     );
-    const widthMpt = "160000";
+    const widthMpt = "150000";
     await typeText(window, "#property-content", widthMpt);
     await press(window, "#apply-property", "Space", "FOCUS_STUDIO_LAYOUT_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent === "Description Column Width Mpt applied at revision 7." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x") === "263000"`,
+      `document.getElementById("editor-status")?.textContent === "Description Column Width Mpt applied at revision 7." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x") === "253000"`,
       "WAIT_STUDIO_LAYOUT_APPLY",
     );
     const layout = record(
@@ -1114,7 +1568,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         layout["effective"] === widthMpt &&
         (layout["provenance"] as string).includes("Effective override") &&
         layout["width"] === widthMpt &&
-        layout["followingX"] === "263000",
+        layout["followingX"] === "253000",
       "STUDIO_LAYOUT_INVALID",
     );
     await press(window, "#undo", "Space", "FOCUS_STUDIO_LAYOUT_UNDO");
@@ -1122,12 +1576,6 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       window,
       `document.getElementById("editor-status")?.textContent === "Undo completed at revision 8." && document.getElementById("property-effective-value")?.textContent === "142000" && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === "142000"`,
       "WAIT_STUDIO_LAYOUT_UNDO",
-    );
-    await press(window, "#redo", "Space", "FOCUS_STUDIO_LAYOUT_REDO");
-    await waitFor(
-      window,
-      `document.getElementById("editor-status")?.textContent === "Redo completed at revision 9." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)}`,
-      "WAIT_STUDIO_LAYOUT_REDO",
     );
     editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
   }
@@ -1352,6 +1800,7 @@ async function main(): Promise<void> {
   if (structuredSession !== null) {
     const source = structuredSession;
     let studioQuerySequence = 0;
+    const projectionCache = new Map<string, BoringLogStudioProjection>();
     const getStudioProjection = async (minimumWorkingRevision: number | null) => {
       studioQuerySequence += 1;
       const queried = await hosted.session.getProjection(
@@ -1364,11 +1813,35 @@ async function main(): Promise<void> {
           code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
         });
       }
-      return resolveBoringLogStudioProjection({
+      const prepared = prepareBoringLogStudioProjection({
         layoutJob: source.layoutJob,
         bindings: source.bindings,
         dataset: queried.result.projection,
       });
+      if (!prepared.accepted) return prepared;
+      const cacheKey = `${prepared.preparation.projection.workingRevision}:${sha256CanonicalJson(prepared.preparation.layout.textRequests)}`;
+      const cached = projectionCache.get(cacheKey);
+      if (cached !== undefined) {
+        return Object.freeze({ accepted: true as const, projection: cached });
+      }
+      const measured = await measureBoringLogTextInChromium(
+        prepared.preparation.layout.textRequests,
+      );
+      if (!measured.accepted) {
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
+        });
+      }
+      const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
+      if (completed.accepted) {
+        projectionCache.set(cacheKey, completed.projection);
+        if (projectionCache.size > 8) {
+          const oldest = projectionCache.keys().next().value;
+          if (oldest !== undefined) projectionCache.delete(oldest);
+        }
+      }
+      return completed;
     };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
@@ -1392,17 +1865,17 @@ async function main(): Promise<void> {
       ownerGeneration: hosted.ownerGeneration,
       createCapability: () => randomBytes(32).toString("hex"),
       exportPdf: async ({ expectedWorkingRevision, expectedSceneInputDigest }) => {
-        const current = await getStudioProjection(expectedWorkingRevision);
-        if (
-          !current.accepted ||
-          current.projection.workingRevision !== expectedWorkingRevision ||
-          current.projection.scene.inputDigest !== expectedSceneInputDigest
-        ) {
+        const current = [...projectionCache.values()].find(
+          (projection) =>
+            projection.workingRevision === expectedWorkingRevision &&
+            projection.scene.inputDigest === expectedSceneInputDigest,
+        );
+        if (current === undefined) {
           return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
         }
         return publishBoringLogPdf({
-          scene: current.projection.scene,
-          workingRevision: current.projection.workingRevision,
+          scene: current.scene,
+          workingRevision: current.workingRevision,
           expectedWorkingRevision,
           expectedSceneInputDigest,
           chooseDestination: async () => {

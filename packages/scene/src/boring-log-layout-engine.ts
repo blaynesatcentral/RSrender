@@ -484,7 +484,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       "node:region-header",
       "project-metadata-value",
       value,
-      rect(header.xMpt + xOffset + 3_000, y + 7_000, width - 6_000, 12_000),
+      rect(header.xMpt + xOffset + 3_000, y + 7_000, width - 6_000, 13_000),
       "style-small",
       metadataProvenance,
       2,

@@ -162,9 +162,9 @@ function assertPositive(run, packageResult) {
     result.editing.style.effective !== "gravel-dot-ring" ||
     result.editing.style.patternedIntervals !== 3 ||
     result.editing.layout.source !== "142000" ||
-    result.editing.layout.effective !== "160000" ||
-    result.editing.layout.width !== "160000" ||
-    result.editing.layout.followingX !== "263000" ||
+    result.editing.layout.effective !== "150000" ||
+    result.editing.layout.width !== "150000" ||
+    result.editing.layout.followingX !== "253000" ||
     result.zoomPercent !== 90 ||
     result.denials.windowCount !== 1
   ) {

@@ -143,6 +143,9 @@ export async function publishBoringLogPdf(
   ) {
     return rejected("EXPORT_STALE_SCENE");
   }
+  if (input.scene.diagnostics.some(({ severity }) => severity === "error")) {
+    return rejected("EXPORT_PREFLIGHT_BLOCKED");
+  }
   const projected = projectBoringLogSceneForPublication(input.scene);
   if (!projected.accepted) return rejected("EXPORT_PROJECTION_REJECTED");
   let destinationPath: string | null;

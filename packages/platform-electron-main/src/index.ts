@@ -104,11 +104,14 @@ export {
 export type { PackagedSemanticEditorRendererVerification } from "./packaged-semantic-editor-renderer.js";
 export {
   boringLogStudioProjectionRevision,
-  resolveBoringLogStudioProjection,
+  completeBoringLogStudioProjection,
+  prepareBoringLogStudioProjection,
 } from "./boring-log-studio-projection.js";
 export type {
   BoringLogStudioEditableValue,
   BoringLogStudioProjection,
+  BoringLogStudioProjectionPreparation,
+  BoringLogStudioProjectionPreparationResult,
   BoringLogStudioProjectionResult,
 } from "./boring-log-studio-projection.js";
 export {

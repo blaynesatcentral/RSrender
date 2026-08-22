@@ -5,16 +5,16 @@ export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
   "rsrender.boring-log-mvp-template.v1" as const;
 export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
 
-export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r3" as const;
-export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r2" as const;
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r4" as const;
+export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r3" as const;
 export const BORING_LOG_MVP_FIXTURE_DIGEST =
-  "sha256:e93e5352f12c8ea89e92dc2dcb7ae9d3762897ca734ec36eebcc37b29276b771" as const;
+  "sha256:9853df40150de5e11d77a73deb5ba0d4193e56ef43c96e8ba543aaafacced574" as const;
 export const BORING_LOG_MVP_TEMPLATE_DIGEST =
-  "sha256:04035bdc50c92f54d54d7eb5f677b76e16259eae08fe0c7f2d76a423c46a12fb" as const;
+  "sha256:359fffb3caa9218e3fd916c1fe87868777149ab3e4448bc7e0d322d673ebaad2" as const;
 export const BORING_LOG_MVP_ORACLE_DIGEST =
-  "sha256:85b13c7e8fa24ed7e1cd126a3c33a4abc6e8aca1807144f4d4d019ac5f28d35b" as const;
+  "sha256:49036d3e09e3cc85f4badb4a5c4c69c6c595bfccd30f945b10305498be10b6a0" as const;
 export const BORING_LOG_MVP_BUNDLE_DIGEST =
-  "sha256:1b589ce142aacd574d8eadf9d5950babab86dbc522562b8ab224b3debff0ed2c" as const;
+  "sha256:825b6255e99144e3fdb589d2040052a2594316ce141b779d4af29fced76a5fba" as const;
 
 const source = (entityId: string, fieldId: string) =>
   Object.freeze({
@@ -60,7 +60,7 @@ const sample = (
 export const boringLogMvpFixture = Object.freeze({
   schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
-  fixtureRevision: 3,
+  fixtureRevision: 4,
   evidenceClass: "synthetic-coverage-only" as const,
   representativeClaimAllowed: false,
   publicationEligibility: "example-dataset-only" as const,
@@ -122,7 +122,7 @@ export const boringLogMvpFixture = Object.freeze({
       patternId: "pattern-gravel-dot-ring",
       materialFillToken: "materialGravelFill",
       description:
-        "Dense, brown to gray, angular to subrounded gravel up to 1½ in; medium to coarse sand; little silt; well-graded.",
+        "Dense, brown to gray GRAVEL WITH SAND (GW); angular to subrounded gravel up to 1½ in; little silt.",
       transitions: Object.freeze([Object.freeze({ depthFt: 22.5, text: "Becoming very dense." })]),
       boundaryKind: "gradational" as const,
       provenance: source("stratum-02", "stratum"),
@@ -338,7 +338,7 @@ const textStyle = (id: string, sizeMpt: number, weight: number) =>
 export const boringLogMvpTemplate = Object.freeze({
   schemaVersion: BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  templateRevision: 2,
+  templateRevision: 3,
   physicalUnits: "mpt" as const,
   page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000, orientation: "portrait" }),
   regions: Object.freeze([
@@ -411,8 +411,8 @@ export const boringLogMvpTemplate = Object.freeze({
     textStyle("style-title", 16_000, 700),
     textStyle("style-company", 13_000, 700),
     textStyle("style-heading", 7_500, 700),
-    textStyle("style-body", 7_500, 400),
-    textStyle("style-small", 6_250, 400),
+    textStyle("style-body", 7_000, 400),
+    textStyle("style-small", 5_500, 400),
   ]),
   hierarchy: Object.freeze({
     id: "page-root",
