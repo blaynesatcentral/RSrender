@@ -66,6 +66,10 @@ function renderPatterns(scene: ResolvedBoringLogPageScene): string {
       if (pattern.kind === "line-hatch") {
         return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}${attribute("fill", background)}/><path${attribute("d", `M 0 ${pattern.spacingMpt} L ${pattern.spacingMpt} 0`)}${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)} fill="none"/></pattern>`;
       }
+      if (pattern.kind === "horizontal-dash") {
+        const center = Math.round(pattern.spacingMpt / 2);
+        return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}${attribute("fill", background)}/><path${attribute("d", `M 0 ${center} L ${pattern.markSizeMpt} ${center}`)}${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)} fill="none"/></pattern>`;
+      }
       const center = Math.round(pattern.spacingMpt / 2);
       return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}><rect${attribute("width", pattern.spacingMpt)}${attribute("height", pattern.spacingMpt)}${attribute("fill", background)}/><circle${attribute("cx", center)}${attribute("cy", center)}${attribute("r", pattern.markSizeMpt)} fill="none"${attribute("stroke", foreground)}${attribute("stroke-width", pattern.strokeWidthMpt)}/></pattern>`;
     })
@@ -104,7 +108,9 @@ function renderNode(
   if (node.kind === "path") {
     const points = node.points.map(({ xMpt, yMpt }) => `${xMpt},${yMpt}`).join(" ");
     const elementName = node.closed ? "polygon" : "polyline";
-    return `<${elementName}${common}${attribute("points", points)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>`;
+    const dash =
+      node.dashMpt.length === 0 ? "" : attribute("stroke-dasharray", node.dashMpt.join(" "));
+    return `<${elementName}${common}${attribute("points", points)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}${dash}/>`;
   }
   if (node.kind === "circle") {
     return `<circle${common}${attribute("cx", node.center.xMpt)}${attribute("cy", node.center.yMpt)}${attribute("r", node.radiusMpt)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>`;

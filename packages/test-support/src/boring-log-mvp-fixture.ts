@@ -5,16 +5,16 @@ export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
   "rsrender.boring-log-mvp-template.v1" as const;
 export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
 
-export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r4" as const;
-export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r3" as const;
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r5" as const;
+export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r4" as const;
 export const BORING_LOG_MVP_FIXTURE_DIGEST =
-  "sha256:9853df40150de5e11d77a73deb5ba0d4193e56ef43c96e8ba543aaafacced574" as const;
+  "sha256:2ec5d2164bfcf0d4392030aae7b0de5820a6862d8868214299e1fcd912257b31" as const;
 export const BORING_LOG_MVP_TEMPLATE_DIGEST =
-  "sha256:359fffb3caa9218e3fd916c1fe87868777149ab3e4448bc7e0d322d673ebaad2" as const;
+  "sha256:aaa790ba0d1a090e63b4b14c14984fc1b2cbfef500b3d214702f2ec608c17c0f" as const;
 export const BORING_LOG_MVP_ORACLE_DIGEST =
-  "sha256:49036d3e09e3cc85f4badb4a5c4c69c6c595bfccd30f945b10305498be10b6a0" as const;
+  "sha256:88d6bd591d564decf56d03b741e352fc146efd2490e44a89bcc7e8996d3e1af9" as const;
 export const BORING_LOG_MVP_BUNDLE_DIGEST =
-  "sha256:825b6255e99144e3fdb589d2040052a2594316ce141b779d4af29fced76a5fba" as const;
+  "sha256:2fd06db13cec8919ca3f6555bae86b954e3685160e52445106157175ccad789a" as const;
 
 const source = (entityId: string, fieldId: string) =>
   Object.freeze({
@@ -60,7 +60,7 @@ const sample = (
 export const boringLogMvpFixture = Object.freeze({
   schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
-  fixtureRevision: 4,
+  fixtureRevision: 5,
   evidenceClass: "synthetic-coverage-only" as const,
   representativeClaimAllowed: false,
   publicationEligibility: "example-dataset-only" as const,
@@ -178,7 +178,7 @@ export const boringLogMvpFixture = Object.freeze({
         quantity: "spt-n-value",
         unit: "blows-per-foot",
         minimum: 0,
-        maximum: 70,
+        maximum: 100,
       }),
       Object.freeze({
         id: "axis-water-percent",
@@ -200,8 +200,10 @@ export const boringLogMvpFixture = Object.freeze({
           ["sample-03", 11],
           ["sample-04", 18],
           ["sample-05", 21],
+          ["sample-06", 50],
           ["sample-07", 60],
           ["sample-08", 62],
+          ["sample-09", 50],
           ["sample-10", 23],
         ] as const),
         provenance: source("track-penetration-moisture", "spt-n-values"),
@@ -338,74 +340,74 @@ const textStyle = (id: string, sizeMpt: number, weight: number) =>
 export const boringLogMvpTemplate = Object.freeze({
   schemaVersion: BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  templateRevision: 3,
+  templateRevision: 4,
   physicalUnits: "mpt" as const,
   page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000, orientation: "portrait" }),
   regions: Object.freeze([
     Object.freeze({
       id: "region-header",
       role: "header",
-      xMpt: 15_000,
+      xMpt: 24_000,
       yMpt: 14_000,
-      widthMpt: 582_000,
-      heightMpt: 86_000,
+      widthMpt: 564_000,
+      heightMpt: 87_000,
     }),
     Object.freeze({
       id: "region-depth-body",
       role: "depth-body",
-      xMpt: 15_000,
+      xMpt: 24_000,
       yMpt: 104_000,
-      widthMpt: 582_000,
-      heightMpt: 568_000,
+      widthMpt: 564_000,
+      heightMpt: 566_000,
     }),
     Object.freeze({
       id: "region-footer",
       role: "footer",
-      xMpt: 15_000,
-      yMpt: 680_000,
-      widthMpt: 582_000,
-      heightMpt: 98_000,
+      xMpt: 24_000,
+      yMpt: 670_000,
+      widthMpt: 564_000,
+      heightMpt: 108_000,
     }),
   ]),
   depthTransform: Object.freeze({
     regionId: "region-depth-body",
     depthStartFt: 0,
     depthEndFt: 40,
-    yStartMpt: 129_000,
-    yEndMpt: 608_000,
-    mptPerFoot: 11_975,
+    yStartMpt: 130_000,
+    yEndMpt: 611_000,
+    mptPerFoot: 12_025,
   }),
   columns: Object.freeze([
     Object.freeze({
       id: "column-elevation",
       role: "elevation-ruler",
-      xMpt: 15_000,
+      xMpt: 24_000,
       widthMpt: 28_000,
     }),
-    Object.freeze({ id: "column-depth", role: "depth-ruler", xMpt: 43_000, widthMpt: 28_000 }),
+    Object.freeze({ id: "column-depth", role: "depth-ruler", xMpt: 52_000, widthMpt: 29_000 }),
     Object.freeze({
       id: "column-lithology",
       role: "lithology-pattern",
-      xMpt: 71_000,
-      widthMpt: 32_000,
+      xMpt: 81_000,
+      widthMpt: 29_000,
     }),
     Object.freeze({
       id: "column-description",
       role: "material-description",
-      xMpt: 103_000,
-      widthMpt: 142_000,
+      xMpt: 110_000,
+      widthMpt: 186_000,
     }),
-    Object.freeze({ id: "column-sample", role: "sample", xMpt: 245_000, widthMpt: 40_000 }),
-    Object.freeze({ id: "column-recovery", role: "recovery", xMpt: 285_000, widthMpt: 30_000 }),
-    Object.freeze({ id: "column-blows", role: "blows", xMpt: 315_000, widthMpt: 35_000 }),
-    Object.freeze({ id: "column-n-value", role: "n-value", xMpt: 350_000, widthMpt: 30_000 }),
+    Object.freeze({ id: "column-sample", role: "sample", xMpt: 296_000, widthMpt: 31_000 }),
+    Object.freeze({ id: "column-recovery", role: "recovery", xMpt: 327_000, widthMpt: 21_000 }),
+    Object.freeze({ id: "column-blows", role: "blows", xMpt: 348_000, widthMpt: 34_000 }),
+    Object.freeze({ id: "column-n-value", role: "n-value", xMpt: 382_000, widthMpt: 22_000 }),
     Object.freeze({
       id: "column-data-track",
       role: "penetration-moisture-plasticity",
-      xMpt: 380_000,
-      widthMpt: 145_000,
+      xMpt: 404_000,
+      widthMpt: 101_000,
     }),
-    Object.freeze({ id: "column-remarks", role: "remarks", xMpt: 525_000, widthMpt: 72_000 }),
+    Object.freeze({ id: "column-remarks", role: "remarks", xMpt: 505_000, widthMpt: 83_000 }),
   ]),
   styles: Object.freeze([
     textStyle("style-title", 16_000, 700),
@@ -531,7 +533,7 @@ export const boringLogMvpOracle = Object.freeze({
   schemaVersion: BORING_LOG_MVP_ORACLE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  oracleRevision: 2,
+  oracleRevision: 3,
   oracleIds: Object.freeze(["OA-PROV-001", "OA-GOLD-001", "OA-REP-001"]),
   requiredSections: Object.freeze(["header", "depth-body", "footer"]),
   requiredColumnRoles: Object.freeze([
@@ -559,13 +561,13 @@ export const boringLogMvpOracle = Object.freeze({
   }),
   geometryAnchors: Object.freeze({
     page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000 }),
-    depth: Object.freeze({ startFt: 0, endFt: 40, yStartMpt: 129_000, yEndMpt: 608_000 }),
+    depth: Object.freeze({ startFt: 0, endFt: 40, yStartMpt: 130_000, yEndMpt: 611_000 }),
     majorVerticalEdgesMpt: Object.freeze([
-      15_000, 43_000, 71_000, 103_000, 245_000, 285_000, 315_000, 350_000, 380_000, 525_000,
-      597_000,
+      24_000, 52_000, 81_000, 110_000, 296_000, 327_000, 348_000, 382_000, 404_000, 505_000,
+      588_000,
     ]),
     majorHorizontalEdgesMpt: Object.freeze([
-      14_000, 100_000, 104_000, 129_000, 608_000, 672_000, 680_000, 778_000,
+      14_000, 101_000, 104_000, 130_000, 611_000, 670_000, 670_000, 778_000,
     ]),
   }),
   comparisonPolicy: Object.freeze({

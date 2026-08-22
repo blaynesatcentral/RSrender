@@ -44,18 +44,51 @@ test("BLD-025 projects the validated scene into ordered semantic vector SVG", ()
   const result = projectBoringLogSceneToSvg(scene);
   assert.equal(boringLogSvgProjectionRevision, "bld-025-svg-projection-v1");
   assert.equal(result.accepted, true);
-  assert.equal(result.semanticElementCount, 319);
+  assert.equal(result.semanticElementCount, 328);
   assert.match(result.markup, /^<svg[^>]+viewBox="0 0 612000 792000"/u);
   assert.match(result.markup, /data-scene-input-digest="sha256:[0-9a-f]{64}"/u);
   assert.match(result.markup, /<pattern[^>]+pattern-silt-horizontal-dash/u);
+  assert.match(
+    result.markup,
+    /<pattern id="pattern-silt-horizontal-dash"[^>]*>[\s\S]*?<path d="M 0 2500 L 2000 2500"/u,
+  );
   assert.match(result.markup, /data-node-role="material-description-interval"/u);
   assert.match(result.markup, /data-node-role="sample-n-value"/u);
   assert.match(result.markup, /data-node-role="data-polyline"/u);
+  assert.match(
+    result.markup,
+    /id="node:data-layer:layer-moisture:line"[^>]*stroke-dasharray="3000 2000"/u,
+  );
+  assert.match(result.markup, /data-node-role="legend-symbol-split-spoon-cutout"/u);
+  assert.match(result.markup, /data-node-role="legend-symbol-moisture-line"/u);
+  assert.match(result.markup, /data-node-role="legend-symbol-pl-open"/u);
+  assert.match(result.markup, /data-node-role="legend-symbol-ll-filled"/u);
   assert.match(result.markup, /data-node-role="approval-seal-box"/u);
   assert.match(result.markup, /data-node-role="approval-signature-line"/u);
   assert.match(result.markup, /data-provenance="source"/u);
   assert.doesNotMatch(result.markup, /<(?:img|image|canvas|foreignObject)\b/iu);
   assert.doesNotMatch(result.markup, /(?:data:image|\.png\b|\.jpe?g\b)/iu);
+});
+
+test("BLD-025 projects the reference symbol grammar as semantic SVG", () => {
+  const result = projectBoringLogSceneToSvg(resolvedScene());
+  assert.equal(result.accepted, true);
+  assert.match(
+    result.markup,
+    /<pattern id="pattern-silt-horizontal-dash"[^>]*>[\s\S]*?<path d="M 0 2500 L 2000 2500"/u,
+  );
+  assert.match(
+    result.markup,
+    /id="node:data-layer:layer-moisture:line"[^>]*stroke-dasharray="3000 2000"/u,
+  );
+  for (const role of [
+    "legend-symbol-split-spoon-cutout",
+    "legend-symbol-moisture-line",
+    "legend-symbol-pl-open",
+    "legend-symbol-ll-filled",
+  ]) {
+    assert.match(result.markup, new RegExp(`data-node-role="${role}"`, "u"));
+  }
 });
 
 test("BLD-025 selection is projected by semantic identity without changing scene authority", () => {

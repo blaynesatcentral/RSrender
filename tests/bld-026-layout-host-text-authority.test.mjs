@@ -41,7 +41,7 @@ test("BLD-026 Layout Host deterministically resolves every scene text request", 
   );
   const scene = resolveBoringLogPageScene(prepared.value, first.results);
   assert.equal(scene.accepted, true);
-  assert.equal(scene.value.pages[0].nodes.length, 319);
+  assert.equal(scene.value.pages[0].nodes.length, 328);
 });
 
 test("BLD-026 Layout Host rejects duplicate, malformed, or excessive text requests", () => {

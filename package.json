@@ -40,6 +40,8 @@
     "studio:test:packaged:bld027": "node ./tooling/shell-run-bld027.mjs --record",
     "studio:package:bld028": "node ./tooling/shell-package-bld028.mjs",
     "studio:test:packaged:bld028": "node ./tooling/shell-run-bld028.mjs --record",
+    "studio:package:bld030": "node ./tooling/shell-package-bld030.mjs",
+    "studio:test:packaged:bld030": "node ./tooling/shell-run-bld030.mjs --record",
     "test": "node --test ./tests/*.test.mjs",
     "typecheck": "tsc -b --pretty false",
     "verify": "npm run dependency:enforce && npm run format:check && npm run lint && npm run typecheck && npm run test && npm run package:check && npm run architecture:check && npm run dependency:verify-admission && npm run dependency:inventory && npm run package"

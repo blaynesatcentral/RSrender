@@ -328,49 +328,65 @@ function installDenials(electronSession: Electron.Session, counters: Counters): 
   });
   electronSession.webRequest.onBeforeRequest((details, callback) => {
     const allowed = exactRequest(details.url, details.method) !== null;
-    if (!allowed) counters.network += 1;
+    if (!allowed) {
+      counters.network += 1;
+      if (probeMode) {
+        probeFailure = `NETWORK_DENIED:${details.method}:${details.url}`.slice(0, 256);
+      }
+    }
     callback({ cancel: !allowed });
   });
 }
 
 function installProtocol(electronSession: Electron.Session): void {
   electronSession.protocol.handle(DOCUMENT_SCHEME, (request) => {
-    const kind = exactRequest(request.url, request.method);
-    if (kind === null) {
-      return new Response("Not found", {
-        status: 404,
-        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    try {
+      const kind = exactRequest(request.url, request.method);
+      if (kind === null) {
+        return new Response("Not found", {
+          status: 404,
+          headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }
+      const body =
+        kind === "html"
+          ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__
+          : kind === "script"
+            ? rendererSource
+            : kind === "stylesheet"
+              ? `${qualifiedFontCss(SCREEN_FONT_REGULAR_URL, SCREEN_FONT_BOLD_URL)}\n${stylesheetSource ?? ""}`
+              : readFileSync(qualifiedFontPath(kind === "font-bold" ? "arialbd.ttf" : "arial.ttf"));
+      return new Response(body, {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Security-Policy": SEMANTIC_EDITOR_SECURITY_PROFILE.contentPolicy,
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Content-Type":
+            kind === "html"
+              ? "text/html; charset=utf-8"
+              : kind === "script"
+                ? "application/javascript; charset=utf-8"
+                : kind === "stylesheet"
+                  ? "text/css; charset=utf-8"
+                  : "font/ttf",
+          "Permissions-Policy":
+            "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+          "Referrer-Policy": "no-referrer",
+          "X-Content-Type-Options": "nosniff",
+        },
       });
+    } catch (error: unknown) {
+      if (probeMode) {
+        probeFailure =
+          `PROTOCOL:${error instanceof Error ? `${error.name}:${error.message}` : String(error)}`.slice(
+            0,
+            256,
+          );
+      }
+      throw error;
     }
-    const body =
-      kind === "html"
-        ? globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__
-        : kind === "script"
-          ? rendererSource
-          : kind === "stylesheet"
-            ? `${qualifiedFontCss(SCREEN_FONT_REGULAR_URL, SCREEN_FONT_BOLD_URL)}\n${stylesheetSource ?? ""}`
-            : readFileSync(qualifiedFontPath(kind === "font-bold" ? "arialbd.ttf" : "arial.ttf"));
-    return new Response(body, {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store",
-        "Content-Security-Policy": SEMANTIC_EDITOR_SECURITY_PROFILE.contentPolicy,
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Resource-Policy": "same-origin",
-        "Content-Type":
-          kind === "html"
-            ? "text/html; charset=utf-8"
-            : kind === "script"
-              ? "application/javascript; charset=utf-8"
-              : kind === "stylesheet"
-                ? "text/css; charset=utf-8"
-                : "font/ttf",
-        "Permissions-Policy":
-          "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
-        "Referrer-Policy": "no-referrer",
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
   });
 }
 
@@ -1246,16 +1262,25 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
   const initial = record(
     await pageValue(
       window,
-      `(() => ({
+      `(() => {
+        const sceneNodes = [...document.querySelectorAll("#svg-page .scene-node")];
+        const countBy = (values) => Object.fromEntries([...new Set(values)].sort().map((value) => [value, values.filter((candidate) => candidate === value).length]));
+        const rect = (selector) => { const node = document.querySelector(selector); return node instanceof SVGRectElement ? { xMpt: Number(node.getAttribute("x")), yMpt: Number(node.getAttribute("y")), widthMpt: Number(node.getAttribute("width")), heightMpt: Number(node.getAttribute("height")) } : null; };
+        const columns = [...document.querySelectorAll('#svg-page [data-node-role="log-column-frame"]')].map((node) => ({ semanticId: node.getAttribute("data-semantic-id"), xMpt: Number(node.getAttribute("x")), widthMpt: Number(node.getAttribute("width")) }));
+        const regions = ["region-header", "region-depth-body", "region-footer"].map((semanticId) => ({ semanticId, bounds: rect('#svg-page [data-semantic-id="' + semanticId + '"][data-node-role="region-frame"]') }));
+        const textSourceRanges = [...document.querySelectorAll("#svg-page text")].map((node) => ({ measurementId: node.getAttribute("data-measurement-id"), ranges: [...node.querySelectorAll("tspan")].map((line) => [Number(line.getAttribute("data-source-start")), Number(line.getAttribute("data-source-end"))]) }));
+        return ({
         title: document.title,
         panes: document.querySelectorAll(".contents-pane,.canvas-workspace,.properties-pane").length,
         svg: document.querySelectorAll("#svg-page > svg").length,
-        sceneNodes: document.querySelectorAll("#svg-page .scene-node").length,
+        sceneNodes: sceneNodes.length,
         semanticElements: new Set([...document.querySelectorAll("#svg-page [data-semantic-id]")].map((node) => node.getAttribute("data-semantic-id"))).size,
         treeRows: document.querySelectorAll("#contents-tree .tree-row").length,
         diagnostics: document.querySelectorAll("#diagnostics-list li").length,
+        diagnosticItems: [...document.querySelectorAll("#diagnostics-list li")].map((item) => item.textContent),
         errorDiagnostics: [...document.querySelectorAll("#diagnostics-list li")].filter((item) => item.textContent?.startsWith("ERROR")).length,
         clippedText: document.querySelectorAll('#svg-page text[data-overflow]:not([data-overflow="none"])').length,
+        clippedTextItems: [...document.querySelectorAll('#svg-page text[data-overflow]:not([data-overflow="none"])')].map((node) => ({ semanticId: node.getAttribute("data-semantic-id"), role: node.getAttribute("data-node-role"), overflow: node.getAttribute("data-overflow") })),
         textLines: document.querySelectorAll("#svg-page text tspan").length,
         positiveTextAdvances: [...document.querySelectorAll("#svg-page text tspan")].filter((line) => Number(line.getAttribute("data-advance-mpt")) > 0).length,
         fontFaceDigests: [...new Set([...document.querySelectorAll("#svg-page text[data-font-face-digest]")].map((node) => node.getAttribute("data-font-face-digest")))].sort(),
@@ -1263,29 +1288,56 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         raster: document.querySelectorAll("img,picture,canvas,image").length,
         nodeGlobals: [typeof require, typeof process, typeof electron],
         pageDigest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
-      }))()`,
+        reference: {
+          viewBox: document.querySelector("#svg-page > svg")?.getAttribute("viewBox"),
+          roles: countBy(sceneNodes.map((node) => node.getAttribute("data-node-role"))),
+          provenance: countBy(sceneNodes.map((node) => node.getAttribute("data-provenance"))),
+          columns,
+          regions,
+          patternCount: document.querySelectorAll("#svg-page defs pattern").length,
+          lineHatchPatternCount: document.querySelectorAll("#svg-page defs pattern > path").length,
+          dotRingPatternCount: document.querySelectorAll("#svg-page defs pattern > circle").length,
+          depthMajorYMpt: [...new Set([...document.querySelectorAll('#svg-page [data-node-role="depth-major-grid"]')].map((node) => Number(node.getAttribute("y1"))))].sort((left, right) => left - right),
+          plotGridXMpt: [...new Set([...document.querySelectorAll('#svg-page [data-node-role="data-axis-grid"]')].map((node) => Number(node.getAttribute("x1"))))].sort((left, right) => left - right),
+          headings: Object.fromEntries([...document.querySelectorAll('#svg-page [data-node-role="log-column-heading"]')].map((node) => [node.getAttribute("data-semantic-id"), [...node.querySelectorAll("tspan")].map((line) => line.textContent).join(" ").replace(/\\s+/gu, " ").trim()])),
+          plotTickLabels: [...document.querySelectorAll('#svg-page [data-node-role="data-axis-grid-label"]')].map((node) => Number(node.textContent)),
+          refusalSemanticIds: [...document.querySelectorAll('#svg-page [data-node-role="sample-refusal-glyph"]')].map((node) => node.getAttribute("data-semantic-id")),
+          moistureDashMpt: document.querySelector('#svg-page [data-semantic-id="data-layer:layer-moisture"][data-node-role="data-polyline"]')?.getAttribute("stroke-dasharray"),
+          textSourceRanges,
+        },
+      }); })()`,
     ),
   );
+  requireProbe(initial["title"] === "RSrender Boring Log Studio", "STUDIO_INITIAL_TITLE_INVALID");
+  requireProbe(initial["panes"] === 3 && initial["svg"] === 1, "STUDIO_INITIAL_SHELL_INVALID");
   requireProbe(
-    initial["title"] === "RSrender Boring Log Studio" &&
-      initial["panes"] === 3 &&
-      initial["svg"] === 1 &&
-      (initial["sceneNodes"] as number) >= 200 &&
+    (initial["sceneNodes"] as number) >= 200 &&
       (initial["semanticElements"] as number) >= 80 &&
-      (initial["treeRows"] as number) >= 15 &&
-      (initial["diagnostics"] as number) >= 1 &&
+      (initial["treeRows"] as number) >= 15,
+    "STUDIO_INITIAL_CONTENT_INVALID",
+  );
+  requireProbe(
+    (initial["diagnostics"] as number) >= 1 &&
       initial["errorDiagnostics"] === 0 &&
-      initial["clippedText"] === 0 &&
-      (initial["textLines"] as number) >= 100 &&
-      (initial["positiveTextAdvances"] as number) >= 100 &&
-      JSON.stringify(initial["fontFaceDigests"]) ===
-        JSON.stringify([QUALIFIED_ARIAL_REGULAR_DIGEST, QUALIFIED_ARIAL_BOLD_DIGEST].sort()) &&
+      initial["clippedText"] === 0,
+    `STUDIO_INITIAL_DIAGNOSTICS_INVALID:${JSON.stringify(initial["diagnosticItems"])}:${JSON.stringify(initial["clippedTextItems"])}`,
+  );
+  requireProbe(
+    (initial["textLines"] as number) >= 100 && (initial["positiveTextAdvances"] as number) >= 100,
+    `STUDIO_INITIAL_TEXT_INVALID:${String(initial["textLines"])}:${String(initial["positiveTextAdvances"])}`,
+  );
+  requireProbe(
+    JSON.stringify(initial["fontFaceDigests"]) ===
+      JSON.stringify([QUALIFIED_ARIAL_REGULAR_DIGEST, QUALIFIED_ARIAL_BOLD_DIGEST].sort()) &&
       Array.isArray(initial["fontMetricsDigests"]) &&
-      initial["fontMetricsDigests"].length === 1 &&
-      initial["raster"] === 0 &&
+      initial["fontMetricsDigests"].length === 1,
+    `STUDIO_INITIAL_FONT_INVALID:${JSON.stringify(initial["fontFaceDigests"])}:${JSON.stringify(initial["fontMetricsDigests"])}`,
+  );
+  requireProbe(
+    initial["raster"] === 0 &&
       JSON.stringify(initial["nodeGlobals"]) === '["undefined","undefined","undefined"]' &&
       typeof initial["pageDigest"] === "string",
-    "STUDIO_INITIAL_UI_INVALID",
+    "STUDIO_INITIAL_SECURITY_INVALID",
   );
   requireProbe(
     (await pageValue(
@@ -1710,12 +1762,12 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       )) === true,
       "STUDIO_LAYOUT_TARGET_INVALID",
     );
-    const widthMpt = "150000";
+    const widthMpt = "190000";
     await typeText(window, "#property-content", widthMpt);
     await press(window, "#apply-property", "Space", "FOCUS_STUDIO_LAYOUT_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent === "Description Column Width Mpt applied at revision 7." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x") === "253000"`,
+      `document.getElementById("editor-status")?.textContent === "Description Column Width Mpt applied at revision 7." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === ${JSON.stringify(widthMpt)} && document.querySelector('#svg-page [data-semantic-id="column-sample"][data-node-role="log-column-frame"]')?.getAttribute("x") === "300000"`,
       "WAIT_STUDIO_LAYOUT_APPLY",
     );
     const layout = record(
@@ -1731,17 +1783,17 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       ),
     );
     requireProbe(
-      layout["source"] === "142000" &&
+      layout["source"] === "186000" &&
         layout["effective"] === widthMpt &&
         (layout["provenance"] as string).includes("Effective override") &&
         layout["width"] === widthMpt &&
-        layout["followingX"] === "253000",
+        layout["followingX"] === "300000",
       "STUDIO_LAYOUT_INVALID",
     );
     await press(window, "#undo", "Space", "FOCUS_STUDIO_LAYOUT_UNDO");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 8." && document.getElementById("property-effective-value")?.textContent === "142000" && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === "142000"`,
+      `document.getElementById("editor-status")?.textContent === "Undo completed at revision 8." && document.getElementById("property-effective-value")?.textContent === "186000" && document.querySelector('#svg-page [data-semantic-id="column-description"][data-node-role="log-column-frame"]')?.getAttribute("width") === "186000"`,
       "WAIT_STUDIO_LAYOUT_UNDO",
     );
     editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
@@ -2078,7 +2130,23 @@ async function main(): Promise<void> {
     studioBroker?.invalidate();
     publicationBroker?.invalidate();
   };
-  window.webContents.on("render-process-gone", rotate);
+  window.webContents.on("render-process-gone", (_event, details) => {
+    if (probeMode) {
+      probeFailure = `RENDER_PROCESS_GONE:${details.reason}:${details.exitCode}`.slice(0, 256);
+    }
+    rotate();
+  });
+  window.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+      if (probeMode && isMainFrame) {
+        probeFailure = `DID_FAIL_LOAD:${errorCode}:${errorDescription}:${validatedUrl}`.slice(
+          0,
+          256,
+        );
+      }
+    },
+  );
   window.webContents.on("destroyed", rotate);
   window.webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
     if (isMainFrame) rotate();
@@ -2123,7 +2191,15 @@ else {
   void app
     .whenReady()
     .then(main)
-    .catch(() => fail("SEMANTIC_EDITOR_HOST_UNAVAILABLE"));
+    .catch((error: unknown) => {
+      if (probeMode && probeFailure === "UNCLASSIFIED") {
+        probeFailure =
+          error instanceof Error
+            ? `${error.name}:${error.message}`.slice(0, 256)
+            : `THROWN:${String(error)}`.slice(0, 256);
+      }
+      return fail("SEMANTIC_EDITOR_HOST_UNAVAILABLE");
+    });
 }
 
 declare global {

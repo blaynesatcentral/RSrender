@@ -123,8 +123,8 @@ function valueToXMpt(
   axisMaximum: number,
   value: number,
 ): Mpt {
-  const xStart = column.xMpt + 5_000;
-  const width = column.widthMpt - 10_000;
+  const xStart = column.xMpt;
+  const width = column.widthMpt;
   return asMpt(xStart + Math.round(((value - axisMinimum) / (axisMaximum - axisMinimum)) * width));
 }
 
@@ -237,6 +237,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     fillToken: string | null,
     strokeToken: string | null,
     provenance: BoringLogValueProvenance | null,
+    dashMpt: readonly Mpt[] = [],
   ): void =>
     append({
       id,
@@ -251,6 +252,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       fillToken,
       strokeToken,
       strokeWidthMpt: asMpt(650),
+      dashMpt,
     });
 
   const addCircle = (
@@ -494,16 +496,16 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   const depthBody = job.template.regions.find(({ role }) => role === "depth-body")!;
   const depthGroupId = "node:region-depth-body";
   const columnLabels: Readonly<Record<string, string>> = {
-    "elevation-ruler": "ELEV.",
-    "depth-ruler": "DEPTH",
-    "lithology-pattern": "LITH.",
+    "elevation-ruler": "ELEV\nFT",
+    "depth-ruler": "DEPTH\nFT",
+    "lithology-pattern": "USCS",
     "material-description": "MATERIAL DESCRIPTION",
     sample: "SAMPLE",
-    recovery: "REC.",
-    blows: "BLOWS",
+    recovery: "REC\n%",
+    blows: "BLOWS\n/6 IN",
     "n-value": "N",
     "penetration-moisture-plasticity": "PENETRATION N · MOISTURE W% · PL–LL",
-    remarks: "REMARKS",
+    remarks: "REMARKS & FIELD NOTES",
   };
   for (const column of job.template.columns) {
     addRect(
@@ -522,7 +524,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       "log-column-heading",
       columnLabels[column.role] ?? column.role.toUpperCase(),
       rect(column.xMpt + 1_000, depthBody.yMpt + 3_000, column.widthMpt - 2_000, 21_000),
-      column.role === "penetration-moisture-plasticity" ? "style-small" : "style-heading",
+      column.role === "penetration-moisture-plasticity" || column.role === "sample"
+        ? "style-small"
+        : "style-heading",
       null,
       2,
     );
@@ -635,7 +639,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       `lithology:${interval.id}`,
       depthGroupId,
       "material-description-interval",
-      `${interval.classification} — ${interval.description}`,
+      interval.description,
       rect(
         descriptionColumn.xMpt + 3_000,
         yFrom + 3_000,
@@ -801,23 +805,6 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         "no-wrap",
       ),
     );
-    if (sample.refusal) {
-      addPath(
-        `node:sample:${sample.id}:refusal`,
-        `sample:${sample.id}`,
-        depthGroupId,
-        "sample-refusal-glyph",
-        [
-          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 7_000), yMpt: asMpt(y - 3_000) },
-          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 3_000), yMpt: asMpt(y) },
-          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 7_000), yMpt: asMpt(y + 3_000) },
-        ],
-        false,
-        null,
-        "ink",
-        sample.provenance,
-      );
-    }
   }
 
   const trackColumn = columnByRole(job, "penetration-moisture-plasticity");
@@ -839,6 +826,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     if (index === 0) {
       for (let tick = axis.minimum; tick <= axis.maximum; tick += 25) {
         const x = valueToXMpt(trackColumn, axis.minimum, axis.maximum, tick);
+        const labelWidthMpt = 14_000;
+        const labelXMpt = Math.min(
+          Math.max(x - labelWidthMpt / 2, trackColumn.xMpt),
+          trackColumn.xMpt + trackColumn.widthMpt - labelWidthMpt,
+        );
         addLine(
           `node:data-axis:grid:${tick}`,
           `data-axis:${axis.id}`,
@@ -856,7 +848,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           depthGroupId,
           "data-axis-grid-label",
           String(tick),
-          rect(x - 7_000, depthBody.yMpt + 15_000, 14_000, 7_000),
+          rect(labelXMpt, depthBody.yMpt + 15_000, labelWidthMpt, 7_000),
           "style-small",
           null,
           1,
@@ -887,11 +879,29 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           null,
           layer.id === "layer-n-value" ? "nTrack" : "moistureTrack",
           layer.provenance,
+          layer.id === "layer-moisture" ? [asMpt(3_000), asMpt(2_000)] : [],
         );
       }
       layer.values.forEach(([sampleId], index) => {
         const point = points[index]!;
-        if (layer.glyph === "filled-square") {
+        const sample = sampleById.get(sampleId)!;
+        if (layer.id === "layer-n-value" && sample.refusal) {
+          addPath(
+            `node:data-layer:${layer.id}:point:${sampleId}`,
+            `data-layer:${layer.id}:${sampleId}`,
+            depthGroupId,
+            "sample-refusal-glyph",
+            [
+              { xMpt: asMpt(point.xMpt - 2_000), yMpt: asMpt(point.yMpt - 2_500) },
+              { xMpt: asMpt(point.xMpt + 1_500), yMpt: point.yMpt },
+              { xMpt: asMpt(point.xMpt - 2_000), yMpt: asMpt(point.yMpt + 2_500) },
+            ],
+            false,
+            null,
+            "nTrack",
+            layer.provenance,
+          );
+        } else if (layer.glyph === "filled-square") {
           addRect(
             `node:data-layer:${layer.id}:point:${sampleId}`,
             `data-layer:${layer.id}:${sampleId}`,
@@ -942,7 +952,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           `node:data-layer:${layer.id}:first:${sampleId}`,
           `data-layer:${layer.id}:${sampleId}`,
           depthGroupId,
-          "data-range-endpoint",
+          "data-range-endpoint-pl-open",
           firstX,
           y,
           1_750,
@@ -954,11 +964,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           `node:data-layer:${layer.id}:second:${sampleId}`,
           `data-layer:${layer.id}:${sampleId}`,
           depthGroupId,
-          "data-range-endpoint",
+          "data-range-endpoint-ll-filled",
           secondX,
           y,
           1_750,
-          "pageFill",
+          "plasticityTrack",
           layer.provenance,
           "plasticityTrack",
         );
@@ -982,7 +992,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         remarksColumn.widthMpt - 4_000,
         yTo - yFrom - 4_000,
       ),
-      "style-body",
+      "style-small",
       sourceFor(job, remark.id, "text"),
       Math.max(1, Math.floor((yTo - yFrom - 4_000) / 9_375)),
     );
@@ -1057,6 +1067,36 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         "ink",
         symbolProvenance,
       );
+      addPath(
+        `${symbolId}:upper`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-split-spoon-cutout",
+        [
+          { xMpt: asMpt(x + 1_000), yMpt: asMpt(y + 1_500) },
+          { xMpt: asMpt(x + 5_000), yMpt: asMpt(y + 1_500) },
+          { xMpt: asMpt(x + 3_000), yMpt: asMpt(y + 4_250) },
+        ],
+        true,
+        "pageFill",
+        null,
+        symbolProvenance,
+      );
+      addPath(
+        `${symbolId}:lower`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-split-spoon-cutout",
+        [
+          { xMpt: asMpt(x + 1_000), yMpt: asMpt(y + 8_500) },
+          { xMpt: asMpt(x + 5_000), yMpt: asMpt(y + 8_500) },
+          { xMpt: asMpt(x + 3_000), yMpt: asMpt(y + 5_750) },
+        ],
+        true,
+        "pageFill",
+        null,
+        symbolProvenance,
+      );
     } else if (item.symbol.startsWith("pattern-")) {
       addRect(
         symbolId,
@@ -1066,6 +1106,72 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         rect(x, y + 1_000, 10_000, 8_000),
         item.symbol,
         "rule",
+        symbolProvenance,
+      );
+    } else if (item.symbol === "open-circle-range") {
+      addLine(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-plasticity-range",
+        x + 1_000,
+        y + 5_000,
+        x + 9_000,
+        y + 5_000,
+        "plasticityTrack",
+        symbolProvenance,
+      );
+      addCircle(
+        `${symbolId}:first`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-pl-open",
+        x + 1_000,
+        y + 5_000,
+        1_500,
+        "pageFill",
+        symbolProvenance,
+        "plasticityTrack",
+      );
+      addCircle(
+        `${symbolId}:second`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-ll-filled",
+        x + 9_000,
+        y + 5_000,
+        1_500,
+        "plasticityTrack",
+        symbolProvenance,
+        "plasticityTrack",
+      );
+    } else if (item.symbol === "open-triangle-line") {
+      addLine(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-moisture-line",
+        x,
+        y + 5_000,
+        x + 10_000,
+        y + 5_000,
+        "moistureTrack",
+        symbolProvenance,
+        [asMpt(3_000), asMpt(2_000)],
+      );
+      addPath(
+        `${symbolId}:point`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-moisture-open-triangle",
+        [
+          { xMpt: asMpt(x + 5_000), yMpt: asMpt(y + 1_000) },
+          { xMpt: asMpt(x + 1_500), yMpt: asMpt(y + 8_000) },
+          { xMpt: asMpt(x + 8_500), yMpt: asMpt(y + 8_000) },
+        ],
+        true,
+        "pageFill",
+        "moistureTrack",
         symbolProvenance,
       );
     } else if (item.symbol.includes("line") && !item.symbol.includes("triangle")) {
@@ -1078,7 +1184,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         y + 5_000,
         x + 10_000,
         y + 5_000,
-        item.symbol.includes("open-circle") ? "plasticityTrack" : "ink",
+        "ink",
         symbolProvenance,
         item.symbol === "dashed-line" ? [asMpt(2_000), asMpt(1_000)] : [],
       );
@@ -1092,31 +1198,6 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           "nTrack",
           "nTrack",
           symbolProvenance,
-        );
-      } else if (item.symbol === "open-circle-range") {
-        addCircle(
-          `${symbolId}:first`,
-          `legend:${item.id}`,
-          footerGroupId,
-          "legend-symbol-open-circle",
-          x + 1_000,
-          y + 5_000,
-          1_500,
-          "pageFill",
-          symbolProvenance,
-          "plasticityTrack",
-        );
-        addCircle(
-          `${symbolId}:second`,
-          `legend:${item.id}`,
-          footerGroupId,
-          "legend-symbol-open-circle",
-          x + 9_000,
-          y + 5_000,
-          1_500,
-          "pageFill",
-          symbolProvenance,
-          "plasticityTrack",
         );
       }
     } else {
@@ -1373,7 +1454,7 @@ export function resolveBoringLogPageScene(
         ]),
       ].map((patternId) => ({
         id: patternId,
-        kind: patternId.includes("gravel") ? ("dot-ring" as const) : ("line-hatch" as const),
+        kind: patternId.includes("gravel") ? ("dot-ring" as const) : ("horizontal-dash" as const),
         foregroundToken: patternId.includes("blue") ? "selection" : "ink",
         backgroundToken: patternId.includes("gravel") ? "lithologyGravelFill" : "lithologySiltFill",
         spacingMpt: asMpt(patternId.includes("gravel") ? 6_000 : 5_000),

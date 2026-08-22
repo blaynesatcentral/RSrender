@@ -146,8 +146,8 @@ function assertPositive(run, packageResult) {
     result.rendererSha256 !== packageResult.rendererSha256 ||
     result.initial.panes !== 3 ||
     result.initial.svg !== 1 ||
-    result.initial.sceneNodes !== 319 ||
-    result.initial.semanticElements !== 88 ||
+    result.initial.sceneNodes !== 328 ||
+    result.initial.semanticElements !== 90 ||
     result.initial.raster !== 0 ||
     result.selection.selectedTreeRows !== 1 ||
     result.selection.selectedSceneNodes < 1 ||
@@ -161,10 +161,10 @@ function assertPositive(run, packageResult) {
     result.editing.style.source !== "reference-varied-patterns" ||
     result.editing.style.effective !== "gravel-dot-ring" ||
     result.editing.style.patternedIntervals !== 3 ||
-    result.editing.layout.source !== "142000" ||
-    result.editing.layout.effective !== "150000" ||
-    result.editing.layout.width !== "150000" ||
-    result.editing.layout.followingX !== "253000" ||
+    result.editing.layout.source !== "186000" ||
+    result.editing.layout.effective !== "190000" ||
+    result.editing.layout.width !== "190000" ||
+    result.editing.layout.followingX !== "300000" ||
     result.zoomPercent !== 90 ||
     result.denials.windowCount !== 1
   ) {

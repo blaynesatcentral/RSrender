@@ -77,14 +77,14 @@ test("BLD-022 covers the complete reference-shaped information architecture", ()
 test("BLD-022 uses exact integer mpt metrics and complete depth/column coverage", () => {
   assert.equal(boringLogMvpTemplate.page.widthMpt, 612_000);
   assert.equal(boringLogMvpTemplate.page.heightMpt, 792_000);
-  assert.equal(boringLogMvpTemplate.depthTransform.mptPerFoot, 11_975);
-  assert.equal(boringLogMvpTemplate.depthTransform.yStartMpt, 129_000);
-  assert.equal(boringLogMvpTemplate.depthTransform.yEndMpt, 608_000);
+  assert.equal(boringLogMvpTemplate.depthTransform.mptPerFoot, 12_025);
+  assert.equal(boringLogMvpTemplate.depthTransform.yStartMpt, 130_000);
+  assert.equal(boringLogMvpTemplate.depthTransform.yEndMpt, 611_000);
   assert.equal(boringLogMvpFixture.lithologyIntervals[0].depthFromFt, 0);
   assert.equal(boringLogMvpFixture.lithologyIntervals.at(-1).depthToFt, 40);
-  assert.equal(boringLogMvpTemplate.columns[0].xMpt, 15_000);
+  assert.equal(boringLogMvpTemplate.columns[0].xMpt, 24_000);
   const last = boringLogMvpTemplate.columns.at(-1);
-  assert.equal(last.xMpt + last.widthMpt, 597_000);
+  assert.equal(last.xMpt + last.widthMpt, 588_000);
 });
 
 test("BLD-022 retains source provenance and distinct shared data-track axes", () => {

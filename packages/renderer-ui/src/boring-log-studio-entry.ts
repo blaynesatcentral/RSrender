@@ -546,7 +546,7 @@ async function main(): Promise<void> {
     if (editable.property === "sample-recovery" && (value < 0 || value > 100)) return null;
     if (
       editable.property === "description-column-width-mpt" &&
-      (!Number.isSafeInteger(value) || value < 100_000 || value > 175_000)
+      (!Number.isSafeInteger(value) || value < 100_000 || value > 230_000)
     ) {
       return null;
     }
@@ -565,7 +565,7 @@ async function main(): Promise<void> {
         editable.property === "sample-recovery"
           ? "Recovery must be a number from 0 through 100."
           : editable.property === "description-column-width-mpt"
-            ? "Column width must be an integer from 100000 through 175000 mpt."
+            ? "Column width must be an integer from 100000 through 230000 mpt."
             : editable.property === "lithology-pattern-style"
               ? "Choose silt-horizontal-dash, sand-dot-ring, or gravel-dot-ring."
               : "Enter a valid property value.";

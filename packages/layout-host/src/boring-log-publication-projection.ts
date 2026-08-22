@@ -86,6 +86,10 @@ function renderPatterns(scene: ResolvedBoringLogPageScene): string {
       if (pattern.kind === "line-hatch") {
         return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}><rect${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}${attribute("fill", background)}/><path${attribute("d", `M 0 ${points(pattern.spacingMpt)} L ${points(pattern.spacingMpt)} 0`)}${attribute("stroke", foreground)}${attribute("stroke-width", points(pattern.strokeWidthMpt))} fill="none"/></pattern>`;
       }
+      if (pattern.kind === "horizontal-dash") {
+        const center = points(Math.round(pattern.spacingMpt / 2));
+        return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}><rect${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}${attribute("fill", background)}/><path${attribute("d", `M 0 ${center} L ${points(pattern.markSizeMpt)} ${center}`)}${attribute("stroke", foreground)}${attribute("stroke-width", points(pattern.strokeWidthMpt))} fill="none"/></pattern>`;
+      }
       const center = points(Math.round(pattern.spacingMpt / 2));
       return `<pattern${attribute("id", pattern.id)} patternUnits="userSpaceOnUse"${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}><rect${attribute("width", points(pattern.spacingMpt))}${attribute("height", points(pattern.spacingMpt))}${attribute("fill", background)}/><circle${attribute("cx", center)}${attribute("cy", center)}${attribute("r", points(pattern.markSizeMpt))} fill="none"${attribute("stroke", foreground)}${attribute("stroke-width", points(pattern.strokeWidthMpt))}/></pattern>`;
     })
@@ -127,7 +131,11 @@ function renderNode(
       .map(({ xMpt, yMpt }) => `${points(xMpt)},${points(yMpt)}`)
       .join(" ");
     const elementName = node.closed ? "polygon" : "polyline";
-    return `<${elementName}${common}${attribute("points", pathPoints)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", points(node.strokeWidthMpt))}/>`;
+    const dash =
+      node.dashMpt.length === 0
+        ? ""
+        : attribute("stroke-dasharray", node.dashMpt.map(points).join(" "));
+    return `<${elementName}${common}${attribute("points", pathPoints)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", points(node.strokeWidthMpt))}${dash}/>`;
   }
   if (node.kind === "circle") {
     return `<circle${common}${attribute("cx", points(node.center.xMpt))}${attribute("cy", points(node.center.yMpt))}${attribute("r", points(node.radiusMpt))}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", points(node.strokeWidthMpt))}/>`;

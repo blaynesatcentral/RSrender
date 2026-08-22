@@ -40,8 +40,8 @@ test("BLD-027 Layout Host projects the validated scene as fixed non-wrapping pub
   const { manifest, html, svgMarkup, projectionDigest, documentTitle } = result.projection;
   assert.equal(manifest.widthMpt, 612_000);
   assert.equal(manifest.heightMpt, 792_000);
-  assert.equal(manifest.sceneNodeCount, 319);
-  assert.equal(manifest.semanticElementCount, 88);
+  assert.equal(manifest.sceneNodeCount, 328);
+  assert.equal(manifest.semanticElementCount, 90);
   assert.equal(manifest.sceneInputDigest, scene.inputDigest);
   assert.match(manifest.sceneDigest, /^sha256:[0-9a-f]{64}$/u);
   assert.match(projectionDigest, /^sha256:[0-9a-f]{64}$/u);
@@ -52,11 +52,39 @@ test("BLD-027 Layout Host projects the validated scene as fixed non-wrapping pub
   assert.ok(svgMarkup.includes('viewBox="0 0 612 792"'));
   assert.ok(svgMarkup.includes('width="612pt"'));
   assert.ok(svgMarkup.includes('height="792pt"'));
-  assert.equal((svgMarkup.match(/class="scene-node"/gu) ?? []).length, 319);
+  assert.match(
+    svgMarkup,
+    /<pattern id="pattern-silt-horizontal-dash"[^>]*>[\s\S]*?<path d="M 0 2\.500 L 2 2\.500"/u,
+  );
+  assert.match(svgMarkup, /id="node:data-layer:layer-moisture:line"[^>]*stroke-dasharray="3 2"/u);
+  assert.match(svgMarkup, /data-node-role="legend-symbol-split-spoon-cutout"/u);
+  assert.match(svgMarkup, /data-node-role="legend-symbol-moisture-line"/u);
+  assert.match(svgMarkup, /data-node-role="legend-symbol-pl-open"/u);
+  assert.match(svgMarkup, /data-node-role="legend-symbol-ll-filled"/u);
+  assert.equal((svgMarkup.match(/class="scene-node"/gu) ?? []).length, 328);
   assert.equal((svgMarkup.match(/<tspan/gu) ?? []).length, manifest.textLineCount);
   assert.equal(/<(?:img|image|canvas|picture)\b/iu.test(html), false);
   assert.equal(/<script\b/iu.test(html), false);
   assert.equal(/https?:\/\//iu.test(html.replace("http://www.w3.org/2000/svg", "")), false);
+});
+
+test("BLD-027 publication uses the same reference symbol grammar as screen SVG", () => {
+  const result = projectBoringLogSceneForPublication(resolvedScene());
+  assert.equal(result.accepted, true);
+  const { svgMarkup } = result.projection;
+  assert.match(
+    svgMarkup,
+    /<pattern id="pattern-silt-horizontal-dash"[^>]*>[\s\S]*?<path d="M 0 2\.500 L 2 2\.500"/u,
+  );
+  assert.match(svgMarkup, /id="node:data-layer:layer-moisture:line"[^>]*stroke-dasharray="3 2"/u);
+  for (const role of [
+    "legend-symbol-split-spoon-cutout",
+    "legend-symbol-moisture-line",
+    "legend-symbol-pl-open",
+    "legend-symbol-ll-filled",
+  ]) {
+    assert.match(svgMarkup, new RegExp(`data-node-role="${role}"`, "u"));
+  }
 });
 
 test("BLD-027 publication projection preserves every resolved source range and is deterministic", () => {

@@ -149,8 +149,8 @@ function assertPositive(run, packageResult) {
     result.rendererSha256 !== packageResult.rendererSha256 ||
     result.initial.panes !== 3 ||
     result.initial.svg !== 1 ||
-    result.initial.sceneNodes !== 319 ||
-    result.initial.semanticElements !== 88 ||
+    result.initial.sceneNodes !== 328 ||
+    result.initial.semanticElements !== 90 ||
     result.initial.raster !== 0 ||
     result.selection.selectedTreeRows !== 1 ||
     result.selection.selectedSceneNodes < 1 ||

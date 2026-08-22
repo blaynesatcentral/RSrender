@@ -101,8 +101,8 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
   assert.equal(boringLogStudioProjectionRevision, "bld-026-studio-projection-v1");
   assert.equal(initial.accepted, true, initial.code);
   assert.equal(initial.projection.editableValues.length, 24);
-  assert.equal(initial.projection.scene.pages[0].nodes.length, 319);
-  assert.equal(initial.projection.scene.pages[0].semanticOrder.length, 88);
+  assert.equal(initial.projection.scene.pages[0].nodes.length, 328);
+  assert.equal(initial.projection.scene.pages[0].semanticOrder.length, 90);
   assert.equal(
     initial.projection.scene.pages[0].nodes.some(({ kind }) => kind === "image"),
     false,
@@ -257,7 +257,7 @@ test("BLD-026 style and layout values rebuild vector resources and integer mpt g
   const description = columns.find(({ role }) => role === "material-description");
   const remarks = columns.find(({ role }) => role === "remarks");
   assert.equal(description.widthMpt, widthMpt);
-  assert.equal(remarks.xMpt + remarks.widthMpt, 597_000);
+  assert.equal(remarks.xMpt + remarks.widthMpt, 588_000);
   assert.equal(
     laidOut.projection.scene.pages[0].nodes.find(
       ({ semanticId, kind }) => semanticId === "column-description" && kind === "rect",

@@ -224,7 +224,7 @@ export function prepareBoringLogStudioProjection(
         }
       } else {
         const widthMpt = effective as number;
-        if (!Number.isSafeInteger(widthMpt) || widthMpt < 100_000 || widthMpt > 175_000) {
+        if (!Number.isSafeInteger(widthMpt) || widthMpt < 100_000 || widthMpt > 230_000) {
           return rejected("BORING_LOG_STUDIO_EDITABLE_VALUE_INVALID");
         }
         const original = template.columns.find(({ role }) => role === "material-description");

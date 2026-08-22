@@ -258,6 +258,7 @@ test("BLD-023 covers the renderer-neutral vector scene-node vocabulary", () => {
       fillToken: "pattern-silt-horizontal-dash",
       strokeToken: "ink",
       strokeWidthMpt: 300,
+      dashMpt: [],
     },
     {
       id: "node:sample-glyph",

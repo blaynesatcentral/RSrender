@@ -376,6 +376,7 @@ export interface BoringLogScenePathNode extends BoringLogSceneNodeBase {
   readonly fillToken: string | null;
   readonly strokeToken: string | null;
   readonly strokeWidthMpt: Mpt;
+  readonly dashMpt: readonly Mpt[];
 }
 
 export interface BoringLogSceneCircleNode extends BoringLogSceneNodeBase {
@@ -412,7 +413,7 @@ export interface BoringLogRenderDiagnostic {
 
 export interface BoringLogVectorPatternResource {
   readonly id: string;
-  readonly kind: "line-hatch" | "dot-ring";
+  readonly kind: "line-hatch" | "horizontal-dash" | "dot-ring";
   readonly foregroundToken: string;
   readonly backgroundToken: string;
   readonly spacingMpt: Mpt;
@@ -1251,7 +1252,7 @@ function validateSceneNode(input: unknown): {
     group: ["bounds", "childIds"],
     rect: ["bounds", "fillToken", "strokeToken", "strokeWidthMpt"],
     line: ["from", "to", "strokeToken", "strokeWidthMpt", "dashMpt"],
-    path: ["points", "closed", "fillToken", "strokeToken", "strokeWidthMpt"],
+    path: ["points", "closed", "fillToken", "strokeToken", "strokeWidthMpt", "dashMpt"],
     circle: ["center", "radiusMpt", "fillToken", "strokeToken", "strokeWidthMpt"],
     text: ["measurementId", "styleId", "content", "frame"],
   };
@@ -1287,6 +1288,8 @@ function validateSceneNode(input: unknown): {
     nullableText(value["fillToken"]);
     nullableText(value["strokeToken"]);
     if (mpt(value["strokeWidthMpt"]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    for (const dash of array(value["dashMpt"]))
+      if (mpt(dash) <= 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   } else if (tagged.tag === "circle") {
     validatePoint(value["center"]);
     if (mpt(value["radiusMpt"]) <= 0 || mpt(value["strokeWidthMpt"]) < 0) {
@@ -1398,7 +1401,7 @@ function validateSceneUnchecked(input: unknown): void {
       "strokeWidthMpt",
     ]);
     patternIds.push(textValue(pattern["id"]));
-    if (!["line-hatch", "dot-ring"].includes(textValue(pattern["kind"]))) {
+    if (!["line-hatch", "horizontal-dash", "dot-ring"].includes(textValue(pattern["kind"]))) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
     textValue(pattern["foregroundToken"]);

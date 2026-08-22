@@ -49,8 +49,8 @@ test("BLD-024 deterministically prepares the exact one-page plan and text author
   assert.equal(first.value.pagePlan.pages[0].heightMpt, 792_000);
   assert.equal(first.value.pagePlan.pages[0].depthRange.startFt, 0);
   assert.equal(first.value.pagePlan.pages[0].depthRange.endFt, 40);
-  assert.equal(first.value.pagePlan.pages[0].depthTransform.yStartMpt, 129_000);
-  assert.equal(first.value.pagePlan.pages[0].depthTransform.yEndMpt, 608_000);
+  assert.equal(first.value.pagePlan.pages[0].depthTransform.yStartMpt, 130_000);
+  assert.equal(first.value.pagePlan.pages[0].depthTransform.yEndMpt, 611_000);
   assert.deepEqual(
     first.value.pagePlan.pages[0].columns.map(({ role }) => role),
     boringLogMvpTemplate.columns.map(({ role }) => role),
@@ -123,10 +123,7 @@ test("BLD-024 accounts for every interval, sample, plot value, remark, legend, n
     );
   }
   for (const sample of boringLogMvpFixture.samples) {
-    assert.equal(
-      nodes.filter(({ semanticId }) => semanticId === `sample:${sample.id}`).length,
-      sample.refusal ? 9 : 8,
-    );
+    assert.equal(nodes.filter(({ semanticId }) => semanticId === `sample:${sample.id}`).length, 8);
   }
   for (const layer of boringLogMvpFixture.dataTrack.layers) {
     for (const [sampleId] of layer.values) {
@@ -152,11 +149,53 @@ test("BLD-024 accounts for every interval, sample, plot value, remark, legend, n
   assert.equal(nodes.filter(({ role }) => role === "approval-signature-line").length, 1);
 });
 
+test("BLD-024 resolves the reference symbol grammar without projection-specific shortcuts", () => {
+  const { scene } = resolvedFixtureScene();
+  const nodes = scene.pages[0].nodes;
+  const siltPattern = scene.resources.patterns.find(
+    ({ id }) => id === "pattern-silt-horizontal-dash",
+  );
+  assert.equal(siltPattern?.kind, "horizontal-dash");
+
+  const moistureLine = nodes.find(({ id }) => id === "node:data-layer:layer-moisture:line");
+  assert.equal(moistureLine?.kind, "path");
+  assert.deepEqual(moistureLine?.dashMpt, [3_000, 2_000]);
+
+  const waterLegendLine = nodes.find(({ role }) => role === "legend-symbol-moisture-line");
+  assert.equal(waterLegendLine?.kind, "line");
+  assert.deepEqual(waterLegendLine?.dashMpt, moistureLine?.dashMpt);
+  assert.ok(nodes.some(({ role }) => role === "legend-symbol-moisture-open-triangle"));
+  assert.equal(nodes.filter(({ role }) => role === "legend-symbol-split-spoon-cutout").length, 2);
+
+  const plEndpoints = nodes.filter(({ role }) => role === "data-range-endpoint-pl-open");
+  const llEndpoints = nodes.filter(({ role }) => role === "data-range-endpoint-ll-filled");
+  assert.ok(plEndpoints.length > 0);
+  assert.equal(llEndpoints.length, plEndpoints.length);
+  assert.ok(
+    plEndpoints.every(
+      (node) =>
+        node.kind === "circle" &&
+        node.fillToken === "pageFill" &&
+        node.strokeToken === "plasticityTrack",
+    ),
+  );
+  assert.ok(
+    llEndpoints.every(
+      (node) =>
+        node.kind === "circle" &&
+        node.fillToken === "plasticityTrack" &&
+        node.strokeToken === "plasticityTrack",
+    ),
+  );
+  assert.ok(nodes.some(({ role }) => role === "legend-symbol-pl-open"));
+  assert.ok(nodes.some(({ role }) => role === "legend-symbol-ll-filled"));
+});
+
 test("BLD-024 uses one exact depth transform and stable integer-mpt geometry", () => {
   const { scene } = resolvedFixtureScene();
   const nodes = scene.pages[0].nodes;
   for (const sample of boringLogMvpFixture.samples) {
-    const expectedY = 129_000 + Math.round(sample.depthFt * 11_975);
+    const expectedY = 130_000 + Math.round(sample.depthFt * 12_025);
     const row = nodes.find(({ id }) => id === `node:sample:${sample.id}:row`);
     assert.equal(row.kind, "line");
     assert.equal(row.from.yMpt, expectedY);
@@ -297,11 +336,11 @@ test("BLD-024 repeats one exact normalized Page Plan and scene in fresh processe
   assert.equal(new Set(transcripts.map((entry) => JSON.stringify(entry))).size, 1);
   assert.deepEqual(transcripts[0], {
     node: "v24.18.1",
-    pagePlanDigest: "sha256:e37678e257b0deffcc43402f3b07ba82741e053bdabe73e003ea4c213bd02848",
-    sceneDigest: "sha256:a185e88d4a6a8ee38ea903585c17ba4edf62a04c3ff93d6d6b81ec202645a29d",
-    textRequestCount: 133,
-    semanticCount: 88,
-    nodeCount: 319,
+    pagePlanDigest: "sha256:128e639895effbb9e2470035cdbb67cd838c0faa64d3efc749805dec503d1d04",
+    sceneDigest: "sha256:4b6eab1de96738acc7fe2724929f59bf770efbb552f1e45c9e6d25759658ec67",
+    textRequestCount: 135,
+    semanticCount: 90,
+    nodeCount: 328,
     diagnosticCount: 0,
   });
 });

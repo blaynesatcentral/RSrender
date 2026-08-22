@@ -7,12 +7,12 @@ export const boringLogExampleDocumentSource = `
   "kind": "boring-log.layout-job",
   "jobId": "job:rsrender-example-boring-log@r1",
   "inputRevision": 1,
-  "fixtureDigest": "sha256:9853df40150de5e11d77a73deb5ba0d4193e56ef43c96e8ba543aaafacced574",
-  "templateDigest": "sha256:359fffb3caa9218e3fd916c1fe87868777149ab3e4448bc7e0d322d673ebaad2",
+  "fixtureDigest": "sha256:2ec5d2164bfcf0d4392030aae7b0de5820a6862d8868214299e1fcd912257b31",
+  "templateDigest": "sha256:aaa790ba0d1a090e63b4b14c14984fc1b2cbfef500b3d214702f2ec608c17c0f",
   "document": {
     "schemaVersion": "rsrender.boring-log-mvp-fixture.v1",
-    "fixtureId": "mvp-boring-log-test-01@r4",
-    "fixtureRevision": 4,
+    "fixtureId": "mvp-boring-log-test-01@r5",
+    "fixtureRevision": 5,
     "evidenceClass": "synthetic-coverage-only",
     "representativeClaimAllowed": false,
     "publicationEligibility": "example-dataset-only",
@@ -454,7 +454,7 @@ export const boringLogExampleDocumentSource = `
           "quantity": "spt-n-value",
           "unit": "blows-per-foot",
           "minimum": 0,
-          "maximum": 70
+          "maximum": 100
         },
         {
           "id": "axis-water-percent",
@@ -492,12 +492,20 @@ export const boringLogExampleDocumentSource = `
               21
             ],
             [
+              "sample-06",
+              50
+            ],
+            [
               "sample-07",
               60
             ],
             [
               "sample-08",
               62
+            ],
+            [
+              "sample-09",
+              50
             ],
             [
               "sample-10",
@@ -720,8 +728,8 @@ export const boringLogExampleDocumentSource = `
   },
   "template": {
     "schemaVersion": "rsrender.boring-log-mvp-template.v1",
-    "templateId": "mvp-template-reference-shaped@r3",
-    "templateRevision": 3,
+    "templateId": "mvp-template-reference-shaped@r4",
+    "templateRevision": 4,
     "physicalUnits": "mpt",
     "page": {
       "widthMpt": 612000,
@@ -732,96 +740,96 @@ export const boringLogExampleDocumentSource = `
       {
         "id": "region-header",
         "role": "header",
-        "xMpt": 15000,
+        "xMpt": 24000,
         "yMpt": 14000,
-        "widthMpt": 582000,
-        "heightMpt": 86000
+        "widthMpt": 564000,
+        "heightMpt": 87000
       },
       {
         "id": "region-depth-body",
         "role": "depth-body",
-        "xMpt": 15000,
+        "xMpt": 24000,
         "yMpt": 104000,
-        "widthMpt": 582000,
-        "heightMpt": 568000
+        "widthMpt": 564000,
+        "heightMpt": 566000
       },
       {
         "id": "region-footer",
         "role": "footer",
-        "xMpt": 15000,
-        "yMpt": 680000,
-        "widthMpt": 582000,
-        "heightMpt": 98000
+        "xMpt": 24000,
+        "yMpt": 670000,
+        "widthMpt": 564000,
+        "heightMpt": 108000
       }
     ],
     "depthTransform": {
       "regionId": "region-depth-body",
       "depthStartFt": 0,
       "depthEndFt": 40,
-      "yStartMpt": 129000,
-      "yEndMpt": 608000,
-      "mptPerFoot": 11975
+      "yStartMpt": 130000,
+      "yEndMpt": 611000,
+      "mptPerFoot": 12025
     },
     "columns": [
       {
         "id": "column-elevation",
         "role": "elevation-ruler",
-        "xMpt": 15000,
+        "xMpt": 24000,
         "widthMpt": 28000
       },
       {
         "id": "column-depth",
         "role": "depth-ruler",
-        "xMpt": 43000,
-        "widthMpt": 28000
+        "xMpt": 52000,
+        "widthMpt": 29000
       },
       {
         "id": "column-lithology",
         "role": "lithology-pattern",
-        "xMpt": 71000,
-        "widthMpt": 32000
+        "xMpt": 81000,
+        "widthMpt": 29000
       },
       {
         "id": "column-description",
         "role": "material-description",
-        "xMpt": 103000,
-        "widthMpt": 142000
+        "xMpt": 110000,
+        "widthMpt": 186000
       },
       {
         "id": "column-sample",
         "role": "sample",
-        "xMpt": 245000,
-        "widthMpt": 40000
+        "xMpt": 296000,
+        "widthMpt": 31000
       },
       {
         "id": "column-recovery",
         "role": "recovery",
-        "xMpt": 285000,
-        "widthMpt": 30000
+        "xMpt": 327000,
+        "widthMpt": 21000
       },
       {
         "id": "column-blows",
         "role": "blows",
-        "xMpt": 315000,
-        "widthMpt": 35000
+        "xMpt": 348000,
+        "widthMpt": 34000
       },
       {
         "id": "column-n-value",
         "role": "n-value",
-        "xMpt": 350000,
-        "widthMpt": 30000
+        "xMpt": 382000,
+        "widthMpt": 22000
       },
       {
         "id": "column-data-track",
         "role": "penetration-moisture-plasticity",
-        "xMpt": 380000,
-        "widthMpt": 145000
+        "xMpt": 404000,
+        "widthMpt": 101000
       },
       {
         "id": "column-remarks",
         "role": "remarks",
-        "xMpt": 525000,
-        "widthMpt": 72000
+        "xMpt": 505000,
+        "widthMpt": 83000
       }
     ],
     "styles": [

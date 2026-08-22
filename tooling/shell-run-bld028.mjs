@@ -86,8 +86,8 @@ function assertIntegratedResult(result, outputPath, index) {
     result.initial?.panes === 3 &&
     result.initial?.svg === 1 &&
     result.initial?.raster === 0 &&
-    result.initial?.sceneNodes === 319 &&
-    result.initial?.semanticElements === 88 &&
+    result.initial?.sceneNodes === 328 &&
+    result.initial?.semanticElements === 90 &&
     result.initial?.errorDiagnostics === 0 &&
     result.initial?.clippedText === 0 &&
     result.initial?.textLines >= 100 &&
@@ -137,8 +137,8 @@ function assertIntegratedResult(result, outputPath, index) {
     result.editing?.redo?.workingRevision === 3 &&
     result.editing?.redo?.durableRevision === 0 &&
     result.editing?.style?.patternedIntervals === 3 &&
-    result.editing?.layout?.width === "150000" &&
-    result.editing?.layout?.followingX === "253000" &&
+    result.editing?.layout?.width === "190000" &&
+    result.editing?.layout?.followingX === "300000" &&
     result.publication?.result === "EXPORT_VERIFIED_SUCCESS" &&
     path.resolve(result.publication.destinationPath) === path.resolve(outputPath) &&
     result.zoomPercent === 90 &&
@@ -163,7 +163,7 @@ function assertIntegratedResult(result, outputPath, index) {
   }
 }
 
-async function runPackaged(packageResult, index, outputPath, inputPath = null) {
+export async function runPackaged(packageResult, index, outputPath, inputPath = null) {
   const executable = packageResult.paths.packagedExecutable;
   if ((await processCount(executable)) !== 0) throw new Error("PACKAGE_ALREADY_RUNNING");
   await rm(outputPath, { force: true });

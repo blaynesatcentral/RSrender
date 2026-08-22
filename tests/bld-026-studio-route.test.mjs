@@ -130,7 +130,7 @@ test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene
     envelope(routedAuthority.binding, 1),
   );
   assert.equal(first.accepted, true, first.code);
-  assert.equal(first.projection.scene.pages[0].nodes.length, 319);
+  assert.equal(first.projection.scene.pages[0].nodes.length, 328);
   assert.equal(first.projection.editableValues.length, 24);
   assert.deepEqual(
     await routedAuthority.route.getProjection(
