@@ -9,6 +9,7 @@ import {
   encodeOverrideRenderDatasetCommand,
   historyRedoCommandId,
   historyUndoCommandId,
+  maximumOverrideRenderDatasetProjectionOverrides,
   sha256Utf8,
   type CanonicalJsonValue,
   type OverrideRenderDatasetCommand,
@@ -195,7 +196,12 @@ function parseCapacities(input: unknown): InMemoryOverrideRenderDatasetServiceCa
 
 function retainedCollection(input: unknown): RetainedCollection | null {
   const decoded = decodePresentationOverrideCollection(input);
-  if (!decoded.accepted || decoded.value.items.length > 1) return null;
+  if (
+    !decoded.accepted ||
+    decoded.value.items.length > maximumOverrideRenderDatasetProjectionOverrides
+  ) {
+    return null;
+  }
   const encoded = encodePresentationOverrideCollection(decoded.value);
   if (!encoded.accepted) return null;
   return Object.freeze({
@@ -887,9 +893,6 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     if (presentationHandle.value.state === "current" && previousCollection === null) {
       return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
     }
-    if ((previousCollection?.items.length ?? 0) > 1) {
-      return this.#retainedRejection(command, commandDigest, "UNSUPPORTED_CURRENT_INPUT");
-    }
     const derivedIdentity = derivePresentationOverrideIdentity({
       ownerDocumentIdentity: snapshot.documentId,
       localOverrideIdentity: command.payload.localOverrideIdentity,
@@ -900,13 +903,6 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     const prior = previousCollection?.items.find(
       (item) => item.presentationOverrideIdentity === derivedIdentity.value,
     );
-    if (
-      previousCollection !== null &&
-      previousCollection.items.length === 1 &&
-      prior === undefined
-    ) {
-      return this.#retainedRejection(command, commandDigest, "UNSUPPORTED_CURRENT_INPUT");
-    }
     const overrideRevision = prior === undefined ? 1 : prior.overrideRevision + 1;
     const acceptedSourceSnapshot = snapshot.aggregate.phase1Inputs.acceptedSourceSnapshot;
     if (acceptedSourceSnapshot === null) {
@@ -984,17 +980,36 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     if (!createdItem.accepted) {
       return this.#retainedRejection(command, commandDigest, mapOverrideFailure(createdItem.code));
     }
+    const nextItems = Object.freeze(
+      [
+        ...(previousCollection?.items.filter(
+          ({ presentationOverrideIdentity }) =>
+            presentationOverrideIdentity !== createdItem.value.presentationOverrideIdentity,
+        ) ?? []),
+        createdItem.value,
+      ].sort((left, right) =>
+        left.targetSourceFieldIdentity === right.targetSourceFieldIdentity
+          ? left.presentationOverrideIdentity < right.presentationOverrideIdentity
+            ? -1
+            : left.presentationOverrideIdentity > right.presentationOverrideIdentity
+              ? 1
+              : 0
+          : left.targetSourceFieldIdentity < right.targetSourceFieldIdentity
+            ? -1
+            : 1,
+      ),
+    );
     const nextCollection =
       previousCollection === null
         ? createPresentationOverrideCollection({
             collectionVersion: 1,
             ownerDocumentIdentity: snapshot.documentId,
             projectRevision: 1,
-            items: [createdItem.value],
+            items: nextItems,
           })
         : createNextPresentationOverrideCollection({
             previousCollection,
-            items: [createdItem.value],
+            items: nextItems,
           });
     if (!nextCollection.accepted) {
       return this.#retainedRejection(

@@ -104,6 +104,14 @@ export {
   type SyntheticBoringLogOverrideSession,
   type SyntheticBoringLogOverrideSessionCreationResult,
 } from "./synthetic-boring-log-override-session.js";
+export {
+  createPersistedBoringLogProjectSession,
+  createSyntheticBoringLogProjectSession,
+  syntheticBoringLogProjectSessionRevision,
+  type SyntheticBoringLogProjectDocument,
+  type SyntheticBoringLogProjectSession,
+  type SyntheticBoringLogProjectSessionCreationResult,
+} from "./synthetic-boring-log-project-session.js";
 export type {
   SyntheticOverrideRenderDatasetSession,
   SyntheticOverrideRenderDatasetSessionCreationResult,

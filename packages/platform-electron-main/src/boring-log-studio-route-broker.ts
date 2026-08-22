@@ -38,7 +38,15 @@ export type BoringLogStudioRouteResult =
   | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
 
 export type BoringLogStudioLifecycleOperation =
-  "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+  | "get-state"
+  | "new-project"
+  | "open-project"
+  | "save-project"
+  | "save-project-as"
+  | "first-boring"
+  | "previous-boring"
+  | "next-boring"
+  | "last-boring";
 
 export type BoringLogStudioLifecycleResult =
   | {
@@ -344,9 +352,17 @@ export class BoringLogStudioRouteBroker {
     const expected = args?.["expectedWorkingRevision"];
     if (
       args === null ||
-      !["get-state", "new-project", "open-project", "save-project", "save-project-as"].includes(
-        String(operation),
-      ) ||
+      ![
+        "get-state",
+        "new-project",
+        "open-project",
+        "save-project",
+        "save-project-as",
+        "first-boring",
+        "previous-boring",
+        "next-boring",
+        "last-boring",
+      ].includes(String(operation)) ||
       (expected !== null &&
         (typeof expected !== "number" || !Number.isSafeInteger(expected) || expected < 0))
     )

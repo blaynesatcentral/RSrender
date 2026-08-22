@@ -25,7 +25,7 @@ textarea {
 }
 .app-shell {
   display: grid;
-  grid-template-rows: 40px 34px 82px minmax(0, 1fr) 28px;
+  grid-template-rows: 40px 34px 82px 42px minmax(0, 1fr) 28px;
   height: 100vh;
   min-width: 980px;
 }
@@ -173,6 +173,67 @@ textarea {
   margin-top: 4px;
   color: #77858e;
   font-size: 11px;
+}
+.boring-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 12px;
+  background: #edf3f6;
+  border-bottom: 1px solid #b8c2c9;
+}
+.boring-navigation strong {
+  margin-right: 6px;
+  color: #274b60;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.boring-navigation button {
+  width: 32px;
+  height: 28px;
+  border: 1px solid #aebcc5;
+  border-radius: 3px;
+  background: #fff;
+  color: #175e83;
+}
+.boring-navigation button:hover:not(:disabled) {
+  border-color: #5594b5;
+  background: #e2f1f8;
+}
+.boring-navigation button:disabled {
+  color: #9ca8af;
+  background: #f4f6f7;
+}
+#boring-selector {
+  width: min(330px, 32vw);
+  height: 28px;
+  padding: 3px 8px;
+  border: 1px solid #9fb0ba;
+  border-radius: 3px;
+  background: #fff;
+}
+#boring-position {
+  min-width: 82px;
+  color: #3e5361;
+  font-variant-numeric: tabular-nums;
+}
+.boring-indicators {
+  margin-left: auto;
+  color: #64757f;
+  font-size: 11px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .workspace {
   display: grid;

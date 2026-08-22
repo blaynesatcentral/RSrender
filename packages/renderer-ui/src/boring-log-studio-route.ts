@@ -43,6 +43,18 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
       <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="export-pdf" disabled><span>⇩</span>Export PDF</button><small>Output</small></div>
       <div class="ribbon-message"><strong>Resolved Page Scene</strong><span id="scene-summary">Loading structured page…</span></div>
     </section>
+    <section class="boring-navigation" aria-label="Boring Log navigation">
+      <strong>Active Boring Log</strong>
+      <button type="button" id="first-boring" aria-label="First boring" title="First boring">|◀</button>
+      <button type="button" id="previous-boring" aria-label="Previous boring" title="Previous boring">◀</button>
+      <label for="boring-selector" class="sr-only">Find or choose a boring</label>
+      <input id="boring-selector" list="boring-options" type="search" autocomplete="off" placeholder="Find a boring…" aria-describedby="boring-position">
+      <datalist id="boring-options"></datalist>
+      <button type="button" id="next-boring" aria-label="Next boring" title="Next boring">▶</button>
+      <button type="button" id="last-boring" aria-label="Last boring" title="Last boring">▶|</button>
+      <output id="boring-position">Boring 1 of 1</output>
+      <span id="boring-indicators" class="boring-indicators">No warnings · Source original</span>
+    </section>
     <main class="workspace">
       <aside class="pane contents-pane" aria-labelledby="contents-title">
         <div class="pane-heading"><div><span class="eyebrow">DOCUMENT</span><h1 id="contents-title">Contents</h1></div><button id="contents-options" type="button" aria-label="Collapse all Contents groups" title="Collapse all">−</button></div>

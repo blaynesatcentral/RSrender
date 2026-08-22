@@ -338,26 +338,32 @@ test("collection rejects duplicate enabled targets, duplicate identities and non
   );
 });
 
-test("bounded assembler rejects more than one enabled override even for distinct targets", () => {
+test("bounded assembler applies multiple enabled overrides for distinct targets", () => {
+  const secondField = bld015Snapshot.explorations[0].fields.find(
+    ({ sourceFieldIdentity }) =>
+      sourceFieldIdentity !== bld015ExplorationNameField.sourceFieldIdentity,
+  );
+  assert.ok(secondField);
   const items = [
     makeOverride(),
     makeOverride({
+      sourceField: secondField,
       localOverrideIdentity: "urn:test:bld-017:local-override:second-enabled",
-      targetSourceFieldIdentity: "urn:test:bld-017:source-field:second-enabled",
+      replacementContent: { kind: "value", value: 25, originalRepresentation: "25" },
     }),
   ].sort((left, right) =>
     left.targetSourceFieldIdentity < right.targetSourceFieldIdentity ? -1 : 1,
   );
   const collection = makeCollection(items);
-  const failure = assertAssemblyFailureUnchanged(
-    makeAssemblyInput(collection),
-    "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_MULTIPLE_OVERRIDES",
-    "OVERRIDE.BOUNDED_ASSEMBLER.MULTIPLE_UNSUPPORTED",
+  const result = assembleBoundedOverrideRenderDataset(makeAssemblyInput(collection));
+  assert.equal(result.assembled, true, result.code);
+  assert.deepEqual(
+    result.value.values
+      .filter(({ application }) => application.kind === "display-value-override")
+      .map(({ sourceFieldIdentity }) => sourceFieldIdentity)
+      .sort(),
+    items.map(({ targetSourceFieldIdentity }) => targetSourceFieldIdentity).sort(),
   );
-  assert.deepEqual(failure.diagnostics[0].affected, {
-    identityKind: "PresentationOverrideCollectionIdentity",
-    identity: collection.collectionIdentity,
-  });
 });
 
 test("bounded assembler preserves duplicate-enabled target taxonomy and Diagnostic", () => {

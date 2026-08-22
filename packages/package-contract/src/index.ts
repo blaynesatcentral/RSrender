@@ -16,6 +16,8 @@ import {
 
 export const packageBoundary = "@rsrender/package-contract" as const;
 export const logProjectPackageContractRevision = "bld-035-log-project-package-v1" as const;
+export const multiBoringLogProjectPackageContractRevision =
+  "bld-036-multi-boring-log-project-package-v2" as const;
 export const logProjectManifestPath = "manifest.json" as const;
 export const logProjectDocumentPath = "document/project.json" as const;
 export const logProjectOverridesPath = "presentation/overrides.json" as const;
@@ -37,7 +39,9 @@ export interface LogProjectPackagePart {
 
 export interface ValidatedLogProjectPackage {
   readonly documentIdentity: string;
+  /** Compatibility view of the first Boring Log. */
   readonly layoutJob: BoringLogLayoutJobInput;
+  readonly layoutJobs: readonly BoringLogLayoutJobInput[];
   readonly projectAggregate: Phase1LogProjectAggregate;
   readonly presentationOverrideCollections: readonly PresentationOverrideCollection[];
   readonly authoritativeDigest: Sha256Digest;
@@ -95,6 +99,7 @@ function parseJson(bytes: Uint8Array): unknown {
 function declaration(
   path: typeof logProjectDocumentPath | typeof logProjectOverridesPath,
   bytes: Uint8Array,
+  projectSchema: "rsrender.log-project-authoring.v1" | "rsrender.log-project-authoring.v2",
 ): PartDeclaration {
   return Object.freeze({
     path,
@@ -104,9 +109,7 @@ function declaration(
     sha256: sha256Bytes(bytes),
     authoritative: true,
     schema:
-      path === logProjectDocumentPath
-        ? "rsrender.log-project-authoring.v1"
-        : "rsrender.presentation-overrides-part.v1",
+      path === logProjectDocumentPath ? projectSchema : "rsrender.presentation-overrides-part.v1",
   });
 }
 
@@ -122,15 +125,34 @@ function authoritativeDigest(documentIdentity: string, parts: readonly PartDecla
 
 export function createLogProjectPackageParts(input: unknown): LogProjectPackageResult {
   try {
-    const record = exactRecord(input, [
+    const singleRecord = exactRecord(input, [
       "layoutJob",
       "projectAggregate",
       "presentationOverrideCollections",
     ]);
+    const multiRecord = exactRecord(input, [
+      "layoutJobs",
+      "projectAggregate",
+      "presentationOverrideCollections",
+    ]);
+    const record = multiRecord ?? singleRecord;
     if (record === null || !Array.isArray(record["presentationOverrideCollections"])) {
       return rejected("LOG_PROJECT_PACKAGE_MALFORMED");
     }
-    const layoutJob = validateBoringLogLayoutJobInput(record["layoutJob"]);
+    const inputLayoutJobs = multiRecord === null ? [record["layoutJob"]] : record["layoutJobs"];
+    if (
+      !Array.isArray(inputLayoutJobs) ||
+      inputLayoutJobs.length < 1 ||
+      inputLayoutJobs.length > 64
+    ) {
+      return rejected("LOG_PROJECT_PACKAGE_DOCUMENT_INVALID");
+    }
+    const layoutJobs: BoringLogLayoutJobInput[] = [];
+    for (const inputLayoutJob of inputLayoutJobs) {
+      const layoutJob = validateBoringLogLayoutJobInput(inputLayoutJob);
+      if (!layoutJob.accepted) return rejected("LOG_PROJECT_PACKAGE_DOCUMENT_INVALID");
+      layoutJobs.push(layoutJob.value);
+    }
     const project = decodePhase1LogProjectAggregate(record["projectAggregate"]);
     const collections: PresentationOverrideCollection[] = [];
     for (const inputCollection of record["presentationOverrideCollections"]) {
@@ -138,20 +160,54 @@ export function createLogProjectPackageParts(input: unknown): LogProjectPackageR
       if (!collection.accepted) return rejected("LOG_PROJECT_PACKAGE_DOCUMENT_INVALID");
       collections.push(collection.value);
     }
-    if (!layoutJob.accepted || !project.accepted || collections.length > 1) {
+    if (!project.accepted || collections.length > 1) {
       return rejected("LOG_PROJECT_PACKAGE_DOCUMENT_INVALID");
     }
-    const documentIdentity = layoutJob.value.document.identity.boringLogId;
-    if (project.value.documentIdentity !== documentIdentity) {
+    const multi = multiRecord !== null;
+    const boringLogIdentities = layoutJobs.map(({ document }) => document.identity.boringLogId);
+    const explorationIdentities = layoutJobs.map(({ document }) => document.identity.explorationId);
+    if (
+      new Set(boringLogIdentities).size !== layoutJobs.length ||
+      new Set(explorationIdentities).size !== layoutJobs.length
+    ) {
       return rejected("LOG_PROJECT_PACKAGE_IDENTITY_MISMATCH");
     }
+    const documentIdentity = multi
+      ? project.value.documentIdentity
+      : layoutJobs[0]!.document.identity.boringLogId;
+    const membershipExplorations = project.value.logSet.memberships.map(
+      ({ sourceExplorationIdentity }) => sourceExplorationIdentity,
+    );
+    if (
+      project.value.documentIdentity !== documentIdentity ||
+      (multi &&
+        (layoutJobs.length < 2 ||
+          membershipExplorations.length !== explorationIdentities.length ||
+          membershipExplorations.some(
+            (identity, index) => identity !== explorationIdentities[index],
+          )))
+    ) {
+      return rejected("LOG_PROJECT_PACKAGE_IDENTITY_MISMATCH");
+    }
+    const projectSchema = multi
+      ? "rsrender.log-project-authoring.v2"
+      : "rsrender.log-project-authoring.v1";
     const projectBytes = encoder.encode(
-      canonicalizeJson({
-        schema: "rsrender.log-project-authoring.v1",
-        documentIdentity,
-        layoutJob: layoutJob.value,
-        projectAggregate: project.value,
-      }),
+      canonicalizeJson(
+        multi
+          ? {
+              schema: projectSchema,
+              documentIdentity,
+              layoutJobs,
+              projectAggregate: project.value,
+            }
+          : {
+              schema: projectSchema,
+              documentIdentity,
+              layoutJob: layoutJobs[0],
+              projectAggregate: project.value,
+            },
+      ),
     );
     const overrideBytes = encoder.encode(
       canonicalizeJson({
@@ -161,8 +217,8 @@ export function createLogProjectPackageParts(input: unknown): LogProjectPackageR
       }),
     );
     const declarations = Object.freeze([
-      declaration(logProjectDocumentPath, projectBytes),
-      declaration(logProjectOverridesPath, overrideBytes),
+      declaration(logProjectDocumentPath, projectBytes, projectSchema),
+      declaration(logProjectOverridesPath, overrideBytes, projectSchema),
     ]);
     const digest = authoritativeDigest(documentIdentity, declarations);
     const manifestBytes = encoder.encode(
@@ -190,7 +246,8 @@ export function createLogProjectPackageParts(input: unknown): LogProjectPackageR
       accepted: true,
       value: Object.freeze({
         documentIdentity,
-        layoutJob: layoutJob.value,
+        layoutJob: layoutJobs[0]!,
+        layoutJobs: Object.freeze(layoutJobs),
         projectAggregate: project.value,
         presentationOverrideCollections: Object.freeze(collections),
         authoritativeDigest: digest,
@@ -259,6 +316,8 @@ export function decodeLogProjectPackageParts(input: unknown): LogProjectPackageR
     )
       return rejected("LOG_PROJECT_PACKAGE_UNSUPPORTED_VERSION");
     const declarations: PartDeclaration[] = [];
+    let declaredProjectSchema:
+      "rsrender.log-project-authoring.v1" | "rsrender.log-project-authoring.v2" | null = null;
     for (const candidate of manifestRecord["parts"]) {
       const item = exactRecord(candidate, [
         "path",
@@ -278,9 +337,14 @@ export function decodeLogProjectPackageParts(input: unknown): LogProjectPackageR
           : item["path"] === logProjectOverridesPath
             ? "presentation-overrides"
             : null;
+      const projectSchemaAccepted =
+        item?.["schema"] === "rsrender.log-project-authoring.v1" ||
+        item?.["schema"] === "rsrender.log-project-authoring.v2";
       const expectedSchema =
         expectedRole === "log-project"
-          ? "rsrender.log-project-authoring.v1"
+          ? projectSchemaAccepted
+            ? item?.["schema"]
+            : null
           : "rsrender.presentation-overrides-part.v1";
       if (
         bytes === undefined ||
@@ -293,6 +357,10 @@ export function decodeLogProjectPackageParts(input: unknown): LogProjectPackageR
         item["schema"] !== expectedSchema
       )
         return rejected("LOG_PROJECT_PACKAGE_DIGEST_MISMATCH");
+      if (expectedRole === "log-project") {
+        declaredProjectSchema = expectedSchema as
+          "rsrender.log-project-authoring.v1" | "rsrender.log-project-authoring.v2";
+      }
       declarations.push(candidate as PartDeclaration);
     }
     declarations.sort((left, right) => left.path.localeCompare(right.path, "en"));
@@ -303,12 +371,22 @@ export function decodeLogProjectPackageParts(input: unknown): LogProjectPackageR
     ) {
       return rejected("LOG_PROJECT_PACKAGE_DIGEST_MISMATCH");
     }
-    const projectPart = exactRecord(parseJson(parts.get(logProjectDocumentPath)!), [
-      "schema",
-      "documentIdentity",
-      "layoutJob",
-      "projectAggregate",
-    ]);
+    const parsedProject = parseJson(parts.get(logProjectDocumentPath)!);
+    const parsedProjectRecord =
+      typeof parsedProject === "object" && parsedProject !== null && !Array.isArray(parsedProject)
+        ? (parsedProject as Record<string, unknown>)
+        : null;
+    const parsedProjectSchema =
+      parsedProjectRecord === null ? null : (parsedProjectRecord["schema"] ?? null);
+    if (declaredProjectSchema === null || parsedProjectSchema !== declaredProjectSchema) {
+      return rejected("LOG_PROJECT_PACKAGE_DOCUMENT_INVALID");
+    }
+    const projectPart = exactRecord(
+      parsedProject,
+      parsedProjectSchema === "rsrender.log-project-authoring.v1"
+        ? ["schema", "documentIdentity", "layoutJob", "projectAggregate"]
+        : ["schema", "documentIdentity", "layoutJobs", "projectAggregate"],
+    );
     const overridesPart = exactRecord(parseJson(parts.get(logProjectOverridesPath)!), [
       "schema",
       "documentIdentity",
@@ -317,14 +395,16 @@ export function decodeLogProjectPackageParts(input: unknown): LogProjectPackageR
     if (
       projectPart === null ||
       overridesPart === null ||
-      projectPart["schema"] !== "rsrender.log-project-authoring.v1" ||
+      projectPart["schema"] !== parsedProjectSchema ||
       overridesPart["schema"] !== "rsrender.presentation-overrides-part.v1" ||
       projectPart["documentIdentity"] !== documentIdentity ||
       overridesPart["documentIdentity"] !== documentIdentity
     )
       return rejected("LOG_PROJECT_PACKAGE_IDENTITY_MISMATCH");
     const rebuilt = createLogProjectPackageParts({
-      layoutJob: projectPart["layoutJob"],
+      ...(parsedProjectSchema === "rsrender.log-project-authoring.v1"
+        ? { layoutJob: projectPart["layoutJob"] }
+        : { layoutJobs: projectPart["layoutJobs"] }),
       projectAggregate: projectPart["projectAggregate"],
       presentationOverrideCollections: overridesPart["collections"],
     });

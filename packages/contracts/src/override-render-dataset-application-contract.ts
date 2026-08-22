@@ -18,6 +18,8 @@ import {
 } from "./history-core-contract.js";
 import { parseOpaqueIdentity } from "./identity.js";
 import { isSha256Digest, sha256Utf8, type Sha256Digest } from "./sha256.js";
+
+export const maximumOverrideRenderDatasetProjectionOverrides = 256 as const;
 import { isWellFormedUnicode } from "./unicode.js";
 
 export const overrideRenderDatasetApplicationContractVersion = 1 as const;
@@ -1658,7 +1660,9 @@ function parseProjection(input: unknown, derivedFields: boolean): OverrideRender
     return fail("OVERRIDE_RENDER_CONTRACT_DIGEST_MISMATCH");
   }
   const overrides = readArray(record["overrides"]).map(parseOverrideState);
-  if (overrides.length > 1) return fail("OVERRIDE_RENDER_CONTRACT_WRONG_TYPE");
+  if (overrides.length > maximumOverrideRenderDatasetProjectionOverrides) {
+    return fail("OVERRIDE_RENDER_CONTRACT_WRONG_TYPE");
+  }
   const values = readArray(record["values"]).map(parseValueProjection);
   if (new Set(values.map((value) => value.sourceFieldIdentity)).size !== values.length) {
     return fail("OVERRIDE_RENDER_CONTRACT_DUPLICATE_VALUE");

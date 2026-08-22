@@ -4,50 +4,50 @@
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts",
-      "bytes": 3802,
-      "sha256": "c660e774dfc4699ce86e5ca2656689adf13c495b6158976cb1ae1ded7611a30d"
+      "bytes": 4117,
+      "sha256": "ae05d92cd478ec5250aa6e54a46c6bacbfa8f237fa1741f767788579f66c6166"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts.map",
-      "bytes": 1581,
-      "sha256": "be078816befb19664e024b7cd102de28e1846540b2314bb4fdfab2f9ed8f7c94"
+      "bytes": 1707,
+      "sha256": "7a63330ff5ec2923b0e7801d7e8fb591a50d22880fd190ae2aa29d3277c488f5"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js",
-      "bytes": 1580,
-      "sha256": "e25ab23c480d09d7ecd437794be19599264ae1cf1d80fdc7145418214528ee2c"
+      "bytes": 1763,
+      "sha256": "e720bb7e7de8cf7820e272e5a71eb6aadf1a4df291e6d6f9514c4bd722bf8756"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js.map",
-      "bytes": 713,
-      "sha256": "f22512b3c903b4db1d2bc07c695216aee3c097208b7d90a35b52e019774977ed"
+      "bytes": 785,
+      "sha256": "b03b7b14a50bced934e83ccd5449575c7f8c850a67b9362240fe7e3ceb084767"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts",
-      "bytes": 8396,
-      "sha256": "f7565ea82b38ae4853eff7d87becd40d80f23d2000ab3db7aa166d00461e062a"
+      "bytes": 8445,
+      "sha256": "389e6086865bea4dbef341f57cbf354c53570958a6b1bea8e0470665b6166b05"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts.map",
-      "bytes": 4110,
-      "sha256": "9b18b8801140140fef7b273f1ad0ae345dd38fccd241037669bcb5be0dbff920"
+      "bytes": 4123,
+      "sha256": "50985d267ef800d5e6c36a814301838fcf412a52df70a75a4439a23beb2d56d0"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js",
-      "bytes": 3791,
-      "sha256": "f2047f1b7b2b6e71d3951b572072c6aa64ca71cb651d3b0610247351e2b472f4"
+      "bytes": 3840,
+      "sha256": "a524223437cd8df5833886928bcc7e30250decebffbeea473873ae523ba6e9b7"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js.map",
-      "bytes": 1905,
-      "sha256": "f781795c3aa30558816c07ef4cdfe8fa9e5dec5963968af75c565866ddfe4dc5"
+      "bytes": 1918,
+      "sha256": "d3c6159c85f2aa667bc619a065f27cc867a66596560bd81ea7767da71e4ef9d7"
     },
     {
       "package": "domain",
@@ -100,26 +100,26 @@
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.d.ts",
-      "bytes": 1862,
-      "sha256": "faaaf1f969d936819e844228d72c29ee43dc8a35994dddf051cb5d894b3854c3"
+      "bytes": 2092,
+      "sha256": "5b68897a70d42b9e8c96497943bbbf721b67576565b3932e2946f4a1c73c7e9c"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.d.ts.map",
-      "bytes": 1280,
-      "sha256": "4370af3ec7e1493b0d7cf69143d4485d7ed41221c67286d0b4a99641db8f08e1"
+      "bytes": 1382,
+      "sha256": "19e59deff1adfe9438f744dec3eafa272225b6180589251533f2fd9bc903858d"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.js",
-      "bytes": 11214,
-      "sha256": "258078b6a91b7550bdf9ffcf4b691282efda193bba1d69e376bc62a0832dd36c"
+      "bytes": 14540,
+      "sha256": "15f5e290e596cc76f8cd285d3d84736cc525ab5619b60d36f1f1fc6081785667"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.js.map",
-      "bytes": 8845,
-      "sha256": "0f3e758293cea1c1c7d6073d7592defd80686bd33dc4e3e9b2e64f8dfdb972fc"
+      "bytes": 11537,
+      "sha256": "23e9be26a9106a7ea5a7c2fb88043614654223cfdf3fd5a99147c411308aea78"
     },
     {
       "package": "platform-electron-main",

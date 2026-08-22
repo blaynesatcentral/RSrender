@@ -10,11 +10,16 @@ import {
   markOverrideRenderDatasetDurable,
   createSyntheticBoringLogOverrideSession,
   createPersistedBoringLogOverrideSession,
+  createSyntheticBoringLogProjectSession,
+  createPersistedBoringLogProjectSession,
   createSyntheticOverrideRenderDatasetSession,
+  type SyntheticBoringLogProjectSession,
   type SyntheticBoringLogOverrideSession,
 } from "@rsrender/application";
 import {
   sha256CanonicalJson,
+  validateBoringLogLayoutJobInput,
+  type BoringLogLayoutJobInput,
   type BoringLogTextMeasurementRequest,
   type BoringLogTextMeasurementResult,
 } from "@rsrender/contracts";
@@ -95,6 +100,7 @@ const PROBE_ARGUMENT = "--rsrender-bld021-probe";
 const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
 const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
 const LIFECYCLE_PROBE_ARGUMENT = "--rsrender-bld035-probe";
+const MULTI_BORING_PROBE_ARGUMENT = "--rsrender-bld036-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -161,13 +167,57 @@ const runtimeDocumentInput = (() => {
 })();
 let runtimeLayoutJob =
   runtimeDocumentInput.mode === "accepted" ? runtimeDocumentInput.decoded.layoutJob : null;
+const EXAMPLE_PROJECT_DOCUMENT_IDENTITY =
+  "urn:rsrender:log-project:synthetic-riverside-multi-exploration";
+function createSecondExampleLayoutJob(
+  first: BoringLogLayoutJobInput,
+): BoringLogLayoutJobInput | null {
+  try {
+    const document = JSON.parse(
+      JSON.stringify(first.document)
+        .replaceAll("test-01", "test-02")
+        .replaceAll("stratum-", "b02-stratum-")
+        .replaceAll("sample-", "b02-sample-")
+        .replaceAll("remark-", "b02-remark-"),
+    ) as BoringLogLayoutJobInput["document"];
+    const updatedDocument = {
+      ...document,
+      metadata: {
+        ...document.metadata,
+        documentTitle: "BORING LOG TEST-02",
+        groundElevationFt: 176.25,
+        location: "Riverview Drive, Dayton, OR · Station 2",
+      },
+    };
+    const candidate = validateBoringLogLayoutJobInput({
+      ...first,
+      jobId: "job:rsrender-example-boring-log-02@r1",
+      inputRevision: 1,
+      fixtureDigest: sha256CanonicalJson(updatedDocument),
+      document: updatedDocument,
+    });
+    return candidate.accepted ? candidate.value : null;
+  } catch {
+    return null;
+  }
+}
+let runtimeLayoutJobs: readonly BoringLogLayoutJobInput[] =
+  runtimeLayoutJob === null
+    ? Object.freeze([])
+    : (() => {
+        const second = createSecondExampleLayoutJob(runtimeLayoutJob);
+        return second === null
+          ? Object.freeze([runtimeLayoutJob])
+          : Object.freeze([runtimeLayoutJob, second]);
+      })();
 const runtimeProjectInputPath = process.argv
   .find((value) => value.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX))
   ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
-const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT);
-const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT);
+const multiBoringProbeMode = process.argv.includes(MULTI_BORING_PROBE_ARGUMENT);
+const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
+const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
 const studioProbeMode =
   process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode || lifecycleProbeMode;
 const probeMode = bld021ProbeMode || studioProbeMode;
@@ -1825,7 +1875,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
   }
   let publication: DataRecord | null = null;
-  if (pdfProbeMode) {
+  if (pdfProbeMode && !multiBoringProbeMode) {
     requireProbe(
       (await pageValue(
         window,
@@ -1867,8 +1917,158 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       "PUBLICATION_RESULT_INVALID",
     );
   }
+  let boringNavigation: DataRecord | null = null;
+  if (multiBoringProbeMode) {
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.querySelector('#svg-page [data-semantic-id="lithology:stratum-01"]'); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+      )) === true,
+      "SELECT_FIRST_BORING_MATERIAL_BEFORE_NAVIGATION",
+    );
+    await waitFor(
+      window,
+      `document.getElementById("property-semantic-id")?.textContent === "lithology:stratum-01"`,
+      "WAIT_FIRST_BORING_SELECTION_BEFORE_NAVIGATION",
+    );
+    await typeText(
+      window,
+      "#property-content",
+      "First boring retained its own authored description.",
+    );
+    await press(window, "#apply-property", "Space", "FOCUS_FIRST_BORING_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("property-effective-value")?.textContent === "First boring retained its own authored description." && document.getElementById("boring-indicators")?.textContent?.includes("Has overrides") === true`,
+      "WAIT_FIRST_BORING_APPLY",
+    );
+    const beforeNavigation = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { accepted: value.accepted, workingRevision: value.accepted ? value.projection.workingRevision : null, dirty: value.accepted ? value.projection.dirty : null, active: document.body.dataset.activeBoringLogIdentity, selector: document.getElementById("boring-selector")?.value, position: document.getElementById("boring-position")?.textContent, effective: document.getElementById("property-effective-value")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+      ),
+    );
+    await press(window, "#next-boring", "Space", "FOCUS_NEXT_BORING");
+    await waitFor(
+      window,
+      `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02" && document.getElementById("canvas-title")?.textContent?.startsWith("BORING LOG TEST-02") === true && document.getElementById("boring-position")?.textContent === "Boring 2 of 2" && document.querySelector('#svg-page [data-semantic-id="lithology:b02-stratum-01"]') !== null`,
+      "WAIT_NEXT_BORING",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.querySelector('#svg-page [data-semantic-id="lithology:b02-stratum-01"]'); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+      )) === true,
+      "SELECT_SECOND_BORING_MATERIAL",
+    );
+    await waitFor(
+      window,
+      `document.getElementById("property-semantic-id")?.textContent === "lithology:b02-stratum-01"`,
+      "WAIT_SECOND_BORING_SELECTION",
+    );
+    await typeText(
+      window,
+      "#property-content",
+      "Second boring retained its own authored description.",
+    );
+    await press(window, "#apply-property", "Space", "FOCUS_SECOND_BORING_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("property-effective-value")?.textContent === "Second boring retained its own authored description." && document.getElementById("boring-indicators")?.textContent?.includes("Has overrides") === true`,
+      "WAIT_SECOND_BORING_APPLY",
+    );
+    const second = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, dirty: value.accepted ? value.projection.dirty : null, effective: document.getElementById("property-effective-value")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+      ),
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => Object.keys(globalThis.rsrenderPublication ?? {}).join(",") === "exportPdf" && document.getElementById("export-pdf")?.disabled === false)()`,
+      )) === true,
+      "MULTI_BORING_PUBLICATION_AUTHORITY_INVALID",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false; })()`,
+      )) === true,
+      "MULTI_BORING_PUBLICATION_TAB_INVALID",
+    );
+    await press(window, "#export-pdf", "Space", "FOCUS_MULTI_BORING_EXPORT_PDF");
+    await waitFor(
+      window,
+      `document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS" && document.getElementById("editor-status")?.textContent?.startsWith("PDF exported and reopened successfully:") === true`,
+      "WAIT_MULTI_BORING_EXPORT_PDF",
+    );
+    publication = record(
+      await pageValue(
+        window,
+        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
+      ),
+    );
+    requireProbe(
+      publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+        publication["destinationPath"] === path.resolve(pdfProbeOutput ?? "") &&
+        publication["activeBoringLogIdentity"] === "urn:rsrender:boring-log:test-02" &&
+        typeof publication["pdfDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["pdfDigest"]) &&
+        typeof publication["sceneDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["sceneDigest"]) &&
+        typeof publication["projectionDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/u.test(publication["projectionDigest"]) &&
+        typeof publication["pdfBytes"] === "number" &&
+        publication["pdfBytes"] > 1_024 &&
+        publication["activeId"] === "export-pdf",
+      "MULTI_BORING_PUBLICATION_RESULT_INVALID",
+    );
+    await press(window, "#previous-boring", "Space", "FOCUS_PREVIOUS_BORING");
+    await waitFor(
+      window,
+      `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-01" && document.getElementById("boring-position")?.textContent === "Boring 1 of 2" && document.getElementById("property-semantic-id")?.textContent === "lithology:stratum-01" && document.getElementById("property-effective-value")?.textContent === "First boring retained its own authored description."`,
+      "WAIT_PREVIOUS_BORING",
+    );
+    const first = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, dirty: value.accepted ? value.projection.dirty : null, effective: document.getElementById("property-effective-value")?.textContent, selector: document.getElementById("boring-selector")?.value, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+      ),
+    );
+    requireProbe(
+      beforeNavigation["accepted"] === true &&
+        beforeNavigation["dirty"] === true &&
+        beforeNavigation["effective"] === "First boring retained its own authored description." &&
+        (beforeNavigation["indicator"] as string).includes("Has overrides") &&
+        second["dirty"] === true &&
+        (second["indicator"] as string).includes("Has overrides") &&
+        first["dirty"] === true &&
+        second["workingRevision"] === (beforeNavigation["workingRevision"] as number) + 1 &&
+        first["workingRevision"] === second["workingRevision"] &&
+        second["effective"] === "Second boring retained its own authored description." &&
+        first["effective"] === "First boring retained its own authored description." &&
+        (first["indicator"] as string).includes("Has overrides") &&
+        first["selector"] === "1. BORING LOG TEST-01",
+      "MULTI_BORING_NAVIGATION_INVALID",
+    );
+    boringNavigation = Object.freeze({ before: beforeNavigation, second, first });
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.querySelector('#svg-page [data-semantic-id="column-description"]'); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+      )) === true,
+      "RESTORE_DESCRIPTION_COLUMN_SELECTION",
+    );
+    await waitFor(
+      window,
+      `document.getElementById("property-semantic-id")?.textContent === "column-description"`,
+      "WAIT_DESCRIPTION_COLUMN_SELECTION",
+    );
+  }
   let persistence: DataRecord | null = null;
   if (lifecycleProbeMode) {
+    await pageValue(window, `document.getElementById("ribbon-tab-home")?.click(); true`);
     await typeText(window, "#property-content", "192000");
     await press(window, "#apply-property", "Space", "FOCUS_PROJECT_PERSISTED_EDIT");
     await waitFor(
@@ -1909,20 +2109,24 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const reopened = await openLogProjectFile(path.resolve(lifecycleProbeOutput ?? ""));
     requireProbe(
       reopened.accepted &&
-        reopened.value.project.documentIdentity ===
-          runtimeLayoutJob?.document.identity.boringLogId &&
+        reopened.value.project.layoutJobs.some(
+          ({ document }) =>
+            document.identity.boringLogId === runtimeLayoutJob?.document.identity.boringLogId,
+        ) &&
         reopened.value.project.presentationOverrideCollections.length === 1,
       "PROJECT_LIFECYCLE_REOPEN_INVALID",
     );
   }
   return Object.freeze({
-    schema: lifecycleProbeMode
-      ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-      : pdfProbeMode
-        ? "rsrender.bld027.boring-log-pdf-probe.v1"
-        : studioEditingMode
-          ? "rsrender.bld026.boring-log-editor-probe.v1"
-          : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: multiBoringProbeMode
+      ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+      : lifecycleProbeMode
+        ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+        : pdfProbeMode
+          ? "rsrender.bld027.boring-log-pdf-probe.v1"
+          : studioEditingMode
+            ? "rsrender.bld026.boring-log-editor-probe.v1"
+            : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
@@ -1930,6 +2134,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     selection,
     interactions: Object.freeze({ ...interactions, fitSmall, fitLarge, panScroll, validation }),
     editing,
+    boringNavigation,
     publication,
     persistence,
     zoomPercent: 90,
@@ -1970,13 +2175,15 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? lifecycleProbeMode
-            ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-            : pdfProbeMode
-              ? "rsrender.bld027.boring-log-pdf-probe.v1"
-              : studioEditingMode
-                ? "rsrender.bld026.boring-log-editor-probe.v1"
-                : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? multiBoringProbeMode
+            ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+            : lifecycleProbeMode
+              ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+              : pdfProbeMode
+                ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                : studioEditingMode
+                  ? "rsrender.bld026.boring-log-editor-probe.v1"
+                  : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -1998,6 +2205,7 @@ async function main(): Promise<void> {
     }
     openedRuntimeProject = opened.value;
     runtimeLayoutJob = opened.value.project.layoutJob;
+    runtimeLayoutJobs = opened.value.project.layoutJobs;
   }
   if (
     globalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ === true &&
@@ -2033,26 +2241,45 @@ async function main(): Promise<void> {
   installProtocol(electronSession);
   if (studioEditingMode && runtimeLayoutJob === null) return fail("DOCUMENT_INPUT_UNAVAILABLE");
   const documentIdentity =
-    runtimeLayoutJob?.document.identity.boringLogId ??
-    "urn:rsrender:bld-021:document:semantic-editor-001";
-  let structuredSession: SyntheticBoringLogOverrideSession | null = null;
+    openedRuntimeProject?.project.documentIdentity ??
+    (runtimeLayoutJobs.length > 1
+      ? EXAMPLE_PROJECT_DOCUMENT_IDENTITY
+      : (runtimeLayoutJob?.document.identity.boringLogId ??
+        "urn:rsrender:bld-021:document:semantic-editor-001"));
+  let structuredSession:
+    SyntheticBoringLogOverrideSession | SyntheticBoringLogProjectSession | null = null;
   let service;
   if (studioEditingMode) {
     const synthetic =
-      openedRuntimeProject === null
-        ? createSyntheticBoringLogOverrideSession({
-            documentIdentity,
-            ownerGeneration: 1,
-            layoutJob: runtimeLayoutJob,
-          })
-        : createPersistedBoringLogOverrideSession({
-            documentIdentity,
-            ownerGeneration: 1,
-            layoutJob: openedRuntimeProject.project.layoutJob,
-            projectAggregate: openedRuntimeProject.project.projectAggregate,
-            presentationOverrideCollections:
-              openedRuntimeProject.project.presentationOverrideCollections,
-          });
+      runtimeLayoutJobs.length > 1
+        ? openedRuntimeProject === null
+          ? createSyntheticBoringLogProjectSession({
+              projectDocumentIdentity: documentIdentity,
+              ownerGeneration: 1,
+              layoutJobs: runtimeLayoutJobs,
+            })
+          : createPersistedBoringLogProjectSession({
+              projectDocumentIdentity: documentIdentity,
+              ownerGeneration: 1,
+              layoutJobs: runtimeLayoutJobs,
+              projectAggregate: openedRuntimeProject.project.projectAggregate,
+              presentationOverrideCollections:
+                openedRuntimeProject.project.presentationOverrideCollections,
+            })
+        : openedRuntimeProject === null
+          ? createSyntheticBoringLogOverrideSession({
+              documentIdentity,
+              ownerGeneration: 1,
+              layoutJob: runtimeLayoutJob,
+            })
+          : createPersistedBoringLogOverrideSession({
+              documentIdentity,
+              ownerGeneration: 1,
+              layoutJob: openedRuntimeProject.project.layoutJob,
+              projectAggregate: openedRuntimeProject.project.projectAggregate,
+              presentationOverrideCollections:
+                openedRuntimeProject.project.presentationOverrideCollections,
+            });
     if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
     structuredSession = synthetic.session;
     service = synthetic.session.service;
@@ -2117,6 +2344,23 @@ async function main(): Promise<void> {
   );
   if (structuredSession !== null) {
     const source = structuredSession;
+    const projectDocuments = Object.freeze(
+      "documents" in source
+        ? [...source.documents]
+        : [
+            Object.freeze({
+              boringLogIdentity: source.layoutJob.document.identity.boringLogId,
+              explorationIdentity: source.layoutJob.document.identity.explorationId,
+              displayName: source.layoutJob.document.metadata.documentTitle,
+              ordinal: 1,
+              warningCount: 0,
+              layoutJob: source.layoutJob,
+              bindings: source.bindings,
+            }),
+          ],
+    );
+    let activeDocumentIndex = 0;
+    const activeDocument = () => projectDocuments[activeDocumentIndex]!;
     let projectBinding: {
       authoritativePath: string | null;
       displayPath: string | null;
@@ -2144,8 +2388,8 @@ async function main(): Promise<void> {
         });
       }
       const prepared = prepareBoringLogStudioProjection({
-        layoutJob: source.layoutJob,
-        bindings: source.bindings,
+        layoutJob: activeDocument().layoutJob,
+        bindings: activeDocument().bindings,
         dataset: queried.result.projection,
       });
       if (!prepared.accepted) return prepared;
@@ -2181,6 +2425,14 @@ async function main(): Promise<void> {
       if (!queried.accepted || queried.result.kind !== "render-dataset.projection.result") {
         return null;
       }
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      const overriddenFields = new Set<string>(
+        captured?.presentationOverrideCollections.flatMap((collection) =>
+          collection.items
+            .filter(({ enabled }) => enabled)
+            .map(({ targetSourceFieldIdentity }) => targetSourceFieldIdentity),
+        ) ?? [],
+      );
       return Object.freeze({
         documentIdentity,
         displayName:
@@ -2195,6 +2447,23 @@ async function main(): Promise<void> {
         workingRevision: queried.result.workingRevision,
         durableRevision: queried.result.durableRevision,
         dirty: queried.result.dirty,
+        activeBoringLogIdentity: activeDocument().boringLogIdentity,
+        activeExplorationIdentity: activeDocument().explorationIdentity,
+        activeOrdinal: activeDocumentIndex + 1,
+        boringLogs: Object.freeze(
+          projectDocuments.map((document) =>
+            Object.freeze({
+              boringLogIdentity: document.boringLogIdentity,
+              explorationIdentity: document.explorationIdentity,
+              displayName: document.displayName,
+              ordinal: document.ordinal,
+              warningCount: document.warningCount,
+              hasOverrides: document.bindings.some(({ sourceFieldIdentity }) =>
+                overriddenFields.has(sourceFieldIdentity),
+              ),
+            }),
+          ),
+        ),
       });
     };
     const lifecycleResponse = (
@@ -2250,7 +2519,9 @@ async function main(): Promise<void> {
         targetPath: target,
         expectedBaseline,
         replaceExisting: expectedBaseline !== null,
-        layoutJob: source.layoutJob,
+        ...(projectDocuments.length > 1
+          ? { layoutJobs: projectDocuments.map(({ layoutJob }) => layoutJob) }
+          : { layoutJob: activeDocument().layoutJob }),
         projectAggregate: captured.project.aggregate,
         presentationOverrideCollections: captured.presentationOverrideCollections,
       });
@@ -2279,6 +2550,30 @@ async function main(): Promise<void> {
       if (current === null) return lifecycleResponse(false, "PROJECT_STATE_UNAVAILABLE");
       if (operation === "get-state") {
         return lifecycleResponse(true, "PROJECT_STATE_READY", current);
+      }
+      if (
+        operation === "first-boring" ||
+        operation === "previous-boring" ||
+        operation === "next-boring" ||
+        operation === "last-boring"
+      ) {
+        if (
+          expectedWorkingRevision !== null &&
+          expectedWorkingRevision !== current.workingRevision
+        ) {
+          return lifecycleResponse(false, "PROJECT_WORKING_REVISION_STALE", current);
+        }
+        const nextIndex =
+          operation === "first-boring"
+            ? 0
+            : operation === "last-boring"
+              ? projectDocuments.length - 1
+              : operation === "previous-boring"
+                ? Math.max(0, activeDocumentIndex - 1)
+                : Math.min(projectDocuments.length - 1, activeDocumentIndex + 1);
+        activeDocumentIndex = nextIndex;
+        projectionCache.clear();
+        return lifecycleResponse(true, "PROJECT_BORING_CHANGED", await projectState());
       }
       if (operation === "save-project") {
         return performProjectSave(expectedWorkingRevision, false);

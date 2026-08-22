@@ -1,6 +1,7 @@
 import {
   canonicalizeJson,
   defineOpaqueIdentityCodec,
+  maximumOverrideRenderDatasetProjectionOverrides,
   parseSha256Digest,
   sha256CanonicalJson,
   type OpaqueIdentity,
@@ -395,10 +396,13 @@ function makeDataset(
   const fields = snapshotFields(snapshot);
   const byIdentity = new Map(fields.map((field) => [field.sourceFieldIdentity, field]));
   const enabled = new Map<string, DisplayValueOverride>();
-  if ((collection?.items.filter((item) => item.enabled).length ?? 0) > 1) {
+  if (
+    (collection?.items.filter((item) => item.enabled).length ?? 0) >
+    maximumOverrideRenderDatasetProjectionOverrides
+  ) {
     return conflict(
       "BOUNDED_OVERRIDE_ASSEMBLY_UNSUPPORTED_MULTIPLE_OVERRIDES",
-      "OVERRIDE.BOUNDED_ASSEMBLER.MULTIPLE_UNSUPPORTED",
+      "OVERRIDE.BOUNDED_ASSEMBLER.CAPACITY_EXCEEDED",
       collection?.collectionIdentity ?? presentation.revisionIdentity,
       inputDigest,
       "PresentationOverrideCollectionIdentity",

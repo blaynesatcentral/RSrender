@@ -202,7 +202,8 @@ export async function saveLogProjectFile(input: {
   readonly targetPath: string;
   readonly expectedBaseline: LogProjectFileBaseline | null;
   readonly replaceExisting: boolean;
-  readonly layoutJob: unknown;
+  readonly layoutJob?: unknown;
+  readonly layoutJobs?: unknown;
   readonly projectAggregate: unknown;
   readonly presentationOverrideCollections: unknown;
 }): Promise<
@@ -220,7 +221,9 @@ export async function saveLogProjectFile(input: {
   if (target === null) return rejected("PROJECT_PATH_INVALID");
   if (!supportedStorage(target)) return rejected("PROJECT_STORAGE_UNSUPPORTED");
   const logical = createLogProjectPackageParts({
-    layoutJob: input.layoutJob,
+    ...(input.layoutJobs === undefined
+      ? { layoutJob: input.layoutJob }
+      : { layoutJobs: input.layoutJobs }),
     projectAggregate: input.projectAggregate,
     presentationOverrideCollections: input.presentationOverrideCollections,
   });

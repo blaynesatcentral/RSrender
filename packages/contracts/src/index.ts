@@ -215,6 +215,7 @@ export {
   encodeOverrideRenderDatasetProjection,
   encodeOverrideRenderDatasetQuery,
   encodeOverrideRenderDatasetQueryResult,
+  maximumOverrideRenderDatasetProjectionOverrides,
   overrideRenderDatasetApplicationContractRevision,
   overrideRenderDatasetApplicationContractVersion,
   overrideRenderDatasetEventKind,

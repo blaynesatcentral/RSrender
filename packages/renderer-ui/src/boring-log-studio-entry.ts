@@ -64,6 +64,17 @@ type PublicationResult =
       }>;
     }>;
 
+type LifecycleOperation =
+  | "get-state"
+  | "new-project"
+  | "open-project"
+  | "save-project"
+  | "save-project-as"
+  | "first-boring"
+  | "previous-boring"
+  | "next-boring"
+  | "last-boring";
+
 type StudioApis = Readonly<{
   readonly studio: {
     readonly getProjection: (input: {
@@ -73,8 +84,7 @@ type StudioApis = Readonly<{
       | { readonly accepted: true; readonly projection: StudioProjection }
     >;
     readonly lifecycle: (input: {
-      readonly operation:
-        "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+      readonly operation: LifecycleOperation;
       readonly expectedWorkingRevision: number | null;
     }) => Promise<unknown>;
   };
@@ -95,6 +105,17 @@ type LifecycleState = Readonly<{
   workingRevision: number;
   durableRevision: number;
   dirty: boolean;
+  activeBoringLogIdentity: string;
+  activeExplorationIdentity: string;
+  activeOrdinal: number;
+  boringLogs: readonly Readonly<{
+    boringLogIdentity: string;
+    explorationIdentity: string;
+    displayName: string;
+    ordinal: number;
+    warningCount: number;
+    hasOverrides: boolean;
+  }>[];
 }>;
 
 type PublicationApi = Readonly<{
@@ -210,8 +231,18 @@ async function main(): Promise<void> {
   const validateButton = element<HTMLButtonElement>("validate-document");
   const selectToolButton = element<HTMLButtonElement>("select-tool");
   const panToolButton = element<HTMLButtonElement>("pan-tool");
+  const boringSelector = element<HTMLInputElement>("boring-selector");
+  const boringOptions = element<HTMLDataListElement>("boring-options");
+  const boringPosition = element<HTMLOutputElement>("boring-position");
+  const boringIndicators = element<HTMLElement>("boring-indicators");
+  const firstBoringButton = element<HTMLButtonElement>("first-boring");
+  const previousBoringButton = element<HTMLButtonElement>("previous-boring");
+  const nextBoringButton = element<HTMLButtonElement>("next-boring");
+  const lastBoringButton = element<HTMLButtonElement>("last-boring");
   let selectedSemanticId: string | null = null;
   let studioProjection: StudioProjection | null = bootstrapProjection;
+  let lifecycleState: LifecycleState | null = null;
+  const selectionByBoring = new Map<string, string | null>();
   const collapsedTreeItems = new Set<string>();
   let contentsMode: "drawing" | "source" = "drawing";
   let interactionMode: "select" | "pan" = "select";
@@ -299,7 +330,27 @@ async function main(): Promise<void> {
       ) ||
       !Number.isSafeInteger(state["workingRevision"]) ||
       !Number.isSafeInteger(state["durableRevision"]) ||
-      typeof state["dirty"] !== "boolean"
+      typeof state["dirty"] !== "boolean" ||
+      typeof state["activeBoringLogIdentity"] !== "string" ||
+      typeof state["activeExplorationIdentity"] !== "string" ||
+      !Number.isSafeInteger(state["activeOrdinal"]) ||
+      !Array.isArray(state["boringLogs"]) ||
+      state["boringLogs"].length < 1 ||
+      state["boringLogs"].length > 64 ||
+      state["boringLogs"].some((input) => {
+        if (typeof input !== "object" || input === null || Array.isArray(input)) return true;
+        const boring = input as Record<string, unknown>;
+        return (
+          typeof boring["boringLogIdentity"] !== "string" ||
+          typeof boring["explorationIdentity"] !== "string" ||
+          typeof boring["displayName"] !== "string" ||
+          !Number.isSafeInteger(boring["ordinal"]) ||
+          typeof boring["warningCount"] !== "number" ||
+          !Number.isSafeInteger(boring["warningCount"]) ||
+          boring["warningCount"] < 0 ||
+          typeof boring["hasOverrides"] !== "boolean"
+        );
+      })
     )
       return null;
     return {
@@ -310,17 +361,57 @@ async function main(): Promise<void> {
   }
 
   function installLifecycleState(next: LifecycleState): void {
+    lifecycleState = next;
     documentName.textContent = next.displayName;
     documentName.title = next.displayPath ?? "This project has not been saved yet.";
     document.body.dataset["authoritativeFileBound"] = String(next.authoritativeFileBound);
     document.body.dataset["projectStorageStatus"] = next.storageStatus;
+    document.body.dataset["activeBoringLogIdentity"] = next.activeBoringLogIdentity;
+    boringOptions.replaceChildren(
+      ...next.boringLogs.map((boring) => {
+        const option = document.createElement("option");
+        option.value = `${boring.ordinal}. ${boring.displayName}`;
+        option.label = boring.explorationIdentity;
+        return option;
+      }),
+    );
+    const active = next.boringLogs.find(
+      ({ boringLogIdentity }) => boringLogIdentity === next.activeBoringLogIdentity,
+    );
+    if (active === undefined) throw new Error("Active Boring Log is absent from project state");
+    boringSelector.value = `${active.ordinal}. ${active.displayName}`;
+    boringPosition.value = `Boring ${active.ordinal} of ${next.boringLogs.length}`;
+    boringIndicators.textContent = `${active.warningCount === 0 ? "No warnings" : `${active.warningCount} warning${active.warningCount === 1 ? "" : "s"}`} · ${active.hasOverrides ? "Has overrides" : "Source original"}`;
+    firstBoringButton.disabled = active.ordinal === 1;
+    previousBoringButton.disabled = active.ordinal === 1;
+    nextBoringButton.disabled = active.ordinal === next.boringLogs.length;
+    lastBoringButton.disabled = active.ordinal === next.boringLogs.length;
+    element<HTMLElement>("canvas-title").textContent = `${active.displayName} — Page 1`;
+    element<HTMLElement>("page-status").textContent =
+      `Boring ${active.ordinal} of ${next.boringLogs.length} · Page 1 of 1`;
   }
 
-  async function invokeLifecycle(
-    operation: "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as",
-  ): Promise<void> {
+  async function refreshLifecycleStateSilently(): Promise<boolean> {
+    const apis = studioApis();
+    if (apis === null) return false;
+    const result = decodedLifecycleResult(
+      await apis.studio.lifecycle({ operation: "get-state", expectedWorkingRevision: null }),
+    );
+    if (result === null || !result.accepted || result.state === null) return false;
+    installLifecycleState(result.state);
+    return true;
+  }
+
+  async function invokeLifecycle(operation: LifecycleOperation): Promise<void> {
     const apis = studioApis();
     if (apis === null) return;
+    const navigation = ["first-boring", "previous-boring", "next-boring", "last-boring"].includes(
+      operation,
+    );
+    const priorBoringIdentity = lifecycleState?.activeBoringLogIdentity ?? null;
+    if (navigation && priorBoringIdentity !== null) {
+      selectionByBoring.set(priorBoringIdentity, selectedSemanticId);
+    }
     const expected = operation === "get-state" ? null : (studioProjection?.workingRevision ?? null);
     status.textContent = `${humanize(operation)}…`;
     const result = decodedLifecycleResult(
@@ -342,6 +433,15 @@ async function main(): Promise<void> {
         result.state?.workingRevision ?? null,
         `Project saved and reopened successfully${result.state?.displayPath === null ? "." : `: ${result.state?.displayPath}`}`,
       );
+      return;
+    }
+    if (result.code === "PROJECT_BORING_CHANGED" && result.state !== null) {
+      selectedSemanticId = selectionByBoring.get(result.state.activeBoringLogIdentity) ?? null;
+      await refreshStudioProjection(
+        result.state.workingRevision,
+        `${boringPosition.value}: ${boringSelector.value}`,
+      );
+      boringSelector.blur();
       return;
     }
     status.textContent =
@@ -688,10 +788,11 @@ async function main(): Promise<void> {
       status.textContent = `Property edit rejected${result.code === undefined ? "." : `: ${result.code}`}`;
       return;
     }
-    await refreshStudioProjection(
+    const refreshed = await refreshStudioProjection(
       result.workingRevision,
       `${humanize(editable.property)} applied at revision ${result.workingRevision}.`,
     );
+    if (refreshed) await refreshLifecycleStateSilently();
     propertyContent.focus();
   }
 
@@ -705,10 +806,11 @@ async function main(): Promise<void> {
       status.textContent = `${humanize(operation)} rejected${result.code === undefined ? "." : `: ${result.code}`}`;
       return;
     }
-    await refreshStudioProjection(
+    const refreshed = await refreshStudioProjection(
       result.workingRevision,
       `${humanize(operation)} completed at revision ${result.workingRevision}.`,
     );
+    if (refreshed) await refreshLifecycleStateSilently();
     (operation === "undo" ? undoButton : redoButton).focus();
   }
 
@@ -831,6 +933,23 @@ async function main(): Promise<void> {
     showPropertyPanel("diagnostics");
     status.textContent = `${scene.diagnostics.length} current scene diagnostic${scene.diagnostics.length === 1 ? "" : "s"} shown.`;
   };
+  const chooseBoringFromSelector = async (): Promise<void> => {
+    const current = lifecycleState;
+    if (current === null) return;
+    const target = current.boringLogs.find(
+      (boring) => `${boring.ordinal}. ${boring.displayName}` === boringSelector.value.trim(),
+    );
+    if (target === undefined) {
+      status.textContent = "Choose a Boring Log from the project list.";
+      return;
+    }
+    while (lifecycleState !== null && lifecycleState.activeOrdinal !== target.ordinal) {
+      await invokeLifecycle(
+        lifecycleState.activeOrdinal < target.ordinal ? "next-boring" : "previous-boring",
+      );
+    }
+  };
+  boringSelector.addEventListener("change", () => void chooseBoringFromSelector());
   const commandRegistry: Readonly<Record<string, () => void>> = Object.freeze({
     "ribbon-tab-home": () => activateRibbonTab("home"),
     "ribbon-tab-layout": () => activateRibbonTab("layout"),
@@ -842,6 +961,10 @@ async function main(): Promise<void> {
     "open-project": () => void invokeLifecycle("open-project"),
     "save-project": () => void invokeLifecycle("save-project"),
     "save-project-as": () => void invokeLifecycle("save-project-as"),
+    "first-boring": () => void invokeLifecycle("first-boring"),
+    "previous-boring": () => void invokeLifecycle("previous-boring"),
+    "next-boring": () => void invokeLifecycle("next-boring"),
+    "last-boring": () => void invokeLifecycle("last-boring"),
     "select-body": () => select("region-depth-body"),
     undo: () => void navigateHistory("undo"),
     redo: () => void navigateHistory("redo"),
@@ -884,6 +1007,19 @@ async function main(): Promise<void> {
   window.addEventListener("keydown", (event) => {
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
+    if (key === "pageup" || key === "pagedown") {
+      event.preventDefault();
+      void invokeLifecycle(
+        key === "pageup"
+          ? event.shiftKey
+            ? "first-boring"
+            : "previous-boring"
+          : event.shiftKey
+            ? "last-boring"
+            : "next-boring",
+      );
+      return;
+    }
     const operation =
       key === "n"
         ? "new-project"

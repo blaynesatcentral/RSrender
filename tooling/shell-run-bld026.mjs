@@ -78,6 +78,12 @@ function parseResult(stdout) {
 export async function runPackaged(packageResult, index, options = {}) {
   const executable = packageResult.paths.packagedExecutable;
   if ((await processCount(executable)) !== 0) throw new Error("PACKAGE_ALREADY_RUNNING");
+  const timeoutMs =
+    Number.isSafeInteger(options.timeoutMs) &&
+    options.timeoutMs >= 30_000 &&
+    options.timeoutMs <= 300_000
+      ? options.timeoutMs
+      : 90_000;
   const profile = path.join(
     os.tmpdir(),
     `${options.profileLabel ?? "rsrender-bld026-positive"}-${index}-profile`,
@@ -105,7 +111,7 @@ export async function runPackaged(packageResult, index, options = {}) {
     const timer = setTimeout(() => {
       timedOut = true;
       void terminateExactTree(executable, child.pid).finally(() => child.kill());
-    }, 90_000);
+    }, timeoutMs);
     child.stdout.on("data", (chunk) => (stdout += String(chunk)));
     child.stderr.on("data", (chunk) => (stderr += String(chunk)));
     child.once("error", reject);

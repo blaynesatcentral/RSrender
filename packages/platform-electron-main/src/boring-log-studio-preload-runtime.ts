@@ -229,9 +229,17 @@ const lifecycle = Object.freeze(async function lifecycle(input: unknown) {
   const expected = args?.["expectedWorkingRevision"];
   if (
     args === null ||
-    !["get-state", "new-project", "open-project", "save-project", "save-project-as"].includes(
-      String(operation),
-    ) ||
+    ![
+      "get-state",
+      "new-project",
+      "open-project",
+      "save-project",
+      "save-project-as",
+      "first-boring",
+      "previous-boring",
+      "next-boring",
+      "last-boring",
+    ].includes(String(operation)) ||
     (expected !== null && !isNonnegativeSafeInteger(expected))
   )
     return unavailable;
@@ -427,7 +435,15 @@ export interface BoringLogStudioPreloadApi {
   >;
   readonly lifecycle: (input: {
     readonly operation:
-      "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+      | "get-state"
+      | "new-project"
+      | "open-project"
+      | "save-project"
+      | "save-project-as"
+      | "first-boring"
+      | "previous-boring"
+      | "next-boring"
+      | "last-boring";
     readonly expectedWorkingRevision: number | null;
   }) => Promise<unknown>;
 }

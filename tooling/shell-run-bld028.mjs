@@ -98,7 +98,7 @@ function assertIntegratedResult(result, outputPath, index) {
     result.selection?.selectedSceneNodes >= 1 &&
     result.selection?.provenance?.includes("Source original") &&
     result.interactions?.ownedCommands === true &&
-    result.interactions?.ownedCommandCount === 31 &&
+    result.interactions?.ownedCommandCount === 35 &&
     result.interactions?.sourceMode === "source" &&
     result.interactions?.sourceRows < result.interactions?.rowsBefore &&
     result.interactions?.drawingRows === result.interactions?.rowsBefore &&

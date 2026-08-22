@@ -237,12 +237,17 @@ function entity(
   return result.accepted ? result.value : null;
 }
 
-function buildSnapshot(job: BoringLogLayoutJobInput): Readonly<{
+export function buildSyntheticBoringLogSnapshot(
+  job: BoringLogLayoutJobInput,
+  sourceProjectIdentityOverride?: string,
+): Readonly<{
   readonly snapshot: SourceSnapshot;
   readonly bindings: readonly SyntheticBoringLogEditableBinding[];
 }> | null {
   const document = job.document;
-  const sourceProjectIdentity = `urn:rsrender:synthetic:boring-log-project:${document.fixtureId}`;
+  const sourceProjectIdentity =
+    sourceProjectIdentityOverride ??
+    `urn:rsrender:synthetic:boring-log-project:${document.fixtureId}`;
   const context = deriveSourceContextIdentity({
     adapterId: ADAPTER_ID,
     providerOrganizationIdentity: PROVIDER_ORGANIZATION_IDENTITY,
@@ -598,7 +603,7 @@ export function createSyntheticBoringLogOverrideSession(
     }
     const layoutJob = validateBoringLogLayoutJobInput(record["layoutJob"]);
     if (!layoutJob.accepted) return rejected("BORING_LOG_SESSION_LAYOUT_JOB_INVALID");
-    const source = buildSnapshot(layoutJob.value);
+    const source = buildSyntheticBoringLogSnapshot(layoutJob.value);
     if (source === null) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
     const initialAggregate = aggregate(documentIdentity, source.snapshot);
     if (initialAggregate === null) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
@@ -662,7 +667,7 @@ export function createPersistedBoringLogOverrideSession(
     ) {
       return rejected("BORING_LOG_SESSION_LAYOUT_JOB_INVALID");
     }
-    const source = buildSnapshot(layoutJob.value);
+    const source = buildSyntheticBoringLogSnapshot(layoutJob.value);
     if (source === null) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
     const initialized = createInMemoryOverrideRenderDatasetService({
       aggregate: project.value,
