@@ -9,6 +9,11 @@ const temporaryRoot = path.join(root, ".tmp", "bld-028-integrated-mvp");
 const outputDirectory = path.join(temporaryRoot, "out");
 const packagedDirectory = path.join(outputDirectory, "RSrender-win32-x64");
 const packagedExecutable = path.join(packagedDirectory, "RSrender.exe");
+const packagedRuntimeInput = path.join(
+  packagedDirectory,
+  "example-data",
+  "rsrender-example-boring-log.json",
+);
 const supersededOutputDirectory = path.join(root, "output", "app", "RSrender-win32-x64");
 
 export async function packageBoringLogMvp() {
@@ -24,7 +29,13 @@ export async function packageBoringLogMvp() {
     ...source,
     schema: "rsrender.bld028.package-result.v1",
     result: "PASS",
-    paths: Object.freeze({ temporaryRoot, outputDirectory, packagedDirectory, packagedExecutable }),
+    paths: Object.freeze({
+      temporaryRoot,
+      outputDirectory,
+      packagedDirectory,
+      packagedExecutable,
+      packagedRuntimeInput,
+    }),
     executableBytes,
     productOwnerLaunchTarget: packagedExecutable,
   });

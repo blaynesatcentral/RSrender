@@ -7,7 +7,7 @@ import path from "node:path";
 import { clearTimeout, setTimeout } from "node:timers";
 import { pathToFileURL } from "node:url";
 
-import { canonicalizeJson } from "../packages/contracts/dist/index.js";
+import { canonicalizeJson, sha256CanonicalJson } from "../packages/contracts/dist/index.js";
 import { boringLogMvpFixture } from "../packages/test-support/dist/index.js";
 import { inspectBoringLogPdf } from "./inspect-boring-log-pdf.mjs";
 import { packageBoringLogMvp } from "./shell-package-bld028.mjs";
@@ -107,7 +107,7 @@ function assertIntegratedResult(result, outputPath, index) {
   if (!valid) throw new Error(`INTEGRATED_PRODUCT_RESULT_INVALID:${index}`);
 }
 
-async function runPackaged(packageResult, index, outputPath) {
+async function runPackaged(packageResult, index, outputPath, inputPath = null) {
   const executable = packageResult.paths.packagedExecutable;
   if ((await processCount(executable)) !== 0) throw new Error("PACKAGE_ALREADY_RUNNING");
   await rm(outputPath, { force: true });
@@ -121,6 +121,7 @@ async function runPackaged(packageResult, index, outputPath) {
         "--rsrender-bld027-probe",
         `--rsrender-bld027-profile=${profile}`,
         `--rsrender-bld027-output=${outputPath}`,
+        ...(inputPath === null ? [] : [`--rsrender-boring-log-input=${inputPath}`]),
       ],
       {
         cwd: path.dirname(executable),
@@ -208,6 +209,8 @@ async function sourceDigests() {
     "tooling/shell-run-bld028.mjs",
     "tooling/shell-run-bld027.mjs",
     "packages/platform-electron-main/src/semantic-editor-main.ts",
+    "packages/platform-electron-main/src/boring-log-document-ingress.ts",
+    "packages/platform-electron-main/src/boring-log-example-document.ts",
     "packages/renderer-ui/src/boring-log-studio-entry.ts",
     "packages/layout-host/src/boring-log-publication-projection.ts",
     "packages/scene/src/boring-log-layout-engine.ts",
@@ -237,6 +240,22 @@ export async function runIntegratedBoringLogMvpQualification({ record = false } 
   for (let index = 1; index <= 3; index += 1) {
     runs.push(await runPackaged(packageResult, index, outputs[index - 1]));
   }
+  const alternateInputPath = path.join(temporaryPdfDirectory, "bld032-alternate-input.json");
+  const alternateInput = JSON.parse(
+    await readFile(packageResult.paths.packagedRuntimeInput, "utf8"),
+  );
+  alternateInput.document.metadata.projectNumber = "SGS-24057-ALT";
+  alternateInput.fixtureDigest = sha256CanonicalJson(alternateInput.document);
+  await writeFile(alternateInputPath, `${canonicalizeJson(alternateInput)}\n`, "utf8");
+  const alternateRun = await runPackaged(
+    packageResult,
+    "alternate-input",
+    path.join(temporaryPdfDirectory, "rsrender-boring-log-bld032-alternate.pdf"),
+    alternateInputPath,
+  );
+  if (alternateRun.result.initial.pageDigest === runs[0].result.initial.pageDigest) {
+    throw new Error("BLD032_ALTERNATE_INPUT_NOT_OBSERVED");
+  }
   const sceneDigests = new Set(runs.map(({ result }) => result.publication.sceneDigest));
   const projectionDigests = new Set(runs.map(({ result }) => result.publication.projectionDigest));
   if (sceneDigests.size !== 1 || projectionDigests.size !== 1) {
@@ -250,6 +269,13 @@ export async function runIntegratedBoringLogMvpQualification({ record = false } 
     productOwnerLaunchTarget: packageResult.productOwnerLaunchTarget,
     finalPdfPath,
     runs,
+    runtimeIngress: {
+      sameExecutableAndAsar: true,
+      defaultInputSceneDigest: runs[0].result.initial.pageDigest,
+      alternateInputSceneDigest: alternateRun.result.initial.pageDigest,
+      alternateInputSha256: sha256(await readFile(alternateInputPath)),
+      alternateRun,
+    },
     crossRun: {
       exactRunCount: runs.length,
       sceneDigest: runs[0].result.publication.sceneDigest,

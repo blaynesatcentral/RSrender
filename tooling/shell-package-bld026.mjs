@@ -21,6 +21,8 @@ const packagedDirectory = path.join(
 );
 const packagedExecutable = path.join(packagedDirectory, `${applicationName}.exe`);
 const bundleMarker = "rsrender.boring-log-editor.bundle.v1";
+const exampleInputRelativePath = path.join("example-data", "rsrender-example-boring-log.json");
+const generatedExampleInputPath = path.join(temporaryRoot, "rsrender-example-boring-log.json");
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -50,35 +52,28 @@ async function electronZip() {
 
 async function structuredInputs() {
   const stamp = Date.now();
-  const [sceneModule, layoutHostModule, fixtureModule] = await Promise.all([
+  const [platformModule, sceneModule, layoutHostModule] = await Promise.all([
+    import(
+      `${pathToFileURL(path.join(root, "packages", "platform-electron-main", "dist", "index.js")).href}?bld032=${stamp}`
+    ),
     import(
       `${pathToFileURL(path.join(root, "packages", "scene", "dist", "index.js")).href}?bld026=${stamp}`
     ),
     import(
       `${pathToFileURL(path.join(root, "packages", "layout-host", "dist", "index.js")).href}?bld026=${stamp}`
     ),
-    import(
-      `${pathToFileURL(path.join(root, "packages", "test-support", "dist", "index.js")).href}?bld026=${stamp}`
-    ),
   ]);
-  const layoutJob = {
-    contractVersion: 1,
-    schemaVersion: "rsrender.boring-log-layout-job.v1",
-    kind: "boring-log.layout-job",
-    jobId: "job:mvp-boring-log-editor-01@r1",
-    inputRevision: 1,
-    fixtureDigest: fixtureModule.BORING_LOG_MVP_FIXTURE_DIGEST,
-    templateDigest: fixtureModule.BORING_LOG_MVP_TEMPLATE_DIGEST,
-    document: structuredClone(fixtureModule.boringLogMvpFixture),
-    template: structuredClone(fixtureModule.boringLogMvpTemplate),
-  };
+  const inputBytes = Buffer.from(platformModule.boringLogExampleDocumentSource, "utf8");
+  const decoded = platformModule.decodeBoringLogDocumentBundle(inputBytes);
+  if (!decoded.accepted) throw new Error(`BLD032_EXAMPLE_INPUT_REJECTED:${decoded.code}`);
+  const layoutJob = decoded.layoutJob;
   const prepared = sceneModule.prepareBoringLogLayout(layoutJob);
   if (!prepared.accepted) throw new Error(`BLD026_PAGE_PLAN_REJECTED:${prepared.code}`);
   const measured = layoutHostModule.measureBoringLogTextRequests(prepared.value.textRequests);
   if (!measured.accepted) throw new Error(`BLD026_TEXT_REJECTED:${measured.code}`);
   const resolved = sceneModule.resolveBoringLogPageScene(prepared.value, measured.results);
   if (!resolved.accepted) throw new Error(`BLD026_SCENE_REJECTED:${resolved.code}`);
-  return Object.freeze({ layoutJob, scene: resolved.value });
+  return Object.freeze({ layoutJob, scene: resolved.value, inputBytes });
 }
 
 async function rendererBundle() {
@@ -136,6 +131,7 @@ async function prepareStage() {
     );
   }
   const inputs = await structuredInputs();
+  await writeFile(generatedExampleInputPath, inputs.inputBytes);
   const rendererUrl = `${pathToFileURL(path.join(root, "packages", "renderer-ui", "dist", "index.js")).href}?bld026=${Date.now()}`;
   const { createBoringLogStudioHtml } = await import(rendererUrl);
   const html = createBoringLogStudioHtml(inputs.scene);
@@ -157,7 +153,7 @@ async function prepareStage() {
   await writeFile(path.join(rendererDirectory, "boring-log-studio.css"), stylesheet, "utf8");
   await writeFile(
     path.join(stageDirectory, "entry.mjs"),
-    `globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ = ${JSON.stringify(html)};\nglobalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__ = ${JSON.stringify(rendererSha256)};\nglobalThis.__RSRENDER_WINDOW_TITLE__ = "RSrender Boring Log Studio";\nglobalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__ = ${JSON.stringify(inputs.layoutJob)};\nawait import("./main/semantic-editor-main.js");\n`,
+    `globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ = ${JSON.stringify(html)};\nglobalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__ = ${JSON.stringify(rendererSha256)};\nglobalThis.__RSRENDER_WINDOW_TITLE__ = "RSrender Boring Log Studio";\nglobalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ = true;\nawait import("./main/semantic-editor-main.js");\n`,
     "utf8",
   );
   await writeFile(
@@ -185,6 +181,9 @@ async function prepareStage() {
     stylesheetSha256: sha256(stylesheet),
     layoutJobSha256: sha256(Buffer.from(JSON.stringify(inputs.layoutJob), "utf8")),
     initialSceneSha256: sha256(Buffer.from(JSON.stringify(inputs.scene), "utf8")),
+    runtimeInputSha256: sha256(inputs.inputBytes),
+    runtimeInputBytes: inputs.inputBytes.byteLength,
+    runtimeInputRelativePath: exampleInputRelativePath.replaceAll("\\", "/"),
     sceneNodes: inputs.scene.pages[0].nodes.length,
     editableValues: 24,
   });
@@ -213,6 +212,9 @@ export async function packageBoringLogEditor() {
     afterComplete: [
       async ({ buildPath }) => {
         await copyFile(admittedExecutable, path.join(buildPath, `${applicationName}.exe`));
+        const runtimeInputDirectory = path.join(buildPath, "example-data");
+        await mkdir(runtimeInputDirectory, { recursive: true });
+        await copyFile(generatedExampleInputPath, path.join(buildPath, exampleInputRelativePath));
       },
     ],
   };
@@ -239,6 +241,10 @@ export async function packageBoringLogEditor() {
   if (sha256(await readFile(packagedExecutable)) !== executableSha256) {
     throw new Error("BLD026_EXECUTABLE_DRIFT");
   }
+  const packagedRuntimeInput = path.join(packagedDirectory, exampleInputRelativePath);
+  if (sha256(await readFile(packagedRuntimeInput)) !== staged.runtimeInputSha256) {
+    throw new Error("BLD032_RUNTIME_INPUT_COPY_DRIFT");
+  }
   const appAsar = path.join(packagedDirectory, "resources", "app.asar");
   return Object.freeze({
     schema: "rsrender.bld026.package-result.v1",
@@ -249,6 +255,7 @@ export async function packageBoringLogEditor() {
       outputDirectory,
       packagedDirectory,
       packagedExecutable,
+      packagedRuntimeInput,
     }),
     electronZipSha256: sha256(await readFile(zip)),
     executableSha256,

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync, readSync } from "node:fs";
 import path from "node:path";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session } from "electron";
@@ -23,6 +23,10 @@ import {
   type DocumentRouteContext,
 } from "./document-route-broker.js";
 import { resolveBoringLogStudioProjection } from "./boring-log-studio-projection.js";
+import {
+  decodeBoringLogDocumentBundle,
+  maximumBoringLogDocumentBundleBytes,
+} from "./boring-log-document-ingress.js";
 import { publishBoringLogPdf } from "./boring-log-pdf-publication.js";
 import { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
 import {
@@ -63,9 +67,63 @@ const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
 const PDF_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld027-output=";
+const DOCUMENT_INPUT_ARGUMENT_PREFIX = "--rsrender-boring-log-input=";
+const DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH = path.join(
+  "example-data",
+  "rsrender-example-boring-log.json",
+);
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
 const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
-const studioEditingMode = globalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__ !== undefined;
+function readBoundedRuntimeDocument(inputPath: string): Uint8Array {
+  const descriptor = openSync(inputPath, "r");
+  try {
+    const details = fstatSync(descriptor);
+    if (!details.isFile() || details.size > maximumBoringLogDocumentBundleBytes) {
+      throw new Error("BORING_LOG_DOCUMENT_INPUT_SIZE_REJECTED");
+    }
+    const bytes = new Uint8Array(details.size);
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const count = readSync(descriptor, bytes, offset, bytes.byteLength - offset, offset);
+      if (count === 0) break;
+      offset += count;
+    }
+    return offset === bytes.byteLength ? bytes : bytes.slice(0, offset);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+const runtimeDocumentInput = (() => {
+  const argument = process.argv.find((value) => value.startsWith(DOCUMENT_INPUT_ARGUMENT_PREFIX));
+  const explicit = argument !== undefined;
+  const supplied = argument?.slice(DOCUMENT_INPUT_ARGUMENT_PREFIX.length);
+  if (explicit && (supplied === undefined || supplied.length === 0)) {
+    return Object.freeze({ mode: "rejected" as const });
+  }
+  const inputPath = explicit
+    ? path.resolve(supplied!)
+    : path.join(path.dirname(process.execPath), DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH);
+  let bytes: Uint8Array;
+  try {
+    bytes = readBoundedRuntimeDocument(inputPath);
+  } catch (error) {
+    const missingDefault =
+      !explicit &&
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT";
+    return Object.freeze({ mode: missingDefault ? ("absent" as const) : ("rejected" as const) });
+  }
+  const decoded = decodeBoringLogDocumentBundle(bytes);
+  return decoded.accepted
+    ? Object.freeze({ mode: "accepted" as const, inputPath, decoded })
+    : Object.freeze({ mode: "rejected" as const });
+})();
+const runtimeLayoutJob =
+  runtimeDocumentInput.mode === "accepted" ? runtimeDocumentInput.decoded.layoutJob : null;
+const studioEditingMode = runtimeLayoutJob !== null;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT);
 const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode;
@@ -1186,8 +1244,15 @@ async function fail(code: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  if (
+    globalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ === true &&
+    runtimeDocumentInput.mode !== "accepted"
+  ) {
+    return fail("BORING_LOG_RUNTIME_INPUT_UNAVAILABLE");
+  }
   if (!preloadVerification.accepted) return fail("DOCUMENT_PRELOAD_UNAVAILABLE");
   if (!rendererVerification.accepted) return fail("SEMANTIC_EDITOR_RENDERER_UNAVAILABLE");
+  if (runtimeDocumentInput.mode === "rejected") return fail("DOCUMENT_INPUT_UNAVAILABLE");
   Menu.setApplicationMenu(null);
   const counters: Counters = {
     navigation: 0,
@@ -1212,7 +1277,7 @@ async function main(): Promise<void> {
   installDenials(electronSession, counters);
   installProtocol(electronSession);
   const documentIdentity = studioEditingMode
-    ? "urn:rsrender:bld-026:document:boring-log-studio-001"
+    ? runtimeLayoutJob.document.identity.boringLogId
     : "urn:rsrender:bld-021:document:semantic-editor-001";
   let structuredSession: SyntheticBoringLogOverrideSession | null = null;
   let service;
@@ -1220,7 +1285,7 @@ async function main(): Promise<void> {
     const synthetic = createSyntheticBoringLogOverrideSession({
       documentIdentity,
       ownerGeneration: 1,
-      layoutJob: globalThis.__RSRENDER_BORING_LOG_LAYOUT_JOB__,
+      layoutJob: runtimeLayoutJob,
     });
     if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
     structuredSession = synthetic.session;
@@ -1425,5 +1490,5 @@ declare global {
   var __RSRENDER_SEMANTIC_EDITOR_HTML__: string;
   var __RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__: string;
   var __RSRENDER_WINDOW_TITLE__: string | undefined;
-  var __RSRENDER_BORING_LOG_LAYOUT_JOB__: unknown;
+  var __RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__: boolean | undefined;
 }

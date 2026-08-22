@@ -166,3 +166,17 @@ export {
 
 /** Stable marker for the accepted platform-electron-main package boundary. */
 export const packageBoundary = "@rsrender/platform-electron-main" as const;
+
+export {
+  boringLogDocumentIngressRevision,
+  decodeBoringLogDocumentBundle,
+  maximumBoringLogDocumentBundleBytes,
+} from "./boring-log-document-ingress.js";
+export type {
+  BoringLogDocumentIngressRejectionCode,
+  BoringLogDocumentIngressResult,
+} from "./boring-log-document-ingress.js";
+export {
+  boringLogExampleDocumentRevision,
+  boringLogExampleDocumentSource,
+} from "./boring-log-example-document.js";
