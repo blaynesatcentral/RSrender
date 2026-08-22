@@ -5,16 +5,16 @@ export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
   "rsrender.boring-log-mvp-template.v1" as const;
 export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
 
-export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r2" as const;
-export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r1" as const;
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r3" as const;
+export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r2" as const;
 export const BORING_LOG_MVP_FIXTURE_DIGEST =
-  "sha256:166ef8a7064274e651a603daa261a76f8e9e43ba060be7887c520442ddc0ee98" as const;
+  "sha256:e93e5352f12c8ea89e92dc2dcb7ae9d3762897ca734ec36eebcc37b29276b771" as const;
 export const BORING_LOG_MVP_TEMPLATE_DIGEST =
-  "sha256:1f48e1a67a2b7b08db8f9f73b4afe95fca34223bf7dfa1c478fb736ad4fec775" as const;
+  "sha256:04035bdc50c92f54d54d7eb5f677b76e16259eae08fe0c7f2d76a423c46a12fb" as const;
 export const BORING_LOG_MVP_ORACLE_DIGEST =
-  "sha256:88828d00675c3bf333af09d0c1109640eb6f2c59a6827c7e5afcabb53bb8e58e" as const;
+  "sha256:85b13c7e8fa24ed7e1cd126a3c33a4abc6e8aca1807144f4d4d019ac5f28d35b" as const;
 export const BORING_LOG_MVP_BUNDLE_DIGEST =
-  "sha256:90cd5d1a2e36024fb3611a9c3482d2b60de418299558c13d2983fe95fa6c19f1" as const;
+  "sha256:1b589ce142aacd574d8eadf9d5950babab86dbc522562b8ab224b3debff0ed2c" as const;
 
 const source = (entityId: string, fieldId: string) =>
   Object.freeze({
@@ -26,13 +26,20 @@ const source = (entityId: string, fieldId: string) =>
     sourceContractRevision: "rsrender.synthetic.render-dataset.v1",
   });
 
+const blowIncrement = (blows: number, penetrationInches = 6) =>
+  Object.freeze({ blows, penetrationInches });
+
+const completeBlowIncrements = (first: number, second: number, third: number) =>
+  Object.freeze([blowIncrement(first), blowIncrement(second), blowIncrement(third)] as const);
+
 const sample = (
   id: string,
   label: string,
   depthFt: number,
   recoveryPercent: number,
-  blows: readonly [number, number, number],
-  nValue: number,
+  blowIncrements: readonly ReturnType<typeof blowIncrement>[],
+  nValue: number | null,
+  refusal = false,
 ) =>
   Object.freeze({
     id,
@@ -40,8 +47,9 @@ const sample = (
     depthFt,
     symbol: "split-spoon" as const,
     recoveryPercent,
-    blowsPerSixInches: blows,
+    blowIncrements: Object.freeze([...blowIncrements]),
     nValue,
+    refusal,
     provenance: source(id, "sample-observation"),
   });
 
@@ -52,7 +60,7 @@ const sample = (
 export const boringLogMvpFixture = Object.freeze({
   schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
-  fixtureRevision: 2,
+  fixtureRevision: 3,
   evidenceClass: "synthetic-coverage-only" as const,
   representativeClaimAllowed: false,
   publicationEligibility: "example-dataset-only" as const,
@@ -63,20 +71,29 @@ export const boringLogMvpFixture = Object.freeze({
   }),
   metadata: Object.freeze({
     companyName: "Synthetic Geotechnical Services",
+    companyContactSubtitle: "4800 Innovation Way, Salem, OR 97301 · (503) 555-0142",
     documentTitle: "BORING LOG TEST-01",
     sheetLabel: "SHEET 1 OF 1",
+    clientName: "Northbank Community Partners",
     projectName: "Riverside Mixed-Use Development",
     projectNumber: "SGS-24057",
     location: "Riverview Drive, Dayton, OR",
     coordinates: "N 44.123456°  W 122.987654°",
+    coordinateDatum: "WGS 84",
     groundElevationFt: 182.5,
+    elevationDatum: "NAVD 88",
     totalDepthFt: 40,
     completionDepthFt: 40,
     drilledDate: "2025-05-14",
     boringMethod: "Hollow-Stem Auger",
+    holeDiameter: "4 in",
+    rigDriller: "CME 75 · Synthetic Drilling Crew",
     hammerType: "Automatic 140 lb",
     hammerDrop: "30 in",
+    hammerEfficiency: "84%",
     loggedBy: "K. Anderson, E.I.",
+    checkedBy: "M. Rivera, P.E.",
+    groundwaterSummary: "Not encountered to 40.0 ft.",
     provenance: source("urn:rsrender:exploration:test-01", "metadata"),
   }),
   referenceDepthRange: Object.freeze({ startFt: 0, endFt: 40, terminalInclusive: true }),
@@ -87,6 +104,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthToFt: 15,
       classification: "SILT (ML)",
       patternId: "pattern-silt-horizontal-dash",
+      materialFillToken: "materialSiltFill",
       description:
         "Medium stiff, moist, brown SILT (ML); low plasticity; trace fine sand; homogeneous; no odor.",
       transitions: Object.freeze([
@@ -102,6 +120,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthToFt: 30,
       classification: "GRAVEL WITH SAND (GW)",
       patternId: "pattern-gravel-dot-ring",
+      materialFillToken: "materialGravelFill",
       description:
         "Dense, brown to gray, angular to subrounded gravel up to 1½ in; medium to coarse sand; little silt; well-graded.",
       transitions: Object.freeze([Object.freeze({ depthFt: 22.5, text: "Becoming very dense." })]),
@@ -114,6 +133,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthToFt: 40,
       classification: "SILT (ML)",
       patternId: "pattern-silt-blue-dash",
+      materialFillToken: "materialSiltFill",
       description:
         "Very stiff, moist, gray with brown mottling SILT (ML); low plasticity; trace fine sand; blocky structure.",
       transitions: Object.freeze([Object.freeze({ depthFt: 34, text: "Trace fine gravel." })]),
@@ -122,16 +142,32 @@ export const boringLogMvpFixture = Object.freeze({
     }),
   ]),
   samples: Object.freeze([
-    sample("sample-01", "S-1", 1.5, 90, [2, 3, 4], 7),
-    sample("sample-02", "S-2", 4, 85, [3, 4, 5], 9),
-    sample("sample-03", "S-3", 7, 80, [4, 5, 6], 11),
-    sample("sample-04", "S-4", 9.8, 95, [6, 8, 10], 18),
-    sample("sample-05", "S-5", 15.8, 95, [7, 9, 12], 21),
-    sample("sample-06", "S-6", 18.8, 90, [14, 20, 24], 44),
-    sample("sample-07", "S-7", 22, 85, [20, 28, 32], 60),
-    sample("sample-08", "S-8", 25, 85, [18, 28, 34], 62),
-    sample("sample-09", "S-9", 31.2, 80, [10, 14, 18], 32),
-    sample("sample-10", "S-10", 34.5, 95, [7, 10, 13], 23),
+    sample("sample-01", "S-1", 1.5, 90, completeBlowIncrements(2, 3, 4), 7),
+    sample("sample-02", "S-2", 4, 85, completeBlowIncrements(3, 4, 5), 9),
+    sample("sample-03", "S-3", 7, 80, completeBlowIncrements(4, 5, 6), 11),
+    sample("sample-04", "S-4", 9.8, 95, completeBlowIncrements(6, 8, 10), 18),
+    sample("sample-05", "S-5", 15.8, 95, completeBlowIncrements(7, 9, 12), 21),
+    sample(
+      "sample-06",
+      "S-6",
+      18.8,
+      90,
+      Object.freeze([blowIncrement(16), blowIncrement(50, 4)]),
+      null,
+      true,
+    ),
+    sample("sample-07", "S-7", 22, 85, completeBlowIncrements(20, 28, 32), 60),
+    sample("sample-08", "S-8", 25, 85, completeBlowIncrements(18, 28, 34), 62),
+    sample(
+      "sample-09",
+      "S-9",
+      31.2,
+      80,
+      Object.freeze([blowIncrement(12), blowIncrement(50, 2)]),
+      null,
+      true,
+    ),
+    sample("sample-10", "S-10", 34.5, 95, completeBlowIncrements(7, 10, 13), 23),
   ]),
   dataTrack: Object.freeze({
     id: "track-penetration-moisture",
@@ -164,10 +200,8 @@ export const boringLogMvpFixture = Object.freeze({
           ["sample-03", 11],
           ["sample-04", 18],
           ["sample-05", 21],
-          ["sample-06", 44],
           ["sample-07", 60],
           ["sample-08", 62],
-          ["sample-09", 32],
           ["sample-10", 23],
         ] as const),
         provenance: source("track-penetration-moisture", "spt-n-values"),
@@ -304,7 +338,7 @@ const textStyle = (id: string, sizeMpt: number, weight: number) =>
 export const boringLogMvpTemplate = Object.freeze({
   schemaVersion: BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  templateRevision: 1,
+  templateRevision: 2,
   physicalUnits: "mpt" as const,
   page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000, orientation: "portrait" }),
   regions: Object.freeze([
@@ -314,32 +348,32 @@ export const boringLogMvpTemplate = Object.freeze({
       xMpt: 15_000,
       yMpt: 14_000,
       widthMpt: 582_000,
-      heightMpt: 76_000,
+      heightMpt: 86_000,
     }),
     Object.freeze({
       id: "region-depth-body",
       role: "depth-body",
       xMpt: 15_000,
-      yMpt: 94_000,
+      yMpt: 104_000,
       widthMpt: 582_000,
-      heightMpt: 610_000,
+      heightMpt: 568_000,
     }),
     Object.freeze({
       id: "region-footer",
       role: "footer",
       xMpt: 15_000,
-      yMpt: 712_000,
+      yMpt: 680_000,
       widthMpt: 582_000,
-      heightMpt: 66_000,
+      heightMpt: 98_000,
     }),
   ]),
   depthTransform: Object.freeze({
     regionId: "region-depth-body",
     depthStartFt: 0,
     depthEndFt: 40,
-    yStartMpt: 121_000,
-    yEndMpt: 704_000,
-    mptPerFoot: 14_575,
+    yStartMpt: 129_000,
+    yEndMpt: 608_000,
+    mptPerFoot: 11_975,
   }),
   columns: Object.freeze([
     Object.freeze({
@@ -466,7 +500,7 @@ export const boringLogMvpTemplate = Object.freeze({
     }),
     Object.freeze({
       elementId: "column-blows",
-      path: "samples.blowsPerSixInches",
+      path: "samples.blowIncrements",
       styleId: "style-body",
     }),
     Object.freeze({ elementId: "column-n-value", path: "samples.nValue", styleId: "style-body" }),
@@ -482,6 +516,11 @@ export const boringLogMvpTemplate = Object.freeze({
     secondaryInk: "#52606d",
     rule: "#7b8794",
     lightRule: "#d8dee6",
+    materialSiltFill: "#edf4f3",
+    materialGravelFill: "#f6efe7",
+    nTrack: "#17202a",
+    moistureTrack: "#16736b",
+    plasticityTrack: "#55728d",
     lithologySiltFill: "#edf4f3",
     lithologyGravelFill: "#f6efe7",
     selection: "#2f6f9f",
@@ -492,7 +531,7 @@ export const boringLogMvpOracle = Object.freeze({
   schemaVersion: BORING_LOG_MVP_ORACLE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  oracleRevision: 1,
+  oracleRevision: 2,
   oracleIds: Object.freeze(["OA-PROV-001", "OA-GOLD-001", "OA-REP-001"]),
   requiredSections: Object.freeze(["header", "depth-body", "footer"]),
   requiredColumnRoles: Object.freeze([
@@ -520,13 +559,13 @@ export const boringLogMvpOracle = Object.freeze({
   }),
   geometryAnchors: Object.freeze({
     page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000 }),
-    depth: Object.freeze({ startFt: 0, endFt: 40, yStartMpt: 121_000, yEndMpt: 704_000 }),
+    depth: Object.freeze({ startFt: 0, endFt: 40, yStartMpt: 129_000, yEndMpt: 608_000 }),
     majorVerticalEdgesMpt: Object.freeze([
       15_000, 43_000, 71_000, 103_000, 245_000, 285_000, 315_000, 350_000, 380_000, 525_000,
       597_000,
     ]),
     majorHorizontalEdgesMpt: Object.freeze([
-      14_000, 90_000, 94_000, 121_000, 704_000, 712_000, 778_000,
+      14_000, 100_000, 104_000, 129_000, 608_000, 672_000, 680_000, 778_000,
     ]),
   }),
   comparisonPolicy: Object.freeze({
@@ -660,6 +699,35 @@ export function validateBoringLogMvpFixtureBundle(
     )
   ) {
     diagnostics.add("MVP_FIXTURE_SAMPLE_IDENTITY_OR_DEPTH_INVALID");
+  }
+  if (
+    fixture.samples.some(
+      ({ blowIncrements, nValue, refusal }) =>
+        blowIncrements.length < 1 ||
+        blowIncrements.length > 3 ||
+        blowIncrements.some(
+          ({ blows, penetrationInches }) =>
+            !Number.isSafeInteger(blows) ||
+            blows < 0 ||
+            !Number.isFinite(penetrationInches) ||
+            penetrationInches <= 0 ||
+            penetrationInches > 6,
+        ) ||
+        (refusal ? nValue !== null : !Number.isSafeInteger(nValue) || (nValue ?? -1) < 0),
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_SAMPLE_PENETRATION_OUTCOME_INVALID");
+  }
+  const admittedVisualTokenIds = new Set(Object.keys(template.visualTokens));
+  if (
+    ["materialSiltFill", "materialGravelFill", "nTrack", "moistureTrack", "plasticityTrack"].some(
+      (tokenId) => !admittedVisualTokenIds.has(tokenId),
+    ) ||
+    fixture.lithologyIntervals.some(
+      ({ materialFillToken }) => !admittedVisualTokenIds.has(materialFillToken),
+    )
+  ) {
+    diagnostics.add("MVP_FIXTURE_VISUAL_TOKEN_REFERENCE_INVALID");
   }
   const axisIds = new Set(fixture.dataTrack.axes.map(({ id }) => id));
   if (

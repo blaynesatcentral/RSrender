@@ -57,13 +57,29 @@ test("BLD-022 covers the complete reference-shaped information architecture", ()
   assert.equal(boringLogMvpFixture.legend.length, 10);
   assert.equal(boringLogMvpFixture.notes.length, 8);
   assert.equal(boringLogMvpFixture.approval.heading, "REVIEWED & APPROVED");
+  assert.equal(boringLogMvpFixture.metadata.clientName, "Northbank Community Partners");
+  assert.equal(boringLogMvpFixture.metadata.coordinateDatum, "WGS 84");
+  assert.equal(boringLogMvpFixture.metadata.elevationDatum, "NAVD 88");
+  assert.ok(boringLogMvpFixture.samples.every(({ blowIncrements }) => blowIncrements.length > 0));
+  assert.equal(boringLogMvpFixture.samples.filter(({ refusal }) => refusal).length, 2);
+  assert.ok(
+    boringLogMvpFixture.samples
+      .filter(({ refusal }) => refusal)
+      .every(({ nValue }) => nValue === null),
+  );
+  assert.ok(
+    boringLogMvpFixture.lithologyIntervals.every(({ materialFillToken }) =>
+      Object.hasOwn(boringLogMvpTemplate.visualTokens, materialFillToken),
+    ),
+  );
 });
 
 test("BLD-022 uses exact integer mpt metrics and complete depth/column coverage", () => {
   assert.equal(boringLogMvpTemplate.page.widthMpt, 612_000);
   assert.equal(boringLogMvpTemplate.page.heightMpt, 792_000);
-  assert.equal(boringLogMvpTemplate.depthTransform.mptPerFoot, 14_575);
-  assert.equal(boringLogMvpTemplate.depthTransform.yEndMpt, 704_000);
+  assert.equal(boringLogMvpTemplate.depthTransform.mptPerFoot, 11_975);
+  assert.equal(boringLogMvpTemplate.depthTransform.yStartMpt, 129_000);
+  assert.equal(boringLogMvpTemplate.depthTransform.yEndMpt, 608_000);
   assert.equal(boringLogMvpFixture.lithologyIntervals[0].depthFromFt, 0);
   assert.equal(boringLogMvpFixture.lithologyIntervals.at(-1).depthToFt, 40);
   assert.equal(boringLogMvpTemplate.columns[0].xMpt, 15_000);
@@ -101,6 +117,18 @@ test("BLD-022 rejects non-integer geometry, gaps, broken references, and raster 
   brokenLayer.fixture.dataTrack.layers[0].axisId = "missing-axis";
   assert.deepEqual(validateBoringLogMvpFixtureBundle(brokenLayer).diagnostics, [
     "MVP_FIXTURE_DATA_TRACK_REFERENCE_INVALID",
+  ]);
+
+  const contradictoryRefusal = mutableBundle();
+  contradictoryRefusal.fixture.samples[0].refusal = true;
+  assert.deepEqual(validateBoringLogMvpFixtureBundle(contradictoryRefusal).diagnostics, [
+    "MVP_FIXTURE_SAMPLE_PENETRATION_OUTCOME_INVALID",
+  ]);
+
+  const missingFillToken = mutableBundle();
+  delete missingFillToken.template.visualTokens.materialSiltFill;
+  assert.deepEqual(validateBoringLogMvpFixtureBundle(missingFillToken).diagnostics, [
+    "MVP_FIXTURE_VISUAL_TOKEN_REFERENCE_INVALID",
   ]);
 
   const raster = mutableBundle();

@@ -122,12 +122,20 @@ function valueToXMpt(
   axisMinimum: number,
   axisMaximum: number,
   value: number,
-  half: "left" | "right",
 ): Mpt {
-  const halfWidth = Math.floor(column.widthMpt / 2);
-  const xStart = column.xMpt + (half === "left" ? 3_000 : halfWidth + 3_000);
-  const width = halfWidth - 6_000;
+  const xStart = column.xMpt + 5_000;
+  const width = column.widthMpt - 10_000;
   return asMpt(xStart + Math.round(((value - axisMinimum) / (axisMaximum - axisMinimum)) * width));
+}
+
+function formatBlowIncrements(
+  increments: readonly { readonly blows: number; readonly penetrationInches: number }[],
+): string {
+  return increments
+    .map(({ blows, penetrationInches }) =>
+      penetrationInches === 6 ? String(blows) : `${String(blows)}/${String(penetrationInches)}"`,
+    )
+    .join("-");
 }
 
 function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
@@ -255,6 +263,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     radius: number,
     fillToken: string | null,
     provenance: BoringLogValueProvenance | null,
+    strokeToken = "ink",
   ): void =>
     append({
       id,
@@ -267,7 +276,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       center: { xMpt: asMpt(x), yMpt: asMpt(y) },
       radiusMpt: asMpt(radius),
       fillToken,
-      strokeToken: "ink",
+      strokeToken,
       strokeWidthMpt: asMpt(500),
     });
 
@@ -351,8 +360,20 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     "node:region-header",
     "company-name",
     metadata.companyName,
-    rect(header.xMpt + 8_000, header.yMpt + 7_000, 215_000, 18_000),
+    rect(header.xMpt + 8_000, header.yMpt + 5_000, 250_000, 15_000),
     "style-company",
+    metadataProvenance,
+    1,
+    "no-wrap",
+  );
+  addText(
+    "node:header-company-subtitle",
+    "header-company",
+    "node:region-header",
+    "company-subtitle",
+    metadata.companyContactSubtitle,
+    rect(header.xMpt + 8_000, header.yMpt + 20_000, 270_000, 8_000),
+    "style-small",
     metadataProvenance,
     1,
     "no-wrap",
@@ -363,7 +384,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     "node:region-header",
     "document-title",
     metadata.documentTitle,
-    rect(header.xMpt + 225_000, header.yMpt + 5_000, 230_000, 22_000),
+    rect(header.xMpt + 300_000, header.yMpt + 3_000, 270_000, 22_000),
     "style-title",
     metadataProvenance,
     1,
@@ -375,32 +396,100 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     "node:region-header",
     "sheet-label",
     metadata.sheetLabel,
-    rect(header.xMpt + 465_000, header.yMpt + 8_000, 105_000, 12_000),
+    rect(header.xMpt + 455_000, header.yMpt + 23_000, 115_000, 8_000),
     "style-small",
     metadataProvenance,
     1,
     "no-wrap",
   );
-  const metadataLines = [
-    `PROJECT: ${metadata.projectName}  |  NO. ${metadata.projectNumber}`,
-    `LOCATION: ${metadata.location}  |  ${metadata.coordinates}`,
-    `ELEVATION: ${metadata.groundElevationFt.toFixed(1)} ft  |  DRILLED: ${metadata.drilledDate}`,
-    `METHOD: ${metadata.boringMethod}  |  HAMMER: ${metadata.hammerType}, ${metadata.hammerDrop}  |  LOGGED BY: ${metadata.loggedBy}`,
-  ];
-  metadataLines.forEach((content, index) =>
+  addLine(
+    "node:header-title-rule",
+    "header-project-metadata",
+    "node:region-header",
+    "header-title-rule",
+    header.xMpt,
+    header.yMpt + 33_000,
+    header.xMpt + header.widthMpt,
+    header.yMpt + 33_000,
+    "rule",
+  );
+  const metadataCells = [
+    ["CLIENT", metadata.clientName, 0, 118_000],
+    [
+      "PROJECT · NO.",
+      `${metadata.projectName} · ${metadata.projectNumber} · ${metadata.location}`,
+      118_000,
+      142_000,
+    ],
+    [
+      "COORDINATES · DATUM",
+      `${metadata.coordinates} · ${metadata.coordinateDatum}`,
+      260_000,
+      118_000,
+    ],
+    [
+      "GROUND ELEVATION",
+      `${metadata.groundElevationFt.toFixed(1)} ft · ${metadata.elevationDatum}`,
+      378_000,
+      92_000,
+    ],
+    [
+      "DRILLED · TOTAL DEPTH",
+      `${metadata.drilledDate} · ${metadata.totalDepthFt.toFixed(1)} ft`,
+      470_000,
+      112_000,
+    ],
+    ["METHOD · HOLE DIA.", `${metadata.boringMethod} · ${metadata.holeDiameter}`, 0, 118_000],
+    ["RIG · DRILLER", metadata.rigDriller, 118_000, 142_000],
+    [
+      "HAMMER · EFFICIENCY",
+      `${metadata.hammerType}, ${metadata.hammerDrop} · ${metadata.hammerEfficiency}`,
+      260_000,
+      118_000,
+    ],
+    ["LOGGED · CHECKED", `${metadata.loggedBy} · ${metadata.checkedBy}`, 378_000, 92_000],
+    ["GROUNDWATER", metadata.groundwaterSummary, 470_000, 112_000],
+  ] as const;
+  metadataCells.forEach(([label, value, xOffset, width], index) => {
+    const row = index < 5 ? 0 : 1;
+    const y = header.yMpt + 36_000 + row * 23_000;
+    if (xOffset > 0) {
+      addLine(
+        `node:header-metadata-divider:${index + 1}`,
+        "header-project-metadata",
+        "node:region-header",
+        "header-metadata-divider",
+        header.xMpt + xOffset,
+        y,
+        header.xMpt + xOffset,
+        y + 20_000,
+        "lightRule",
+      );
+    }
     addText(
-      `node:header-project-metadata:${index + 1}`,
+      `node:header-project-metadata:${index + 1}:label`,
       "header-project-metadata",
       "node:region-header",
-      "project-metadata-line",
-      content,
-      rect(header.xMpt + 8_000, header.yMpt + 31_000 + index * 10_000, 562_000, 9_000),
+      "project-metadata-label",
+      label,
+      rect(header.xMpt + xOffset + 3_000, y, width - 6_000, 7_000),
       "style-small",
       metadataProvenance,
       1,
       "no-wrap",
-    ),
-  );
+    );
+    addText(
+      `node:header-project-metadata:${index + 1}:value`,
+      "header-project-metadata",
+      "node:region-header",
+      "project-metadata-value",
+      value,
+      rect(header.xMpt + xOffset + 3_000, y + 7_000, width - 6_000, 12_000),
+      "style-small",
+      metadataProvenance,
+      2,
+    );
+  });
 
   const depthBody = job.template.regions.find(({ role }) => role === "depth-body")!;
   const depthGroupId = "node:region-depth-body";
@@ -413,7 +502,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     recovery: "REC.",
     blows: "BLOWS",
     "n-value": "N",
-    "penetration-moisture-plasticity": "PENETRATION / WATER / PLASTICITY",
+    "penetration-moisture-plasticity": "PENETRATION N · MOISTURE W% · PL–LL",
     remarks: "REMARKS",
   };
   for (const column of job.template.columns) {
@@ -433,7 +522,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       "log-column-heading",
       columnLabels[column.role] ?? column.role.toUpperCase(),
       rect(column.xMpt + 1_000, depthBody.yMpt + 3_000, column.widthMpt - 2_000, 21_000),
-      "style-heading",
+      column.role === "penetration-moisture-plasticity" ? "style-small" : "style-heading",
       null,
       2,
     );
@@ -451,17 +540,42 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
 
   const elevationColumn = columnByRole(job, "elevation-ruler");
   const depthColumn = columnByRole(job, "depth-ruler");
-  for (let depthFt = 0; depthFt <= job.document.referenceDepthRange.endFt; depthFt += 5) {
+  const depthSpineX = depthColumn.xMpt + depthColumn.widthMpt - 4_000;
+  addLine(
+    "node:depth-spine",
+    "column-depth",
+    depthGroupId,
+    "depth-spine",
+    depthSpineX,
+    job.template.depthTransform.yStartMpt,
+    depthSpineX,
+    job.template.depthTransform.yEndMpt,
+    "ink",
+  );
+  for (let depthFt = 0; depthFt <= job.document.referenceDepthRange.endFt; depthFt += 1) {
     const y = depthToYMpt(job, depthFt);
-    const elevation = metadata.groundElevationFt - depthFt;
+    const major = depthFt % 5 === 0;
     addLine(
       `node:depth-tick:${depthFt}`,
       "column-depth",
       depthGroupId,
-      "depth-major-tick",
-      elevationColumn.xMpt,
+      major ? "depth-major-tick" : "depth-minor-tick",
+      depthSpineX - (major ? 8_000 : 4_000),
       y,
+      depthSpineX,
+      y,
+      major ? "ink" : "rule",
+    );
+    if (!major) continue;
+    const elevation = metadata.groundElevationFt - depthFt;
+    addLine(
+      `node:depth-grid:${depthFt}`,
+      "column-depth",
+      depthGroupId,
+      "depth-major-grid",
       depthColumn.xMpt + depthColumn.widthMpt,
+      y,
+      depthBody.xMpt + depthBody.widthMpt,
       y,
       "lightRule",
     );
@@ -496,6 +610,16 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   for (const interval of job.document.lithologyIntervals) {
     const yFrom = depthToYMpt(job, interval.depthFromFt);
     const yTo = depthToYMpt(job, interval.depthToFt);
+    addRect(
+      `node:lithology:${interval.id}:description-fill`,
+      `lithology:${interval.id}`,
+      depthGroupId,
+      "material-description-fill",
+      rect(descriptionColumn.xMpt, yFrom, descriptionColumn.widthMpt, yTo - yFrom),
+      interval.materialFillToken,
+      null,
+      interval.provenance,
+    );
     addRect(
       `node:lithology:${interval.id}:pattern`,
       `lithology:${interval.id}`,
@@ -571,6 +695,26 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     }
   }
 
+  addText(
+    "node:log-completion-note",
+    `lithology:${job.document.lithologyIntervals.at(-1)!.id}`,
+    depthGroupId,
+    "log-completion-note",
+    `— Boring completed at ${metadata.completionDepthFt.toFixed(1)} ft. End of log.`,
+    rect(
+      descriptionColumn.xMpt + 4_000,
+      job.template.depthTransform.yEndMpt + 10_000,
+      descriptionColumn.widthMpt - 8_000,
+      Math.max(
+        8_000,
+        depthBody.yMpt + depthBody.heightMpt - job.template.depthTransform.yEndMpt - 14_000,
+      ),
+    ),
+    "style-small",
+    metadataProvenance,
+    2,
+  );
+
   const sampleColumn = columnByRole(job, "sample");
   const recoveryColumn = columnByRole(job, "recovery");
   const blowsColumn = columnByRole(job, "blows");
@@ -589,11 +733,54 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       "lightRule",
       sample.provenance,
     );
+    const samplerX = sampleColumn.xMpt + 4_000;
+    if (sample.symbol === "split-spoon") {
+      addRect(
+        `node:sample:${sample.id}:sampler`,
+        `sample:${sample.id}`,
+        depthGroupId,
+        "sample-symbol-split-spoon",
+        rect(samplerX, y - 5_000, 7_000, 10_000),
+        "ink",
+        "ink",
+        sample.provenance,
+      );
+      addPath(
+        `node:sample:${sample.id}:sampler-upper`,
+        `sample:${sample.id}`,
+        depthGroupId,
+        "sample-symbol-split-spoon-cutout",
+        [
+          { xMpt: asMpt(samplerX + 1_000), yMpt: asMpt(y - 3_500) },
+          { xMpt: asMpt(samplerX + 6_000), yMpt: asMpt(y - 3_500) },
+          { xMpt: asMpt(samplerX + 3_500), yMpt: asMpt(y - 500) },
+        ],
+        true,
+        "pageFill",
+        null,
+        sample.provenance,
+      );
+      addPath(
+        `node:sample:${sample.id}:sampler-lower`,
+        `sample:${sample.id}`,
+        depthGroupId,
+        "sample-symbol-split-spoon-cutout",
+        [
+          { xMpt: asMpt(samplerX + 1_000), yMpt: asMpt(y + 3_500) },
+          { xMpt: asMpt(samplerX + 6_000), yMpt: asMpt(y + 3_500) },
+          { xMpt: asMpt(samplerX + 3_500), yMpt: asMpt(y + 500) },
+        ],
+        true,
+        "pageFill",
+        null,
+        sample.provenance,
+      );
+    }
     const cells: readonly [string, BoringLogColumnInput, string][] = [
       [sample.label, sampleColumn, "sample-label"],
       [`${sample.recoveryPercent}%`, recoveryColumn, "sample-recovery"],
-      [sample.blowsPerSixInches.join("/"), blowsColumn, "sample-blows"],
-      [String(sample.nValue), nColumn, "sample-n-value"],
+      [formatBlowIncrements(sample.blowIncrements), blowsColumn, "sample-blows"],
+      [sample.nValue === null ? "REF" : String(sample.nValue), nColumn, "sample-n-value"],
     ];
     cells.forEach(([content, column, role], index) =>
       addText(
@@ -602,73 +789,90 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         depthGroupId,
         role,
         content,
-        rect(column.xMpt + 1_000, y - 4_500, column.widthMpt - 2_000, 9_000),
+        rect(
+          column.xMpt + (index === 0 ? 13_000 : 1_000),
+          y - 4_500,
+          column.widthMpt - (index === 0 ? 14_000 : 2_000),
+          9_000,
+        ),
         "style-body",
         sample.provenance,
         1,
         "no-wrap",
       ),
     );
+    if (sample.refusal) {
+      addPath(
+        `node:sample:${sample.id}:refusal`,
+        `sample:${sample.id}`,
+        depthGroupId,
+        "sample-refusal-glyph",
+        [
+          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 7_000), yMpt: asMpt(y - 3_000) },
+          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 3_000), yMpt: asMpt(y) },
+          { xMpt: asMpt(nColumn.xMpt + nColumn.widthMpt - 7_000), yMpt: asMpt(y + 3_000) },
+        ],
+        false,
+        null,
+        "ink",
+        sample.provenance,
+      );
+    }
   }
 
   const trackColumn = columnByRole(job, "penetration-moisture-plasticity");
   const axesById = new Map(job.document.dataTrack.axes.map((axis) => [axis.id, axis]));
   job.document.dataTrack.axes.forEach((axis, index) => {
-    const half = index === 0 ? "left" : "right";
-    const xMin = valueToXMpt(trackColumn, axis.minimum, axis.maximum, axis.minimum, half);
-    const xMax = valueToXMpt(trackColumn, axis.minimum, axis.maximum, axis.maximum, half);
-    addLine(
-      `node:data-axis:${axis.id}:minimum`,
-      `data-axis:${axis.id}`,
-      depthGroupId,
-      "data-axis-minimum",
-      xMin,
-      job.template.depthTransform.yStartMpt,
-      xMin,
-      job.template.depthTransform.yEndMpt,
-      "lightRule",
-    );
-    addLine(
-      `node:data-axis:${axis.id}:maximum`,
-      `data-axis:${axis.id}`,
-      depthGroupId,
-      "data-axis-maximum",
-      xMax,
-      job.template.depthTransform.yStartMpt,
-      xMax,
-      job.template.depthTransform.yEndMpt,
-      "lightRule",
-    );
-    addText(
-      `node:data-axis:${axis.id}:label`,
-      `data-axis:${axis.id}`,
-      depthGroupId,
-      "data-axis-label",
-      index === 0
-        ? `N (${axis.unit}) ${axis.minimum}–${axis.maximum}`
-        : `Water content (%) ${axis.minimum}–${axis.maximum}`,
-      rect(
-        trackColumn.xMpt + index * Math.floor(trackColumn.widthMpt / 2) + 1_000,
-        depthBody.yMpt + 13_000,
-        Math.floor(trackColumn.widthMpt / 2) - 2_000,
-        10_000,
-      ),
-      "style-small",
-      null,
-      1,
-      "no-wrap",
-    );
+    if (index > 0) {
+      addLine(
+        `node:data-axis:${axis.id}:authority`,
+        `data-axis:${axis.id}`,
+        depthGroupId,
+        "data-axis-authority",
+        trackColumn.xMpt,
+        job.template.depthTransform.yStartMpt,
+        trackColumn.xMpt + trackColumn.widthMpt,
+        job.template.depthTransform.yStartMpt,
+        "lightRule",
+      );
+    }
+    if (index === 0) {
+      for (let tick = axis.minimum; tick <= axis.maximum; tick += 25) {
+        const x = valueToXMpt(trackColumn, axis.minimum, axis.maximum, tick);
+        addLine(
+          `node:data-axis:grid:${tick}`,
+          `data-axis:${axis.id}`,
+          depthGroupId,
+          "data-axis-grid",
+          x,
+          job.template.depthTransform.yStartMpt,
+          x,
+          job.template.depthTransform.yEndMpt,
+          "lightRule",
+        );
+        addText(
+          `node:data-axis:grid-label:${tick}`,
+          `data-axis:${axis.id}`,
+          depthGroupId,
+          "data-axis-grid-label",
+          String(tick),
+          rect(x - 7_000, depthBody.yMpt + 15_000, 14_000, 7_000),
+          "style-small",
+          null,
+          1,
+          "no-wrap",
+        );
+      }
+    }
   });
   const sampleById = new Map(job.document.samples.map((sample) => [sample.id, sample]));
   for (const layer of job.document.dataTrack.layers) {
     const axis = axesById.get(layer.axisId)!;
-    const axisIndex = job.document.dataTrack.axes.findIndex(({ id }) => id === axis.id);
-    const half = axisIndex === 0 ? "left" : "right";
     if (layer.kind === "numeric-polyline") {
       const points = layer.values.map(([sampleId, value]) => {
         const sample = sampleById.get(sampleId)!;
         return {
-          xMpt: valueToXMpt(trackColumn, axis.minimum, axis.maximum, value, half),
+          xMpt: valueToXMpt(trackColumn, axis.minimum, axis.maximum, value),
           yMpt: depthToYMpt(job, sample.depthFt),
         };
       });
@@ -681,11 +885,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           points,
           false,
           null,
-          layer.id === "layer-n-value" ? "selection" : "secondaryInk",
+          layer.id === "layer-n-value" ? "nTrack" : "moistureTrack",
           layer.provenance,
         );
       }
-      layer.values.forEach(([sampleId, value], index) => {
+      layer.values.forEach(([sampleId], index) => {
         const point = points[index]!;
         if (layer.glyph === "filled-square") {
           addRect(
@@ -694,7 +898,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
             depthGroupId,
             "data-point-filled-square",
             rect(point.xMpt - 1_500, point.yMpt - 1_500, 3_000, 3_000),
-            "selection",
+            "nTrack",
             "ink",
             layer.provenance,
           );
@@ -711,29 +915,17 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
             ],
             true,
             "pageFill",
-            "secondaryInk",
+            "moistureTrack",
             layer.provenance,
           );
         }
-        addText(
-          `node:data-layer:${layer.id}:value:${sampleId}`,
-          `data-layer:${layer.id}:${sampleId}`,
-          depthGroupId,
-          "data-point-value",
-          String(value),
-          rect(point.xMpt + 2_000, point.yMpt - 4_000, 16_000, 8_000),
-          "style-small",
-          layer.provenance,
-          1,
-          "no-wrap",
-        );
       });
     } else {
       for (const [sampleId, first, second] of layer.values) {
         const sample = sampleById.get(sampleId)!;
         const y = depthToYMpt(job, sample.depthFt);
-        const firstX = valueToXMpt(trackColumn, axis.minimum, axis.maximum, first, half);
-        const secondX = valueToXMpt(trackColumn, axis.minimum, axis.maximum, second, half);
+        const firstX = valueToXMpt(trackColumn, axis.minimum, axis.maximum, first);
+        const secondX = valueToXMpt(trackColumn, axis.minimum, axis.maximum, second);
         addLine(
           `node:data-layer:${layer.id}:range:${sampleId}`,
           `data-layer:${layer.id}:${sampleId}`,
@@ -743,7 +935,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           y,
           Math.max(firstX, secondX),
           y,
-          "secondaryInk",
+          "plasticityTrack",
           layer.provenance,
         );
         addCircle(
@@ -756,6 +948,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           1_750,
           "pageFill",
           layer.provenance,
+          "plasticityTrack",
         );
         addCircle(
           `node:data-layer:${layer.id}:second:${sampleId}`,
@@ -767,6 +960,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           1_750,
           "pageFill",
           layer.provenance,
+          "plasticityTrack",
         );
       }
     }
@@ -796,30 +990,167 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
 
   const footer = job.template.regions.find(({ role }) => role === "footer")!;
   const footerGroupId = "node:region-footer";
-  const legendColumnOffsetsMpt = [0, 76_000, 152_000, 246_000, 322_000] as const;
+  const legendWidthMpt = 182_000;
+  const notesWidthMpt = 258_000;
+  const approvalX = footer.xMpt + legendWidthMpt + notesWidthMpt;
+  addLine(
+    "node:footer-legend-notes-divider",
+    "footer-legend",
+    footerGroupId,
+    "footer-divider",
+    footer.xMpt + legendWidthMpt,
+    footer.yMpt,
+    footer.xMpt + legendWidthMpt,
+    footer.yMpt + footer.heightMpt,
+    "lightRule",
+  );
+  addLine(
+    "node:footer-notes-approval-divider",
+    "footer-approval",
+    footerGroupId,
+    "footer-divider",
+    approvalX,
+    footer.yMpt,
+    approvalX,
+    footer.yMpt + footer.heightMpt,
+    "lightRule",
+  );
+  addText(
+    "node:footer-legend-heading",
+    "footer-legend",
+    footerGroupId,
+    "footer-heading",
+    "LEGEND — FULL KEY ON LEGEND SHEET",
+    rect(footer.xMpt + 3_000, footer.yMpt + 3_000, legendWidthMpt - 6_000, 8_000),
+    "style-heading",
+    null,
+    1,
+    "no-wrap",
+  );
+  addText(
+    "node:footer-notes-heading",
+    "footer-notes",
+    footerGroupId,
+    "footer-heading",
+    "NOTES",
+    rect(footer.xMpt + legendWidthMpt + 5_000, footer.yMpt + 3_000, 90_000, 8_000),
+    "style-heading",
+    null,
+    1,
+    "no-wrap",
+  );
   job.document.legend.forEach((item, index) => {
-    const column = index % 5;
-    const row = Math.floor(index / 5);
-    const x = footer.xMpt + 3_000 + legendColumnOffsetsMpt[column]!;
-    const y = footer.yMpt + 3_000 + row * 9_000;
-    addCircle(
-      `node:legend:${item.id}:symbol`,
-      `legend:${item.id}`,
-      footerGroupId,
-      "legend-symbol",
-      x + 2_500,
-      y + 3_500,
-      1_500,
-      item.symbol.includes("filled") ? "ink" : "pageFill",
-      sourceFor(job, item.id, "symbol"),
-    );
+    const column = Math.floor(index / 5);
+    const row = index % 5;
+    const x = footer.xMpt + 3_000 + column * 89_000;
+    const y = footer.yMpt + 14_000 + row * 15_000;
+    const symbolProvenance = sourceFor(job, item.id, "symbol");
+    const symbolId = `node:legend:${item.id}:symbol`;
+    if (item.symbol === "split-spoon") {
+      addRect(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-split-spoon",
+        rect(x, y, 6_000, 10_000),
+        "ink",
+        "ink",
+        symbolProvenance,
+      );
+    } else if (item.symbol.startsWith("pattern-")) {
+      addRect(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-pattern",
+        rect(x, y + 1_000, 10_000, 8_000),
+        item.symbol,
+        "rule",
+        symbolProvenance,
+      );
+    } else if (item.symbol.includes("line") && !item.symbol.includes("triangle")) {
+      addLine(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-line",
+        x,
+        y + 5_000,
+        x + 10_000,
+        y + 5_000,
+        item.symbol.includes("open-circle") ? "plasticityTrack" : "ink",
+        symbolProvenance,
+        item.symbol === "dashed-line" ? [asMpt(2_000), asMpt(1_000)] : [],
+      );
+      if (item.symbol === "filled-square-line") {
+        addRect(
+          `${symbolId}:point`,
+          `legend:${item.id}`,
+          footerGroupId,
+          "legend-symbol-filled-square",
+          rect(x + 3_500, y + 3_500, 3_000, 3_000),
+          "nTrack",
+          "nTrack",
+          symbolProvenance,
+        );
+      } else if (item.symbol === "open-circle-range") {
+        addCircle(
+          `${symbolId}:first`,
+          `legend:${item.id}`,
+          footerGroupId,
+          "legend-symbol-open-circle",
+          x + 1_000,
+          y + 5_000,
+          1_500,
+          "pageFill",
+          symbolProvenance,
+          "plasticityTrack",
+        );
+        addCircle(
+          `${symbolId}:second`,
+          `legend:${item.id}`,
+          footerGroupId,
+          "legend-symbol-open-circle",
+          x + 9_000,
+          y + 5_000,
+          1_500,
+          "pageFill",
+          symbolProvenance,
+          "plasticityTrack",
+        );
+      }
+    } else {
+      const downward = item.symbol.includes("down-triangle");
+      const open = item.symbol.startsWith("open-");
+      addPath(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-triangle",
+        downward
+          ? [
+              { xMpt: asMpt(x), yMpt: asMpt(y + 2_000) },
+              { xMpt: asMpt(x + 10_000), yMpt: asMpt(y + 2_000) },
+              { xMpt: asMpt(x + 5_000), yMpt: asMpt(y + 9_000) },
+            ]
+          : [
+              { xMpt: asMpt(x + 5_000), yMpt: asMpt(y + 1_000) },
+              { xMpt: asMpt(x), yMpt: asMpt(y + 9_000) },
+              { xMpt: asMpt(x + 10_000), yMpt: asMpt(y + 9_000) },
+            ],
+        true,
+        open ? "pageFill" : "ink",
+        item.symbol === "open-triangle-line" ? "moistureTrack" : "ink",
+        symbolProvenance,
+      );
+    }
     addText(
       `node:legend:${item.id}:label`,
       `legend:${item.id}`,
       footerGroupId,
       "legend-label",
       item.label,
-      rect(x + 6_000, y, 67_000, 8_000),
+      rect(x + 13_000, y, 73_000, 11_000),
       "style-small",
       sourceFor(job, item.id, "label"),
       1,
@@ -829,6 +1160,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   job.document.notes.forEach((note, index) => {
     const column = index >= 4 ? 1 : 0;
     const row = index % 4;
+    const columnWidth = Math.floor((notesWidthMpt - 10_000) / 2);
     addText(
       `node:note:${index + 1}`,
       `note:${index + 1}`,
@@ -836,37 +1168,92 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       "publication-note",
       `${index + 1}. ${note}`,
       rect(
-        footer.xMpt + 3_000 + column * 191_000,
-        footer.yMpt + 24_000 + row * 9_000,
-        186_000,
-        8_000,
+        footer.xMpt + legendWidthMpt + 5_000 + column * columnWidth,
+        footer.yMpt + 14_000 + row * 20_000,
+        columnWidth - 5_000,
+        18_000,
       ),
       "style-small",
       sourceFor(job, `note-${index + 1}`, "text"),
-      1,
-      "no-wrap",
+      2,
     );
   });
   const approval = job.document.approval;
-  const approvalLines = [
+  addText(
+    "node:approval:heading",
+    "footer-approval",
+    footerGroupId,
+    "approval-heading",
     approval.heading,
-    approval.sealPlaceholder,
-    approval.reviewerName,
-    approval.reviewedDate,
-  ];
-  approvalLines.forEach((content, index) =>
-    addText(
-      `node:approval:${index + 1}`,
-      "footer-approval",
-      footerGroupId,
-      "approval-line",
-      content,
-      rect(footer.xMpt + 390_000, footer.yMpt + 25_000 + index * 9_000, 188_000, 8_000),
-      index === 0 ? "style-heading" : "style-small",
-      sourceFor(job, "approval", `line-${index + 1}`),
-      1,
-      "no-wrap",
+    rect(
+      approvalX + 7_000,
+      footer.yMpt + 3_000,
+      footer.xMpt + footer.widthMpt - approvalX - 14_000,
+      8_000,
     ),
+    "style-heading",
+    sourceFor(job, "approval", "heading"),
+    1,
+    "no-wrap",
+  );
+  addRect(
+    "node:approval:seal-box",
+    "footer-approval",
+    footerGroupId,
+    "approval-seal-box",
+    rect(
+      approvalX + 7_000,
+      footer.yMpt + 15_000,
+      footer.xMpt + footer.widthMpt - approvalX - 14_000,
+      45_000,
+    ),
+    null,
+    "rule",
+    sourceFor(job, "approval", "seal"),
+  );
+  addText(
+    "node:approval:seal-label",
+    "footer-approval",
+    footerGroupId,
+    "approval-seal-label",
+    approval.sealPlaceholder,
+    rect(
+      approvalX + 12_000,
+      footer.yMpt + 33_000,
+      footer.xMpt + footer.widthMpt - approvalX - 24_000,
+      9_000,
+    ),
+    "style-small",
+    sourceFor(job, "approval", "seal"),
+    1,
+    "no-wrap",
+  );
+  addLine(
+    "node:approval:signature-line",
+    "footer-approval",
+    footerGroupId,
+    "approval-signature-line",
+    approvalX + 7_000,
+    footer.yMpt + 72_000,
+    footer.xMpt + footer.widthMpt - 7_000,
+    footer.yMpt + 72_000,
+    "rule",
+  );
+  addText(
+    "node:approval:signature",
+    "footer-approval",
+    footerGroupId,
+    "approval-signature",
+    `${approval.reviewerName} · ${approval.reviewedDate}`,
+    rect(
+      approvalX + 7_000,
+      footer.yMpt + 75_000,
+      footer.xMpt + footer.widthMpt - approvalX - 14_000,
+      16_000,
+    ),
+    "style-small",
+    sourceFor(job, "approval", "reviewer"),
+    2,
   );
 
   const semanticOrder = nodes
@@ -978,9 +1365,12 @@ export function resolveBoringLogPageScene(
       visualTokens: prepared.value.job.template.visualTokens,
       textStyles: prepared.value.job.template.styles,
       patterns: [
-        ...new Set(
-          prepared.value.job.document.lithologyIntervals.map(({ patternId }) => patternId),
-        ),
+        ...new Set([
+          ...prepared.value.job.document.lithologyIntervals.map(({ patternId }) => patternId),
+          ...prepared.value.job.document.legend
+            .map(({ symbol }) => symbol)
+            .filter((symbol) => symbol.startsWith("pattern-")),
+        ]),
       ].map((patternId) => ({
         id: patternId,
         kind: patternId.includes("gravel") ? ("dot-ring" as const) : ("line-hatch" as const),

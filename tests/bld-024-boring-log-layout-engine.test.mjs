@@ -49,8 +49,8 @@ test("BLD-024 deterministically prepares the exact one-page plan and text author
   assert.equal(first.value.pagePlan.pages[0].heightMpt, 792_000);
   assert.equal(first.value.pagePlan.pages[0].depthRange.startFt, 0);
   assert.equal(first.value.pagePlan.pages[0].depthRange.endFt, 40);
-  assert.equal(first.value.pagePlan.pages[0].depthTransform.yStartMpt, 121_000);
-  assert.equal(first.value.pagePlan.pages[0].depthTransform.yEndMpt, 704_000);
+  assert.equal(first.value.pagePlan.pages[0].depthTransform.yStartMpt, 129_000);
+  assert.equal(first.value.pagePlan.pages[0].depthTransform.yEndMpt, 608_000);
   assert.deepEqual(
     first.value.pagePlan.pages[0].columns.map(({ role }) => role),
     boringLogMvpTemplate.columns.map(({ role }) => role),
@@ -81,7 +81,9 @@ test("BLD-024 resolves every required boring-log section into one common vector 
   for (const role of [
     "company-name",
     "document-title",
-    "project-metadata-line",
+    "project-metadata-label",
+    "project-metadata-value",
+    "depth-minor-tick",
     "elevation-label",
     "depth-label",
     "lithology-pattern-interval",
@@ -90,12 +92,15 @@ test("BLD-024 resolves every required boring-log section into one common vector 
     "sample-recovery",
     "sample-blows",
     "sample-n-value",
+    "sample-symbol-split-spoon",
+    "sample-refusal-glyph",
     "data-polyline",
     "data-range",
     "remark-interval",
     "legend-label",
     "publication-note",
-    "approval-line",
+    "approval-seal-box",
+    "approval-signature-line",
   ]) {
     assert.equal(roles.has(role), true, `missing role ${role}`);
   }
@@ -118,14 +123,17 @@ test("BLD-024 accounts for every interval, sample, plot value, remark, legend, n
     );
   }
   for (const sample of boringLogMvpFixture.samples) {
-    assert.equal(nodes.filter(({ semanticId }) => semanticId === `sample:${sample.id}`).length, 5);
+    assert.equal(
+      nodes.filter(({ semanticId }) => semanticId === `sample:${sample.id}`).length,
+      sample.refusal ? 9 : 8,
+    );
   }
   for (const layer of boringLogMvpFixture.dataTrack.layers) {
     for (const [sampleId] of layer.values) {
       assert.equal(
         nodes.filter(({ semanticId }) => semanticId === `data-layer:${layer.id}:${sampleId}`)
           .length,
-        layer.kind === "numeric-polyline" ? 2 : 3,
+        layer.kind === "numeric-polyline" ? 1 : 3,
       );
     }
     assert.equal(
@@ -137,17 +145,18 @@ test("BLD-024 accounts for every interval, sample, plot value, remark, legend, n
     assert.ok(nodes.some(({ semanticId }) => semanticId === `remark:${remark.id}`));
   }
   for (const item of boringLogMvpFixture.legend) {
-    assert.equal(nodes.filter(({ semanticId }) => semanticId === `legend:${item.id}`).length, 2);
+    assert.ok(nodes.filter(({ semanticId }) => semanticId === `legend:${item.id}`).length >= 2);
   }
   assert.equal(nodes.filter(({ role }) => role === "publication-note").length, 8);
-  assert.equal(nodes.filter(({ role }) => role === "approval-line").length, 4);
+  assert.equal(nodes.filter(({ role }) => role === "approval-seal-box").length, 1);
+  assert.equal(nodes.filter(({ role }) => role === "approval-signature-line").length, 1);
 });
 
 test("BLD-024 uses one exact depth transform and stable integer-mpt geometry", () => {
   const { scene } = resolvedFixtureScene();
   const nodes = scene.pages[0].nodes;
   for (const sample of boringLogMvpFixture.samples) {
-    const expectedY = 121_000 + Math.round(sample.depthFt * 14_575);
+    const expectedY = 129_000 + Math.round(sample.depthFt * 11_975);
     const row = nodes.find(({ id }) => id === `node:sample:${sample.id}:row`);
     assert.equal(row.kind, "line");
     assert.equal(row.from.yMpt, expectedY);
@@ -288,11 +297,11 @@ test("BLD-024 repeats one exact normalized Page Plan and scene in fresh processe
   assert.equal(new Set(transcripts.map((entry) => JSON.stringify(entry))).size, 1);
   assert.deepEqual(transcripts[0], {
     node: "v24.18.1",
-    pagePlanDigest: "sha256:7d89184b3b11d2075b186ba113d225dced16720f1d9f88c2e42b458a6820c24e",
-    sceneDigest: "sha256:9696ae6fd389f27d8f15e723e6c6abb2f793aabf3a843119824bff39a2fad0c0",
-    textRequestCount: 130,
+    pagePlanDigest: "sha256:f1412940bde1f9c65215e9a8862f82f2df47dc0d46e44c06ffeccdd1057fd883",
+    sceneDigest: "sha256:e654ba9fc103a6ab32c3b3cb030d627c1e041dc68614445b631736da3acb23c4",
+    textRequestCount: 133,
     semanticCount: 88,
-    nodeCount: 227,
-    diagnosticCount: 3,
+    nodeCount: 319,
+    diagnosticCount: 0,
   });
 });

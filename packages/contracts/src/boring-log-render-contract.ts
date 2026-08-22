@@ -153,20 +153,29 @@ export type BoringLogDataLayerInput =
 
 export interface BoringLogMetadataInput {
   readonly companyName: string;
+  readonly companyContactSubtitle: string;
   readonly documentTitle: string;
   readonly sheetLabel: string;
+  readonly clientName: string;
   readonly projectName: string;
   readonly projectNumber: string;
   readonly location: string;
   readonly coordinates: string;
+  readonly coordinateDatum: string;
   readonly groundElevationFt: number;
+  readonly elevationDatum: string;
   readonly totalDepthFt: number;
   readonly completionDepthFt: number;
   readonly drilledDate: string;
   readonly boringMethod: string;
+  readonly holeDiameter: string;
+  readonly rigDriller: string;
   readonly hammerType: string;
   readonly hammerDrop: string;
+  readonly hammerEfficiency: string;
   readonly loggedBy: string;
+  readonly checkedBy: string;
+  readonly groundwaterSummary: string;
   readonly provenance: BoringLogValueProvenance;
 }
 
@@ -181,6 +190,7 @@ export interface BoringLogLithologyIntervalInput {
   readonly depthToFt: number;
   readonly classification: string;
   readonly patternId: string;
+  readonly materialFillToken: string;
   readonly description: string;
   readonly transitions: readonly BoringLogLithologyTransitionInput[];
   readonly boundaryKind: "observed" | "gradational";
@@ -193,8 +203,12 @@ export interface BoringLogSampleInput {
   readonly depthFt: number;
   readonly symbol: string;
   readonly recoveryPercent: number;
-  readonly blowsPerSixInches: readonly [number, number, number];
-  readonly nValue: number;
+  readonly blowIncrements: readonly {
+    readonly blows: number;
+    readonly penetrationInches: number;
+  }[];
+  readonly nValue: number | null;
+  readonly refusal: boolean;
   readonly provenance: BoringLogValueProvenance;
 }
 
@@ -791,35 +805,53 @@ function validateDocument(input: unknown): void {
   for (const item of Object.values(identity)) textValue(item);
   const metadata = record(value["metadata"], [
     "companyName",
+    "companyContactSubtitle",
     "documentTitle",
     "sheetLabel",
+    "clientName",
     "projectName",
     "projectNumber",
     "location",
     "coordinates",
+    "coordinateDatum",
     "groundElevationFt",
+    "elevationDatum",
     "totalDepthFt",
     "completionDepthFt",
     "drilledDate",
     "boringMethod",
+    "holeDiameter",
+    "rigDriller",
     "hammerType",
     "hammerDrop",
+    "hammerEfficiency",
     "loggedBy",
+    "checkedBy",
+    "groundwaterSummary",
     "provenance",
   ]);
   for (const key of [
     "companyName",
+    "companyContactSubtitle",
     "documentTitle",
     "sheetLabel",
+    "clientName",
     "projectName",
     "projectNumber",
     "location",
     "coordinates",
+    "coordinateDatum",
+    "elevationDatum",
     "drilledDate",
     "boringMethod",
+    "holeDiameter",
+    "rigDriller",
     "hammerType",
     "hammerDrop",
+    "hammerEfficiency",
     "loggedBy",
+    "checkedBy",
+    "groundwaterSummary",
   ]) {
     textValue(metadata[key]);
   }
@@ -842,6 +874,7 @@ function validateDocument(input: unknown): void {
       "depthToFt",
       "classification",
       "patternId",
+      "materialFillToken",
       "description",
       "transitions",
       "boundaryKind",
@@ -855,6 +888,7 @@ function validateDocument(input: unknown): void {
     previousEnd = to;
     textValue(interval["classification"]);
     textValue(interval["patternId"]);
+    textValue(interval["materialFillToken"]);
     textValue(interval["description"]);
     for (const transitionInput of array(interval["transitions"])) {
       const transition = record(transitionInput, ["depthFt", "text"]);
@@ -878,8 +912,9 @@ function validateDocument(input: unknown): void {
       "depthFt",
       "symbol",
       "recoveryPercent",
-      "blowsPerSixInches",
+      "blowIncrements",
       "nValue",
+      "refusal",
       "provenance",
     ]);
     sampleIds.push(textValue(sample["id"]));
@@ -891,10 +926,25 @@ function validateDocument(input: unknown): void {
     previousSampleDepth = depth;
     const recovery = finite(sample["recoveryPercent"]);
     if (recovery < 0 || recovery > 100) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-    const blows = array(sample["blowsPerSixInches"]);
-    if (blows.length !== 3) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-    for (const blow of blows) nonnegativeInteger(blow);
-    nonnegativeInteger(sample["nValue"]);
+    const increments = array(sample["blowIncrements"]);
+    if (increments.length < 1 || increments.length > 3) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    for (const incrementInput of increments) {
+      const increment = record(incrementInput, ["blows", "penetrationInches"]);
+      nonnegativeInteger(increment["blows"]);
+      const penetrationInches = finite(increment["penetrationInches"]);
+      if (penetrationInches <= 0 || penetrationInches > 6) {
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      }
+    }
+    if (typeof sample["refusal"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    if (sample["nValue"] === null) {
+      if (sample["refusal"] !== true) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    } else {
+      nonnegativeInteger(sample["nValue"]);
+      if (sample["refusal"] !== false) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     validateProvenance(sample["provenance"]);
   }
   unique(sampleIds);
@@ -1537,6 +1587,13 @@ export function validateBoringLogLayoutJobInput(
       documentRange["endFt"] !== transform["depthEndFt"]
     ) {
       fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
+    }
+    const visualTokens = template["visualTokens"] as DataRecord;
+    for (const intervalInput of document["lithologyIntervals"] as readonly unknown[]) {
+      const interval = intervalInput as DataRecord;
+      if (!Object.hasOwn(visualTokens, interval["materialFillToken"] as PropertyKey)) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
     }
   });
 }

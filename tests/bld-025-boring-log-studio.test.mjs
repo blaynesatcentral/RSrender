@@ -44,14 +44,15 @@ test("BLD-025 projects the validated scene into ordered semantic vector SVG", ()
   const result = projectBoringLogSceneToSvg(scene);
   assert.equal(boringLogSvgProjectionRevision, "bld-025-svg-projection-v1");
   assert.equal(result.accepted, true);
-  assert.equal(result.semanticElementCount, 227);
+  assert.equal(result.semanticElementCount, 319);
   assert.match(result.markup, /^<svg[^>]+viewBox="0 0 612000 792000"/u);
   assert.match(result.markup, /data-scene-input-digest="sha256:[0-9a-f]{64}"/u);
   assert.match(result.markup, /<pattern[^>]+pattern-silt-horizontal-dash/u);
   assert.match(result.markup, /data-node-role="material-description-interval"/u);
   assert.match(result.markup, /data-node-role="sample-n-value"/u);
   assert.match(result.markup, /data-node-role="data-polyline"/u);
-  assert.match(result.markup, /data-node-role="approval-line"/u);
+  assert.match(result.markup, /data-node-role="approval-seal-box"/u);
+  assert.match(result.markup, /data-node-role="approval-signature-line"/u);
   assert.match(result.markup, /data-provenance="source"/u);
   assert.doesNotMatch(result.markup, /<(?:img|image|canvas|foreignObject)\b/iu);
   assert.doesNotMatch(result.markup, /(?:data:image|\.png\b|\.jpe?g\b)/iu);

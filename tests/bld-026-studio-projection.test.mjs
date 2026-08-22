@@ -94,7 +94,7 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
   assert.equal(boringLogStudioProjectionRevision, "bld-026-studio-projection-v1");
   assert.equal(initial.accepted, true, initial.code);
   assert.equal(initial.projection.editableValues.length, 24);
-  assert.equal(initial.projection.scene.pages[0].nodes.length, 227);
+  assert.equal(initial.projection.scene.pages[0].nodes.length, 319);
   assert.equal(initial.projection.scene.pages[0].semanticOrder.length, 88);
   assert.equal(
     initial.projection.scene.pages[0].nodes.some(({ kind }) => kind === "image"),

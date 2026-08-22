@@ -374,6 +374,52 @@ test("BLD-023 rejects incompatible axis units, noncanonical order, and extra fie
   assert.equal(validateBoringLogLayoutJobInput(extraField).code, "BORING_LOG_CONTRACT_EXTRA_FIELD");
 });
 
+test("BLD-023 validates structured blow increments, refusal outcomes, and material tokens", () => {
+  const accepted = layoutJob();
+  assert.equal(accepted.document.samples[5].refusal, true);
+  assert.equal(accepted.document.samples[5].nValue, null);
+  assert.deepEqual(accepted.document.samples[5].blowIncrements, [
+    { blows: 16, penetrationInches: 6 },
+    { blows: 50, penetrationInches: 4 },
+  ]);
+  assert.equal(validateBoringLogLayoutJobInput(accepted).accepted, true);
+
+  const missingPenetration = layoutJob();
+  delete missingPenetration.document.samples[0].blowIncrements[0].penetrationInches;
+  assert.equal(
+    validateBoringLogLayoutJobInput(missingPenetration).code,
+    "BORING_LOG_CONTRACT_MISSING_FIELD",
+  );
+
+  const excessivePenetration = layoutJob();
+  excessivePenetration.document.samples[0].blowIncrements[0].penetrationInches = 7;
+  assert.equal(
+    validateBoringLogLayoutJobInput(excessivePenetration).code,
+    "BORING_LOG_CONTRACT_WRONG_TYPE",
+  );
+
+  const contradictoryRefusal = layoutJob();
+  contradictoryRefusal.document.samples[0].refusal = true;
+  assert.equal(
+    validateBoringLogLayoutJobInput(contradictoryRefusal).code,
+    "BORING_LOG_CONTRACT_WRONG_TYPE",
+  );
+
+  const missingFillAuthority = layoutJob();
+  delete missingFillAuthority.document.lithologyIntervals[0].materialFillToken;
+  assert.equal(
+    validateBoringLogLayoutJobInput(missingFillAuthority).code,
+    "BORING_LOG_CONTRACT_MISSING_FIELD",
+  );
+
+  const brokenFillAuthority = layoutJob();
+  brokenFillAuthority.document.lithologyIntervals[0].materialFillToken = "missing-fill-token";
+  assert.equal(
+    validateBoringLogLayoutJobInput(brokenFillAuthority).code,
+    "BORING_LOG_CONTRACT_BROKEN_REFERENCE",
+  );
+});
+
 test("BLD-023 rejects image, raster, background, and screenshot shortcuts", () => {
   const background = layoutJob();
   background.document.metadata.backgroundImage = "page.png";

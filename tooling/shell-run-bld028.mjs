@@ -86,7 +86,7 @@ function assertIntegratedResult(result, outputPath, index) {
     result.initial?.panes === 3 &&
     result.initial?.svg === 1 &&
     result.initial?.raster === 0 &&
-    result.initial?.sceneNodes === 227 &&
+    result.initial?.sceneNodes === 319 &&
     result.initial?.semanticElements === 88 &&
     result.selection?.selectedTreeRows === 1 &&
     result.selection?.selectedSceneNodes >= 1 &&

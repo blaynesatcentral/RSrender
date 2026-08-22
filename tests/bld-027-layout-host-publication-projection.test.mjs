@@ -40,7 +40,7 @@ test("BLD-027 Layout Host projects the validated scene as fixed non-wrapping pub
   const { manifest, html, svgMarkup, projectionDigest, documentTitle } = result.projection;
   assert.equal(manifest.widthMpt, 612_000);
   assert.equal(manifest.heightMpt, 792_000);
-  assert.equal(manifest.sceneNodeCount, 227);
+  assert.equal(manifest.sceneNodeCount, 319);
   assert.equal(manifest.semanticElementCount, 88);
   assert.equal(manifest.sceneInputDigest, scene.inputDigest);
   assert.match(manifest.sceneDigest, /^sha256:[0-9a-f]{64}$/u);
@@ -52,7 +52,7 @@ test("BLD-027 Layout Host projects the validated scene as fixed non-wrapping pub
   assert.ok(svgMarkup.includes('viewBox="0 0 612 792"'));
   assert.ok(svgMarkup.includes('width="612pt"'));
   assert.ok(svgMarkup.includes('height="792pt"'));
-  assert.equal((svgMarkup.match(/class="scene-node"/gu) ?? []).length, 227);
+  assert.equal((svgMarkup.match(/class="scene-node"/gu) ?? []).length, 319);
   assert.equal((svgMarkup.match(/<tspan/gu) ?? []).length, manifest.textLineCount);
   assert.equal(/<(?:img|image|canvas|picture)\b/iu.test(html), false);
   assert.equal(/<script\b/iu.test(html), false);

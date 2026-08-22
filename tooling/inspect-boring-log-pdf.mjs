@@ -138,10 +138,10 @@ export async function inspectBoringLogPdf({
       representativeOrder: Object.freeze([
         text.stdout.indexOf("Synthetic Geotechnical Services"),
         text.stdout.indexOf("BORING LOG TEST-01"),
-        text.stdout.indexOf("PROJECT:"),
+        text.stdout.indexOf("CLIENT"),
         text.stdout.indexOf("MATERIAL DESCRIPTION"),
-        text.stdout.indexOf("Split spoon (SPT)"),
         text.stdout.indexOf("REVIEWED & APPROVED"),
+        text.stdout.indexOf("Split spoon (SPT)"),
       ]),
     }),
     toolWarnings: Object.freeze({
