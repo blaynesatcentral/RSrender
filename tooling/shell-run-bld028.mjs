@@ -97,11 +97,45 @@ function assertIntegratedResult(result, outputPath, index) {
     result.selection?.selectedTreeRows === 1 &&
     result.selection?.selectedSceneNodes >= 1 &&
     result.selection?.provenance?.includes("Source original") &&
+    result.interactions?.ownedCommands === true &&
+    result.interactions?.ownedCommandCount === 27 &&
+    result.interactions?.sourceMode === "source" &&
+    result.interactions?.sourceRows < result.interactions?.rowsBefore &&
+    result.interactions?.drawingRows === result.interactions?.rowsBefore &&
+    result.interactions?.optionRowsCollapsed === 1 &&
+    result.interactions?.optionRowsExpanded === result.interactions?.rowsBefore &&
+    result.interactions?.allPropertiesCollapsed === true &&
+    result.interactions?.allPropertiesExpanded === true &&
+    result.interactions?.panPressed === true &&
+    result.interactions?.panSelectionGated === true &&
+    result.interactions?.panScroll > 0 &&
+    result.interactions?.fitSmall?.actual === result.interactions?.fitSmall?.expected &&
+    result.interactions?.fitSmall?.mode === "fit" &&
+    result.interactions?.fitLarge?.actual === result.interactions?.fitLarge?.expected &&
+    result.interactions?.fitLarge?.mode === "fit" &&
+    result.interactions?.validation?.result === "VALIDATION_PASS" &&
+    result.interactions?.validation?.diagnosticsShown === true &&
     result.editing?.before?.source === result.editing?.before?.effective &&
+    result.editing?.before?.dirtyText === "Clean" &&
+    result.editing?.before?.authorityDirty === false &&
+    result.editing?.before?.workingRevision === 0 &&
+    result.editing?.before?.durableRevision === 0 &&
     result.editing?.applied?.effective === result.editing?.replacement &&
     result.editing?.applied?.provenance?.includes("Effective override") &&
+    result.editing?.applied?.dirtyText === "Unsaved changes" &&
+    result.editing?.applied?.authorityDirty === true &&
+    result.editing?.applied?.workingRevision === 1 &&
+    result.editing?.applied?.durableRevision === 0 &&
     result.editing?.undo?.effective === result.editing?.undo?.source &&
+    result.editing?.undo?.dirtyText === "Unsaved changes" &&
+    result.editing?.undo?.authorityDirty === true &&
+    result.editing?.undo?.workingRevision === 2 &&
+    result.editing?.undo?.durableRevision === 0 &&
     result.editing?.redo?.effective === result.editing?.replacement &&
+    result.editing?.redo?.dirtyText === "Unsaved changes" &&
+    result.editing?.redo?.authorityDirty === true &&
+    result.editing?.redo?.workingRevision === 3 &&
+    result.editing?.redo?.durableRevision === 0 &&
     result.editing?.style?.patternedIntervals === 3 &&
     result.editing?.layout?.width === "150000" &&
     result.editing?.layout?.followingX === "253000" &&
@@ -110,7 +144,23 @@ function assertIntegratedResult(result, outputPath, index) {
     result.zoomPercent === 90 &&
     result.denials?.windowCount === 1 &&
     result.denials?.network === 0;
-  if (!valid) throw new Error(`INTEGRATED_PRODUCT_RESULT_INVALID:${index}`);
+  if (!valid) {
+    throw new Error(
+      `INTEGRATED_PRODUCT_RESULT_INVALID:${index}:${JSON.stringify({
+        schema: result.schema,
+        result: result.result,
+        code: result.code,
+        diagnosticCode: result.diagnosticCode,
+        initial: result.initial,
+        selection: result.selection,
+        editing: result.editing,
+        publication: result.publication,
+        zoomPercent: result.zoomPercent,
+        denials: result.denials,
+        interactions: result.interactions,
+      })}`,
+    );
+  }
 }
 
 async function runPackaged(packageResult, index, outputPath, inputPath = null) {

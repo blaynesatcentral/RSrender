@@ -1322,6 +1322,31 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     "STUDIO_SELECTION_SYNC_INVALID",
   );
   window.setSize(1_100, 600);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const fitSmall = record(
+    await pageValue(
+      window,
+      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight }; })()`,
+    ),
+  );
+  requireProbe(
+    fitSmall["actual"] === fitSmall["expected"] && fitSmall["mode"] === "fit",
+    "STUDIO_FIT_SMALL_INVALID",
+  );
+  window.setSize(1_400, 900);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const fitLarge = record(
+    await pageValue(
+      window,
+      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight }; })()`,
+    ),
+  );
+  requireProbe(
+    fitLarge["actual"] === fitLarge["expected"] && fitLarge["mode"] === "fit",
+    "STUDIO_FIT_LARGE_INVALID",
+  );
+  window.setSize(1_100, 600);
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const interactions = record(
     await pageValue(
       window,
@@ -1341,6 +1366,15 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         const rowsCollapsed = document.querySelectorAll("#contents-tree .tree-row").length;
         disclosure.click();
         const rowsExpanded = document.querySelectorAll("#contents-tree .tree-row").length;
+        document.getElementById("contents-mode-source")?.click();
+        const sourceRows = document.querySelectorAll("#contents-tree .tree-row").length;
+        const sourceMode = document.getElementById("contents-tree")?.dataset.displayMode;
+        document.getElementById("contents-mode-drawing")?.click();
+        const drawingRows = document.querySelectorAll("#contents-tree .tree-row").length;
+        document.getElementById("contents-options")?.click();
+        const optionRowsCollapsed = document.querySelectorAll("#contents-tree .tree-row").length;
+        document.getElementById("contents-options")?.click();
+        const optionRowsExpanded = document.querySelectorAll("#contents-tree .tree-row").length;
         const group = document.querySelector(".property-group");
         const summary = group?.querySelector("summary");
         if (!(group instanceof HTMLDetailsElement) || !(summary instanceof HTMLElement)) return { invalid: "missing-property-disclosure" };
@@ -1348,6 +1382,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         const propertyCollapsed = group.open === false;
         summary.click();
         const propertyExpanded = group.open === true;
+        document.getElementById("properties-options")?.click();
+        const allPropertiesCollapsed = [...document.querySelectorAll(".property-group")].every((candidate) => candidate instanceof HTMLDetailsElement && candidate.open === false);
+        document.getElementById("properties-options")?.click();
+        const allPropertiesExpanded = [...document.querySelectorAll(".property-group")].every((candidate) => candidate instanceof HTMLDetailsElement && candidate.open === true);
         document.getElementById("property-tab-diagnostics")?.click();
         const diagnosticsShown = document.getElementById("property-diagnostics-panel")?.hidden === false;
         document.getElementById("property-tab-element")?.click();
@@ -1355,18 +1393,39 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         const scroll = document.getElementById("properties-scroll");
         if (!(scroll instanceof HTMLElement)) return { invalid: "missing-properties-scroll" };
         scroll.scrollTop = scroll.scrollHeight;
+        const selectedBeforePan = document.getElementById("property-semantic-id")?.textContent;
+        document.getElementById("pan-tool")?.click();
+        const panPressed = document.getElementById("pan-tool")?.getAttribute("aria-pressed") === "true" && document.getElementById("select-tool")?.getAttribute("aria-pressed") === "false";
+        document.querySelector('#svg-page [data-semantic-id="region-header"]')?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        const panSelectionGated = document.getElementById("property-semantic-id")?.textContent === selectedBeforePan;
+        const ownedCommands = [...document.querySelectorAll("button[id]")].every((button) => button instanceof HTMLButtonElement && typeof button.dataset.commandOwned === "string");
+        const ownedCommandCount = Number(document.body.dataset.ownedCommandCount);
+        const stage = document.getElementById("canvas-stage");
+        if (!(stage instanceof HTMLElement)) return { invalid: "missing-canvas-stage" };
+        stage.scrollTop = 0;
         return {
           tabStates,
           rowsBefore,
           rowsCollapsed,
           rowsExpanded,
+          sourceRows,
+          sourceMode,
+          drawingRows,
+          optionRowsCollapsed,
+          optionRowsExpanded,
           propertyCollapsed,
           propertyExpanded,
+          allPropertiesCollapsed,
+          allPropertiesExpanded,
           diagnosticsShown,
           elementShown,
           overflowY: getComputedStyle(scroll).overflowY,
           scrollable: scroll.scrollHeight > scroll.clientHeight,
           scrollTop: scroll.scrollTop,
+          panPressed,
+          panSelectionGated,
+          ownedCommands,
+          ownedCommandCount,
         };
       })()`,
     ),
@@ -1377,36 +1436,116 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       (interactions["rowsBefore"] as number) >= 15 &&
       interactions["rowsCollapsed"] === 1 &&
       interactions["rowsExpanded"] === interactions["rowsBefore"] &&
+      (interactions["sourceRows"] as number) > 0 &&
+      (interactions["sourceRows"] as number) < (interactions["rowsBefore"] as number) &&
+      interactions["sourceMode"] === "source" &&
+      interactions["drawingRows"] === interactions["rowsBefore"] &&
+      interactions["optionRowsCollapsed"] === 1 &&
+      interactions["optionRowsExpanded"] === interactions["rowsBefore"] &&
       interactions["propertyCollapsed"] === true &&
       interactions["propertyExpanded"] === true &&
+      interactions["allPropertiesCollapsed"] === true &&
+      interactions["allPropertiesExpanded"] === true &&
       interactions["diagnosticsShown"] === true &&
       interactions["elementShown"] === true &&
       interactions["overflowY"] === "auto" &&
       interactions["scrollable"] === true &&
-      (interactions["scrollTop"] as number) > 0,
+      (interactions["scrollTop"] as number) > 0 &&
+      interactions["panPressed"] === true &&
+      interactions["panSelectionGated"] === true &&
+      interactions["ownedCommands"] === true &&
+      (interactions["ownedCommandCount"] as number) >= 25,
     "STUDIO_INTERACTIONS_INVALID",
   );
-  await pageValue(window, `document.getElementById("zoom-in")?.click(); true`);
+  const stageBounds = record(
+    await pageValue(
+      window,
+      `(() => { const bounds = document.getElementById("canvas-stage")?.getBoundingClientRect(); return bounds === undefined ? {} : { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) }; })()`,
+    ),
+  );
+  requireProbe(
+    typeof stageBounds["x"] === "number" && typeof stageBounds["y"] === "number",
+    "STUDIO_PAN_BOUNDS_INVALID",
+  );
+  window.webContents.sendInputEvent({
+    type: "mouseDown",
+    x: stageBounds["x"],
+    y: stageBounds["y"] + 60,
+    button: "left",
+    clickCount: 1,
+  });
+  window.webContents.sendInputEvent({
+    type: "mouseMove",
+    x: stageBounds["x"],
+    y: stageBounds["y"] - 60,
+    movementX: 0,
+    movementY: -120,
+  });
+  window.webContents.sendInputEvent({
+    type: "mouseUp",
+    x: stageBounds["x"],
+    y: stageBounds["y"] - 60,
+    button: "left",
+    clickCount: 1,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const panScroll = await pageValue(
+    window,
+    `document.getElementById("canvas-stage")?.scrollTop ?? 0`,
+  );
+  requireProbe(typeof panScroll === "number" && panScroll > 0, "STUDIO_PAN_SCROLL_INVALID");
+  await pageValue(
+    window,
+    `(() => { document.getElementById("select-tool")?.click(); const target = document.querySelector('.tree-row[data-semantic-id^="lithology:"] .tree-select'); if (target instanceof HTMLButtonElement) target.click(); document.getElementById("actual-size")?.click(); document.getElementById("zoom-out")?.click(); return true; })()`,
+  );
   requireProbe(
     (await pageValue(
       window,
-      `document.getElementById("zoom-value")?.textContent === "90%" && document.getElementById("page-shadow")?.classList.contains("zoom-90") === true`,
+      `document.getElementById("zoom-value")?.textContent === "90%" && document.getElementById("page-shadow")?.classList.contains("zoom-90") === true && document.getElementById("page-shadow")?.dataset.zoomMode === "manual"`,
     )) === true,
     "STUDIO_ZOOM_INVALID",
+  );
+  await pageValue(window, `document.getElementById("ribbon-tab-review")?.click(); true`);
+  await press(window, "#validate-document", "Space", "FOCUS_STUDIO_VALIDATE");
+  await waitFor(
+    window,
+    `document.getElementById("validate-document")?.dataset.result === "VALIDATION_PASS" && document.getElementById("editor-status")?.textContent?.startsWith("Validation passed at revision 0:") === true`,
+    "WAIT_STUDIO_VALIDATE",
+  );
+  const validation = record(
+    await pageValue(
+      window,
+      `(() => ({ result: document.getElementById("validate-document")?.dataset.result, diagnosticsShown: document.getElementById("property-diagnostics-panel")?.hidden === false, diagnostics: document.querySelectorAll("#diagnostics-list li").length, revision: document.getElementById("editor-status")?.textContent, activeId: document.activeElement?.id }))()`,
+    ),
+  );
+  requireProbe(
+    validation["result"] === "VALIDATION_PASS" &&
+      validation["diagnosticsShown"] === true &&
+      (validation["diagnostics"] as number) >= 1 &&
+      validation["activeId"] === "validate-document",
+    "STUDIO_VALIDATION_INVALID",
+  );
+  await pageValue(
+    window,
+    `(() => { document.getElementById("property-tab-element")?.click(); document.getElementById("ribbon-tab-home")?.click(); return true; })()`,
   );
   let editing: DataRecord | null = null;
   if (studioEditingMode) {
     const before = record(
       await pageValue(
         window,
-        `(() => ({
+        `(async () => { const authority = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return ({
           documentApi: Object.keys(globalThis.rsrender.document),
           studioApi: Object.keys(globalThis.rsrenderStudio),
           readonly: document.getElementById("property-content")?.readOnly,
           applyDisabled: document.getElementById("apply-property")?.disabled,
           source: document.getElementById("property-source-original")?.textContent,
           effective: document.getElementById("property-effective-value")?.textContent,
-        }))()`,
+          dirtyText: document.getElementById("document-state")?.textContent,
+          authorityDirty: authority.accepted ? authority.projection.dirty : null,
+          workingRevision: authority.accepted ? authority.projection.workingRevision : null,
+          durableRevision: authority.accepted ? authority.projection.durableRevision : null,
+        }); })()`,
       ),
     );
     requireProbe(
@@ -1415,7 +1554,11 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         JSON.stringify(before["studioApi"]) === '["getProjection"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
-        before["source"] === before["effective"],
+        before["source"] === before["effective"] &&
+        before["dirtyText"] === "Clean" &&
+        before["authorityDirty"] === false &&
+        before["workingRevision"] === 0 &&
+        before["durableRevision"] === 0,
       "STUDIO_EDITING_AUTHORITY_INVALID",
     );
     const replacement = "Edited in packaged BLD-026 Studio";
@@ -1429,13 +1572,17 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const applied = record(
       await pageValue(
         window,
-        `(() => ({
+        `(async () => { const authority = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return ({
           source: document.getElementById("property-source-original")?.textContent,
           effective: document.getElementById("property-effective-value")?.textContent,
           provenance: document.getElementById("property-provenance")?.textContent,
           digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
           selectedSceneNodes: document.querySelectorAll("#svg-page .scene-node.is-selected").length,
-        }))()`,
+          dirtyText: document.getElementById("document-state")?.textContent,
+          authorityDirty: authority.accepted ? authority.projection.dirty : null,
+          workingRevision: authority.accepted ? authority.projection.workingRevision : null,
+          durableRevision: authority.accepted ? authority.projection.durableRevision : null,
+        }); })()`,
       ),
     );
     requireProbe(
@@ -1443,7 +1590,11 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         applied["effective"] === replacement &&
         (applied["provenance"] as string).includes("Effective override") &&
         applied["digest"] !== initial["pageDigest"] &&
-        (applied["selectedSceneNodes"] as number) >= 1,
+        (applied["selectedSceneNodes"] as number) >= 1 &&
+        applied["dirtyText"] === "Unsaved changes" &&
+        applied["authorityDirty"] === true &&
+        applied["workingRevision"] === 1 &&
+        applied["durableRevision"] === 0,
       "STUDIO_APPLY_INVALID",
     );
     await press(window, "#undo", "Space", "FOCUS_STUDIO_UNDO");
@@ -1455,12 +1606,16 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const undo = record(
       await pageValue(
         window,
-        `(() => ({
+        `(async () => { const authority = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return ({
           source: document.getElementById("property-source-original")?.textContent,
           effective: document.getElementById("property-effective-value")?.textContent,
           provenance: document.getElementById("property-provenance")?.textContent,
           digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
-        }))()`,
+          dirtyText: document.getElementById("document-state")?.textContent,
+          authorityDirty: authority.accepted ? authority.projection.dirty : null,
+          workingRevision: authority.accepted ? authority.projection.workingRevision : null,
+          durableRevision: authority.accepted ? authority.projection.durableRevision : null,
+        }); })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_STUDIO_REDO");
@@ -1472,13 +1627,17 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const redo = record(
       await pageValue(
         window,
-        `(() => ({
+        `(async () => { const authority = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return ({
           source: document.getElementById("property-source-original")?.textContent,
           effective: document.getElementById("property-effective-value")?.textContent,
           provenance: document.getElementById("property-provenance")?.textContent,
           digest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"),
           raster: document.querySelectorAll("img,picture,canvas,image").length,
-        }))()`,
+          dirtyText: document.getElementById("document-state")?.textContent,
+          authorityDirty: authority.accepted ? authority.projection.dirty : null,
+          workingRevision: authority.accepted ? authority.projection.workingRevision : null,
+          durableRevision: authority.accepted ? authority.projection.durableRevision : null,
+        }); })()`,
       ),
     );
     requireProbe(
@@ -1488,7 +1647,15 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         redo["source"] === before["source"] &&
         redo["effective"] === replacement &&
         (redo["provenance"] as string).includes("Effective override") &&
-        redo["raster"] === 0,
+        redo["raster"] === 0 &&
+        undo["dirtyText"] === "Unsaved changes" &&
+        undo["authorityDirty"] === true &&
+        undo["workingRevision"] === 2 &&
+        undo["durableRevision"] === 0 &&
+        redo["dirtyText"] === "Unsaved changes" &&
+        redo["authorityDirty"] === true &&
+        redo["workingRevision"] === 3 &&
+        redo["durableRevision"] === 0,
       "STUDIO_HISTORY_INVALID",
     );
     await press(window, "#undo", "Space", "FOCUS_STUDIO_CLEAR_TEXT_OVERRIDE");
@@ -1633,7 +1800,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
     initial,
     selection,
-    interactions,
+    interactions: Object.freeze({ ...interactions, fitSmall, fitLarge, panScroll, validation }),
     editing,
     publication,
     zoomPercent: 90,

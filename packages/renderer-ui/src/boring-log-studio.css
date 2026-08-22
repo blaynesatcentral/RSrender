@@ -71,6 +71,15 @@ textarea {
   border-radius: 50%;
   background: #62c29b;
 }
+.saved-dot.is-dirty {
+  background: #f2b84b;
+  box-shadow: 0 0 0 2px #f2b84b33;
+}
+.document-state {
+  margin-left: 6px;
+  color: #c7dce8;
+  font-size: 10px;
+}
 .window-meta {
   margin-left: auto;
   color: #bdd5e3;
@@ -397,6 +406,17 @@ textarea {
   padding: 28px;
   background-color: #c9ced2;
 }
+.canvas-stage.is-pan-mode {
+  cursor: grab;
+}
+.canvas-stage.is-pan-mode .scene-node {
+  cursor: grab;
+}
+.canvas-stage.is-panning,
+.canvas-stage.is-panning .scene-node {
+  cursor: grabbing;
+  user-select: none;
+}
 .page-shadow {
   width: min(660px, 88%);
   transform-origin: top center;
@@ -637,6 +657,9 @@ textarea {
 }
 .status-ready {
   color: #a7e4c8;
+}
+.status-ready.is-dirty {
+  color: #ffd277;
 }
 .status-spacer {
   flex: 1;

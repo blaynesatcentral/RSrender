@@ -1,0 +1,90 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+import { createBoringLogStudioHtml } from "../packages/renderer-ui/dist/index.js";
+
+const expectedCommandIds = Object.freeze([
+  "ribbon-tab-home",
+  "ribbon-tab-layout",
+  "ribbon-tab-data",
+  "ribbon-tab-review",
+  "ribbon-tab-publish",
+  "select-page",
+  "select-body",
+  "undo",
+  "redo",
+  "fit-page",
+  "actual-size",
+  "inspect-samples",
+  "inspect-track",
+  "validate-document",
+  "show-diagnostics",
+  "export-pdf",
+  "contents-options",
+  "contents-mode-drawing",
+  "contents-mode-source",
+  "select-tool",
+  "pan-tool",
+  "properties-options",
+  "property-tab-element",
+  "property-tab-diagnostics",
+  "apply-property",
+  "zoom-out",
+  "zoom-in",
+]);
+
+test("BLD-034 gives every static Studio button an owned command identity", async () => {
+  const html = createBoringLogStudioHtml(null);
+  const buttons = [...html.matchAll(/<button\b([^>]*)>/gu)];
+  assert.ok(buttons.length >= expectedCommandIds.length);
+  const buttonIds = buttons.map(([, attributes]) => {
+    const match = /\bid="([^"]+)"/u.exec(attributes);
+    assert.notEqual(match, null, `button has no command identity: ${attributes}`);
+    return match[1];
+  });
+  assert.deepEqual([...buttonIds].sort(), [...expectedCommandIds].sort());
+
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  for (const id of expectedCommandIds) {
+    assert.match(entry, new RegExp(`"${id}"`, "u"));
+  }
+  assert.match(entry, /Unowned Boring Log Studio command/u);
+  assert.doesNotMatch(html, />×<\/span>/u);
+});
+
+test("BLD-034 binds real tool, fit, validation, pane, mode, and dirty behavior", async () => {
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(entry, /function setInteractionMode\(mode: "select" \| "pan"\)/u);
+  assert.match(entry, /canvasStage\.addEventListener\("pointermove"/u);
+  assert.match(entry, /if \(interactionMode !== "select"\) return/u);
+  assert.match(entry, /function fitPage\(\): void/u);
+  assert.match(entry, /canvasStage\.clientWidth - horizontalPadding/u);
+  assert.match(entry, /canvasStage\.clientHeight - verticalPadding/u);
+  assert.doesNotMatch(entry, /"fit-page"[^\n]+applyZoom\(80\)/u);
+  assert.match(entry, /async function validateDocument\(\): Promise<void>/u);
+  assert.match(entry, /refreshStudioProjection\(revision/u);
+  assert.match(entry, /showPropertyPanel\("diagnostics"\)/u);
+  assert.match(entry, /function toggleAllContentsGroups\(\): void/u);
+  assert.match(entry, /function toggleAllPropertyGroups\(\): void/u);
+  assert.match(entry, /function setContentsMode\(mode: "drawing" \| "source"\)/u);
+  assert.match(entry, /studioProjection\?\.dirty === true/u);
+  assert.match(entry, /documentState\.textContent = dirty \? "Unsaved changes" : "Clean"/u);
+});
+
+test("BLD-034 exposes explicit pan and dirty visual states", async () => {
+  const stylesheet = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(stylesheet, /\.canvas-stage\.is-pan-mode\s*\{[^}]*cursor:\s*grab/su);
+  assert.match(stylesheet, /\.canvas-stage\.is-panning[^}]*cursor:\s*grabbing/su);
+  assert.match(stylesheet, /\.saved-dot\.is-dirty\s*\{[^}]*background:/su);
+  assert.match(stylesheet, /\.status-ready\.is-dirty\s*\{[^}]*color:/su);
+});
