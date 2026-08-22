@@ -43,6 +43,7 @@ import {
   executeProjectDomainHistoryNavigation,
   inspectPhase1ProjectHistoryState,
   lookupProjectSourceCommandReplay,
+  markPhase1ProjectDurableRevision,
   prepareProjectDomainEffectTransition,
 } from "./project-domain-effect-state.js";
 import type {
@@ -424,6 +425,13 @@ class InMemoryHistoryCoreImplementation
     return capturePhase1ProjectWorkingRevision(this.#phase1State()) ?? historyInvariantFailure();
   }
 
+  markProjectDurableRevision(capture: CapturedPhase1ProjectWorkingRevision): boolean {
+    const marked = markPhase1ProjectDurableRevision(this.#phase1State(), capture);
+    if (!marked.accepted) return false;
+    this.#projectState = marked.state;
+    return true;
+  }
+
   inspectProject(): ProjectDomainHistorySnapshot {
     return inspectPhase1ProjectHistoryState(this.#phase1State()) ?? historyInvariantFailure();
   }
@@ -703,6 +711,15 @@ class Phase1ProjectHistoryCoreFacade implements InMemoryPhase1ProjectHistoryCore
   }
 }
 
+const phase1HistoryAuthorities = new WeakMap<object, InMemoryHistoryCoreImplementation>();
+
+export function markInMemoryPhase1ProjectHistoryCoreDurableRevision(
+  core: InMemoryPhase1ProjectHistoryCore,
+  capture: CapturedPhase1ProjectWorkingRevision,
+): boolean {
+  return phase1HistoryAuthorities.get(core)?.markProjectDurableRevision(capture) ?? false;
+}
+
 export function createInMemoryHistoryCore(input: unknown): HistoryCoreInitializationResult {
   const configuration = ownDataRecord(input, ["aggregate", "ownerGeneration", "capacities"]);
   if (configuration === null) {
@@ -764,13 +781,11 @@ export function createInMemoryPhase1ProjectHistoryCore(
     },
   });
   if (!state.accepted) return state;
-  return Object.freeze({
-    accepted: true,
-    core: new Phase1ProjectHistoryCoreFacade(
-      new InMemoryHistoryCoreImplementation(
-        { kind: "phase1-project", state: state.state },
-        capacities,
-      ),
-    ),
-  });
+  const authority = new InMemoryHistoryCoreImplementation(
+    { kind: "phase1-project", state: state.state },
+    capacities,
+  );
+  const core = new Phase1ProjectHistoryCoreFacade(authority);
+  phase1HistoryAuthorities.set(core, authority);
+  return Object.freeze({ accepted: true, core });
 }

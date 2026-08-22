@@ -160,6 +160,10 @@ export interface CapturedPhase1ProjectWorkingRevision {
   readonly aggregate: Phase1LogProjectAggregate;
 }
 
+export type MarkPhase1ProjectDurableRevisionResult =
+  | { readonly accepted: true; readonly state: Phase1ProjectHistoryState }
+  | { readonly accepted: false; readonly code: "DURABLE_CAPTURE_INVALID" };
+
 declare const projectHistoryStateBrand: unique symbol;
 export interface Phase1ProjectHistoryState {
   readonly [projectHistoryStateBrand]: "Phase1ProjectHistoryState";
@@ -1052,6 +1056,52 @@ export function inspectPhase1ProjectHistoryState(
     events: data.events,
     replayEntryCount: data.replay.length,
     commitCount: data.commitCount,
+  });
+}
+
+/**
+ * Advances lifecycle durability only after the file broker verifies the exact captured package.
+ * This is deliberately not a document command or an Undo history entry.
+ */
+export function markPhase1ProjectDurableRevision(
+  state: unknown,
+  capture: CapturedPhase1ProjectWorkingRevision,
+): MarkPhase1ProjectDurableRevisionResult {
+  const data = dataFor(state);
+  if (
+    data === null ||
+    capture.documentId !== data.documentId ||
+    capture.ownerGeneration !== data.ownerGeneration ||
+    capture.workingRevision > data.workingRevision
+  ) {
+    return Object.freeze({ accepted: false, code: "DURABLE_CAPTURE_INVALID" });
+  }
+  const encoded = encodePhase1LogProjectAggregate(capture.aggregate);
+  if (
+    !encoded.accepted ||
+    encoded.canonicalJson !== capture.aggregateCanonicalJson ||
+    encoded.digest !== capture.aggregateDigest
+  ) {
+    return Object.freeze({ accepted: false, code: "DURABLE_CAPTURE_INVALID" });
+  }
+  const known =
+    (capture.workingRevision === data.workingRevision &&
+      capture.aggregateDigest === data.aggregateDigest) ||
+    data.history.some(
+      (entry) =>
+        (entry.createdBeforeWorkingRevision === capture.workingRevision &&
+          entry.beforeAggregateDigest === capture.aggregateDigest) ||
+        (entry.createdAfterWorkingRevision === capture.workingRevision &&
+          entry.afterAggregateDigest === capture.aggregateDigest),
+    );
+  if (!known) return Object.freeze({ accepted: false, code: "DURABLE_CAPTURE_INVALID" });
+  return Object.freeze({
+    accepted: true,
+    state: makeState({
+      ...data,
+      durableRevision: parseDurableRevision(capture.workingRevision),
+      durableAggregateDigest: capture.aggregateDigest,
+    }),
   });
 }
 

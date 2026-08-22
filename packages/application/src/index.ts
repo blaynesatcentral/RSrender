@@ -36,6 +36,7 @@ export {
   createInMemoryHistoryCore,
   createInMemoryPhase1ProjectHistoryCore,
   inMemoryHistoryCoreRevision,
+  markInMemoryPhase1ProjectHistoryCoreDurableRevision,
 } from "./in-memory-history-core.js";
 export type {
   CapturedWorkingRevision,
@@ -60,11 +61,14 @@ export type {
   ProjectDomainHistoryRejectionReason,
   ProjectDomainHistorySnapshot,
   ProjectSourceCommandReplayLookupResult,
+  MarkPhase1ProjectDurableRevisionResult,
 } from "./project-domain-effect-state.js";
 
 export {
   createInMemoryOverrideRenderDatasetService,
+  captureOverrideRenderDatasetWorkingState,
   inMemoryOverrideRenderDatasetServiceRevision,
+  markOverrideRenderDatasetDurable,
 } from "./in-memory-override-render-dataset-service.js";
 
 export {
@@ -81,6 +85,7 @@ export type {
 export type {
   InMemoryOverrideRenderDatasetService,
   InMemoryOverrideRenderDatasetServiceCapacities,
+  CapturedOverrideRenderDatasetWorkingState,
   OverrideRenderDatasetServiceInitializationResult,
 } from "./in-memory-override-render-dataset-service.js";
 
@@ -91,6 +96,7 @@ export {
 } from "./synthetic-override-render-dataset-session.js";
 export {
   createSyntheticBoringLogOverrideSession,
+  createPersistedBoringLogOverrideSession,
   syntheticBoringLogOverrideSessionCapacities,
   syntheticBoringLogOverrideSessionRevision,
   type SyntheticBoringLogEditableBinding,

@@ -58,9 +58,11 @@ import {
 } from "@rsrender/domain";
 import {
   createInMemoryPhase1ProjectHistoryCore,
+  markInMemoryPhase1ProjectHistoryCoreDurableRevision,
   type InMemoryPhase1ProjectHistoryCore,
 } from "./in-memory-history-core.js";
 import type {
+  CapturedPhase1ProjectWorkingRevision,
   ProjectDomainHistoryCommittedResult,
   ProjectDomainHistorySnapshot,
 } from "./project-domain-effect-state.js";
@@ -83,6 +85,11 @@ export interface InMemoryOverrideRenderDatasetService {
   readonly undo: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
   readonly redo: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
   readonly getProjection: (input: unknown) => Promise<OverrideRenderDatasetQueryResult>;
+}
+
+export interface CapturedOverrideRenderDatasetWorkingState {
+  readonly project: CapturedPhase1ProjectWorkingRevision;
+  readonly presentationOverrideCollections: readonly PresentationOverrideCollection[];
 }
 
 export type OverrideRenderDatasetServiceInitializationResult =
@@ -743,6 +750,31 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     return this.#serialize(operation);
   }
 
+  public captureWorkingState(): Promise<CapturedOverrideRenderDatasetWorkingState> {
+    return this.#serialize(() => {
+      const project = this.#core.captureProjectWorkingRevision();
+      const handle = getProjectInputRevisionHandle(project.aggregate, "presentation-overrides");
+      const collections =
+        handle.accepted && handle.value.state === "current"
+          ? this.#state.collections
+              .filter((entry) => entry.logicalDigest === handle.value.contentDigest)
+              .map((entry) => entry.value)
+          : [];
+      return Promise.resolve(
+        Object.freeze({
+          project,
+          presentationOverrideCollections: Object.freeze(collections),
+        }),
+      );
+    });
+  }
+
+  public markDurable(capture: CapturedPhase1ProjectWorkingRevision): Promise<boolean> {
+    return this.#serialize(() =>
+      Promise.resolve(markInMemoryPhase1ProjectHistoryCoreDurableRevision(this.#core, capture)),
+    );
+  }
+
   #serialize<Result>(operation: () => Promise<Result>): Promise<Result> {
     const pending = this.#tail.then(operation, operation);
     this.#tail = pending.then(
@@ -1231,6 +1263,24 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
   }
 }
 
+const persistenceAuthorities = new WeakMap<
+  object,
+  InMemoryOverrideRenderDatasetServiceImplementation
+>();
+
+export async function captureOverrideRenderDatasetWorkingState(
+  service: InMemoryOverrideRenderDatasetService,
+): Promise<CapturedOverrideRenderDatasetWorkingState | null> {
+  return (await persistenceAuthorities.get(service)?.captureWorkingState()) ?? null;
+}
+
+export async function markOverrideRenderDatasetDurable(
+  service: InMemoryOverrideRenderDatasetService,
+  capture: CapturedPhase1ProjectWorkingRevision,
+): Promise<boolean> {
+  return (await persistenceAuthorities.get(service)?.markDurable(capture)) ?? false;
+}
+
 export function createInMemoryOverrideRenderDatasetService(
   input: unknown,
 ): OverrideRenderDatasetServiceInitializationResult {
@@ -1260,6 +1310,7 @@ export function createInMemoryOverrideRenderDatasetService(
       redo: Object.freeze((command: unknown) => implementation.redo(command)),
       getProjection: Object.freeze((query: unknown) => implementation.getProjection(query)),
     });
+    persistenceAuthorities.set(service, implementation);
     return Object.freeze({ accepted: true, service });
   } catch {
     return Object.freeze({ accepted: false, code: "INITIAL_CONFIGURATION_MALFORMED" });

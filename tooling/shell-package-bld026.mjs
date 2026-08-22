@@ -105,7 +105,15 @@ async function prepareStage() {
     path.join(stageDirectory, "main"),
     { recursive: true },
   );
-  for (const packageName of ["application", "contracts", "domain", "layout-host", "scene"]) {
+  for (const packageName of [
+    "application",
+    "contracts",
+    "domain",
+    "layout-host",
+    "package-contract",
+    "platform-zipjs",
+    "scene",
+  ]) {
     const target = path.join(stageDirectory, "node_modules", "@rsrender", packageName);
     await mkdir(target, { recursive: true });
     await cp(path.join(root, "packages", packageName, "dist"), path.join(target, "dist"), {
@@ -116,6 +124,11 @@ async function prepareStage() {
       path.join(target, "package.json"),
     );
   }
+  const zipJsTarget = path.join(stageDirectory, "node_modules", "@zip.js", "zip.js");
+  await mkdir(path.dirname(zipJsTarget), { recursive: true });
+  await cp(path.join(root, "node_modules", "@zip.js", "zip.js"), zipJsTarget, {
+    recursive: true,
+  });
   const inputs = await structuredInputs();
   await writeFile(generatedExampleInputPath, inputs.inputBytes);
   const rendererUrl = `${pathToFileURL(path.join(root, "packages", "renderer-ui", "dist", "index.js")).href}?bld026=${Date.now()}`;

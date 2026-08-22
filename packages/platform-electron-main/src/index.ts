@@ -117,6 +117,7 @@ export type {
 export {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   boringLogStudioRouteRevision,
 } from "./boring-log-studio-route-contract.js";
 export { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
@@ -124,6 +125,8 @@ export type {
   BoringLogStudioRouteBootstrapResult,
   BoringLogStudioRouteRejectionCode,
   BoringLogStudioRouteResult,
+  BoringLogStudioLifecycleOperation,
+  BoringLogStudioLifecycleResult,
 } from "./boring-log-studio-route-broker.js";
 export {
   generateBoringLogStudioPreloadSource,
@@ -175,6 +178,17 @@ export {
   decodeBoringLogDocumentBundle,
   maximumBoringLogDocumentBundleBytes,
 } from "./boring-log-document-ingress.js";
+export {
+  logProjectFileBrokerRevision,
+  captureLogProjectFileBaseline,
+  openLogProjectFile,
+  saveLogProjectFile,
+} from "./log-project-file-broker.js";
+export type {
+  LogProjectFileBaseline,
+  LogProjectFileResult,
+  OpenedLogProjectFile,
+} from "./log-project-file-broker.js";
 export type {
   BoringLogDocumentIngressRejectionCode,
   BoringLogDocumentIngressResult,

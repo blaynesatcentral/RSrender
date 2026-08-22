@@ -72,12 +72,29 @@ type StudioApis = Readonly<{
       | { readonly accepted: false; readonly code: string }
       | { readonly accepted: true; readonly projection: StudioProjection }
     >;
+    readonly lifecycle: (input: {
+      readonly operation:
+        "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+      readonly expectedWorkingRevision: number | null;
+    }) => Promise<unknown>;
   };
   readonly document: {
     readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
     readonly undo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
     readonly redo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
   };
+}>;
+
+type LifecycleState = Readonly<{
+  documentIdentity: string;
+  displayName: string;
+  displayPath: string | null;
+  authoritativeFileBound: boolean;
+  readOnly: boolean;
+  storageStatus: "untargeted" | "supported-local-fixed-ntfs";
+  workingRevision: number;
+  durableRevision: number;
+  dirty: boolean;
 }>;
 
 type PublicationApi = Readonly<{
@@ -181,6 +198,7 @@ async function main(): Promise<void> {
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
   const documentState = element<HTMLElement>("document-state");
+  const documentName = element<HTMLElement>("document-name");
   const documentStateDot = element<HTMLElement>("document-state-dot");
   const documentReadiness = element<HTMLElement>("document-readiness");
   const zoom = element<HTMLInputElement>("zoom");
@@ -252,6 +270,86 @@ async function main(): Promise<void> {
     documentStateDot.classList.toggle("is-dirty", dirty);
     documentReadiness.textContent = dirty ? "● Modified" : "● Ready";
     documentReadiness.classList.toggle("is-dirty", dirty);
+    element<HTMLButtonElement>("save-project").disabled = studioProjection === null;
+    element<HTMLButtonElement>("save-project-as").disabled = studioProjection === null;
+  }
+
+  function decodedLifecycleResult(input: unknown): {
+    readonly accepted: boolean;
+    readonly code: string;
+    readonly state: LifecycleState | null;
+  } | null {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
+    const value = input as Record<string, unknown>;
+    if (typeof value["accepted"] !== "boolean" || typeof value["code"] !== "string") return null;
+    const inputState = value["state"];
+    if (inputState === null)
+      return { accepted: value["accepted"], code: value["code"], state: null };
+    if (typeof inputState !== "object" || Array.isArray(inputState)) return null;
+    const state = inputState as Record<string, unknown>;
+    if (
+      typeof state["documentIdentity"] !== "string" ||
+      typeof state["displayName"] !== "string" ||
+      !(state["displayPath"] === null || typeof state["displayPath"] === "string") ||
+      typeof state["authoritativeFileBound"] !== "boolean" ||
+      typeof state["readOnly"] !== "boolean" ||
+      !(
+        state["storageStatus"] === "untargeted" ||
+        state["storageStatus"] === "supported-local-fixed-ntfs"
+      ) ||
+      !Number.isSafeInteger(state["workingRevision"]) ||
+      !Number.isSafeInteger(state["durableRevision"]) ||
+      typeof state["dirty"] !== "boolean"
+    )
+      return null;
+    return {
+      accepted: value["accepted"],
+      code: value["code"],
+      state: state as unknown as LifecycleState,
+    };
+  }
+
+  function installLifecycleState(next: LifecycleState): void {
+    documentName.textContent = next.displayName;
+    documentName.title = next.displayPath ?? "This project has not been saved yet.";
+    document.body.dataset["authoritativeFileBound"] = String(next.authoritativeFileBound);
+    document.body.dataset["projectStorageStatus"] = next.storageStatus;
+  }
+
+  async function invokeLifecycle(
+    operation: "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as",
+  ): Promise<void> {
+    const apis = studioApis();
+    if (apis === null) return;
+    const expected = operation === "get-state" ? null : (studioProjection?.workingRevision ?? null);
+    status.textContent = `${humanize(operation)}…`;
+    const result = decodedLifecycleResult(
+      await apis.studio.lifecycle({ operation, expectedWorkingRevision: expected }),
+    );
+    if (result === null) {
+      status.textContent = `${humanize(operation)} route returned an invalid result.`;
+      return;
+    }
+    if (result.state !== null) installLifecycleState(result.state);
+    if (!result.accepted) {
+      status.textContent = result.code.endsWith("_CANCELED")
+        ? `${humanize(operation)} canceled; the current project is unchanged.`
+        : `${humanize(operation)} failed: ${result.code}`;
+      return;
+    }
+    if (result.code === "PROJECT_SAVE_VERIFIED") {
+      await refreshStudioProjection(
+        result.state?.workingRevision ?? null,
+        `Project saved and reopened successfully${result.state?.displayPath === null ? "." : `: ${result.state?.displayPath}`}`,
+      );
+      return;
+    }
+    status.textContent =
+      result.code === "PROJECT_STATE_READY"
+        ? `${result.state?.authoritativeFileBound === true ? "Saved Log Project" : "Untitled Log Project"} ready.`
+        : result.code.includes("RESTARTING")
+          ? "Switching Log Projects…"
+          : humanize(result.code);
   }
 
   function installSvg(): void {
@@ -740,6 +838,10 @@ async function main(): Promise<void> {
     "ribbon-tab-review": () => activateRibbonTab("review"),
     "ribbon-tab-publish": () => activateRibbonTab("publish"),
     "select-page": () => select("page-root"),
+    "new-project": () => void invokeLifecycle("new-project"),
+    "open-project": () => void invokeLifecycle("open-project"),
+    "save-project": () => void invokeLifecycle("save-project"),
+    "save-project-as": () => void invokeLifecycle("save-project-as"),
     "select-body": () => select("region-depth-body"),
     undo: () => void navigateHistory("undo"),
     redo: () => void navigateHistory("redo"),
@@ -779,6 +881,23 @@ async function main(): Promise<void> {
   window.addEventListener("resize", () => {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
+  window.addEventListener("keydown", (event) => {
+    if (!event.ctrlKey || event.altKey) return;
+    const key = event.key.toLowerCase();
+    const operation =
+      key === "n"
+        ? "new-project"
+        : key === "o"
+          ? "open-project"
+          : key === "s" && event.shiftKey
+            ? "save-project-as"
+            : key === "s"
+              ? "save-project"
+              : null;
+    if (operation === null) return;
+    event.preventDefault();
+    void invokeLifecycle(operation);
+  });
 
   installSvg();
   renderTree();
@@ -789,7 +908,7 @@ async function main(): Promise<void> {
   sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
   status.textContent = "Structured boring log scene rendered as semantic SVG.";
   if (studioProjection === null) {
-    void refreshStudioProjection(
+    await refreshStudioProjection(
       null,
       "Editable structured boring log scene loaded from main authority.",
     );
@@ -797,6 +916,7 @@ async function main(): Promise<void> {
     updateHistoryControls();
     status.textContent = "Editable structured boring log scene loaded from main authority.";
   }
+  await invokeLifecycle("get-state");
 }
 
 void main().catch((error: unknown) => {

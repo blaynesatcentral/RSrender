@@ -220,7 +220,7 @@ test("BLD-026 generated Studio preload preserves the four document methods and a
     "undo",
     "redo",
   ]);
-  assert.deepEqual(Object.keys(sandbox.rsrenderStudio), ["getProjection"]);
+  assert.deepEqual(Object.keys(sandbox.rsrenderStudio), ["getProjection", "lifecycle"]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
     vmContext,

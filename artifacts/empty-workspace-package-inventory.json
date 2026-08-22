@@ -4,26 +4,26 @@
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts",
-      "bytes": 3549,
-      "sha256": "ef91d6a8f9155720ec96f873d2a94bfce16a4260287f61b24fd69674d20e3fb6"
+      "bytes": 3802,
+      "sha256": "c660e774dfc4699ce86e5ca2656689adf13c495b6158976cb1ae1ded7611a30d"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts.map",
-      "bytes": 1503,
-      "sha256": "6ae804065a809c7e2c78efe6e6d27c82d38c40ffeeecbc513f672af2a2a5746e"
+      "bytes": 1581,
+      "sha256": "be078816befb19664e024b7cd102de28e1846540b2314bb4fdfab2f9ed8f7c94"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js",
-      "bytes": 1410,
-      "sha256": "869f326c3fbc74cebebc78aa30f73cffc8da0832490a181c09c602074e574c75"
+      "bytes": 1580,
+      "sha256": "e25ab23c480d09d7ecd437794be19599264ae1cf1d80fdc7145418214528ee2c"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js.map",
-      "bytes": 661,
-      "sha256": "64fe12b235de180bd586d98b8d30e0b066866cd94bcdda0ad520b76264222570"
+      "bytes": 713,
+      "sha256": "f22512b3c903b4db1d2bc07c695216aee3c097208b7d90a35b52e019774977ed"
     },
     {
       "package": "contracts",
@@ -100,74 +100,74 @@
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.d.ts",
-      "bytes": 176,
-      "sha256": "af77798f40eadfbb58650df8640ce22329b0bc5806ccca85b9bd3418f64f807b"
+      "bytes": 1862,
+      "sha256": "faaaf1f969d936819e844228d72c29ee43dc8a35994dddf051cb5d894b3854c3"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.d.ts.map",
-      "bytes": 153,
-      "sha256": "883365018a3b797c47c2e984f6445d85a10def4ab849a10f5cc899a002a057bc"
+      "bytes": 1280,
+      "sha256": "4370af3ec7e1493b0d7cf69143d4485d7ed41221c67286d0b4a99641db8f08e1"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.js",
-      "bytes": 167,
-      "sha256": "7d4477186e85503c47ac4687518cac650a6b0965d3fe7265c89c7540ac35b7ef"
+      "bytes": 11214,
+      "sha256": "258078b6a91b7550bdf9ffcf4b691282efda193bba1d69e376bc62a0832dd36c"
     },
     {
       "package": "package-contract",
       "file": "packages/package-contract/dist/index.js.map",
-      "bytes": 156,
-      "sha256": "230ab0e393ebccd11e7a02625fdeb38a4a77b68e252d32b76af829562c07dfb4"
+      "bytes": 8845,
+      "sha256": "0f3e758293cea1c1c7d6073d7592defd80686bd33dc4e3e9b2e64f8dfdb972fc"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 6204,
-      "sha256": "d2c32b898ee4ffe040e660e8dffb4580e89b003578e12fc3c086c654e8148948"
+      "bytes": 6578,
+      "sha256": "a3a01799f2e4358956fa2c80ac70c5c4b5da9a3abbf582c5b6ed7b0cab04d007"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 2958,
-      "sha256": "0a3a32977bfa33d2de2a7817edaf8b3a5e8d83cbce68e5e693e9fb4596273c0d"
+      "bytes": 3154,
+      "sha256": "f70f6c0ce9e11de198a9ba6c44fa64f6e3fbae34fe860b5c36dc4496940ed420"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js",
-      "bytes": 3697,
-      "sha256": "490a980458cb968ed61853505f203d5a15096e724426ee8413fb4ca13944863e"
+      "bytes": 3883,
+      "sha256": "2ded0b57b76651effd32e985399cfb5c1b03389322644b66159252878723df04"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
-      "bytes": 1807,
-      "sha256": "edd0092974325370a4f7cc2cd69c939943cc127a708638f72b81bd99952b9347"
+      "bytes": 1905,
+      "sha256": "70ea2aba7d2b08c0f3344ed84847775ca0119d6911b7ef4c27abbc889b42c778"
     },
     {
       "package": "platform-zipjs",
       "file": "packages/platform-zipjs/dist/index.d.ts",
-      "bytes": 172,
-      "sha256": "4aa8a702c870d376773f1ef31aaa86a8df4f9d207148f2903be28f987992059f"
+      "bytes": 805,
+      "sha256": "e710025acf6eacc958293673b883299a921dd02cb4b0229add403aab436e0041"
     },
     {
       "package": "platform-zipjs",
       "file": "packages/platform-zipjs/dist/index.d.ts.map",
-      "bytes": 153,
-      "sha256": "598fd6bc6d3cf06385ff9d60d0dafb1a484ed27bf293e410b9e8b85cc8b0c779"
+      "bytes": 657,
+      "sha256": "c9dfdeb631b84acc6d1c7c6e4dd1f051d0b4a38fa13742bf75dbd3f3c43a13ef"
     },
     {
       "package": "platform-zipjs",
       "file": "packages/platform-zipjs/dist/index.js",
-      "bytes": 163,
-      "sha256": "22c5e48559275bf5e4b65e3bb70570557a5c88d3282cdf3273046ab6d29cb7db"
+      "bytes": 4062,
+      "sha256": "d5d6a84ac29e632c67692e0bdec43cdbf69d7bb216e87be6e54c44c2a163741f"
     },
     {
       "package": "platform-zipjs",
       "file": "packages/platform-zipjs/dist/index.js.map",
-      "bytes": 156,
-      "sha256": "698dcf1498821228848827ce51ee6244699554031324cf06b25f83364da199d3"
+      "bytes": 3603,
+      "sha256": "cbf6ed8996b0b6d1f404c61fdc325aa763694cd171daba533505e0995fd87729"
     },
     {
       "package": "renderer-ui",

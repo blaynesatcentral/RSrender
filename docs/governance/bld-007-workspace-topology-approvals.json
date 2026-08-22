@@ -2,17 +2,17 @@
   "schema": "rsrender.bld007.workspace-topology-approvals.v0",
   "scope": "owned workspace topology only; never admits an external identity, source, integrity, license, or asset",
   "externalIdentityBaselineCount": 156,
-  "currentLockSha256": "125c4a2dab3aa2b43f8676b17bea8cdcbf233c589329546adb52b3e28b91b2ca",
+  "currentLockSha256": "3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
   "expectedArtifactDigests": {
-    "spdx": "sha256:e7c25151e9448b249a7ee6e8307888387642d287e5dbdf0ca5d9fcc2b6503e15",
-    "custody": "sha256:4a588d43114adba17afdd6ad5f9e7ba0cd8a588c3424533cccb1a4859cc7afd8",
+    "spdx": "sha256:9f846453bd449504329bd1577df0bf27f900aefe1d100e79b09934313ec732fd",
+    "custody": "sha256:5cce2daef99e0ef4441b01e713e76268cb6e083b016030fe0c8dd997e5e3a679",
     "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
     "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
   },
   "accountableHumanApproval": {
     "statement": "i approve the topology",
-    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, BLD-024 scene-to-contracts, BLD-025 renderer-ui-to-contracts, and BLD-026 layout-host-to-contracts plus platform-electron-main-to-layout-host/scene",
-    "condition": "effective through BLD-026 only under the product owner's unconditional MVP implementation authorization, the disclosed exact renderer-authority seams, exact qualifying BLD-026 topology evidence, the three newly recorded internal edges, and this exact lock hash",
+    "scope": "current exact internal workspace topology only: BLD-009 domain-to-contracts, BLD-010 application-to-contracts/domain, BLD-012 platform-electron-main-to-application/contracts, BLD-013 test-support-to-contracts, BLD-024 scene-to-contracts, BLD-025 renderer-ui-to-contracts, BLD-026 layout-host-to-contracts plus platform-electron-main-to-layout-host/scene, and BLD-035 package-contract-to-contracts/domain plus platform-zipjs-to-package-contract/zip.js plus platform-electron-main-to-package-contract/platform-zipjs",
+    "condition": "effective through BLD-035 only under the product owner's unconditional beta implementation authorization and recommended topology decisions, the disclosed exact persistence-authority seams, exact qualifying BLD-035 packaged lifecycle evidence, the six newly recorded internal edges, and this exact lock hash",
     "externalGraphAuthority": "none; the BLD-001 exact 156-identity external graph remains fail-closed"
   },
   "approvals": [
@@ -92,6 +92,23 @@
         "@rsrender/platform-electron-main@0.0.0 -> @rsrender/layout-host@0.0.0",
         "@rsrender/platform-electron-main@0.0.0 -> @rsrender/scene@0.0.0"
       ]
+    },
+    {
+      "ticket": "BLD-035 / GitHub #79",
+      "status": "CLOSED",
+      "approvalComment": "https://github.com/blaynesatcentral/RSrender/issues/79#issuecomment-5382060294",
+      "lockSha256": "3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
+      "evidence": "artifacts/bld-035-log-project-lifecycle-evidence.json",
+      "evidenceSha256": "1196004f8b8651d6ca67191abdf9072210d2bcac6cc904375ebe8e7355efb2f5",
+      "externalDelta": { "added": 0, "removed": 0, "changed": 0 },
+      "workspaceEdgesAdded": [
+        "@rsrender/package-contract@0.0.0 -> @rsrender/contracts@0.0.0",
+        "@rsrender/package-contract@0.0.0 -> @rsrender/domain@0.0.0",
+        "@rsrender/platform-zipjs@0.0.0 -> @rsrender/package-contract@0.0.0",
+        "@rsrender/platform-zipjs@0.0.0 -> @zip.js/zip.js@2.8.49",
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/package-contract@0.0.0",
+        "@rsrender/platform-electron-main@0.0.0 -> @rsrender/platform-zipjs@0.0.0"
+      ]
     }
   ],
   "workspacePackages": [
@@ -126,7 +143,7 @@
     {
       "path": "packages/package-contract",
       "identity": "@rsrender/package-contract@0.0.0",
-      "dependencies": {},
+      "dependencies": { "@rsrender/contracts": "0.0.0", "@rsrender/domain": "0.0.0" },
       "devDependencies": {},
       "optionalDependencies": {}
     },
@@ -137,6 +154,8 @@
         "@rsrender/application": "0.0.0",
         "@rsrender/contracts": "0.0.0",
         "@rsrender/layout-host": "0.0.0",
+        "@rsrender/package-contract": "0.0.0",
+        "@rsrender/platform-zipjs": "0.0.0",
         "@rsrender/scene": "0.0.0"
       },
       "devDependencies": {},
@@ -145,7 +164,10 @@
     {
       "path": "packages/platform-zipjs",
       "identity": "@rsrender/platform-zipjs@0.0.0",
-      "dependencies": {},
+      "dependencies": {
+        "@rsrender/package-contract": "0.0.0",
+        "@zip.js/zip.js": "2.8.49"
+      },
       "devDependencies": {},
       "optionalDependencies": {}
     },

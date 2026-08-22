@@ -37,6 +37,19 @@ export type BoringLogStudioRouteResult =
     }
   | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
 
+export type BoringLogStudioLifecycleOperation =
+  "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+
+export type BoringLogStudioLifecycleResult =
+  | {
+      readonly accepted: true;
+      readonly transportVersion: 1;
+      readonly generation: number;
+      readonly sequence: number;
+      readonly result: unknown;
+    }
+  | { readonly accepted: false; readonly code: BoringLogStudioRouteRejectionCode };
+
 type DataRecord = Readonly<Record<string, unknown>>;
 type Binding = {
   readonly capability: string;
@@ -47,6 +60,12 @@ type Binding = {
 };
 
 function rejected(code: BoringLogStudioRouteRejectionCode): BoringLogStudioRouteResult {
+  return Object.freeze({ accepted: false, code });
+}
+
+function lifecycleRejected(
+  code: BoringLogStudioRouteRejectionCode,
+): BoringLogStudioLifecycleResult {
   return Object.freeze({ accepted: false, code });
 }
 
@@ -116,6 +135,10 @@ export class BoringLogStudioRouteBroker {
   readonly #getProjection: (
     minimumWorkingRevision: number | null,
   ) => Promise<BoringLogStudioProjectionResult>;
+  readonly #lifecycle: (input: {
+    readonly operation: BoringLogStudioLifecycleOperation;
+    readonly expectedWorkingRevision: number | null;
+  }) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -128,6 +151,10 @@ export class BoringLogStudioRouteBroker {
     readonly getProjection: (
       minimumWorkingRevision: number | null,
     ) => Promise<BoringLogStudioProjectionResult>;
+    readonly lifecycle?: (input: {
+      readonly operation: BoringLogStudioLifecycleOperation;
+      readonly expectedWorkingRevision: number | null;
+    }) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -135,6 +162,15 @@ export class BoringLogStudioRouteBroker {
     this.#ownerGeneration = input.ownerGeneration;
     this.#createCapability = input.createCapability;
     this.#getProjection = input.getProjection;
+    this.#lifecycle =
+      input.lifecycle ??
+      (() =>
+        Promise.resolve(
+          Object.freeze({
+            accepted: false,
+            code: "PROJECT_LIFECYCLE_UNAVAILABLE",
+          }),
+        ));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -264,5 +300,79 @@ export class BoringLogStudioRouteBroker {
       sequence,
       projection: result.projection,
     });
+  }
+
+  public async lifecycle(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    )
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    const args = exactRecord(request["args"], ["operation", "expectedWorkingRevision"]);
+    const operation = args?.["operation"];
+    const expected = args?.["expectedWorkingRevision"];
+    if (
+      args === null ||
+      !["get-state", "new-project", "open-project", "save-project", "save-project-as"].includes(
+        String(operation),
+      ) ||
+      (expected !== null &&
+        (typeof expected !== "number" || !Number.isSafeInteger(expected) || expected < 0))
+    )
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#lifecycle({
+        operation: operation as BoringLogStudioLifecycleOperation,
+        expectedWorkingRevision: expected,
+      });
+      if (this.#binding !== binding || !boundedProjection(result))
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
   }
 }

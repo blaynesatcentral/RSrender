@@ -3,6 +3,7 @@ import { validateResolvedBoringLogPageScene } from "@rsrender/contracts";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
@@ -221,7 +222,54 @@ const getProjection = Object.freeze(async function getProjection(input: unknown)
   }
 });
 
-contextBridge.exposeInMainWorld("rsrenderStudio", Object.freeze({ getProjection }));
+const lifecycle = Object.freeze(async function lifecycle(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, ["operation", "expectedWorkingRevision"]);
+  const operation = args?.["operation"];
+  const expected = args?.["expectedWorkingRevision"];
+  if (
+    args === null ||
+    !["get-state", "new-project", "open-project", "save-project", "save-project-as"].includes(
+      String(operation),
+    ) ||
+    (expected !== null && !isNonnegativeSafeInteger(expected))
+  )
+    return unavailable;
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_LIFECYCLE_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args: { operation, expectedWorkingRevision: expected },
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    )
+      return unavailable;
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
+contextBridge.exposeInMainWorld("rsrenderStudio", Object.freeze({ getProjection, lifecycle }));
 
 const publicationUnavailable = Object.freeze({
   accepted: false,
@@ -377,6 +425,11 @@ export interface BoringLogStudioPreloadApi {
         readonly projection: Readonly<Record<string, unknown>>;
       }
   >;
+  readonly lifecycle: (input: {
+    readonly operation:
+      "get-state" | "new-project" | "open-project" | "save-project" | "save-project-as";
+    readonly expectedWorkingRevision: number | null;
+  }) => Promise<unknown>;
 }
 
 export interface BoringLogPublicationPreloadApi {

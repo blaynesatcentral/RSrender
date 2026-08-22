@@ -21,8 +21,8 @@ import {
 
 import {
   createInMemoryOverrideRenderDatasetService,
-  type InMemoryOverrideRenderDatasetService,
   type InMemoryOverrideRenderDatasetServiceCapacities,
+  type InMemoryOverrideRenderDatasetService,
 } from "./in-memory-override-render-dataset-service.js";
 
 export const syntheticBoringLogOverrideSessionRevision =
@@ -607,6 +607,68 @@ export function createSyntheticBoringLogOverrideSession(
       ownerGeneration,
       capacities: syntheticBoringLogOverrideSessionCapacities,
       presentationOverrideCollections: [],
+    });
+    if (!initialized.accepted) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
+    return Object.freeze({
+      accepted: true,
+      session: Object.freeze({
+        documentIdentity,
+        ownerGeneration,
+        layoutJob: layoutJob.value,
+        bindings: source.bindings,
+        service: initialized.service,
+      }),
+    });
+  } catch {
+    return rejected("BORING_LOG_SESSION_CONFIGURATION_MALFORMED");
+  }
+}
+
+/** Restores a validated Log Project without replaying renderer-authored commands. */
+export function createPersistedBoringLogOverrideSession(
+  input: unknown,
+): SyntheticBoringLogOverrideSessionCreationResult {
+  try {
+    const record = ownDataRecord(input, [
+      "documentIdentity",
+      "ownerGeneration",
+      "layoutJob",
+      "projectAggregate",
+      "presentationOverrideCollections",
+    ]);
+    if (record === null) return rejected("BORING_LOG_SESSION_CONFIGURATION_MALFORMED");
+    let documentIdentity: DocumentIdentity;
+    try {
+      documentIdentity = documentIdentityCodec.parse(record["documentIdentity"]);
+    } catch {
+      return rejected("BORING_LOG_SESSION_DOCUMENT_IDENTITY_INVALID");
+    }
+    const ownerGeneration = record["ownerGeneration"];
+    if (
+      typeof ownerGeneration !== "number" ||
+      !Number.isSafeInteger(ownerGeneration) ||
+      ownerGeneration < 1
+    ) {
+      return rejected("BORING_LOG_SESSION_OWNER_GENERATION_INVALID");
+    }
+    const layoutJob = validateBoringLogLayoutJobInput(record["layoutJob"]);
+    const project = decodePhase1LogProjectAggregate(record["projectAggregate"]);
+    if (
+      !layoutJob.accepted ||
+      !project.accepted ||
+      layoutJob.value.document.identity.boringLogId !== documentIdentity ||
+      project.value.documentIdentity !== documentIdentity ||
+      !Array.isArray(record["presentationOverrideCollections"])
+    ) {
+      return rejected("BORING_LOG_SESSION_LAYOUT_JOB_INVALID");
+    }
+    const source = buildSnapshot(layoutJob.value);
+    if (source === null) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
+    const initialized = createInMemoryOverrideRenderDatasetService({
+      aggregate: project.value,
+      ownerGeneration,
+      capacities: syntheticBoringLogOverrideSessionCapacities,
+      presentationOverrideCollections: record["presentationOverrideCollections"],
     });
     if (!initialized.accepted) return rejected("BORING_LOG_SESSION_BOOTSTRAP_FAILED");
     return Object.freeze({

@@ -23,7 +23,7 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
     <header class="titlebar">
       <div class="brand-mark" aria-hidden="true">RS</div>
       <div class="brand-copy"><strong>RSrender</strong><span>Boring Log Studio</span></div>
-      <div class="document-title"><span id="document-state-dot" class="saved-dot" aria-hidden="true"></span>Synthetic Site Boring Log <span id="document-state" class="document-state">Clean</span></div>
+      <div class="document-title"><span id="document-state-dot" class="saved-dot" aria-hidden="true"></span><span id="document-name">Untitled Boring Log Project</span> <span id="document-state" class="document-state">Clean</span></div>
       <div class="window-meta">Structured scene · Page 1 of 1</div>
     </header>
     <nav class="tabs" role="tablist" aria-label="Application commands">
@@ -34,6 +34,7 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
       <button class="tab" id="ribbon-tab-publish" data-ribbon-tab="publish" role="tab" aria-selected="false" aria-controls="ribbon" type="button">Publish</button>
     </nav>
     <section class="ribbon" id="ribbon" role="tabpanel" aria-labelledby="ribbon-tab-home" aria-label="Home commands">
+      <div class="ribbon-group file-commands" data-ribbon-panel="home"><button type="button" id="new-project" title="New project (Ctrl+N)"><span>＋</span>New</button><button type="button" id="open-project" title="Open project (Ctrl+O)"><span>▤</span>Open</button><button type="button" id="save-project" title="Save project (Ctrl+S)"><span>▣</span>Save</button><button type="button" id="save-project-as" title="Save project as (Ctrl+Shift+S)"><span>▧</span>Save As</button><small>Log Project</small></div>
       <div class="ribbon-group" data-ribbon-panel="home"><button type="button" id="select-page"><span>▱</span>Page</button><button type="button" id="select-body"><span>▥</span>Log Body</button><small>Selection</small></div>
       <div class="ribbon-group" data-ribbon-panel="home"><button type="button" id="undo" disabled><span>↶</span>Undo</button><button type="button" id="redo" disabled><span>↷</span>Redo</button><small>History</small></div>
       <div class="ribbon-group" data-ribbon-panel="layout" hidden><button type="button" id="fit-page"><span>□</span>Fit Page</button><button type="button" id="actual-size"><span>1:1</span>Actual</button><small>Page view</small></div>

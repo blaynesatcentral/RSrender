@@ -75,16 +75,23 @@ function parseResult(stdout) {
   return JSON.parse(Buffer.from(lines[0].slice(resultMarker.length), "base64").toString("utf8"));
 }
 
-async function runPackaged(packageResult, index) {
+export async function runPackaged(packageResult, index, options = {}) {
   const executable = packageResult.paths.packagedExecutable;
   if ((await processCount(executable)) !== 0) throw new Error("PACKAGE_ALREADY_RUNNING");
-  const profile = path.join(os.tmpdir(), `rsrender-bld026-positive-${index}-profile`);
+  const profile = path.join(
+    os.tmpdir(),
+    `${options.profileLabel ?? "rsrender-bld026-positive"}-${index}-profile`,
+  );
   await rm(profile, { recursive: true, force: true });
   const started = Date.now();
   const outcome = await new Promise((resolve, reject) => {
     const child = spawn(
       executable,
-      ["--rsrender-bld025-probe", `--rsrender-bld025-profile=${profile}`],
+      [
+        options.probeArgument ?? "--rsrender-bld025-probe",
+        `${options.profileArgumentPrefix ?? "--rsrender-bld025-profile="}${profile}`,
+        ...(options.extraArguments ?? []),
+      ],
       {
         cwd: path.dirname(executable),
         windowsHide: true,

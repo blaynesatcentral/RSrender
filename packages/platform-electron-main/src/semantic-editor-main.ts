@@ -6,7 +6,10 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session } from "el
 import type { IpcMainInvokeEvent } from "electron";
 
 import {
+  captureOverrideRenderDatasetWorkingState,
+  markOverrideRenderDatasetDurable,
   createSyntheticBoringLogOverrideSession,
+  createPersistedBoringLogOverrideSession,
   createSyntheticOverrideRenderDatasetSession,
   type SyntheticBoringLogOverrideSession,
 } from "@rsrender/application";
@@ -42,11 +45,22 @@ import {
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
 } from "./boring-log-publication-route-contract.js";
-import { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
+import {
+  BoringLogStudioRouteBroker,
+  type BoringLogStudioLifecycleOperation,
+} from "./boring-log-studio-route-broker.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
+import {
+  captureLogProjectFileBaseline,
+  openLogProjectFile,
+  saveLogProjectFile,
+  type LogProjectFileBaseline,
+  type OpenedLogProjectFile,
+} from "./log-project-file-broker.js";
 import { DocumentSessionHost } from "./document-session-host.js";
 import {
   packagedBoringLogStudioPreloadRelativePath,
@@ -80,11 +94,14 @@ const SCREEN_FONT_BOLD_URL = "rsrender-shell://document/arial-bold.ttf";
 const PROBE_ARGUMENT = "--rsrender-bld021-probe";
 const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
 const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
+const LIFECYCLE_PROBE_ARGUMENT = "--rsrender-bld035-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
 const PDF_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld027-output=";
+const PROJECT_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld035-output=";
 const DOCUMENT_INPUT_ARGUMENT_PREFIX = "--rsrender-boring-log-input=";
+const PROJECT_INPUT_ARGUMENT_PREFIX = "--rsrender-log-project=";
 const DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH = path.join(
   "example-data",
   "rsrender-example-boring-log.json",
@@ -142,12 +159,17 @@ const runtimeDocumentInput = (() => {
     ? Object.freeze({ mode: "accepted" as const, inputPath, decoded })
     : Object.freeze({ mode: "rejected" as const });
 })();
-const runtimeLayoutJob =
+let runtimeLayoutJob =
   runtimeDocumentInput.mode === "accepted" ? runtimeDocumentInput.decoded.layoutJob : null;
-const studioEditingMode = runtimeLayoutJob !== null;
+const runtimeProjectInputPath = process.argv
+  .find((value) => value.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX))
+  ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
+const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT);
-const studioProbeMode = process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode;
+const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT);
+const studioProbeMode =
+  process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode || lifecycleProbeMode;
 const probeMode = bld021ProbeMode || studioProbeMode;
 const profileArgument = process.argv.find((value) =>
   value.startsWith(
@@ -177,6 +199,9 @@ const profileRoot =
 const pdfProbeOutput = process.argv
   .find((value) => value.startsWith(PDF_OUTPUT_ARGUMENT_PREFIX))
   ?.slice(PDF_OUTPUT_ARGUMENT_PREFIX.length);
+const lifecycleProbeOutput = process.argv
+  .find((value) => value.startsWith(PROJECT_OUTPUT_ARGUMENT_PREFIX))
+  ?.slice(PROJECT_OUTPUT_ARGUMENT_PREFIX.length);
 const preloadPath = path.join(
   app.getAppPath(),
   ...(studioEditingMode
@@ -275,6 +300,7 @@ const handlers = [
   DOCUMENT_REDO_CHANNEL,
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
 ] as const;
@@ -1255,7 +1281,7 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
 async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
   await waitFor(
     window,
-    `document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === "Editable structured boring log scene loaded from main authority."`,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && document.body.dataset.authoritativeFileBound === "false" && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."`,
     "WAIT_STUDIO",
     60_000,
   );
@@ -1603,7 +1629,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
-        JSON.stringify(before["studioApi"]) === '["getProjection"]' &&
+        JSON.stringify(before["studioApi"]) === '["getProjection","lifecycle"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -1841,12 +1867,62 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       "PUBLICATION_RESULT_INVALID",
     );
   }
+  let persistence: DataRecord | null = null;
+  if (lifecycleProbeMode) {
+    await typeText(window, "#property-content", "192000");
+    await press(window, "#apply-property", "Space", "FOCUS_PROJECT_PERSISTED_EDIT");
+    await waitFor(
+      window,
+      `document.getElementById("property-effective-value")?.textContent === "192000" && document.getElementById("document-state")?.textContent === "Unsaved changes"`,
+      "WAIT_PROJECT_PERSISTED_EDIT",
+    );
+    await press(window, "#save-project-as", "Space", "FOCUS_PROJECT_SAVE_AS");
+    await waitFor(
+      window,
+      `document.body.dataset.authoritativeFileBound === "true" && document.getElementById("editor-status")?.textContent?.startsWith("Project saved and reopened successfully:") === true`,
+      "WAIT_PROJECT_SAVE_AS",
+    );
+    persistence = record(
+      await pageValue(
+        window,
+        `(async () => {
+          const before = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null });
+          if (!before.accepted) return { accepted: false, code: before.code };
+          const saved = await globalThis.rsrenderStudio.lifecycle({ operation: "save-project", expectedWorkingRevision: before.projection.workingRevision });
+          const after = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: before.projection.workingRevision });
+          return { saved, after: after.accepted ? { accepted: true, dirty: after.projection.dirty, workingRevision: after.projection.workingRevision, durableRevision: after.projection.durableRevision } : after, bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, status: document.getElementById("editor-status")?.textContent };
+        })()`,
+      ),
+    );
+    const saved = record(persistence["saved"]);
+    const after = record(persistence["after"]);
+    requireProbe(
+      saved["accepted"] === true &&
+        saved["code"] === "PROJECT_SAVE_VERIFIED" &&
+        after["accepted"] === true &&
+        after["dirty"] === false &&
+        after["workingRevision"] === after["durableRevision"] &&
+        persistence["bodyBound"] === "true" &&
+        persistence["documentName"] === path.basename(path.resolve(lifecycleProbeOutput ?? "")),
+      "PROJECT_LIFECYCLE_SAVE_INVALID",
+    );
+    const reopened = await openLogProjectFile(path.resolve(lifecycleProbeOutput ?? ""));
+    requireProbe(
+      reopened.accepted &&
+        reopened.value.project.documentIdentity ===
+          runtimeLayoutJob?.document.identity.boringLogId &&
+        reopened.value.project.presentationOverrideCollections.length === 1,
+      "PROJECT_LIFECYCLE_REOPEN_INVALID",
+    );
+  }
   return Object.freeze({
-    schema: pdfProbeMode
-      ? "rsrender.bld027.boring-log-pdf-probe.v1"
-      : studioEditingMode
-        ? "rsrender.bld026.boring-log-editor-probe.v1"
-        : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: lifecycleProbeMode
+      ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+      : pdfProbeMode
+        ? "rsrender.bld027.boring-log-pdf-probe.v1"
+        : studioEditingMode
+          ? "rsrender.bld026.boring-log-editor-probe.v1"
+          : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
@@ -1855,6 +1931,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     interactions: Object.freeze({ ...interactions, fitSmall, fitLarge, panScroll, validation }),
     editing,
     publication,
+    persistence,
     zoomPercent: 90,
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
@@ -1893,11 +1970,13 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? pdfProbeMode
-            ? "rsrender.bld027.boring-log-pdf-probe.v1"
-            : studioEditingMode
-              ? "rsrender.bld026.boring-log-editor-probe.v1"
-              : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? lifecycleProbeMode
+            ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+            : pdfProbeMode
+              ? "rsrender.bld027.boring-log-pdf-probe.v1"
+              : studioEditingMode
+                ? "rsrender.bld026.boring-log-editor-probe.v1"
+                : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -1911,6 +1990,15 @@ async function fail(code: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  let openedRuntimeProject: OpenedLogProjectFile | null = null;
+  if (typeof runtimeProjectInputPath === "string" && runtimeProjectInputPath.length > 0) {
+    const opened = await openLogProjectFile(path.resolve(runtimeProjectInputPath));
+    if (!opened.accepted || opened.value.readOnly) {
+      return fail(opened.accepted ? "PROJECT_STORAGE_UNSUPPORTED" : opened.code);
+    }
+    openedRuntimeProject = opened.value;
+    runtimeLayoutJob = opened.value.project.layoutJob;
+  }
   if (
     globalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ === true &&
     runtimeDocumentInput.mode !== "accepted"
@@ -1943,17 +2031,28 @@ async function main(): Promise<void> {
   editorSession = electronSession;
   installDenials(electronSession, counters);
   installProtocol(electronSession);
-  const documentIdentity = studioEditingMode
-    ? runtimeLayoutJob.document.identity.boringLogId
-    : "urn:rsrender:bld-021:document:semantic-editor-001";
+  if (studioEditingMode && runtimeLayoutJob === null) return fail("DOCUMENT_INPUT_UNAVAILABLE");
+  const documentIdentity =
+    runtimeLayoutJob?.document.identity.boringLogId ??
+    "urn:rsrender:bld-021:document:semantic-editor-001";
   let structuredSession: SyntheticBoringLogOverrideSession | null = null;
   let service;
   if (studioEditingMode) {
-    const synthetic = createSyntheticBoringLogOverrideSession({
-      documentIdentity,
-      ownerGeneration: 1,
-      layoutJob: runtimeLayoutJob,
-    });
+    const synthetic =
+      openedRuntimeProject === null
+        ? createSyntheticBoringLogOverrideSession({
+            documentIdentity,
+            ownerGeneration: 1,
+            layoutJob: runtimeLayoutJob,
+          })
+        : createPersistedBoringLogOverrideSession({
+            documentIdentity,
+            ownerGeneration: 1,
+            layoutJob: openedRuntimeProject.project.layoutJob,
+            projectAggregate: openedRuntimeProject.project.projectAggregate,
+            presentationOverrideCollections:
+              openedRuntimeProject.project.presentationOverrideCollections,
+          });
     if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
     structuredSession = synthetic.session;
     service = synthetic.session.service;
@@ -2018,6 +2117,18 @@ async function main(): Promise<void> {
   );
   if (structuredSession !== null) {
     const source = structuredSession;
+    let projectBinding: {
+      authoritativePath: string | null;
+      displayPath: string | null;
+      baseline: LogProjectFileBaseline | null;
+    } =
+      openedRuntimeProject === null
+        ? { authoritativePath: null, displayPath: null, baseline: null }
+        : {
+            authoritativePath: openedRuntimeProject.authoritativePath,
+            displayPath: openedRuntimeProject.displayPath,
+            baseline: openedRuntimeProject.baseline,
+          };
     let studioQuerySequence = 0;
     const projectionCache = new Map<string, BoringLogStudioProjection>();
     const getStudioProjection = async (minimumWorkingRevision: number | null) => {
@@ -2062,6 +2173,178 @@ async function main(): Promise<void> {
       }
       return completed;
     };
+    const projectState = async () => {
+      const queried = await hosted.session.getProjection(
+        `urn:rsrender:bld-035:request:lifecycle-state:${Date.now()}`,
+        { minimumWorkingRevision: null },
+      );
+      if (!queried.accepted || queried.result.kind !== "render-dataset.projection.result") {
+        return null;
+      }
+      return Object.freeze({
+        documentIdentity,
+        displayName:
+          projectBinding.displayPath === null
+            ? "Untitled Boring Log Project"
+            : path.basename(projectBinding.displayPath),
+        displayPath: projectBinding.displayPath,
+        authoritativeFileBound: projectBinding.authoritativePath !== null,
+        readOnly: false,
+        storageStatus:
+          projectBinding.authoritativePath === null ? "untargeted" : "supported-local-fixed-ntfs",
+        workingRevision: queried.result.workingRevision,
+        durableRevision: queried.result.durableRevision,
+        dirty: queried.result.dirty,
+      });
+    };
+    const lifecycleResponse = (
+      accepted: boolean,
+      code: string,
+      snapshot: Awaited<ReturnType<typeof projectState>> = null,
+    ) => Object.freeze({ accepted, code, state: snapshot });
+    const performProjectSave = async (
+      expectedWorkingRevision: number | null,
+      forceSaveAs: boolean,
+    ) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return lifecycleResponse(false, "PROJECT_STATE_UNAVAILABLE", await projectState());
+      }
+      if (
+        expectedWorkingRevision !== null &&
+        captured.project.workingRevision !== expectedWorkingRevision
+      ) {
+        return lifecycleResponse(false, "PROJECT_WORKING_REVISION_STALE", await projectState());
+      }
+      let target = forceSaveAs ? null : projectBinding.authoritativePath;
+      if (target === null) {
+        if (lifecycleProbeMode) {
+          if (typeof lifecycleProbeOutput !== "string" || lifecycleProbeOutput.length === 0) {
+            return lifecycleResponse(false, "PROJECT_PATH_INVALID", await projectState());
+          }
+          target = path.resolve(lifecycleProbeOutput);
+        } else {
+          const selected = await dialog.showSaveDialog(window, {
+            title: forceSaveAs ? "Save Boring Log Project As" : "Save Boring Log Project",
+            defaultPath: path.join(
+              app.getPath("documents"),
+              projectBinding.displayPath === null
+                ? "Untitled Boring Log.rsrender"
+                : path.basename(projectBinding.displayPath),
+            ),
+            buttonLabel: "Save Project",
+            filters: [{ name: "RSrender Log Project", extensions: ["rsrender"] }],
+            properties: ["createDirectory", "showOverwriteConfirmation"],
+          });
+          if (selected.canceled || selected.filePath.length === 0) {
+            return lifecycleResponse(false, "PROJECT_SAVE_CANCELED", await projectState());
+          }
+          target = selected.filePath;
+        }
+      }
+      const sameTarget = projectBinding.authoritativePath?.toLowerCase() === target.toLowerCase();
+      const expectedBaseline = sameTarget
+        ? projectBinding.baseline
+        : captureLogProjectFileBaseline(target);
+      const saved = await saveLogProjectFile({
+        targetPath: target,
+        expectedBaseline,
+        replaceExisting: expectedBaseline !== null,
+        layoutJob: source.layoutJob,
+        projectAggregate: captured.project.aggregate,
+        presentationOverrideCollections: captured.presentationOverrideCollections,
+      });
+      if (!saved.accepted) return lifecycleResponse(false, saved.code, await projectState());
+      if (!(await markOverrideRenderDatasetDurable(source.service, captured.project))) {
+        return lifecycleResponse(
+          false,
+          "PROJECT_SAVE_POST_REPLACEMENT_UNCERTAIN",
+          await projectState(),
+        );
+      }
+      projectBinding = {
+        authoritativePath: path.resolve(target),
+        displayPath: path.resolve(target),
+        baseline: saved.value.baseline,
+      };
+      projectionCache.clear();
+      return lifecycleResponse(true, "PROJECT_SAVE_VERIFIED", await projectState());
+    };
+    const handleLifecycle = async (input: {
+      readonly operation: BoringLogStudioLifecycleOperation;
+      readonly expectedWorkingRevision: number | null;
+    }) => {
+      const { operation, expectedWorkingRevision } = input;
+      const current = await projectState();
+      if (current === null) return lifecycleResponse(false, "PROJECT_STATE_UNAVAILABLE");
+      if (operation === "get-state") {
+        return lifecycleResponse(true, "PROJECT_STATE_READY", current);
+      }
+      if (operation === "save-project") {
+        return performProjectSave(expectedWorkingRevision, false);
+      }
+      if (operation === "save-project-as") {
+        return performProjectSave(expectedWorkingRevision, true);
+      }
+
+      if (current.dirty) {
+        const choice = await dialog.showMessageBox(window, {
+          type: "warning",
+          title: "Unsaved Log Project changes",
+          message:
+            operation === "new-project"
+              ? "Save changes before creating a new project?"
+              : "Save changes before opening another project?",
+          detail: "Unsaved project edits will be lost if you continue without saving.",
+          buttons: ["Save", "Don't Save", "Cancel"],
+          defaultId: 0,
+          cancelId: 2,
+          noLink: true,
+        });
+        if (choice.response === 2) {
+          return lifecycleResponse(false, "PROJECT_REPLACE_CANCELED", current);
+        }
+        if (choice.response === 0) {
+          const saved = await performProjectSave(expectedWorkingRevision, false);
+          if (!saved.accepted) return saved;
+        }
+      }
+
+      const baseArguments = process.argv
+        .slice(1)
+        .filter((argument) => !argument.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX));
+      if (operation === "new-project") {
+        setTimeout(() => {
+          app.relaunch({ args: baseArguments });
+          app.exit(0);
+        }, 150);
+        return lifecycleResponse(true, "PROJECT_NEW_RESTARTING", current);
+      }
+      const selected = await dialog.showOpenDialog(window, {
+        title: "Open Boring Log Project",
+        buttonLabel: "Open Project",
+        filters: [{ name: "RSrender Log Project", extensions: ["rsrender"] }],
+        properties: ["openFile", "dontAddToRecent"],
+      });
+      if (selected.canceled || selected.filePaths.length !== 1) {
+        return lifecycleResponse(false, "PROJECT_OPEN_CANCELED", current);
+      }
+      const opened = await openLogProjectFile(selected.filePaths[0]!);
+      if (!opened.accepted || opened.value.readOnly) {
+        return lifecycleResponse(
+          false,
+          opened.accepted ? "PROJECT_STORAGE_UNSUPPORTED" : opened.code,
+          current,
+        );
+      }
+      setTimeout(() => {
+        app.relaunch({
+          args: [...baseArguments, `${PROJECT_INPUT_ARGUMENT_PREFIX}${opened.value.displayPath}`],
+        });
+        app.exit(0);
+      }, 150);
+      return lifecycleResponse(true, "PROJECT_OPEN_RESTARTING", current);
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -2069,6 +2352,7 @@ async function main(): Promise<void> {
       ownerGeneration: hosted.ownerGeneration,
       createCapability: () => randomBytes(32).toString("hex"),
       getProjection: getStudioProjection,
+      lifecycle: handleLifecycle,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -2077,6 +2361,47 @@ async function main(): Promise<void> {
     ipcMain.handle(BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
       route.getProjection(routeContext(window, event), input),
     );
+    ipcMain.handle(BORING_LOG_STUDIO_LIFECYCLE_CHANNEL, (event, input: unknown) =>
+      route.lifecycle(routeContext(window, event), input),
+    );
+    let closeAllowed = false;
+    let closePromptInFlight = false;
+    window.on("close", (event) => {
+      if (closeAllowed || probeMode) return;
+      event.preventDefault();
+      if (closePromptInFlight) return;
+      closePromptInFlight = true;
+      void (async () => {
+        try {
+          const current = await projectState();
+          if (current === null) return;
+          if (!current.dirty) {
+            closeAllowed = true;
+            window.close();
+            return;
+          }
+          const choice = await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "Unsaved Log Project changes",
+            message: "Save changes before closing RSrender?",
+            detail: "Unsaved project edits will be lost if you continue without saving.",
+            buttons: ["Save", "Don't Save", "Cancel"],
+            defaultId: 0,
+            cancelId: 2,
+            noLink: true,
+          });
+          if (choice.response === 2) return;
+          if (choice.response === 0) {
+            const saved = await performProjectSave(current.workingRevision, false);
+            if (!saved.accepted) return;
+          }
+          closeAllowed = true;
+          window.close();
+        } finally {
+          closePromptInFlight = false;
+        }
+      })();
+    });
     const publicationRoute = new BoringLogPdfPublicationRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
