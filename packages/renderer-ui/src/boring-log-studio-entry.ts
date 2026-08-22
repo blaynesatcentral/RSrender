@@ -8,13 +8,10 @@ import type {
 } from "@rsrender/contracts";
 
 import { projectBoringLogSceneToSvg } from "./boring-log-svg-projection.js";
-
-type TreeItem = Readonly<{
-  readonly semanticId: string;
-  readonly label: string;
-  readonly level: number;
-  readonly icon: string;
-}>;
+import {
+  buildBoringLogStudioTree,
+  visibleBoringLogStudioTreeItems,
+} from "./boring-log-studio-tree.js";
 
 type EditableValue = Readonly<{
   readonly semanticId: string;
@@ -125,41 +122,6 @@ function boundsText(nodes: readonly BoringLogSceneNode[]): string {
   return "Vector geometry";
 }
 
-function semanticTree(scene: ResolvedBoringLogPageScene): readonly TreeItem[] {
-  const page = scene.pages[0]!;
-  const items: TreeItem[] = [
-    { semanticId: "page-root", label: "Boring Log — Page 1", level: 1, icon: "▱" },
-  ];
-  const groups = [
-    ["region-header", "Header & project metadata", "▤"],
-    ["region-depth-body", "Depth log body", "▥"],
-    ["region-footer", "Legend, notes & approval", "▧"],
-  ] as const;
-  for (const [semanticId, label, icon] of groups) {
-    items.push({ semanticId, label, level: 2, icon });
-    if (semanticId === "region-depth-body") {
-      for (const column of scene.pagePlan.pages[0]!.columns) {
-        items.push({
-          semanticId: column.id,
-          label: humanize(column.role),
-          level: 3,
-          icon: column.role === "lithology-pattern" ? "▨" : "│",
-        });
-      }
-    }
-  }
-  const represented = new Set(items.map(({ semanticId }) => semanticId));
-  for (const semanticId of page.semanticOrder) {
-    if (represented.has(semanticId)) continue;
-    const node = page.nodes.find((candidate) => candidate.semanticId === semanticId);
-    if (node === undefined || !/^(?:lithology|sample|remark|data-layer):/u.test(semanticId))
-      continue;
-    items.push({ semanticId, label: humanize(semanticId), level: 3, icon: "·" });
-    represented.add(semanticId);
-  }
-  return Object.freeze(items);
-}
-
 function sceneFromDocument(): unknown {
   const source = element<HTMLScriptElement>("resolved-page-scene").textContent;
   if (source === null || source.length === 0) throw new Error("Resolved scene data is missing");
@@ -195,6 +157,11 @@ const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
 const selectionStatus = element<HTMLElement>("selection-status");
 const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
 const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
+const propertiesScroll = element<HTMLElement>("properties-scroll");
+const propertyElementPanel = element<HTMLElement>("property-element-panel");
+const propertyDiagnosticsPanel = element<HTMLElement>("property-diagnostics-panel");
+const propertyElementTab = element<HTMLButtonElement>("property-tab-element");
+const propertyDiagnosticsTab = element<HTMLButtonElement>("property-tab-diagnostics");
 const status = element<HTMLParagraphElement>("editor-status");
 const sceneSummary = element<HTMLElement>("scene-summary");
 const zoom = element<HTMLInputElement>("zoom");
@@ -205,6 +172,7 @@ const redoButton = element<HTMLButtonElement>("redo");
 const exportPdfButton = element<HTMLButtonElement>("export-pdf");
 let selectedSemanticId: string | null = null;
 let studioProjection: StudioProjection | null = null;
+const collapsedTreeItems = new Set<string>();
 
 function studioApis(): StudioApis | null {
   const world = globalThis as typeof globalThis & {
@@ -254,34 +222,86 @@ function installSvg(): void {
 }
 
 function renderTree(): void {
-  const query = filter.value.trim().toLocaleLowerCase();
   tree.replaceChildren();
-  for (const item of semanticTree(scene)) {
-    if (query.length > 0 && !item.label.toLocaleLowerCase().includes(query)) continue;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `tree-row tree-level-${item.level}${item.semanticId === selectedSemanticId ? " is-selected" : ""}`;
-    button.setAttribute("role", "treeitem");
-    button.setAttribute("aria-level", String(item.level));
-    button.setAttribute("aria-selected", String(item.semanticId === selectedSemanticId));
-    button.dataset["semanticId"] = item.semanticId;
+  const items = buildBoringLogStudioTree(scene);
+  for (const item of visibleBoringLogStudioTreeItems(items, collapsedTreeItems, filter.value)) {
+    const row = document.createElement("div");
+    row.className = `tree-row tree-level-${item.level}${item.semanticId === selectedSemanticId ? " is-selected" : ""}`;
+    row.setAttribute("role", "treeitem");
+    row.setAttribute("aria-level", String(item.level));
+    row.setAttribute("aria-selected", String(item.semanticId === selectedSemanticId));
+    if (item.hasChildren) {
+      row.setAttribute("aria-expanded", String(!collapsedTreeItems.has(item.semanticId)));
+    }
+    row.dataset["semanticId"] = item.semanticId;
     const chevron = document.createElement("span");
     chevron.className = "chevron";
-    chevron.textContent = item.level < 3 ? "⌄" : "";
+    const disclosure = document.createElement("button");
+    disclosure.type = "button";
+    disclosure.className = "tree-disclosure";
+    disclosure.disabled = !item.hasChildren;
+    disclosure.textContent = item.hasChildren
+      ? collapsedTreeItems.has(item.semanticId)
+        ? "▸"
+        : "▾"
+      : "";
+    disclosure.setAttribute(
+      "aria-label",
+      `${collapsedTreeItems.has(item.semanticId) ? "Expand" : "Collapse"} ${item.label}`,
+    );
+    disclosure.addEventListener("click", () => {
+      if (collapsedTreeItems.has(item.semanticId)) collapsedTreeItems.delete(item.semanticId);
+      else collapsedTreeItems.add(item.semanticId);
+      renderTree();
+    });
+    chevron.append(disclosure);
     const icon = document.createElement("span");
     icon.className = "layer-icon";
     icon.textContent = item.icon;
     const label = document.createElement("span");
     label.className = "layer-label";
     label.textContent = item.label;
-    button.append(chevron, icon, label);
-    button.addEventListener("click", () => select(item.semanticId));
-    tree.append(button);
+    const selectButton = document.createElement("button");
+    selectButton.type = "button";
+    selectButton.className = "tree-select";
+    selectButton.append(icon, label);
+    selectButton.addEventListener("click", () => select(item.semanticId));
+    row.append(chevron, selectButton);
+    tree.append(row);
   }
+}
+
+function showPropertyPanel(panel: "element" | "diagnostics"): void {
+  const showElement = panel === "element";
+  propertyElementPanel.hidden = !showElement;
+  propertyDiagnosticsPanel.hidden = showElement;
+  propertyElementTab.classList.toggle("is-active", showElement);
+  propertyDiagnosticsTab.classList.toggle("is-active", !showElement);
+  propertyElementTab.setAttribute("aria-selected", String(showElement));
+  propertyDiagnosticsTab.setAttribute("aria-selected", String(!showElement));
+  propertiesScroll.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function activateRibbonTab(tabId: string): void {
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")];
+  const panels = [...document.querySelectorAll<HTMLElement>("[data-ribbon-panel]")];
+  const activeTab = tabs.find((tab) => tab.dataset["ribbonTab"] === tabId);
+  if (activeTab === undefined) return;
+  for (const tab of tabs) {
+    const active = tab === activeTab;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  }
+  for (const panel of panels) panel.hidden = panel.dataset["ribbonPanel"] !== tabId;
+  const ribbon = element<HTMLElement>("ribbon");
+  ribbon.setAttribute("aria-labelledby", activeTab.id);
+  ribbon.setAttribute("aria-label", `${activeTab.textContent?.trim() ?? tabId} commands`);
+  status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
 }
 
 function select(semanticId: string): void {
   selectedSemanticId = semanticId;
+  showPropertyPanel("element");
   const nodes = page.nodes.filter((node) => node.semanticId === semanticId);
   const representative = nodes.find((node) => node.kind === "text") ?? nodes[0];
   installSvg();
@@ -513,6 +533,24 @@ pageHost.addEventListener("click", (event) => {
   if (semantic !== undefined) select(semantic);
 });
 filter.addEventListener("input", renderTree);
+for (const tab of document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")) {
+  tab.addEventListener("click", () => activateRibbonTab(tab.dataset["ribbonTab"] ?? "home"));
+}
+propertyElementTab.addEventListener("click", () => showPropertyPanel("element"));
+propertyDiagnosticsTab.addEventListener("click", () => showPropertyPanel("diagnostics"));
+element<HTMLButtonElement>("select-page").addEventListener("click", () => select("page-root"));
+element<HTMLButtonElement>("select-body").addEventListener("click", () =>
+  select("region-depth-body"),
+);
+element<HTMLButtonElement>("inspect-samples").addEventListener("click", () =>
+  select("column-sample"),
+);
+element<HTMLButtonElement>("inspect-track").addEventListener("click", () =>
+  select("column-data-track"),
+);
+element<HTMLButtonElement>("show-diagnostics").addEventListener("click", () =>
+  showPropertyPanel("diagnostics"),
+);
 zoom.addEventListener("input", () => applyZoom(Number(zoom.value)));
 element<HTMLButtonElement>("zoom-out").addEventListener("click", () =>
   applyZoom(Number(zoom.value) - 10),

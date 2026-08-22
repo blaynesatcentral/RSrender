@@ -1,8 +1,16 @@
-# BLD-028 Integrated boring-log MVP verification
+# BLD-028 Integrated boring-log vertical-slice verification
+
+> **Superseded completion claim (2026-08-21):** Product-owner operation rejected the
+> earlier MVP-complete interpretation. The packaged slice proved important plumbing,
+> but its ribbon tabs and disclosure controls were decorative, the inspector could not
+> be traversed reliably, the product input was a build-time test fixture, the text
+> measurement authority was approximate, and the output was not yet close enough to
+> the supplied design render. BLD-028 remains open and now depends on BLD-029 through
+> BLD-033.
 
 ## Automated outcome
 
-The complete packaged vertical slice passed automated qualification in one product-owner build. The retained machine-readable record is `artifacts/bld-028-integrated-mvp-evidence.json`.
+The packaged vertical slice passed its bounded automated qualification in one product-owner build. The retained machine-readable record is `artifacts/bld-028-integrated-mvp-evidence.json`. This proves the tested structured fixture, scene, interaction subset, and publication path; it does not prove the product-owner MVP.
 
 Launch target:
 
@@ -30,11 +38,13 @@ Exactly three sessions used fresh memory-only profiles against the same packaged
 - one normalized Letter PDF with 105/105 expected text tokens, two embedded/subset/Unicode fonts, zero images, and zero Poppler warnings;
 - zero stderr, a removed fresh profile, and zero remaining RSrender processes.
 
-All three runs retained one exact scene digest and one exact publication-projection digest. The final PDF was rendered with Poppler and visually inspected at original resolution; no header, legend, notes, approval, or column collision remains.
+All three runs retained one exact scene digest and one exact publication-projection digest. The final PDF was rendered with Poppler and inspected at original resolution. Later side-by-side inspection against the supplied design render found a material-description/sample-row collision and material header, ruler, symbol, plot, legend, footer, and typography fidelity gaps. The normalized PDF inspector did not test those conditions.
 
 ## Product-owner acceptance
 
-Automated qualification is complete, but personal operation is intentionally not inferred. To supply the final MVP acceptance evidence, the product owner must open the launch target and personally verify this short flow:
+Product-owner operation on 2026-08-21 rejected the earlier acceptance candidate because core visible controls did not work. BLD-031 corrects tabs, disclosures, and pane scrolling. BLD-029, BLD-032, and BLD-033 remain required before the final BLD-030 acceptance flow is run.
+
+The eventual acceptance flow remains:
 
 1. Confirm the Contents tree, boring-log Canvas, Properties/Diagnostics pane, selection status, zoom, and document commands are usable.
 2. Select a material-description interval in Contents and confirm the corresponding Canvas geometry and Properties item are selected.
@@ -56,4 +66,4 @@ Also run format, lint, TypeScript build, package-boundary, architecture, depende
 
 ## Claims and nonclaims
 
-The automated MVP slice is qualified and product-owner-operable. The current honest status is 98% overall and about 95% of the visible UX pending personal operation. This evidence does not claim that personal operation has occurred, PDF/UA conformance, release readiness, persistent project storage, a real-provider adapter, or completion of the broader #44 program.
+The bounded automated vertical slice is qualified. It is not the product-owner MVP and is not evidence that close reference fidelity, production document/template ingress, qualified Chromium text measurement, or personal acceptance is complete. After the product-owner defect report and the independent code/output audit, the honest status is 65% overall and about 50% operable UX after BLD-031. This evidence also does not claim PDF/UA conformance, release readiness, persistent project storage, a real-provider adapter, or completion of the broader #44 program.

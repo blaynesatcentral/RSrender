@@ -778,7 +778,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
   requireProbe(
     (await pageValue(
       window,
-      `(() => { const target = document.querySelector('.tree-row[data-semantic-id^="lithology:"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return true; })()`,
+      `(() => { const target = document.querySelector('.tree-row[data-semantic-id^="lithology:"] .tree-select'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return true; })()`,
     )) === true,
     "STUDIO_SELECTION_TARGET_MISSING",
   );
@@ -808,6 +808,71 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       selection["selectedTreeRows"] === 1 &&
       (selection["selectedSceneNodes"] as number) >= 1,
     "STUDIO_SELECTION_SYNC_INVALID",
+  );
+  window.setSize(1_100, 600);
+  const interactions = record(
+    await pageValue(
+      window,
+      `(() => {
+        const tabStates = {};
+        for (const tab of document.querySelectorAll("[data-ribbon-tab]")) {
+          if (!(tab instanceof HTMLButtonElement)) continue;
+          tab.click();
+          const id = tab.dataset.ribbonTab ?? "";
+          tabStates[id] = tab.getAttribute("aria-selected") === "true" && document.querySelectorAll('[data-ribbon-panel]:not([hidden])').length >= 1 && [...document.querySelectorAll('[data-ribbon-panel]:not([hidden])')].every((panel) => panel.dataset.ribbonPanel === id);
+        }
+        document.querySelector('[data-ribbon-tab="home"]')?.click();
+        const rowsBefore = document.querySelectorAll("#contents-tree .tree-row").length;
+        const disclosure = document.querySelector('.tree-row[data-semantic-id="page-root"] .tree-disclosure');
+        if (!(disclosure instanceof HTMLButtonElement)) return { invalid: "missing-disclosure" };
+        disclosure.click();
+        const rowsCollapsed = document.querySelectorAll("#contents-tree .tree-row").length;
+        disclosure.click();
+        const rowsExpanded = document.querySelectorAll("#contents-tree .tree-row").length;
+        const group = document.querySelector(".property-group");
+        const summary = group?.querySelector("summary");
+        if (!(group instanceof HTMLDetailsElement) || !(summary instanceof HTMLElement)) return { invalid: "missing-property-disclosure" };
+        summary.click();
+        const propertyCollapsed = group.open === false;
+        summary.click();
+        const propertyExpanded = group.open === true;
+        document.getElementById("property-tab-diagnostics")?.click();
+        const diagnosticsShown = document.getElementById("property-diagnostics-panel")?.hidden === false;
+        document.getElementById("property-tab-element")?.click();
+        const elementShown = document.getElementById("property-element-panel")?.hidden === false;
+        const scroll = document.getElementById("properties-scroll");
+        if (!(scroll instanceof HTMLElement)) return { invalid: "missing-properties-scroll" };
+        scroll.scrollTop = scroll.scrollHeight;
+        return {
+          tabStates,
+          rowsBefore,
+          rowsCollapsed,
+          rowsExpanded,
+          propertyCollapsed,
+          propertyExpanded,
+          diagnosticsShown,
+          elementShown,
+          overflowY: getComputedStyle(scroll).overflowY,
+          scrollable: scroll.scrollHeight > scroll.clientHeight,
+          scrollTop: scroll.scrollTop,
+        };
+      })()`,
+    ),
+  );
+  requireProbe(
+    JSON.stringify(interactions["tabStates"]) ===
+      '{"home":true,"layout":true,"data":true,"review":true,"publish":true}' &&
+      (interactions["rowsBefore"] as number) >= 15 &&
+      interactions["rowsCollapsed"] === 1 &&
+      interactions["rowsExpanded"] === interactions["rowsBefore"] &&
+      interactions["propertyCollapsed"] === true &&
+      interactions["propertyExpanded"] === true &&
+      interactions["diagnosticsShown"] === true &&
+      interactions["elementShown"] === true &&
+      interactions["overflowY"] === "auto" &&
+      interactions["scrollable"] === true &&
+      (interactions["scrollTop"] as number) > 0,
+    "STUDIO_INTERACTIONS_INVALID",
   );
   await pageValue(window, `document.getElementById("zoom-in")?.click(); true`);
   requireProbe(
@@ -923,7 +988,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-lithology"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
+        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-lithology"] .tree-select'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
       )) === true,
       "STUDIO_STYLE_TARGET_INVALID",
     );
@@ -962,7 +1027,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-description"]'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
+        `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-description"] .tree-select'); if (!(target instanceof HTMLButtonElement)) return false; target.click(); return document.getElementById("property-content")?.readOnly === false; })()`,
       )) === true,
       "STUDIO_LAYOUT_TARGET_INVALID",
     );
@@ -1017,6 +1082,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       )) === true,
       "PUBLICATION_AUTHORITY_INVALID",
     );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false; })()`,
+      )) === true,
+      "PUBLICATION_TAB_INVALID",
+    );
     await press(window, "#export-pdf", "Space", "FOCUS_EXPORT_PDF");
     await waitFor(
       window,
@@ -1055,6 +1127,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
     initial,
     selection,
+    interactions,
     editing,
     publication,
     zoomPercent: 90,

@@ -8,6 +8,9 @@
 * {
   box-sizing: border-box;
 }
+[hidden] {
+  display: none !important;
+}
 html,
 body {
   margin: 0;
@@ -166,19 +169,34 @@ textarea {
   display: grid;
   grid-template-columns: 244px minmax(480px, 1fr) 292px;
   min-height: 0;
+  overflow: hidden;
   background: #cbd2d7;
 }
 .pane {
   min-width: 0;
+  min-height: 0;
   background: #f7f9fa;
   border-color: #aeb8bf;
 }
 .contents-pane {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  overflow: hidden;
   border-right: 1px solid #aeb8bf;
 }
 .properties-pane {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
   border-left: 1px solid #aeb8bf;
-  overflow: auto;
+}
+.properties-scroll {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .pane-heading {
   display: flex;
@@ -241,8 +259,10 @@ textarea {
   border-bottom: 2px solid #2682af;
 }
 .contents-tree {
-  height: calc(100% - 117px);
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 7px 4px 16px;
 }
 .tree-row {
@@ -250,8 +270,7 @@ textarea {
   align-items: center;
   width: 100%;
   height: 27px;
-  padding: 0 7px;
-  border: 0;
+  padding: 0 5px;
   border-left: 3px solid transparent;
   background: transparent;
   color: #344550;
@@ -268,7 +287,34 @@ textarea {
 }
 .tree-row .chevron {
   width: 15px;
+  flex: 0 0 15px;
   color: #75858f;
+}
+.tree-disclosure {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.tree-disclosure:disabled {
+  cursor: default;
+}
+.tree-select {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 .tree-row .layer-icon {
   width: 19px;
@@ -286,6 +332,9 @@ textarea {
 }
 .tree-level-3 {
   padding-left: 37px;
+}
+.tree-level-4 {
+  padding-left: 52px;
 }
 .canvas-workspace {
   display: grid;
@@ -475,16 +524,25 @@ textarea {
   color: #6d7c85;
 }
 .property-group {
-  padding: 5px 14px 12px;
+  padding: 0;
   border-top: 1px solid #dbe0e3;
 }
-.property-group h3,
+.property-group summary,
 .diagnostics-panel h3 {
-  margin: 10px 0;
+  margin: 0;
+  padding: 10px 14px;
   color: #52636d;
   font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.property-group summary:hover {
+  background: #edf3f6;
+}
+.property-group-body {
+  padding: 0 14px 12px;
 }
 .property-group dl {
   display: grid;
@@ -546,9 +604,8 @@ textarea {
   color: #4e606b;
 }
 .diagnostics-panel {
-  margin: 0 14px 14px;
-  padding-top: 4px;
-  border-top: 1px solid #dbe0e3;
+  margin: 0;
+  padding: 4px 14px 14px;
 }
 .diagnostics-panel ul {
   margin: 0;
