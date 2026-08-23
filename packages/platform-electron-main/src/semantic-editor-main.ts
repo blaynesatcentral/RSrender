@@ -2155,7 +2155,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const weight = document.getElementById("text-font-weight"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); if (!(weight instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
+        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
       )) === true,
       "TEXT_OCCURRENCE_CONTROLS_INVALID",
     );
@@ -2168,7 +2168,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const applied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
     requireProbe(applied["canUndo"] === true, "TEXT_OCCURRENCE_AUTHORITY_UNDO_INVALID");
@@ -2189,7 +2189,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const undo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_REDO");
@@ -2201,7 +2201,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const redo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
       ),
     );
     requireProbe(
@@ -2211,6 +2211,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         applied["horizontalAlignment"] === "center" &&
         applied["verticalAlignment"] === "middle" &&
         applied["wrapPolicy"] === "no-wrap" &&
+        applied["textDecoration"] === "underline" &&
         applied["locked"] === "true",
       `TEXT_OCCURRENCE_LAYOUT_APPLY_INVALID:${JSON.stringify(applied)}`,
     );
@@ -2219,12 +2220,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       `TEXT_OCCURRENCE_ROTATION_INVALID:${String(applied["transform"])}`,
     );
     requireProbe(
-      undo["frameX"] === null && undo["firstLineX"] === "114750",
+      undo["frameX"] === null && undo["textDecoration"] === null && undo["firstLineX"] === "114750",
       `TEXT_OCCURRENCE_LAYOUT_UNDO_INVALID:${JSON.stringify(undo)}`,
     );
     requireProbe(
       redo["frameX"] === "125000" &&
         redo["horizontalAlignment"] === "center" &&
+        redo["textDecoration"] === "underline" &&
         redo["locked"] === "true" &&
         redo["transform"] === "rotate(5 200000 304338)",
       `TEXT_OCCURRENCE_LAYOUT_REDO_INVALID:${JSON.stringify(redo)}`,
@@ -2246,6 +2248,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         undo["fontWeight"] === "400" &&
         redo["fontSize"] === "9000" &&
         redo["fontWeight"] === "700" &&
+        redo["textDecoration"] === "underline" &&
         redo["fill"] === "#b42318" &&
         redo["sceneInputDigest"] !== before["sceneInputDigest"],
       "TEXT_OCCURRENCE_STYLE_HISTORY_INVALID",
@@ -3183,6 +3186,7 @@ async function main(): Promise<void> {
               fontWeight: input.fontWeight,
               lineHeightMpt: input.lineHeightMpt,
               color: input.color.toLowerCase(),
+              textDecoration: input.textDecoration,
             },
             locked: input.locked,
           },

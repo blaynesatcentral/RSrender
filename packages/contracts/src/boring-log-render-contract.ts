@@ -68,6 +68,8 @@ export interface BoringLogTextStyleInput {
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
   readonly color: string;
+  /** Absent only in legacy v1 resources, where none is the exact default. */
+  readonly textDecoration?: "none" | "underline";
 }
 
 export type BoringLogTextFrameAnchor =
@@ -788,6 +790,7 @@ function validateTemplate(input: unknown): void {
   unique(columnIds);
   const styleIds: string[] = [];
   for (const styleInput of array(value["styles"])) {
+    const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
@@ -795,6 +798,7 @@ function validateTemplate(input: unknown): void {
       "fontWeight",
       "lineHeightMpt",
       "color",
+      ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
     styleIds.push(textValue(style["id"]));
     textValue(style["fontFamilyId"]);
@@ -804,6 +808,8 @@ function validateTemplate(input: unknown): void {
     const weight = nonnegativeInteger(style["fontWeight"]);
     if (weight < 1 || weight > 1000) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     textValue(style["color"]);
+    if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
   unique(styleIds);
   const occurrenceLayoutIds: string[] = [];
@@ -1609,6 +1615,7 @@ function validateSceneUnchecked(input: unknown): void {
   validateStringMap(resources["visualTokens"]);
   const styleIds: string[] = [];
   for (const styleInput of array(resources["textStyles"])) {
+    const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
@@ -1616,6 +1623,7 @@ function validateSceneUnchecked(input: unknown): void {
       "fontWeight",
       "lineHeightMpt",
       "color",
+      ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
     styleIds.push(textValue(style["id"]));
     textValue(style["fontFamilyId"]);
@@ -1624,6 +1632,8 @@ function validateSceneUnchecked(input: unknown): void {
     }
     nonnegativeInteger(style["fontWeight"]);
     textValue(style["color"]);
+    if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
   unique(styleIds);
   const patternIds: string[] = [];

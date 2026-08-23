@@ -68,6 +68,7 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly fontWeight: number;
   readonly lineHeightMpt: number;
   readonly color: string;
+  readonly textDecoration: "none" | "underline";
   readonly layout: {
     readonly frame: {
       readonly xMpt: number;
@@ -514,6 +515,7 @@ export class BoringLogStudioRouteBroker {
       "fontWeight",
       "lineHeightMpt",
       "color",
+      "textDecoration",
       "layout",
       "locked",
     ]);
@@ -563,6 +565,7 @@ export class BoringLogStudioRouteBroker {
       !Number.isSafeInteger(args["lineHeightMpt"]) ||
       (args["lineHeightMpt"] as number) < 1 ||
       !boundedText(args["color"]) ||
+      !["none", "underline"].includes(String(args["textDecoration"])) ||
       layout === null ||
       frame === null ||
       padding === null ||

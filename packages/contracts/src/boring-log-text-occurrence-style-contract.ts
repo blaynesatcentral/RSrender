@@ -116,17 +116,23 @@ export function validateBoringLogTextOccurrenceStyleOverride(
     ) {
       return fail("BORING_LOG_TEXT_STYLE_OVERRIDE_WRONG_TYPE");
     }
+    const hasTextDecoration =
+      typeof value["style"] === "object" &&
+      value["style"] !== null &&
+      Object.hasOwn(value["style"], "textDecoration");
     const style = record(value["style"], [
       "fontFamilyId",
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
       "color",
+      ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
     if (
       !Number.isSafeInteger(style["fontWeight"]) ||
       (style["fontWeight"] as number) < 1 ||
-      (style["fontWeight"] as number) > 1_000
+      (style["fontWeight"] as number) > 1_000 ||
+      (hasTextDecoration && !["none", "underline"].includes(String(style["textDecoration"])))
     ) {
       return fail("BORING_LOG_TEXT_STYLE_OVERRIDE_WRONG_TYPE");
     }
@@ -148,6 +154,9 @@ export function validateBoringLogTextOccurrenceStyleOverride(
         fontWeight: style["fontWeight"] as number,
         lineHeightMpt: positiveMpt(style["lineHeightMpt"]),
         color: text(style["color"]),
+        ...(hasTextDecoration
+          ? { textDecoration: style["textDecoration"] as "none" | "underline" }
+          : {}),
       }),
       locked: value["locked"],
     });

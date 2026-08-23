@@ -41,7 +41,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     profileLabel: "rsrender-bld037-text-occurrence",
     probeArgument: "--rsrender-bld037-probe",
     profileArgumentPrefix: "--rsrender-bld027-profile=",
-    timeoutMs: 240_000,
+    timeoutMs: 300_000,
     extraArguments: [
       `--rsrender-bld027-output=${pdfPath}`,
       `--rsrender-bld035-output=${projectPath}`,
@@ -62,6 +62,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.workingRevision !== style.before.workingRevision + 1 ||
     style?.applied?.fontSize !== "9000" ||
     style?.applied?.fontWeight !== "700" ||
+    style?.applied?.textDecoration !== "underline" ||
     style?.applied?.fill !== "#b42318" ||
     style?.applied?.frameX !== "125000" ||
     style?.applied?.frameWidth !== "150000" ||
@@ -77,6 +78,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.undo?.frameX !== null ||
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
+    style?.redo?.textDecoration !== "underline" ||
     style?.redo?.fill !== "#b42318" ||
     style?.redo?.frameX !== "125000" ||
     style?.redo?.horizontalAlignment !== "center" ||
@@ -187,6 +189,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       explicitDetachUnlocksFreeY: true,
       occurrenceResetToInherited: true,
       deterministicShrinkToMinimumWithLegibilityFloor: true,
+      occurrenceUnderlineEmphasis: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

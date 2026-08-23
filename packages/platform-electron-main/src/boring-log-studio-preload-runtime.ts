@@ -315,6 +315,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     "fontWeight",
     "lineHeightMpt",
     "color",
+    "textDecoration",
     "layout",
     "locked",
   ]);
@@ -360,6 +361,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     args["fontWeight"] > 1_000 ||
     !isPositiveSafeInteger(args["lineHeightMpt"]) ||
     !boundedText(args["color"]) ||
+    !["none", "underline"].includes(String(args["textDecoration"])) ||
     layout === null ||
     frame === null ||
     padding === null ||
@@ -667,6 +669,7 @@ export interface BoringLogStudioPreloadApi {
     readonly fontWeight: number;
     readonly lineHeightMpt: number;
     readonly color: string;
+    readonly textDecoration: "none" | "underline";
     readonly layout: {
       readonly frame: {
         readonly xMpt: number;

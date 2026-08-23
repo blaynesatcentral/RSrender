@@ -67,6 +67,7 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-style-properties"/u);
   assert.match(html, /id="text-font-size"[^>]+min="4"[^>]+max="48"/u);
   assert.match(html, /id="text-font-weight"/u);
+  assert.match(html, /id="text-decoration"[\s\S]*?Underline/u);
   assert.match(html, /id="text-line-height"/u);
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(html, /id="text-style-scope"[^>]*>[\s\S]*?This occurrence/u);
@@ -133,6 +134,7 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
           fontWeight: 700,
           lineHeightMpt: 11_000,
           color: "#b42318",
+          textDecoration: "underline",
         },
         locked: false,
       },
@@ -198,6 +200,8 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9000"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(screen.markup, /data-horizontal-alignment="center"/u);
+  assert.match(screen.markup, /text-decoration="underline"/u);
+  assert.match(screen.markup, /data-text-decoration="underline"/u);
   assert.match(screen.markup, /data-frame-anchor="bottom-center"/u);
   assert.match(screen.markup, /transform="rotate\(5 200000 304338\)"/u);
   assert.match(
@@ -205,6 +209,8 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
+  assert.match(publication.projection.svgMarkup, /text-decoration="underline"/u);
+  assert.match(publication.projection.svgMarkup, /data-text-decoration="underline"/u);
   assert.match(publication.projection.svgMarkup, /data-frame-anchor="bottom-center"/u);
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
 });

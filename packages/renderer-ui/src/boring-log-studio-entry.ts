@@ -149,6 +149,7 @@ type StudioApis = Readonly<{
       readonly fontWeight: number;
       readonly lineHeightMpt: number;
       readonly color: string;
+      readonly textDecoration: "none" | "underline";
       readonly layout: {
         readonly frame: {
           readonly xMpt: number;
@@ -304,6 +305,7 @@ async function main(): Promise<void> {
   const textFontFamily = element<HTMLSelectElement>("text-font-family");
   const textFontSize = element<HTMLInputElement>("text-font-size");
   const textFontWeight = element<HTMLSelectElement>("text-font-weight");
+  const textDecoration = element<HTMLSelectElement>("text-decoration");
   const textLineHeight = element<HTMLInputElement>("text-line-height");
   const textColor = element<HTMLInputElement>("text-color");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
@@ -837,6 +839,7 @@ async function main(): Promise<void> {
       textFontFamily.value = textStyle.fontFamilyId;
       textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
       textFontWeight.value = String(textStyle.fontWeight);
+      textDecoration.value = textStyle.textDecoration ?? "none";
       textLineHeight.value = String(textStyle.lineHeightMpt / 1_000);
       textColor.value = /^#[0-9a-f]{6}$/iu.test(textStyle.color) ? textStyle.color : "#111827";
       const presentation = representative.presentation;
@@ -1126,6 +1129,7 @@ async function main(): Promise<void> {
       fontWeight,
       lineHeightMpt,
       color: textColor.value,
+      textDecoration: textDecoration.value as "none" | "underline",
       layout: {
         frame,
         frameAnchor,
