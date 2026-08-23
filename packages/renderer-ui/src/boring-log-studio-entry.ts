@@ -172,6 +172,9 @@ type StudioApis = Readonly<{
         readonly wrapPolicy: "word-v1" | "no-wrap";
         readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
         readonly minimumFontSizeMpt?: number;
+        readonly frameFillColor: string | null;
+        readonly frameStrokeColor: string | null;
+        readonly frameStrokeWidthMpt: number;
         readonly rotationMilliDegrees: number;
         readonly positionMode: "depth-bound" | "free";
       };
@@ -329,6 +332,11 @@ async function main(): Promise<void> {
   const textPaddingRight = element<HTMLInputElement>("text-padding-right");
   const textPaddingBottom = element<HTMLInputElement>("text-padding-bottom");
   const textPaddingLeft = element<HTMLInputElement>("text-padding-left");
+  const textFrameFillEnabled = element<HTMLInputElement>("text-frame-fill-enabled");
+  const textFrameFillColor = element<HTMLInputElement>("text-frame-fill-color");
+  const textFrameStrokeEnabled = element<HTMLInputElement>("text-frame-stroke-enabled");
+  const textFrameStrokeColor = element<HTMLInputElement>("text-frame-stroke-color");
+  const textFrameStrokeWidth = element<HTMLInputElement>("text-frame-stroke-width");
   const textPositionMode = element<HTMLSelectElement>("text-position-mode");
   const detachTextAnnotation = element<HTMLButtonElement>("detach-text-annotation");
   const textLocked = element<HTMLInputElement>("text-locked");
@@ -882,6 +890,18 @@ async function main(): Promise<void> {
       textPaddingRight.value = String((presentation?.paddingMpt.rightMpt ?? 0) / 1_000);
       textPaddingBottom.value = String((presentation?.paddingMpt.bottomMpt ?? 0) / 1_000);
       textPaddingLeft.value = String((presentation?.paddingMpt.leftMpt ?? 0) / 1_000);
+      textFrameFillEnabled.checked = presentation?.frameFillColor != null;
+      textFrameFillColor.value = /^#[0-9a-f]{6}$/iu.test(presentation?.frameFillColor ?? "")
+        ? presentation!.frameFillColor!
+        : "#fff4cc";
+      textFrameFillColor.disabled = !textFrameFillEnabled.checked;
+      textFrameStrokeEnabled.checked = presentation?.frameStrokeColor != null;
+      textFrameStrokeColor.value = /^#[0-9a-f]{6}$/iu.test(presentation?.frameStrokeColor ?? "")
+        ? presentation!.frameStrokeColor!
+        : "#b42318";
+      textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
+      textFrameStrokeWidth.value = String((presentation?.frameStrokeWidthMpt ?? 500) / 1_000);
+      textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
       textPositionMode.value = presentation?.positionMode ?? "depth-bound";
       textFrameY.readOnly = textPositionMode.value !== "free";
       detachTextAnnotation.disabled =
@@ -1093,6 +1113,7 @@ async function main(): Promise<void> {
       leftMpt: Math.round(Number(textPaddingLeft.value) * 1_000),
     };
     const rotationMilliDegrees = Math.round(Number(textRotation.value) * 1_000);
+    const frameStrokeWidthMpt = Math.round(Number(textFrameStrokeWidth.value) * 1_000);
     const positionMode = textPositionMode.value as "depth-bound" | "free";
     if (
       !Number.isSafeInteger(fontSizeMpt) ||
@@ -1131,7 +1152,12 @@ async function main(): Promise<void> {
       paddingMpt.topMpt + paddingMpt.bottomMpt >= frame.heightMpt ||
       !Number.isSafeInteger(rotationMilliDegrees) ||
       rotationMilliDegrees < -180_000 ||
-      rotationMilliDegrees > 180_000
+      rotationMilliDegrees > 180_000 ||
+      !Number.isSafeInteger(frameStrokeWidthMpt) ||
+      frameStrokeWidthMpt < 0 ||
+      frameStrokeWidthMpt > 12_000 ||
+      !/^#[0-9a-f]{6}$/iu.test(textFrameFillColor.value) ||
+      !/^#[0-9a-f]{6}$/iu.test(textFrameStrokeColor.value)
     ) {
       status.textContent =
         "Text properties require valid typography, positive in-page frame geometry, a bound Y unless explicitly detached, and padding smaller than the frame.";
@@ -1163,6 +1189,9 @@ async function main(): Promise<void> {
         wrapPolicy: textWrapPolicy.value as "word-v1" | "no-wrap",
         overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic" | "shrink-to-minimum",
         ...(textOverflowPolicy.value === "shrink-to-minimum" ? { minimumFontSizeMpt } : {}),
+        frameFillColor: textFrameFillEnabled.checked ? textFrameFillColor.value : null,
+        frameStrokeColor: textFrameStrokeEnabled.checked ? textFrameStrokeColor.value : null,
+        frameStrokeWidthMpt,
         rotationMilliDegrees,
         positionMode,
       },
@@ -1501,6 +1530,13 @@ async function main(): Promise<void> {
   document.body.dataset["ownedCommandCount"] = String(Object.keys(commandRegistry).length);
   textOverflowPolicy.addEventListener("change", () => {
     textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
+  });
+  textFrameFillEnabled.addEventListener("change", () => {
+    textFrameFillColor.disabled = !textFrameFillEnabled.checked;
+  });
+  textFrameStrokeEnabled.addEventListener("change", () => {
+    textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
+    textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
   });
   window.addEventListener("resize", () => {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);

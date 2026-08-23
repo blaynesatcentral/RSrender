@@ -84,6 +84,11 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-wrap-policy"/u);
   assert.match(html, /id="text-overflow-policy"[\s\S]*?Shrink to minimum/u);
   assert.match(html, /id="text-minimum-font-size"[^>]+min="4"[^>]+max="48"/u);
+  assert.match(html, /id="text-frame-fill-enabled"/u);
+  assert.match(html, /id="text-frame-fill-color" type="color"/u);
+  assert.match(html, /id="text-frame-stroke-enabled"/u);
+  assert.match(html, /id="text-frame-stroke-color" type="color"/u);
+  assert.match(html, /id="text-frame-stroke-width"[^>]+min="0"[^>]+max="12"/u);
   assert.match(html, /id="text-locked"/u);
   assert.match(html, /id="apply-text-style"[^>]*>Apply text properties/u);
   assert.match(html, /id="detach-text-annotation"[^>]*>Detach as Annotation/u);
@@ -165,6 +170,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
           verticalAlignment: "middle",
           wrapPolicy: "no-wrap",
           overflowPolicy: "clip-with-diagnostic",
+          frameFillColor: "#fff4cc",
+          frameStrokeColor: "#b42318",
+          frameStrokeWidthMpt: 750,
           rotationMilliDegrees: 5_000,
           positionMode: "depth-bound",
           locked: true,
@@ -200,6 +208,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   });
   assert.equal(node?.kind === "text" ? node.presentation?.locked : null, true);
   assert.equal(node?.kind === "text" ? node.presentation?.frameAnchor : null, "bottom-center");
+  assert.equal(node?.kind === "text" ? node.presentation?.frameFillColor : null, "#fff4cc");
+  assert.equal(node?.kind === "text" ? node.presentation?.frameStrokeColor : null, "#b42318");
+  assert.equal(node?.kind === "text" ? node.presentation?.frameStrokeWidthMpt : null, 750);
   const screen = projectBoringLogSceneToSvg(resolved.value);
   const publication = projectBoringLogSceneForPublication(resolved.value);
   assert.equal(screen.accepted, true);
@@ -215,6 +226,10 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.match(screen.markup, /word-spacing="500"/u);
   assert.match(screen.markup, /data-paragraph-spacing-mpt="2000"/u);
   assert.match(screen.markup, /data-frame-anchor="bottom-center"/u);
+  assert.match(
+    screen.markup,
+    /id="node:lithology:stratum-01:transition:2:text:presentation-frame"[^>]+fill="#fff4cc"[^>]+stroke="#b42318"[^>]+stroke-width="750"/u,
+  );
   assert.match(screen.markup, /transform="rotate\(5 200000 304338\)"/u);
   assert.match(
     publication.projection.svgMarkup,
@@ -227,6 +242,10 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.match(publication.projection.svgMarkup, /word-spacing="0\.500"/u);
   assert.match(publication.projection.svgMarkup, /data-paragraph-spacing-mpt="2000"/u);
   assert.match(publication.projection.svgMarkup, /data-frame-anchor="bottom-center"/u);
+  assert.match(
+    publication.projection.svgMarkup,
+    /id="node:lithology:stratum-01:transition:2:text:presentation-frame"[^>]+fill="#fff4cc"[^>]+stroke="#b42318"[^>]+stroke-width="0\.750"/u,
+  );
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
 });
 

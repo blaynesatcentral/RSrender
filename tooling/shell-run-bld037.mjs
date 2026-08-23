@@ -38,10 +38,10 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
   );
   const packageResult = await packageBoringLogEditor();
   const run = await runPackaged(packageResult, 1, {
-    profileLabel: "rsrender-bld037-text-occurrence",
+    profileLabel: `rsrender-bld037-text-occurrence-${process.pid}`,
     probeArgument: "--rsrender-bld037-probe",
     profileArgumentPrefix: "--rsrender-bld027-profile=",
-    timeoutMs: 300_000,
+    timeoutMs: 420_000,
     extraArguments: [
       `--rsrender-bld027-output=${pdfPath}`,
       `--rsrender-bld035-output=${projectPath}`,
@@ -66,6 +66,10 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.letterSpacing !== "250" ||
     style?.applied?.wordSpacing !== "500" ||
     style?.applied?.paragraphSpacing !== "2000" ||
+    style?.applied?.presentationFrameFill !== "#fff4cc" ||
+    style?.applied?.presentationFrameStroke !== "#b42318" ||
+    style?.applied?.presentationFrameStrokeWidth !== "750" ||
+    style?.applied?.presentationFrameTransform !== "rotate(5 200000 304338)" ||
     style?.applied?.fill !== "#b42318" ||
     style?.applied?.frameX !== "125000" ||
     style?.applied?.frameWidth !== "150000" ||
@@ -79,12 +83,17 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.undo?.fontSize !== "5500" ||
     style?.undo?.fontWeight !== "400" ||
     style?.undo?.frameX !== null ||
+    style?.undo?.presentationFrame !== false ||
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
     style?.redo?.textDecoration !== "underline" ||
     style?.redo?.letterSpacing !== "250" ||
     style?.redo?.wordSpacing !== "500" ||
     style?.redo?.paragraphSpacing !== "2000" ||
+    style?.redo?.presentationFrameFill !== "#fff4cc" ||
+    style?.redo?.presentationFrameStroke !== "#b42318" ||
+    style?.redo?.presentationFrameStrokeWidth !== "750" ||
+    style?.redo?.presentationFrameTransform !== "rotate(5 200000 304338)" ||
     style?.redo?.fill !== "#b42318" ||
     style?.redo?.frameX !== "125000" ||
     style?.redo?.horizontalAlignment !== "center" ||
@@ -197,6 +206,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       deterministicShrinkToMinimumWithLegibilityFloor: true,
       occurrenceUnderlineEmphasis: true,
       occurrenceLetterWordParagraphSpacing: true,
+      occurrenceFrameStyling: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

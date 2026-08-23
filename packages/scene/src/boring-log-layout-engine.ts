@@ -381,6 +381,13 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
               ...(occurrenceLayout.minimumFontSizeMpt === undefined
                 ? {}
                 : { minimumFontSizeMpt: occurrenceLayout.minimumFontSizeMpt }),
+              ...(occurrenceLayout.frameStrokeWidthMpt === undefined
+                ? {}
+                : {
+                    frameFillColor: occurrenceLayout.frameFillColor ?? null,
+                    frameStrokeColor: occurrenceLayout.frameStrokeColor ?? null,
+                    frameStrokeWidthMpt: occurrenceLayout.frameStrokeWidthMpt,
+                  }),
               rotationMilliDegrees: occurrenceLayout.rotationMilliDegrees,
               positionMode: occurrenceLayout.positionMode,
               locked: occurrenceLayout.locked,

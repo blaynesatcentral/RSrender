@@ -70,6 +70,10 @@ function text(input: unknown): string {
   return input;
 }
 
+function nullableText(input: unknown): string | null {
+  return input === null ? null : text(input);
+}
+
 function nonnegativeMpt(input: unknown): Mpt {
   if (!isMpt(input) || input < 0) return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
   return input;
@@ -119,6 +123,12 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       typeof value["layout"] === "object" &&
       value["layout"] !== null &&
       Object.hasOwn(value["layout"], "minimumFontSizeMpt");
+    const hasFrameStyle =
+      typeof value["layout"] === "object" &&
+      value["layout"] !== null &&
+      ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some((key) =>
+        Object.hasOwn(value["layout"] as object, key),
+      );
     const layout = record(value["layout"], [
       "frame",
       ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -128,6 +138,7 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       "wrapPolicy",
       "overflowPolicy",
       ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
+      ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -159,6 +170,11 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
     const overflowPolicy = layout["overflowPolicy"];
     const rotationMilliDegrees = layout["rotationMilliDegrees"];
     const positionMode = layout["positionMode"];
+    const frameFillColor = hasFrameStyle ? nullableText(layout["frameFillColor"]) : null;
+    const frameStrokeColor = hasFrameStyle ? nullableText(layout["frameStrokeColor"]) : null;
+    const frameStrokeWidthMpt = hasFrameStyle
+      ? nonnegativeMpt(layout["frameStrokeWidthMpt"])
+      : null;
     if (
       !(
         horizontalAlignment === "start" ||
@@ -215,6 +231,9 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
           overflowPolicy,
           ...(hasMinimumFontSize
             ? { minimumFontSizeMpt: positiveMpt(layout["minimumFontSizeMpt"]) }
+            : {}),
+          ...(hasFrameStyle
+            ? { frameFillColor, frameStrokeColor, frameStrokeWidthMpt: frameStrokeWidthMpt! }
             : {}),
           rotationMilliDegrees: rotationMilliDegrees as number,
           positionMode,

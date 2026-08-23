@@ -339,6 +339,9 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
           "wrapPolicy",
           "overflowPolicy",
           ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
+          "frameFillColor",
+          "frameStrokeColor",
+          "frameStrokeWidthMpt",
           "rotationMilliDegrees",
           "positionMode",
         ]);
@@ -399,6 +402,14 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     (hasMinimumFontSize &&
       (!isPositiveSafeInteger(layout["minimumFontSizeMpt"]) ||
         layout["minimumFontSizeMpt"] > args["fontSizeMpt"])) ||
+    (layout["frameFillColor"] !== null &&
+      (typeof layout["frameFillColor"] !== "string" ||
+        !/^#[0-9a-f]{6}$/iu.test(layout["frameFillColor"]))) ||
+    (layout["frameStrokeColor"] !== null &&
+      (typeof layout["frameStrokeColor"] !== "string" ||
+        !/^#[0-9a-f]{6}$/iu.test(layout["frameStrokeColor"]))) ||
+    !isNonnegativeSafeInteger(layout["frameStrokeWidthMpt"]) ||
+    layout["frameStrokeWidthMpt"] > 12_000 ||
     !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
     (layout["rotationMilliDegrees"] as number) < -180_000 ||
     (layout["rotationMilliDegrees"] as number) > 180_000 ||
@@ -711,6 +722,9 @@ export interface BoringLogStudioPreloadApi {
       readonly verticalAlignment: "top" | "middle" | "bottom";
       readonly wrapPolicy: "word-v1" | "no-wrap";
       readonly overflowPolicy: "clip-with-diagnostic";
+      readonly frameFillColor: string | null;
+      readonly frameStrokeColor: string | null;
+      readonly frameStrokeWidthMpt: number;
       readonly rotationMilliDegrees: number;
       readonly positionMode: "depth-bound" | "free";
     };

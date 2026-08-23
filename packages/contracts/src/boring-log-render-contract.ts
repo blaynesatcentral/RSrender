@@ -106,6 +106,10 @@ export interface BoringLogTextOccurrenceLayoutInput {
   readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
   /** Required for shrink-to-minimum; absent only for legacy clip-only layouts. */
   readonly minimumFontSizeMpt?: Mpt;
+  /** All three frame-style fields are absent in legacy v1 layouts, meaning no visible frame. */
+  readonly frameFillColor?: string | null;
+  readonly frameStrokeColor?: string | null;
+  readonly frameStrokeWidthMpt?: Mpt;
   readonly rotationMilliDegrees: number;
   readonly positionMode: "depth-bound" | "free";
   readonly locked: boolean;
@@ -835,6 +839,9 @@ function validateTemplate(input: unknown): void {
   for (const layoutInput of hasOccurrenceLayouts ? array(value["occurrenceLayouts"]) : []) {
     const hasFrameAnchor = Object.hasOwn(layoutInput as object, "frameAnchor");
     const hasMinimumFontSize = Object.hasOwn(layoutInput as object, "minimumFontSizeMpt");
+    const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
+      (key) => Object.hasOwn(layoutInput as object, key),
+    );
     const layout = record(layoutInput, [
       "id",
       "frame",
@@ -845,6 +852,7 @@ function validateTemplate(input: unknown): void {
       "wrapPolicy",
       "overflowPolicy",
       ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
+      ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -866,6 +874,11 @@ function validateTemplate(input: unknown): void {
       ].includes(textValue(layout["frameAnchor"]))
     ) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (hasFrameStyle) {
+      nullableText(layout["frameFillColor"]);
+      nullableText(layout["frameStrokeColor"]);
+      if (mpt(layout["frameStrokeWidthMpt"]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
     const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
     for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
@@ -1506,6 +1519,9 @@ function validateSceneNode(input: unknown): {
         value["presentation"] as object,
         "minimumFontSizeMpt",
       );
+      const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
+        (key) => Object.hasOwn(value["presentation"] as object, key),
+      );
       const presentation = record(value["presentation"], [
         "paddingMpt",
         ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -1514,6 +1530,7 @@ function validateSceneNode(input: unknown): {
         "wrapPolicy",
         "overflowPolicy",
         ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
+        ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
         "rotationMilliDegrees",
         "positionMode",
         "locked",
@@ -1542,6 +1559,12 @@ function validateSceneNode(input: unknown): {
         ].includes(textValue(presentation["frameAnchor"]))
       ) {
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+        if (hasFrameStyle) {
+          nullableText(presentation["frameFillColor"]);
+          nullableText(presentation["frameStrokeColor"]);
+          if (mpt(presentation["frameStrokeWidthMpt"]) < 0)
+            fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+        }
       }
       if (!["start", "center", "end"].includes(textValue(presentation["horizontalAlignment"])))
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");

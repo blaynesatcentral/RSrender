@@ -2220,10 +2220,11 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
+        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); const frameFillEnabled = document.getElementById("text-frame-fill-enabled"); const frameFillColor = document.getElementById("text-frame-fill-color"); const frameStrokeEnabled = document.getElementById("text-frame-stroke-enabled"); const frameStrokeColor = document.getElementById("text-frame-stroke-color"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement) || !(frameFillEnabled instanceof HTMLInputElement) || !(frameFillColor instanceof HTMLInputElement) || !(frameStrokeEnabled instanceof HTMLInputElement) || !(frameStrokeColor instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); frameFillEnabled.checked = true; frameFillEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameFillColor.value = "#fff4cc"; frameFillColor.dispatchEvent(new Event("input", { bubbles: true })); frameStrokeEnabled.checked = true; frameStrokeEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameStrokeColor.value = "#b42318"; frameStrokeColor.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
       )) === true,
       "TEXT_OCCURRENCE_CONTROLS_INVALID",
     );
+    await typeText(window, "#text-frame-stroke-width", "0.75");
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_APPLY");
     await waitFor(
       window,
@@ -2233,7 +2234,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const applied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
     requireProbe(applied["canUndo"] === true, "TEXT_OCCURRENCE_AUTHORITY_UNDO_INVALID");
@@ -2248,25 +2249,25 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#undo", "Space", "FOCUS_TEXT_OCCURRENCE_UNDO");
     await waitFor(
       window,
-      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("redo")?.disabled === false`,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame") === null && document.getElementById("redo")?.disabled === false`,
       "WAIT_TEXT_OCCURRENCE_UNDO",
     );
     const undo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), presentationFrame: document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame") !== null, firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_REDO");
     await waitFor(
       window,
-      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000"`,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame")?.getAttribute("stroke") === "#b42318"`,
       "WAIT_TEXT_OCCURRENCE_REDO",
     );
     const redo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform") }; })()`,
       ),
     );
     requireProbe(
@@ -2280,6 +2281,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         applied["letterSpacing"] === "250" &&
         applied["wordSpacing"] === "500" &&
         applied["paragraphSpacing"] === "2000" &&
+        applied["presentationFrameFill"] === "#fff4cc" &&
+        applied["presentationFrameStroke"] === "#b42318" &&
+        applied["presentationFrameStrokeWidth"] === "750" &&
+        applied["presentationFrameTransform"] === "rotate(5 200000 304338)" &&
         applied["locked"] === "true",
       `TEXT_OCCURRENCE_LAYOUT_APPLY_INVALID:${JSON.stringify(applied)}`,
     );
@@ -2289,6 +2294,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     requireProbe(
       undo["frameX"] === null &&
+        undo["presentationFrame"] === false &&
         undo["textDecoration"] === null &&
         undo["letterSpacing"] === null &&
         undo["wordSpacing"] === null &&
@@ -2303,6 +2309,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         redo["letterSpacing"] === "250" &&
         redo["wordSpacing"] === "500" &&
         redo["paragraphSpacing"] === "2000" &&
+        redo["presentationFrameFill"] === "#fff4cc" &&
+        redo["presentationFrameStroke"] === "#b42318" &&
+        redo["presentationFrameStrokeWidth"] === "750" &&
+        redo["presentationFrameTransform"] === "rotate(5 200000 304338)" &&
         redo["locked"] === "true" &&
         redo["transform"] === "rotate(5 200000 304338)",
       `TEXT_OCCURRENCE_LAYOUT_REDO_INVALID:${JSON.stringify(redo)}`,
@@ -3220,6 +3230,12 @@ async function main(): Promise<void> {
         input.paragraphSpacingMpt < 0 ||
         input.paragraphSpacingMpt > 72_000 ||
         !/^#[0-9a-f]{6}$/iu.test(input.color) ||
+        (input.layout.frameFillColor !== null &&
+          !/^#[0-9a-f]{6}$/iu.test(input.layout.frameFillColor)) ||
+        (input.layout.frameStrokeColor !== null &&
+          !/^#[0-9a-f]{6}$/iu.test(input.layout.frameStrokeColor)) ||
+        input.layout.frameStrokeWidthMpt < 0 ||
+        input.layout.frameStrokeWidthMpt > 12_000 ||
         (input.layout.positionMode === "depth-bound" &&
           input.layout.frame.yMpt !== node.frame.yMpt) ||
         input.layout.frame.xMpt + input.layout.frame.widthMpt >

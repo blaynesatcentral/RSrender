@@ -100,6 +100,9 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
     readonly wrapPolicy: "word-v1" | "no-wrap";
     readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
     readonly minimumFontSizeMpt?: number;
+    readonly frameFillColor: string | null;
+    readonly frameStrokeColor: string | null;
+    readonly frameStrokeWidthMpt: number;
     readonly rotationMilliDegrees: number;
     readonly positionMode: "depth-bound" | "free";
   };
@@ -542,6 +545,9 @@ export class BoringLogStudioRouteBroker {
             "wrapPolicy",
             "overflowPolicy",
             ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
+            "frameFillColor",
+            "frameStrokeColor",
+            "frameStrokeWidthMpt",
             "rotationMilliDegrees",
             "positionMode",
           ]);
@@ -612,6 +618,15 @@ export class BoringLogStudioRouteBroker {
         (!Number.isSafeInteger(layout["minimumFontSizeMpt"]) ||
           (layout["minimumFontSizeMpt"] as number) < 1 ||
           (layout["minimumFontSizeMpt"] as number) > (args["fontSizeMpt"] as number))) ||
+      (layout["frameFillColor"] !== null &&
+        (typeof layout["frameFillColor"] !== "string" ||
+          !/^#[0-9a-f]{6}$/iu.test(layout["frameFillColor"]))) ||
+      (layout["frameStrokeColor"] !== null &&
+        (typeof layout["frameStrokeColor"] !== "string" ||
+          !/^#[0-9a-f]{6}$/iu.test(layout["frameStrokeColor"]))) ||
+      !Number.isSafeInteger(layout["frameStrokeWidthMpt"]) ||
+      (layout["frameStrokeWidthMpt"] as number) < 0 ||
+      (layout["frameStrokeWidthMpt"] as number) > 12_000 ||
       !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
       (layout["rotationMilliDegrees"] as number) < -180_000 ||
       (layout["rotationMilliDegrees"] as number) > 180_000 ||
