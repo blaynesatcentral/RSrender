@@ -82,7 +82,17 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.redo?.horizontalAlignment !== "center" ||
     style?.redo?.locked !== "true" ||
     style?.redo?.sceneInputDigest === style.before.sceneInputDigest ||
-    style?.reset?.workingRevision !== style.redo.workingRevision + 1 ||
+    style?.detached?.workingRevision !== style.redo.workingRevision + 1 ||
+    style?.detached?.positionMode !== "free" ||
+    style?.detached?.frameY !== "293338" ||
+    style?.detached?.anchorY !== "315.338" ||
+    style?.detached?.yReadOnly !== false ||
+    style?.detached?.detachDisabled !== true ||
+    style?.freeMoved?.workingRevision !== style.detached.workingRevision + 1 ||
+    style?.freeMoved?.positionMode !== "free" ||
+    style?.freeMoved?.frameY !== "303338" ||
+    style?.freeMoved?.anchorY !== "325.338" ||
+    style?.reset?.workingRevision !== style.freeMoved.workingRevision + 1 ||
     style?.reset?.fontSize !== "5500" ||
     style?.reset?.frameX !== null ||
     style?.reset?.styleInheritance !== "inherited" ||
@@ -90,6 +100,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.reset?.resetDisabled !== true ||
     style?.resetUndo?.fontSize !== "9000" ||
     style?.resetUndo?.frameX !== "125000" ||
+    style?.resetUndo?.frameY !== "303338" ||
+    style?.resetUndo?.positionMode !== "free" ||
     style?.resetUndo?.resetDisabled !== false ||
     style?.resetRedo?.fontSize !== "5500" ||
     style?.resetRedo?.frameX !== null ||
@@ -163,6 +175,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       sharedHistoryUndoRedo: true,
       exactFrameAlignmentWrapRotationLock: true,
       explicitNinePointFrameAnchor: true,
+      explicitDetachUnlocksFreeY: true,
       occurrenceResetToInherited: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,

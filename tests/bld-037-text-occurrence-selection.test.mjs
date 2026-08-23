@@ -72,10 +72,12 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-frame-y"[^>]+readonly/u);
   assert.match(html, /id="text-frame-width"/u);
   assert.match(html, /id="text-frame-height"/u);
+  assert.match(html, /id="text-frame-anchor"/u);
   assert.match(html, /id="text-horizontal-alignment"/u);
   assert.match(html, /id="text-wrap-policy"/u);
   assert.match(html, /id="text-locked"/u);
   assert.match(html, /id="apply-text-style"[^>]*>Apply text properties/u);
+  assert.match(html, /id="detach-text-annotation"[^>]*>Detach as Annotation/u);
   assert.match(html, /id="text-style-inheritance"/u);
   assert.match(html, /id="text-layout-inheritance"/u);
   assert.match(html, /id="reset-text-presentation"[^>]*>Reset to inherited/u);
@@ -96,6 +98,8 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /resetTextOccurrencePresentation/u);
   assert.match(entry, /resetSelectedTextPresentation/u);
   assert.match(entry, /applySelectedTextStyle/u);
+  assert.match(entry, /detachSelectedTextAsAnnotation/u);
+  assert.match(entry, /textFrameY\.readOnly = textPositionMode\.value !== "free"/u);
   assert.match(entry, /expectedWorkingRevision: studioProjection\.workingRevision/u);
 });
 

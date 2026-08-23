@@ -320,6 +320,7 @@ async function main(): Promise<void> {
   const textPaddingBottom = element<HTMLInputElement>("text-padding-bottom");
   const textPaddingLeft = element<HTMLInputElement>("text-padding-left");
   const textPositionMode = element<HTMLSelectElement>("text-position-mode");
+  const detachTextAnnotation = element<HTMLButtonElement>("detach-text-annotation");
   const textLocked = element<HTMLInputElement>("text-locked");
   const applyTextStyle = element<HTMLButtonElement>("apply-text-style");
   const textStyleHelp = element<HTMLElement>("text-style-help");
@@ -857,6 +858,12 @@ async function main(): Promise<void> {
       textPaddingBottom.value = String((presentation?.paddingMpt.bottomMpt ?? 0) / 1_000);
       textPaddingLeft.value = String((presentation?.paddingMpt.leftMpt ?? 0) / 1_000);
       textPositionMode.value = presentation?.positionMode ?? "depth-bound";
+      textFrameY.readOnly = textPositionMode.value !== "free";
+      detachTextAnnotation.disabled =
+        textPositionMode.value === "free" ||
+        selectedSceneNodeId === null ||
+        studioProjection === null ||
+        lifecycleState?.readOnly === true;
       textLocked.checked = presentation?.locked ?? false;
       const presentationState = studioProjection?.textOccurrencePresentationStates.find(
         ({ occurrenceNodeId }) => occurrenceNodeId === representative.id,
@@ -1021,7 +1028,7 @@ async function main(): Promise<void> {
     propertyContent.focus();
   }
 
-  async function applySelectedTextStyle(): Promise<void> {
+  async function applySelectedTextStyle(): Promise<boolean> {
     const apis = studioApis();
     const node =
       selectedSceneNodeId === null
@@ -1036,7 +1043,7 @@ async function main(): Promise<void> {
         : scene.resources.textStyles.find(({ id }) => id === node.styleId);
     if (apis === null || studioProjection === null || node === undefined || style === undefined) {
       status.textContent = "Select one exact text occurrence before applying text properties.";
-      return;
+      return false;
     }
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
@@ -1058,6 +1065,7 @@ async function main(): Promise<void> {
       leftMpt: Math.round(Number(textPaddingLeft.value) * 1_000),
     };
     const rotationMilliDegrees = Math.round(Number(textRotation.value) * 1_000);
+    const positionMode = textPositionMode.value as "depth-bound" | "free";
     if (
       !Number.isSafeInteger(fontSizeMpt) ||
       fontSizeMpt < 4_000 ||
@@ -1071,7 +1079,8 @@ async function main(): Promise<void> {
       !/^#[0-9a-f]{6}$/iu.test(textColor.value) ||
       !Object.values(frame).every(Number.isSafeInteger) ||
       frame.xMpt < 0 ||
-      frame.yMpt !== node.frame.yMpt ||
+      frame.yMpt < 0 ||
+      (positionMode === "depth-bound" && frame.yMpt !== node.frame.yMpt) ||
       frame.widthMpt < 1_000 ||
       frame.heightMpt < 1_000 ||
       frame.xMpt + frame.widthMpt > page.widthMpt ||
@@ -1085,9 +1094,9 @@ async function main(): Promise<void> {
       rotationMilliDegrees > 180_000
     ) {
       status.textContent =
-        "Text properties require valid typography, positive in-page frame geometry, depth-bound Y, and padding smaller than the frame.";
+        "Text properties require valid typography, positive in-page frame geometry, a bound Y unless explicitly detached, and padding smaller than the frame.";
       textFontSize.focus();
-      return;
+      return false;
     }
     applyTextStyle.disabled = true;
     status.textContent = `Applying text properties to ${node.id}…`;
@@ -1110,20 +1119,20 @@ async function main(): Promise<void> {
         wrapPolicy: textWrapPolicy.value as "word-v1" | "no-wrap",
         overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic",
         rotationMilliDegrees,
-        positionMode: textPositionMode.value as "depth-bound" | "free",
+        positionMode,
       },
       locked: textLocked.checked,
     });
     if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
       applyTextStyle.disabled = false;
       status.textContent = "Text property command returned an invalid result.";
-      return;
+      return false;
     }
     const result = raw as Record<string, unknown>;
     if (result["accepted"] !== true || !Number.isSafeInteger(result["workingRevision"])) {
       applyTextStyle.disabled = false;
       status.textContent = `Text property edit rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
-      return;
+      return false;
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
@@ -1132,6 +1141,28 @@ async function main(): Promise<void> {
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
     textFontSize.focus();
+    return true;
+  }
+
+  async function detachSelectedTextAsAnnotation(): Promise<void> {
+    if (
+      selectedSceneNodeId === null ||
+      studioProjection === null ||
+      lifecycleState?.readOnly === true ||
+      textPositionMode.value === "free"
+    ) {
+      status.textContent = "Select one editable depth-bound text occurrence before detaching.";
+      return;
+    }
+    detachTextAnnotation.disabled = true;
+    textPositionMode.value = "free";
+    textFrameY.readOnly = false;
+    status.textContent = `Detaching ${selectedSceneNodeId} as a free annotationâ€¦`;
+    if (!(await applySelectedTextStyle())) {
+      textPositionMode.value = "depth-bound";
+      textFrameY.readOnly = true;
+      detachTextAnnotation.disabled = false;
+    }
   }
 
   async function resetSelectedTextPresentation(): Promise<void> {
@@ -1407,6 +1438,7 @@ async function main(): Promise<void> {
     "context-properties": focusSelectedProperties,
     "apply-property": () => void applySelectedProperty(),
     "apply-text-style": () => void applySelectedTextStyle(),
+    "detach-text-annotation": () => void detachSelectedTextAsAnnotation(),
     "reset-text-presentation": () => void resetSelectedTextPresentation(),
     "zoom-out": () => applyZoom(Number(zoom.value) - 10),
     "zoom-in": () => applyZoom(Number(zoom.value) + 10),

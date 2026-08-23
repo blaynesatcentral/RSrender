@@ -39,6 +39,7 @@ const expectedCommandIds = Object.freeze([
   "property-tab-diagnostics",
   "apply-property",
   "apply-text-style",
+  "detach-text-annotation",
   "context-properties",
   "reset-text-presentation",
   "zoom-out",

@@ -2212,6 +2212,44 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         redo["sceneInputDigest"] !== before["sceneInputDigest"],
       "TEXT_OCCURRENCE_STYLE_HISTORY_INVALID",
     );
+    await press(window, "#detach-text-annotation", "Space", "FOCUS_TEXT_OCCURRENCE_DETACH");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-position-mode") === "free" && document.getElementById("text-position-mode")?.value === "free" && document.getElementById("text-frame-y")?.readOnly === false && document.getElementById("detach-text-annotation")?.disabled === true`,
+      "WAIT_TEXT_OCCURRENCE_DETACH",
+    );
+    const detached = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, positionMode: node?.getAttribute("data-position-mode"), frameY: node?.getAttribute("data-frame-y-mpt"), anchorY: document.getElementById("text-frame-y")?.value, yReadOnly: document.getElementById("text-frame-y")?.readOnly, detachDisabled: document.getElementById("detach-text-annotation")?.disabled }; })()`,
+      ),
+    );
+    await typeText(window, "#text-frame-y", "325.338");
+    await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_FREE_Y_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-position-mode") === "free" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-y-mpt") === "303338"`,
+      "WAIT_TEXT_OCCURRENCE_FREE_Y_APPLY",
+    );
+    const freeMoved = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, positionMode: node?.getAttribute("data-position-mode"), frameY: node?.getAttribute("data-frame-y-mpt"), anchorY: document.getElementById("text-frame-y")?.value }; })()`,
+      ),
+    );
+    requireProbe(
+      detached["workingRevision"] === (redo["workingRevision"] as number) + 1 &&
+        detached["positionMode"] === "free" &&
+        detached["frameY"] === "293338" &&
+        detached["anchorY"] === "315.338" &&
+        detached["yReadOnly"] === false &&
+        detached["detachDisabled"] === true &&
+        freeMoved["workingRevision"] === (detached["workingRevision"] as number) + 1 &&
+        freeMoved["positionMode"] === "free" &&
+        freeMoved["frameY"] === "303338" &&
+        freeMoved["anchorY"] === "325.338",
+      `TEXT_OCCURRENCE_DETACH_INVALID:${JSON.stringify({ detached, freeMoved })}`,
+    );
     await press(window, "#reset-text-presentation", "Space", "FOCUS_TEXT_OCCURRENCE_RESET");
     await waitFor(
       window,
@@ -2233,7 +2271,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const resetUndo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), frameY: node?.getAttribute("data-frame-y-mpt"), positionMode: node?.getAttribute("data-position-mode"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_RESET_REDO");
@@ -2249,7 +2287,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       ),
     );
     requireProbe(
-      reset["workingRevision"] === (redo["workingRevision"] as number) + 1 &&
+      reset["workingRevision"] === (freeMoved["workingRevision"] as number) + 1 &&
         reset["fontSize"] === "5500" &&
         reset["frameX"] === null &&
         reset["styleInheritance"] === "inherited" &&
@@ -2257,6 +2295,8 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         reset["resetDisabled"] === true &&
         resetUndo["fontSize"] === "9000" &&
         resetUndo["frameX"] === "125000" &&
+        resetUndo["frameY"] === "303338" &&
+        resetUndo["positionMode"] === "free" &&
         resetUndo["resetDisabled"] === false &&
         resetRedo["fontSize"] === "5500" &&
         resetRedo["frameX"] === null &&
@@ -2287,6 +2327,8 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       applied,
       undo,
       redo,
+      detached,
+      freeMoved,
       reset,
       resetUndo,
       resetRedo,
@@ -2994,8 +3036,8 @@ async function main(): Promise<void> {
         input.lineHeightMpt < input.fontSizeMpt ||
         input.lineHeightMpt > 72_000 ||
         !/^#[0-9a-f]{6}$/iu.test(input.color) ||
-        input.layout.positionMode !== "depth-bound" ||
-        input.layout.frame.yMpt !== node.frame.yMpt ||
+        (input.layout.positionMode === "depth-bound" &&
+          input.layout.frame.yMpt !== node.frame.yMpt) ||
         input.layout.frame.xMpt + input.layout.frame.widthMpt >
           projected.projection.scene.pages[0]!.widthMpt ||
         input.layout.frame.yMpt + input.layout.frame.heightMpt >
