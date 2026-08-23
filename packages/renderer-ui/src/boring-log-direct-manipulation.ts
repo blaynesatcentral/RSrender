@@ -28,6 +28,12 @@ export type BoringLogDirectManipulationResult =
       code: "DIRECT_MANIPULATION_ARGUMENT_INVALID";
     }>;
 
+export type BoringLogSnapResult = Readonly<{
+  frame: BoringLogDirectManipulationFrame;
+  snapXMpt: number | null;
+  snapYMpt: number | null;
+}>;
+
 const handles: readonly BoringLogDirectManipulationHandle[] = [
   "move",
   "north-west",
@@ -165,5 +171,92 @@ export function resolveBoringLogDirectManipulationFrame(input: {
       frame.widthMpt !== original.widthMpt ||
       frame.heightMpt !== original.heightMpt,
     yConstrained: input.positionMode === "depth-bound" && (north || south),
+  });
+}
+
+function closestSnap(
+  candidates: readonly number[],
+  targets: readonly number[],
+  thresholdMpt: number,
+): Readonly<{ deltaMpt: number; targetMpt: number }> | null {
+  let best: Readonly<{ deltaMpt: number; targetMpt: number }> | null = null;
+  for (const candidate of candidates) {
+    for (const target of targets) {
+      const deltaMpt = target - candidate;
+      if (Math.abs(deltaMpt) > thresholdMpt) continue;
+      if (
+        best === null ||
+        Math.abs(deltaMpt) < Math.abs(best.deltaMpt) ||
+        (Math.abs(deltaMpt) === Math.abs(best.deltaMpt) && target < best.targetMpt)
+      ) {
+        best = Object.freeze({ deltaMpt, targetMpt: target });
+      }
+    }
+  }
+  return best;
+}
+
+export function snapBoringLogDirectManipulationFrame(input: {
+  readonly frame: BoringLogDirectManipulationFrame;
+  readonly handle: BoringLogDirectManipulationHandle;
+  readonly xTargetsMpt: readonly number[];
+  readonly yTargetsMpt: readonly number[];
+  readonly thresholdMpt: number;
+  readonly pageWidthMpt: number;
+  readonly pageHeightMpt: number;
+  readonly bypass: boolean;
+}): BoringLogSnapResult {
+  if (input.bypass || input.thresholdMpt < 0 || !exactFrame(input.frame)) {
+    return Object.freeze({ frame: input.frame, snapXMpt: null, snapYMpt: null });
+  }
+  const frame = input.frame;
+  const horizontalCandidates =
+    input.handle === "move"
+      ? [frame.xMpt, frame.xMpt + Math.round(frame.widthMpt / 2), frame.xMpt + frame.widthMpt]
+      : input.handle.endsWith("west") || input.handle === "west"
+        ? [frame.xMpt]
+        : input.handle.endsWith("east") || input.handle === "east"
+          ? [frame.xMpt + frame.widthMpt]
+          : [];
+  const verticalCandidates =
+    input.handle === "move"
+      ? [frame.yMpt, frame.yMpt + Math.round(frame.heightMpt / 2), frame.yMpt + frame.heightMpt]
+      : input.handle.startsWith("north") || input.handle === "north"
+        ? [frame.yMpt]
+        : input.handle.startsWith("south") || input.handle === "south"
+          ? [frame.yMpt + frame.heightMpt]
+          : [];
+  const xSnap = closestSnap(horizontalCandidates, input.xTargetsMpt, input.thresholdMpt);
+  const ySnap = closestSnap(verticalCandidates, input.yTargetsMpt, input.thresholdMpt);
+  let xMpt = frame.xMpt;
+  let yMpt = frame.yMpt;
+  let widthMpt = frame.widthMpt;
+  let heightMpt = frame.heightMpt;
+  if (xSnap !== null) {
+    if (input.handle === "move") xMpt += xSnap.deltaMpt;
+    else if (input.handle.endsWith("west") || input.handle === "west") {
+      xMpt += xSnap.deltaMpt;
+      widthMpt -= xSnap.deltaMpt;
+    } else widthMpt += xSnap.deltaMpt;
+  }
+  if (ySnap !== null) {
+    if (input.handle === "move") yMpt += ySnap.deltaMpt;
+    else if (input.handle.startsWith("north") || input.handle === "north") {
+      yMpt += ySnap.deltaMpt;
+      heightMpt -= ySnap.deltaMpt;
+    } else heightMpt += ySnap.deltaMpt;
+  }
+  const snapped = Object.freeze({ xMpt, yMpt, widthMpt, heightMpt });
+  const valid =
+    widthMpt > 0 &&
+    heightMpt > 0 &&
+    xMpt >= 0 &&
+    yMpt >= 0 &&
+    xMpt + widthMpt <= input.pageWidthMpt &&
+    yMpt + heightMpt <= input.pageHeightMpt;
+  return Object.freeze({
+    frame: valid ? snapped : frame,
+    snapXMpt: valid ? (xSnap?.targetMpt ?? null) : null,
+    snapYMpt: valid ? (ySnap?.targetMpt ?? null) : null,
   });
 }

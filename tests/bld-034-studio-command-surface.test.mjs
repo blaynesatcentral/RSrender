@@ -24,6 +24,8 @@ const expectedCommandIds = Object.freeze([
   "redo",
   "fit-page",
   "actual-size",
+  "toggle-smart-snap",
+  "toggle-grid-snap",
   "inspect-samples",
   "inspect-track",
   "validate-document",

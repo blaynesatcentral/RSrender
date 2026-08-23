@@ -559,6 +559,12 @@ textarea {
   stroke-dasharray: 5000 3000;
   pointer-events: none;
 }
+.direct-snap-feedback {
+  stroke: #e6007e;
+  stroke-width: 1200;
+  stroke-dasharray: 4000 2500;
+  pointer-events: none;
+}
 .direct-manipulation-handle {
   fill: #fff;
   stroke: #007ac2;

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { resolveBoringLogDirectManipulationFrame } from "../packages/renderer-ui/dist/index.js";
+import {
+  resolveBoringLogDirectManipulationFrame,
+  snapBoringLogDirectManipulationFrame,
+} from "../packages/renderer-ui/dist/index.js";
 
 const original = Object.freeze({
   xMpt: 110_000,
@@ -106,6 +109,52 @@ test("BLD-038 fails closed for fractional, out-of-page, and impossible gesture i
   }
 });
 
+test("BLD-038 snaps move and resize edges deterministically with temporary bypass", () => {
+  const moved = snapBoringLogDirectManipulationFrame({
+    frame: { xMpt: 23_750, yMpt: 100_000, widthMpt: 100_000, heightMpt: 20_000 },
+    handle: "move",
+    xTargetsMpt: [24_000, 200_000],
+    yTargetsMpt: [99_500],
+    thresholdMpt: 1_000,
+    pageWidthMpt: 612_000,
+    pageHeightMpt: 792_000,
+    bypass: false,
+  });
+  assert.deepEqual(moved, {
+    frame: { xMpt: 24_000, yMpt: 99_500, widthMpt: 100_000, heightMpt: 20_000 },
+    snapXMpt: 24_000,
+    snapYMpt: 99_500,
+  });
+  const resized = snapBoringLogDirectManipulationFrame({
+    frame: { xMpt: 24_000, yMpt: 100_000, widthMpt: 99_500, heightMpt: 20_000 },
+    handle: "east",
+    xTargetsMpt: [124_000],
+    yTargetsMpt: [],
+    thresholdMpt: 1_000,
+    pageWidthMpt: 612_000,
+    pageHeightMpt: 792_000,
+    bypass: false,
+  });
+  assert.deepEqual(resized.frame, {
+    xMpt: 24_000,
+    yMpt: 100_000,
+    widthMpt: 100_000,
+    heightMpt: 20_000,
+  });
+  assert.equal(resized.snapXMpt, 124_000);
+  const bypassed = snapBoringLogDirectManipulationFrame({
+    frame: moved.frame,
+    handle: "move",
+    xTargetsMpt: [25_000],
+    yTargetsMpt: [100_000],
+    thresholdMpt: 10_000,
+    pageWidthMpt: 612_000,
+    pageHeightMpt: 792_000,
+    bypass: true,
+  });
+  assert.deepEqual(bypassed, { frame: moved.frame, snapXMpt: null, snapYMpt: null });
+});
+
 test("BLD-038 installs accessible SVG handles and coalesces pointer completion through history", async () => {
   const [entry, stylesheet] = await Promise.all([
     readFile(
@@ -129,6 +178,9 @@ test("BLD-038 installs accessible SVG handles and coalesces pointer completion t
   );
   assert.match(entry, /await applySelectedTextStyle\("canvas"\)/u);
   assert.match(entry, /release commits one Undo\/Redo step/u);
+  assert.match(entry, /snapBoringLogDirectManipulationFrame/u);
+  assert.match(entry, /hold Alt to bypass/u);
+  assert.match(entry, /\.direct-snap-feedback/u);
   assert.match(entry, /text was reflowed by the shared layout authority/u);
   assert.match(entry, /node\.presentation\?\.locked === true/u);
   assert.match(stylesheet, /\.direct-manipulation-frame/u);

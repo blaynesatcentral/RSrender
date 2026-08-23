@@ -44,7 +44,9 @@ export {
 } from "./boring-log-studio-route.js";
 export {
   resolveBoringLogDirectManipulationFrame,
+  snapBoringLogDirectManipulationFrame,
   type BoringLogDirectManipulationFrame,
   type BoringLogDirectManipulationHandle,
   type BoringLogDirectManipulationResult,
+  type BoringLogSnapResult,
 } from "./boring-log-direct-manipulation.js";

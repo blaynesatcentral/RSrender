@@ -72,6 +72,7 @@ import {
 } from "./boring-log-studio-tree.js";
 import {
   resolveBoringLogDirectManipulationFrame,
+  snapBoringLogDirectManipulationFrame,
   type BoringLogDirectManipulationHandle,
 } from "./boring-log-direct-manipulation.js";
 
@@ -405,6 +406,8 @@ async function main(): Promise<void> {
   const validateButton = element<HTMLButtonElement>("validate-document");
   const selectToolButton = element<HTMLButtonElement>("select-tool");
   const panToolButton = element<HTMLButtonElement>("pan-tool");
+  const smartSnapButton = element<HTMLButtonElement>("toggle-smart-snap");
+  const gridSnapButton = element<HTMLButtonElement>("toggle-grid-snap");
   const boringSelector = element<HTMLInputElement>("boring-selector");
   const boringOptions = element<HTMLDataListElement>("boring-options");
   const boringPosition = element<HTMLOutputElement>("boring-position");
@@ -453,11 +456,17 @@ async function main(): Promise<void> {
         readonly positionMode: "depth-bound" | "free";
         readonly minimumWidthMpt: number;
         readonly minimumHeightMpt: number;
+        readonly snapTargets: Readonly<{
+          readonly xMpt: readonly number[];
+          readonly yMpt: readonly number[];
+        }>;
         readonly originalTransform: string | null;
         readonly originalFrameTransform: string | null;
       }
     | undefined;
   let suppressCanvasClick = false;
+  let smartSnapEnabled = true;
+  let gridSnapEnabled = false;
 
   function studioApis(): StudioApis | null {
     const world = globalThis as typeof globalThis & {
@@ -819,7 +828,42 @@ async function main(): Promise<void> {
     propertyBounds.textContent = `${(frame.xMpt / 1_000).toFixed(1)}, ${(frame.yMpt / 1_000).toFixed(1)} Â· ${(frame.widthMpt / 1_000).toFixed(1)} Ã— ${(frame.heightMpt / 1_000).toFixed(1)} pt`;
   }
 
-  function previewDirectManipulationFrame(frame: TextFrame): void {
+  function currentSnapTargets(): Readonly<{ xMpt: readonly number[]; yMpt: readonly number[] }> {
+    const xMpt = new Set<number>([0, Math.round(page.widthMpt / 2), page.widthMpt]);
+    const yMpt = new Set<number>([0, Math.round(page.heightMpt / 2), page.heightMpt]);
+    if (smartSnapEnabled) {
+      for (const candidate of pageHost.querySelectorAll<SVGGraphicsElement>(".scene-node")) {
+        if (candidate.dataset["nodeId"] === selectedSceneNodeId) continue;
+        try {
+          const bounds = candidate.getBBox();
+          for (const value of [bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width]) {
+            if (Number.isFinite(value)) xMpt.add(Math.round(value));
+          }
+          for (const value of [bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height]) {
+            if (Number.isFinite(value)) yMpt.add(Math.round(value));
+          }
+        } catch {
+          // A non-rendered semantic node is not a snap target.
+        }
+      }
+    }
+    if (gridSnapEnabled) {
+      for (let value = 0; value <= page.widthMpt; value += 1_000) xMpt.add(value);
+      for (let value = 0; value <= page.heightMpt; value += 1_000) yMpt.add(value);
+    }
+    return Object.freeze({
+      xMpt: Object.freeze([...xMpt].sort((left, right) => left - right)),
+      yMpt: Object.freeze([...yMpt].sort((left, right) => left - right)),
+    });
+  }
+
+  function previewDirectManipulationFrame(
+    frame: TextFrame,
+    snap: Readonly<{ snapXMpt: number | null; snapYMpt: number | null }> = {
+      snapXMpt: null,
+      snapYMpt: null,
+    },
+  ): void {
     const gesture = directManipulationGesture;
     if (gesture === undefined) return;
     gesture.previewFrame = frame;
@@ -871,7 +915,32 @@ async function main(): Promise<void> {
         presentationFrame.setAttribute("transform", gesture.originalFrameTransform ?? "");
       }
     }
-    status.textContent = `Canvas preview ${Math.round(frame.xMpt)} / ${Math.round(frame.yMpt)} / ${Math.round(frame.widthMpt)} / ${Math.round(frame.heightMpt)} mpt. Release to commit and reflow; Esc cancels.`;
+    const overlay = pageHost.querySelector<SVGGElement>("#direct-manipulation-overlay");
+    overlay?.querySelectorAll(".direct-snap-feedback").forEach((candidate) => candidate.remove());
+    const namespace = "http://www.w3.org/2000/svg";
+    if (overlay !== null && snap.snapXMpt !== null) {
+      const line = document.createElementNS(namespace, "line");
+      line.classList.add("direct-snap-feedback");
+      line.setAttribute("x1", String(snap.snapXMpt));
+      line.setAttribute("x2", String(snap.snapXMpt));
+      line.setAttribute("y1", "0");
+      line.setAttribute("y2", String(page.heightMpt));
+      overlay.prepend(line);
+    }
+    if (overlay !== null && snap.snapYMpt !== null) {
+      const line = document.createElementNS(namespace, "line");
+      line.classList.add("direct-snap-feedback");
+      line.setAttribute("x1", "0");
+      line.setAttribute("x2", String(page.widthMpt));
+      line.setAttribute("y1", String(snap.snapYMpt));
+      line.setAttribute("y2", String(snap.snapYMpt));
+      overlay.prepend(line);
+    }
+    const snapStatus =
+      snap.snapXMpt === null && snap.snapYMpt === null
+        ? ""
+        : ` Snapped${snap.snapXMpt === null ? "" : ` X ${snap.snapXMpt} mpt`}${snap.snapYMpt === null ? "" : ` Y ${snap.snapYMpt} mpt`}; hold Alt to bypass.`;
+    status.textContent = `Canvas preview ${Math.round(frame.xMpt)} / ${Math.round(frame.yMpt)} / ${Math.round(frame.widthMpt)} / ${Math.round(frame.heightMpt)} mpt.${snapStatus} Release to commit and reflow; Esc cancels.`;
   }
 
   function renderTree(): void {
@@ -1011,6 +1080,16 @@ async function main(): Promise<void> {
     status.textContent = pan
       ? "Pan tool active. Drag the Canvas to move the page."
       : "Select tool active. Choose an element on the Canvas or in Contents.";
+  }
+
+  function toggleSnapping(kind: "smart" | "grid"): void {
+    if (kind === "smart") smartSnapEnabled = !smartSnapEnabled;
+    else gridSnapEnabled = !gridSnapEnabled;
+    smartSnapButton.classList.toggle("is-active", smartSnapEnabled);
+    gridSnapButton.classList.toggle("is-active", gridSnapEnabled);
+    smartSnapButton.setAttribute("aria-pressed", String(smartSnapEnabled));
+    gridSnapButton.setAttribute("aria-pressed", String(gridSnapEnabled));
+    status.textContent = `Snapping: smart ${smartSnapEnabled ? "on" : "off"}, 1 pt grid ${gridSnapEnabled ? "on" : "off"}. Hold Alt during a gesture to bypass all snapping.`;
   }
 
   function showPropertyPanel(panel: "element" | "diagnostics"): void {
@@ -1834,6 +1913,7 @@ async function main(): Promise<void> {
       positionMode: node.presentation?.positionMode ?? "depth-bound",
       minimumWidthMpt: Math.max(1_000, padding.leftMpt + padding.rightMpt + 1_000),
       minimumHeightMpt: Math.max(1_000, padding.topMpt + padding.bottomMpt + 1_000),
+      snapTargets: currentSnapTargets(),
       originalTransform:
         pageHost
           .querySelector<SVGTextElement>(`#${CSS.escape(node.id)}`)
@@ -1865,7 +1945,26 @@ async function main(): Promise<void> {
       positionMode: gesture.positionMode,
     });
     if (!resolved.accepted) return;
-    previewDirectManipulationFrame(resolved.frame);
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    const transform = svg?.getScreenCTM();
+    const thresholdMpt =
+      transform === null || transform === undefined
+        ? 6_000
+        : Math.max(1, Math.round(6 / Math.max(Math.abs(transform.a), Math.abs(transform.d))));
+    const snapped = snapBoringLogDirectManipulationFrame({
+      frame: resolved.frame,
+      handle: gesture.handle,
+      xTargetsMpt: smartSnapEnabled || gridSnapEnabled ? gesture.snapTargets.xMpt : [],
+      yTargetsMpt:
+        (smartSnapEnabled || gridSnapEnabled) && gesture.positionMode !== "depth-bound"
+          ? gesture.snapTargets.yMpt
+          : [],
+      thresholdMpt,
+      pageWidthMpt: page.widthMpt,
+      pageHeightMpt: page.heightMpt,
+      bypass: event.altKey,
+    });
+    previewDirectManipulationFrame(snapped.frame, snapped);
     event.preventDefault();
   }
 
@@ -2085,6 +2184,8 @@ async function main(): Promise<void> {
       applyZoom(100);
       status.textContent = "Canvas set to actual 100% page size.";
     },
+    "toggle-smart-snap": () => toggleSnapping("smart"),
+    "toggle-grid-snap": () => toggleSnapping("grid"),
     "inspect-samples": () => select("column-sample"),
     "inspect-track": () => select("column-data-track"),
     "validate-document": () => void validateDocument(),
