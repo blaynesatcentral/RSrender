@@ -18,6 +18,7 @@ import {
   type SyntheticBoringLogOverrideSession,
 } from "@rsrender/application";
 import {
+  boringLogTextColumnSemanticId,
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
   type BoringLogLayoutJobInput,
@@ -1088,6 +1089,10 @@ function emitResult(value: unknown): void {
   );
 }
 
+function emitStudioProbePhase(phase: string): void {
+  if (studioProbeMode) process.stdout.write(`RSRENDER_PROBE_PHASE:${phase}\n`);
+}
+
 async function pageValue(window: BrowserWindow, expression: string): Promise<unknown> {
   return window.webContents.executeJavaScript(expression, true);
 }
@@ -1443,6 +1448,7 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
 }
 
 async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
+  emitStudioProbePhase("started");
   await waitFor(
     window,
     `document.querySelectorAll("#svg-page > svg").length === 1 && document.body.dataset.authoritativeFileBound === "false" && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."`,
@@ -2623,6 +2629,84 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         allSelectedRedo["peerDecoration"] === null,
       `TEXT_ALL_SELECTED_HISTORY_INVALID:${JSON.stringify({ allSelectedApplied, allSelectedUndo, allSelectedRedo })}`,
     );
+    emitStudioProbePhase("all-selected-complete");
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const candidate = document.getElementById("node:lithology:stratum-02:transition:1:text"); if (!(candidate instanceof SVGElement)) return false; candidate.dispatchEvent(new MouseEvent("click", { bubbles: true })); const scope = document.getElementById("text-style-scope"); const color = document.getElementById("text-color"); const decoration = document.getElementById("text-decoration"); if (!(scope instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(decoration instanceof HTMLSelectElement)) return false; scope.value = "column-default"; scope.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#047857"; color.dispatchEvent(new Event("input", { bubbles: true })); decoration.value = "none"; decoration.dispatchEvent(new Event("change", { bubbles: true })); return scope.value === "column-default" && document.getElementById("text-column-default-scope")?.disabled === false; })()`,
+      )) === true,
+      "TEXT_COLUMN_STYLE_SCOPE_INVALID",
+    );
+    const columnStyleBefore = record(
+      await pageValue(
+        window,
+        `(() => { const candidate = document.getElementById("node:lithology:stratum-02:transition:1:text"); return { frame: { x: candidate?.getAttribute("x"), y: candidate?.getAttribute("y"), width: candidate?.getAttribute("width"), height: candidate?.getAttribute("height") }, fill: candidate?.getAttribute("fill"), decoration: candidate?.getAttribute("text-decoration") }; })()`,
+      ),
+    );
+    await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_COLUMN_STYLE_APPLY");
+    emitStudioProbePhase("column-apply-pressed");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent?.startsWith("column-description typography default updated at revision ") === true && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_COLUMN_STYLE_APPLY",
+    );
+    const columnStyleApplied = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const candidate = value.accepted ? value.projection.scene.pages[0]?.nodes.find((node) => node.id === "node:lithology:stratum-02:transition:1:text") : null; const inheritedPeer = value.accepted ? value.projection.scene.pages[0]?.nodes.find((node) => node.id === "node:lithology:stratum-03:transition:1:text") : null; const overridden = value.accepted ? value.projection.scene.pages[0]?.nodes.find((node) => node.id === "node:lithology:stratum-01:transition:2:text") : null; const state = value.accepted ? value.projection.textOccurrencePresentationStates.find((candidateState) => candidateState.occurrenceNodeId === candidate?.id) : null; const element = document.getElementById(candidate?.id ?? ""); return { workingRevision: value.accepted ? value.projection.workingRevision : null, candidateFill: element?.getAttribute("fill"), peerFill: document.getElementById(inheritedPeer?.id ?? "")?.getAttribute("fill"), overriddenFill: document.getElementById(overridden?.id ?? "")?.getAttribute("fill"), candidateDecoration: element?.getAttribute("text-decoration"), candidateStyleId: candidate?.styleId, peerStyleId: inheritedPeer?.styleId, overriddenStyleId: overridden?.styleId, candidateFrame: { x: element?.getAttribute("x"), y: element?.getAttribute("y"), width: element?.getAttribute("width"), height: element?.getAttribute("height") }, typographyInheritance: state?.typography, layoutInheritance: state?.layout }; })()`,
+      ),
+    );
+    emitStudioProbePhase("column-apply-observed");
+    await press(window, "#undo", "Space", "FOCUS_TEXT_COLUMN_STYLE_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_COLUMN_STYLE_UNDO",
+    );
+    const columnStyleUndo = record(
+      await pageValue(
+        window,
+        `(() => ({ candidateFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), peerFill: document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill"), overriddenFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill"), candidateDecoration: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("text-decoration") }))()`,
+      ),
+    );
+    emitStudioProbePhase("column-undo-observed");
+    await press(window, "#redo", "Space", "FOCUS_TEXT_COLUMN_STYLE_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_COLUMN_STYLE_REDO",
+    );
+    const columnStyleRedo = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, candidateFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), peerFill: document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill"), overriddenFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill"), candidateDecoration: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("text-decoration") }; })()`,
+      ),
+    );
+    emitStudioProbePhase("column-redo-observed");
+    requireProbe(
+      columnStyleApplied["workingRevision"] === allSelectedRedo["workingRevision"] + 1 &&
+        columnStyleApplied["candidateFill"] === "#047857" &&
+        columnStyleApplied["peerFill"] === "#047857" &&
+        columnStyleApplied["overriddenFill"] === "#c2410c" &&
+        columnStyleApplied["candidateDecoration"] === null &&
+        (columnStyleApplied["candidateStyleId"] as string).startsWith("style-column-") &&
+        columnStyleApplied["peerStyleId"] === columnStyleApplied["candidateStyleId"] &&
+        (columnStyleApplied["overriddenStyleId"] as string).startsWith("style-occurrence-") &&
+        columnStyleApplied["typographyInheritance"] === "inherited" &&
+        columnStyleApplied["layoutInheritance"] === "inherited" &&
+        JSON.stringify(columnStyleApplied["candidateFrame"]) ===
+          JSON.stringify(columnStyleBefore["frame"]) &&
+        columnStyleUndo["candidateFill"] === "#1d4ed8" &&
+        columnStyleUndo["peerFill"] === "#1d4ed8" &&
+        columnStyleUndo["overriddenFill"] === "#c2410c" &&
+        columnStyleUndo["candidateDecoration"] === "underline" &&
+        columnStyleRedo["workingRevision"] === columnStyleApplied["workingRevision"] + 2 &&
+        columnStyleRedo["candidateFill"] === "#047857" &&
+        columnStyleRedo["peerFill"] === "#047857" &&
+        columnStyleRedo["overriddenFill"] === "#c2410c" &&
+        columnStyleRedo["candidateDecoration"] === null,
+      `TEXT_COLUMN_STYLE_HISTORY_INVALID:${JSON.stringify({ columnStyleBefore, columnStyleApplied, columnStyleUndo, columnStyleRedo })}`,
+    );
     requireProbe(
       (await pageValue(
         window,
@@ -2630,6 +2714,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       )) === true,
       "TEXT_OCCURRENCE_PUBLICATION_TAB_INVALID",
     );
+    emitStudioProbePhase("publication-starting");
     await press(window, "#export-pdf", "Space", "FOCUS_TEXT_OCCURRENCE_EXPORT");
     await waitFor(
       window,
@@ -2660,6 +2745,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       allSelectedApplied,
       allSelectedUndo,
       allSelectedRedo,
+      columnStyleBefore,
+      columnStyleApplied,
+      columnStyleUndo,
+      columnStyleRedo,
     });
     requireProbe(
       (await pageValue(
@@ -3358,6 +3447,7 @@ async function main(): Promise<void> {
         node?.kind === "text"
           ? projected.projection.scene.resources.textStyles.find(({ id }) => id === node.styleId)
           : undefined;
+      const columnId = node?.kind === "text" ? boringLogTextColumnSemanticId(node) : null;
       const targetNodes = input.targets.map((target) =>
         projected.projection.scene.pages[0]?.nodes.find(
           (candidate) =>
@@ -3438,7 +3528,11 @@ async function main(): Promise<void> {
           ({ elementId, path }) =>
             elementId === input.occurrenceNodeId && path === "presentation.text-occurrence-style",
         );
-        if (occurrenceBinding || input.baseStyleId.startsWith("style-occurrence-")) {
+        if (
+          occurrenceBinding ||
+          input.baseStyleId.startsWith("style-occurrence-") ||
+          input.baseStyleId.startsWith("style-column-")
+        ) {
           return Object.freeze({
             accepted: false,
             code: "TEXT_NAMED_STYLE_REQUIRES_INHERITED",
@@ -3461,6 +3555,55 @@ async function main(): Promise<void> {
           return Object.freeze({ accepted: false, code: "TEXT_NAMED_STYLE_INVALID" });
         }
         authoredJob = namedStyleJob.value;
+      } else if (input.applyScope === "column-default") {
+        const occurrenceBinding = currentJob.template.bindings.some(
+          ({ elementId, path }) =>
+            elementId === input.occurrenceNodeId && path === "presentation.text-occurrence-style",
+        );
+        if (columnId === null || occurrenceBinding) {
+          return Object.freeze({
+            accepted: false,
+            code: "TEXT_COLUMN_STYLE_REQUIRES_INHERITED",
+          });
+        }
+        const priorBinding = currentJob.template.bindings.find(
+          ({ elementId, path }) =>
+            elementId === columnId && path === "presentation.text-column-style",
+        );
+        const bindings = currentJob.template.bindings.filter(
+          ({ elementId, path }) =>
+            !(elementId === columnId && path === "presentation.text-column-style"),
+        );
+        const retainedStyleIds = new Set(bindings.map(({ styleId }) => styleId));
+        const retainedStyles = currentJob.template.styles.filter(
+          ({ id }) => id !== priorBinding?.styleId || retainedStyleIds.has(id),
+        );
+        const columnStyleDigest = sha256CanonicalJson({ columnId, style: authoredStyle }).slice(
+          "sha256:".length,
+          "sha256:".length + 24,
+        );
+        const columnStyleId = `style-column-${columnStyleDigest}`;
+        if (retainedStyles.some(({ id }) => id === columnStyleId)) {
+          return Object.freeze({ accepted: false, code: "TEXT_COLUMN_STYLE_COLLISION" });
+        }
+        const styles = [...retainedStyles, Object.freeze({ id: columnStyleId, ...authoredStyle })];
+        bindings.push(
+          Object.freeze({
+            elementId: columnId,
+            path: "presentation.text-column-style",
+            styleId: columnStyleId,
+          }),
+        );
+        const template = { ...currentJob.template, styles, bindings };
+        const columnStyleJob = validateBoringLogLayoutJobInput({
+          ...currentJob,
+          templateDigest: sha256CanonicalJson(template),
+          template,
+        });
+        if (!columnStyleJob.accepted) {
+          return Object.freeze({ accepted: false, code: "TEXT_COLUMN_STYLE_INVALID" });
+        }
+        authoredJob = columnStyleJob.value;
       } else if (input.applyScope === "all-selected") {
         const authored = applyBoringLogTextOccurrenceStyles(
           currentJob,
@@ -3544,9 +3687,11 @@ async function main(): Promise<void> {
         reason:
           input.applyScope === "named-style"
             ? "Set template-local named text style in Boring Log Studio"
-            : input.applyScope === "all-selected"
-              ? "Set typography for selected text occurrences in Boring Log Studio"
-              : "Set text occurrence style in Boring Log Studio",
+            : input.applyScope === "column-default"
+              ? `Set ${columnId ?? "Log Column"} text style in Boring Log Studio`
+              : input.applyScope === "all-selected"
+                ? "Set typography for selected text occurrences in Boring Log Studio"
+                : "Set text occurrence style in Boring Log Studio",
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -3559,9 +3704,11 @@ async function main(): Promise<void> {
         code:
           input.applyScope === "named-style"
             ? "TEXT_NAMED_STYLE_SET"
-            : input.applyScope === "all-selected"
-              ? "TEXT_SELECTED_STYLES_SET"
-              : "TEXT_OCCURRENCE_STYLE_SET",
+            : input.applyScope === "column-default"
+              ? "TEXT_COLUMN_STYLE_SET"
+              : input.applyScope === "all-selected"
+                ? "TEXT_SELECTED_STYLES_SET"
+                : "TEXT_OCCURRENCE_STYLE_SET",
         applyScope: input.applyScope,
         targetCount: input.targets.length,
         workingRevision: committed.workingRevision,
@@ -3572,11 +3719,16 @@ async function main(): Promise<void> {
         effectiveStyleId:
           input.applyScope === "named-style"
             ? input.baseStyleId
-            : authoredJob.template.bindings.find(
-                ({ elementId, path }) =>
-                  elementId === input.occurrenceNodeId &&
-                  path === "presentation.text-occurrence-style",
-              )?.styleId,
+            : input.applyScope === "column-default"
+              ? authoredJob.template.bindings.find(
+                  ({ elementId, path }) =>
+                    elementId === columnId && path === "presentation.text-column-style",
+                )?.styleId
+              : authoredJob.template.bindings.find(
+                  ({ elementId, path }) =>
+                    elementId === input.occurrenceNodeId &&
+                    path === "presentation.text-occurrence-style",
+                )?.styleId,
       });
     };
     const handleTextOccurrencePresentationReset = async (

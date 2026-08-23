@@ -1,6 +1,7 @@
 import {
   boringLogPagePlanSchemaVersion,
   boringLogRenderContractVersion,
+  boringLogTextColumnSemanticId,
   resolvedBoringLogPageSceneSchemaVersion,
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
@@ -305,7 +306,15 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     const occurrenceLayout = job.template.occurrenceLayouts?.find(
       ({ id: layoutId }) => layoutId === occurrenceLayoutBinding?.styleId,
     );
-    const effectiveStyleId = occurrenceStyle?.styleId ?? styleId;
+    const columnId = boringLogTextColumnSemanticId({ semanticId, role });
+    const columnStyle =
+      columnId === null
+        ? undefined
+        : job.template.bindings.find(
+            (binding) =>
+              binding.elementId === columnId && binding.path === "presentation.text-column-style",
+          );
+    const effectiveStyleId = occurrenceStyle?.styleId ?? columnStyle?.styleId ?? styleId;
     const style = styleById(job, effectiveStyleId);
     const effectiveFrame = occurrenceLayout?.frame ?? frame;
     const horizontalPadding =

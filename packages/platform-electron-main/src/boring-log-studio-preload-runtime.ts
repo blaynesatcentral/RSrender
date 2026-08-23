@@ -366,7 +366,9 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
-    !["occurrence", "all-selected", "named-style"].includes(String(args["applyScope"])) ||
+    !["occurrence", "all-selected", "column-default", "named-style"].includes(
+      String(args["applyScope"]),
+    ) ||
     !boundedText(args["occurrenceNodeId"]) ||
     !boundedText(args["semanticId"]) ||
     !boundedText(args["baseStyleId"]) ||
@@ -708,7 +710,7 @@ export interface BoringLogStudioPreloadApi {
   }) => Promise<unknown>;
   readonly setTextOccurrenceStyle: (input: {
     readonly expectedWorkingRevision: number;
-    readonly applyScope: "occurrence" | "all-selected" | "named-style";
+    readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
     readonly baseStyleId: string;

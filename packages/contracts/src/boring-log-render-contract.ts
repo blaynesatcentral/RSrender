@@ -6,6 +6,28 @@ import type { Sha256Digest } from "./sha256.js";
 
 export const boringLogRenderContractVersion = 1 as const;
 export const boringLogRenderContractRevision = "bld-023-v1" as const;
+
+export function boringLogTextColumnSemanticId(
+  node: Readonly<{ readonly semanticId: string; readonly role: string }>,
+): string | null {
+  if (node.role === "log-column-heading" && node.semanticId.startsWith("column-")) {
+    return node.semanticId;
+  }
+  const columnByRole: Readonly<Record<string, string>> = Object.freeze({
+    "elevation-label": "column-elevation",
+    "depth-label": "column-depth",
+    "material-description-interval": "column-description",
+    "material-transition-text": "column-description",
+    "log-completion-note": "column-description",
+    "sample-label": "column-sample",
+    "sample-recovery": "column-recovery",
+    "sample-blows": "column-blows",
+    "sample-n-value": "column-n-value",
+    "data-axis-grid-label": "column-data-track",
+    "remark-interval": "column-remarks",
+  });
+  return columnByRole[node.role] ?? null;
+}
 export const boringLogLayoutJobSchemaVersion = "rsrender.boring-log-layout-job.v1" as const;
 export const boringLogPagePlanSchemaVersion = "rsrender.boring-log-page-plan.v1" as const;
 export const resolvedBoringLogPageSceneSchemaVersion =
@@ -934,9 +956,13 @@ function validateTemplate(input: unknown): void {
       path === "presentation.text-occurrence-style" && elementId.startsWith("node:");
     const occurrenceLayoutBinding =
       path === "presentation.text-occurrence-layout" && elementId.startsWith("node:");
+    const columnStyleBinding = path === "presentation.text-column-style";
+    if (columnStyleBinding && !columnIds.includes(elementId)) {
+      fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    }
     if (!semanticIds.has(elementId) && !occurrenceStyleBinding && !occurrenceLayoutBinding)
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
-    if (occurrenceStyleBinding || occurrenceLayoutBinding) {
+    if (occurrenceStyleBinding || occurrenceLayoutBinding || columnStyleBinding) {
       occurrenceBindingIds.push(`${path}\u0000${elementId}`);
     }
     const resourceId = textValue(binding["styleId"]);

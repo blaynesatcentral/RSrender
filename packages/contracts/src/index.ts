@@ -26,6 +26,7 @@ export {
   boringLogPagePlanSchemaVersion,
   boringLogRenderContractRevision,
   boringLogRenderContractVersion,
+  boringLogTextColumnSemanticId,
   resolvedBoringLogPageSceneSchemaVersion,
   validateBoringLogLayoutJobInput,
   validateBoringLogPagePlan,

@@ -171,6 +171,23 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.allSelectedRedo?.peerFill !== "#c2410c" ||
     style?.allSelectedRedo?.targetDecoration !== null ||
     style?.allSelectedRedo?.peerDecoration !== null ||
+    style?.columnStyleApplied?.candidateFill !== "#047857" ||
+    style?.columnStyleApplied?.peerFill !== "#047857" ||
+    style?.columnStyleApplied?.overriddenFill !== "#c2410c" ||
+    style?.columnStyleApplied?.candidateDecoration !== null ||
+    !style?.columnStyleApplied?.candidateStyleId?.startsWith("style-column-") ||
+    style?.columnStyleApplied?.peerStyleId !== style?.columnStyleApplied?.candidateStyleId ||
+    !style?.columnStyleApplied?.overriddenStyleId?.startsWith("style-occurrence-") ||
+    style?.columnStyleApplied?.typographyInheritance !== "inherited" ||
+    style?.columnStyleApplied?.layoutInheritance !== "inherited" ||
+    style?.columnStyleUndo?.candidateFill !== "#1d4ed8" ||
+    style?.columnStyleUndo?.peerFill !== "#1d4ed8" ||
+    style?.columnStyleUndo?.overriddenFill !== "#c2410c" ||
+    style?.columnStyleUndo?.candidateDecoration !== "underline" ||
+    style?.columnStyleRedo?.candidateFill !== "#047857" ||
+    style?.columnStyleRedo?.peerFill !== "#047857" ||
+    style?.columnStyleRedo?.overriddenFill !== "#c2410c" ||
+    style?.columnStyleRedo?.candidateDecoration !== null ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -207,6 +224,13 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     ({ id }) => id === layoutBinding?.styleId,
   );
   const persistedNamedStyle = layoutJob?.template.styles.find(({ id }) => id === "style-small");
+  const columnBinding = layoutJob?.template.bindings.find(
+    ({ elementId, path: bindingPath }) =>
+      elementId === "column-description" && bindingPath === "presentation.text-column-style",
+  );
+  const persistedColumnStyle = layoutJob?.template.styles.find(
+    ({ id }) => id === columnBinding?.styleId,
+  );
   if (
     !layoutJob ||
     binding === undefined ||
@@ -224,10 +248,15 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     persistedNamedStyle?.fontSizeMpt !== 5_500 ||
     persistedNamedStyle?.lineHeightMpt !== 6_875 ||
     persistedNamedStyle?.color !== "#1d4ed8" ||
-    persistedNamedStyle?.textDecoration !== "underline"
+    persistedNamedStyle?.textDecoration !== "underline" ||
+    columnBinding === undefined ||
+    persistedColumnStyle?.fontSizeMpt !== 5_500 ||
+    persistedColumnStyle?.lineHeightMpt !== 6_875 ||
+    persistedColumnStyle?.color !== "#047857" ||
+    persistedColumnStyle?.textDecoration !== "none"
   ) {
     throw new Error(
-      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, peerBinding, persistedPeerStyle, layoutBinding, persistedLayout, persistedNamedStyle })}`,
+      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, peerBinding, persistedPeerStyle, layoutBinding, persistedLayout, persistedNamedStyle, columnBinding, persistedColumnStyle })}`,
     );
   }
 
@@ -251,6 +280,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       persistedLayout: null,
       namedStyleId: persistedNamedStyle.id,
       persistedNamedStyle,
+      columnStyleId: columnBinding.styleId,
+      persistedColumnStyle,
     },
     pdf: {
       relativePath: path.relative(root, pdfPath).replaceAll("\\", "/"),
@@ -273,6 +304,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       occurrenceFrameStyling: true,
       templateLocalNamedStyleTypography: true,
       explicitAllSelectedTypography: true,
+      templateLocalLogColumnTypography: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

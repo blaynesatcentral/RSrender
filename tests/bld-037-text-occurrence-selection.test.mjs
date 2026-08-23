@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { sha256CanonicalJson } from "../packages/contracts/dist/index.js";
+
 import {
   applyBoringLogTextOccurrenceStyles,
   clearBoringLogTextOccurrencePresentation,
@@ -75,7 +77,7 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(
     html,
-    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Named style default \(typography\)/u,
+    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Log Column default \(typography\)[\s\S]*?Named style default \(typography\)/u,
   );
   assert.match(html, /id="text-layout-properties"/u);
   assert.match(html, /id="text-frame-x"/u);
@@ -118,6 +120,8 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /const applyScope = textStyleScope\.value/u);
   assert.match(entry, /event\.ctrlKey \|\| event\.metaKey/u);
   assert.match(entry, /All selected applies typography/u);
+  assert.match(entry, /boringLogTextColumnSemanticId/u);
+  assert.match(entry, /Log Column default updates inherited text/u);
   assert.match(entry, /their geometry was unchanged/u);
   assert.match(entry, /Reset this occurrence to inherited typography/u);
   assert.match(entry, /Occurrence geometry, layout, and existing overrides are unchanged/u);
@@ -405,6 +409,91 @@ test("BLD-037 applies one typography command to multiple exact occurrences witho
     const style = authored.job.template.styles.find(({ id }) => id === authoredNode.styleId);
     assert.equal(style.color, "#c2410c");
   }
+});
+
+test("BLD-037 resolves exact occurrence before Log Column typography before authored style", () => {
+  const baselineJob = boringLogMvpFixtureJob();
+  const columnTextStyle = {
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: 5_500,
+    fontWeight: 400,
+    lineHeightMpt: 6_875,
+    color: "#1d4ed8",
+    textDecoration: "underline",
+  };
+  const columnStyle = { id: "style-column-description-test", ...columnTextStyle };
+  const columnJob = {
+    ...baselineJob,
+    templateDigest: "sha256:5fe23a58e56b92519c02ccbe36949f63302ca7dfb83ac26396ccc693f3e74f1d",
+    template: {
+      ...baselineJob.template,
+      styles: [...baselineJob.template.styles, columnStyle],
+      bindings: [
+        ...baselineJob.template.bindings,
+        {
+          elementId: "column-description",
+          path: "presentation.text-column-style",
+          styleId: columnStyle.id,
+        },
+      ],
+    },
+  };
+  columnJob.templateDigest = sha256CanonicalJson(columnJob.template);
+  const prepared = prepareBoringLogLayout(columnJob);
+  assert.equal(prepared.accepted, true);
+  const resolved = resolveBoringLogPageScene(
+    prepared.value,
+    deterministicTextResults(prepared.value.textRequests),
+  );
+  assert.equal(resolved.accepted, true);
+  for (const nodeId of [
+    "node:column-description:heading",
+    "node:lithology:stratum-01:description",
+    "node:lithology:stratum-01:transition:1:text",
+    "node:lithology:stratum-01:transition:2:text",
+    "node:log-completion-note",
+  ]) {
+    assert.equal(
+      resolved.value.pages[0].nodes.find(({ id }) => id === nodeId)?.styleId,
+      columnStyle.id,
+    );
+  }
+  assert.equal(
+    resolved.value.pages[0].nodes.find(({ id }) => id === "node:header-sheet")?.styleId,
+    "style-small",
+  );
+  const occurrenceNodeId = "node:lithology:stratum-01:transition:2:text";
+  const authored = applyBoringLogTextOccurrenceStyles(columnJob, [
+    {
+      contractVersion: 1,
+      schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+      kind: "boring-log.text-occurrence-style-override",
+      ownerDocumentIdentity: "urn:rsrender:document:bld-037-column-precedence",
+      boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+      overrideIdentity: "urn:rsrender:text-style-override:bld-037-column-precedence",
+      overrideRevision: 1,
+      scope: "occurrence",
+      occurrenceNodeId,
+      semanticId: "lithology:stratum-01:transition:2",
+      baseStyleId: columnStyle.id,
+      style: { ...columnTextStyle, color: "#c2410c", textDecoration: "none" },
+      locked: false,
+    },
+  ]);
+  assert.equal(authored.accepted, true);
+  const occurrencePrepared = prepareBoringLogLayout(authored.job);
+  assert.equal(occurrencePrepared.accepted, true);
+  const occurrenceScene = resolveBoringLogPageScene(
+    occurrencePrepared.value,
+    deterministicTextResults(occurrencePrepared.value.textRequests),
+  );
+  assert.equal(occurrenceScene.accepted, true);
+  const target = occurrenceScene.value.pages[0].nodes.find(({ id }) => id === occurrenceNodeId);
+  const peer = occurrenceScene.value.pages[0].nodes.find(
+    ({ id }) => id === "node:lithology:stratum-01:transition:1:text",
+  );
+  assert.match(target.styleId, /^style-occurrence-/u);
+  assert.equal(peer.styleId, columnStyle.id);
 });
 
 test("BLD-037 reset removes only one occurrence presentation and restores inheritance", () => {

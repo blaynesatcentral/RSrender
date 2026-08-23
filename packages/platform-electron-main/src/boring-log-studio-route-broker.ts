@@ -60,7 +60,7 @@ export type BoringLogStudioLifecycleResult =
 
 export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly expectedWorkingRevision: number;
-  readonly applyScope: "occurrence" | "all-selected" | "named-style";
+  readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
   readonly occurrenceNodeId: string;
   readonly semanticId: string;
   readonly baseStyleId: string;
@@ -579,7 +579,9 @@ export class BoringLogStudioRouteBroker {
       args === null ||
       !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
       (args["expectedWorkingRevision"] as number) < 0 ||
-      !["occurrence", "all-selected", "named-style"].includes(String(args["applyScope"])) ||
+      !["occurrence", "all-selected", "column-default", "named-style"].includes(
+        String(args["applyScope"]),
+      ) ||
       !boundedText(args["occurrenceNodeId"]) ||
       !boundedText(args["semanticId"]) ||
       !boundedText(args["baseStyleId"]) ||

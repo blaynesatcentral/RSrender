@@ -1,3 +1,4 @@
+import { boringLogTextColumnSemanticId } from "@rsrender/contracts";
 import type {
   BoringLogSceneNode,
   BoringLogTextFrameAnchor,
@@ -141,7 +142,7 @@ type StudioApis = Readonly<{
     }) => Promise<unknown>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
-      readonly applyScope: "occurrence" | "all-selected" | "named-style";
+      readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
       readonly occurrenceNodeId: string;
       readonly semanticId: string;
       readonly baseStyleId: string;
@@ -325,6 +326,7 @@ async function main(): Promise<void> {
   const textColor = element<HTMLInputElement>("text-color");
   const textStyleScope = element<HTMLSelectElement>("text-style-scope");
   const textAllSelectedScope = element<HTMLOptionElement>("text-all-selected-scope");
+  const textColumnDefaultScope = element<HTMLOptionElement>("text-column-default-scope");
   const textNamedStyleScope = element<HTMLOptionElement>("text-named-style-scope");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
@@ -961,12 +963,21 @@ async function main(): Promise<void> {
       );
       const inheritedStyle = presentationState?.typography !== "occurrence";
       const inheritedLayout = presentationState?.layout !== "occurrence";
+      const columnId = boringLogTextColumnSemanticId(representative);
       textAllSelectedScope.disabled = selectedTextNodeIds.size < 2;
-      textNamedStyleScope.disabled = !inheritedStyle;
+      textColumnDefaultScope.disabled = !inheritedStyle || columnId === null;
+      textNamedStyleScope.disabled =
+        !inheritedStyle || representative.styleId.startsWith("style-column-");
       if (selectedTextNodeIds.size < 2 && textStyleScope.value === "all-selected") {
         textStyleScope.value = "occurrence";
       }
-      if (!inheritedStyle && textStyleScope.value === "named-style") {
+      if (
+        (!inheritedStyle || representative.styleId.startsWith("style-column-")) &&
+        textStyleScope.value === "named-style"
+      ) {
+        textStyleScope.value = "occurrence";
+      }
+      if ((!inheritedStyle || columnId === null) && textStyleScope.value === "column-default") {
         textStyleScope.value = "occurrence";
       }
       textStyleInheritance.textContent = inheritedStyle ? "Inherited" : "This occurrence";
@@ -1158,7 +1169,8 @@ async function main(): Promise<void> {
       status.textContent = "Select one exact text occurrence before applying text properties.";
       return false;
     }
-    const applyScope = textStyleScope.value as "occurrence" | "all-selected" | "named-style";
+    const applyScope = textStyleScope.value as
+      "occurrence" | "all-selected" | "column-default" | "named-style";
     const selectedTargetNodes = [
       node,
       ...page.nodes.filter(
@@ -1177,9 +1189,18 @@ async function main(): Promise<void> {
     const presentationState = studioProjection.textOccurrencePresentationStates.find(
       ({ occurrenceNodeId }) => occurrenceNodeId === node.id,
     );
-    if (applyScope === "named-style" && presentationState?.typography === "occurrence") {
+    if (
+      (applyScope === "named-style" || applyScope === "column-default") &&
+      presentationState?.typography === "occurrence"
+    ) {
       status.textContent =
-        "Reset this occurrence to inherited typography before changing its named style default.";
+        "Reset this occurrence to inherited typography before changing its broader default.";
+      textStyleScope.focus();
+      return false;
+    }
+    const columnId = boringLogTextColumnSemanticId(node);
+    if (applyScope === "column-default" && columnId === null) {
+      status.textContent = "This text occurrence does not belong to a Log Column.";
       textStyleScope.focus();
       return false;
     }
@@ -1262,6 +1283,8 @@ async function main(): Promise<void> {
     status.textContent = `Applying text properties to ${node.id}…`;
     if (applyScope === "named-style") {
       status.textContent = `Applying typography to named style ${style.id}...`;
+    } else if (applyScope === "column-default") {
+      status.textContent = `Applying typography to ${columnId}...`;
     } else if (applyScope === "all-selected") {
       status.textContent = `Applying typography to ${selectedTargetNodes.length} selected occurrences...`;
     }
@@ -1320,9 +1343,11 @@ async function main(): Promise<void> {
       result["workingRevision"] as number,
       applyScope === "named-style"
         ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
-        : applyScope === "all-selected"
-          ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
-          : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+        : applyScope === "column-default"
+          ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
+          : applyScope === "all-selected"
+            ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
+            : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -1649,9 +1674,11 @@ async function main(): Promise<void> {
     textStyleHelp.textContent =
       textStyleScope.value === "named-style"
         ? "Named style default updates template-local typography for inherited occurrences. Occurrence geometry, layout, and existing overrides are unchanged."
-        : textStyleScope.value === "all-selected"
-          ? `All selected applies typography to ${selectedTextNodeIds.size} exact text occurrences in one history command. Their frames, positions, and locks are unchanged.`
-          : "This occurrence receives project-owned typography and layout overrides through document history.";
+        : textStyleScope.value === "column-default"
+          ? "Log Column default updates inherited text in this column through a template-local renderer binding. Occurrence overrides and geometry are unchanged."
+          : textStyleScope.value === "all-selected"
+            ? `All selected applies typography to ${selectedTextNodeIds.size} exact text occurrences in one history command. Their frames, positions, and locks are unchanged.`
+            : "This occurrence receives project-owned typography and layout overrides through document history.";
   });
   textFrameFillEnabled.addEventListener("change", () => {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;
