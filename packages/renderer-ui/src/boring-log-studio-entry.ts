@@ -16,6 +16,17 @@ type TextFrame = Readonly<{
   heightMpt: number;
 }>;
 
+type TextTemplateProperty =
+  | "fontFamilyId"
+  | "fontSizeMpt"
+  | "fontWeight"
+  | "lineHeightMpt"
+  | "letterSpacingMpt"
+  | "wordSpacingMpt"
+  | "paragraphSpacingMpt"
+  | "color"
+  | "textDecoration";
+
 function frameAnchorPoint(frame: TextFrame, anchor: BoringLogTextFrameAnchor) {
   const horizontal = anchor.endsWith("left")
     ? 0
@@ -85,6 +96,10 @@ type StudioProjection = Readonly<{
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly EditableValue[];
+  readonly textTemplateScopeSummary: Readonly<{
+    readonly authoredStyleCount: number;
+    readonly excludedOverrideStyleCount: number;
+  }>;
   readonly textOccurrencePresentationStates: readonly Readonly<{
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
@@ -142,7 +157,9 @@ type StudioApis = Readonly<{
     }) => Promise<unknown>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
-      readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
+      readonly applyScope:
+        "occurrence" | "all-selected" | "column-default" | "named-style" | "template-default";
+      readonly propertyMask?: readonly TextTemplateProperty[];
       readonly occurrenceNodeId: string;
       readonly semanticId: string;
       readonly baseStyleId: string;
@@ -328,6 +345,7 @@ async function main(): Promise<void> {
   const textAllSelectedScope = element<HTMLOptionElement>("text-all-selected-scope");
   const textColumnDefaultScope = element<HTMLOptionElement>("text-column-default-scope");
   const textNamedStyleScope = element<HTMLOptionElement>("text-named-style-scope");
+  const textTemplateDefaultScope = element<HTMLOptionElement>("text-template-default-scope");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
   const textFrameAnchor = element<HTMLSelectElement>("text-frame-anchor");
@@ -394,6 +412,7 @@ async function main(): Promise<void> {
   let selectedSemanticId: string | null = null;
   let selectedSceneNodeId: string | null = null;
   const selectedTextNodeIds = new Set<string>();
+  const templateTextPropertyMask = new Set<TextTemplateProperty>();
   let currentTextFrameAnchor: BoringLogTextFrameAnchor = "top-left";
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
@@ -898,6 +917,7 @@ async function main(): Promise<void> {
     textLayoutProperties.hidden = textStyle === undefined;
     textInheritanceProperties.hidden = textStyle === undefined;
     if (textStyle !== undefined && representative.kind === "text") {
+      templateTextPropertyMask.clear();
       textFontFamily.value = textStyle.fontFamilyId;
       textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
       textFontWeight.value = String(textStyle.fontWeight);
@@ -968,6 +988,7 @@ async function main(): Promise<void> {
       textColumnDefaultScope.disabled = !inheritedStyle || columnId === null;
       textNamedStyleScope.disabled =
         !inheritedStyle || representative.styleId.startsWith("style-column-");
+      textTemplateDefaultScope.disabled = !inheritedStyle;
       if (selectedTextNodeIds.size < 2 && textStyleScope.value === "all-selected") {
         textStyleScope.value = "occurrence";
       }
@@ -980,6 +1001,9 @@ async function main(): Promise<void> {
       if ((!inheritedStyle || columnId === null) && textStyleScope.value === "column-default") {
         textStyleScope.value = "occurrence";
       }
+      if (!inheritedStyle && textStyleScope.value === "template-default") {
+        textStyleScope.value = "occurrence";
+      }
       textStyleInheritance.textContent = inheritedStyle ? "Inherited" : "This occurrence";
       textLayoutInheritance.textContent = inheritedLayout ? "Inherited" : "This occurrence";
       resetTextPresentation.disabled =
@@ -989,6 +1013,7 @@ async function main(): Promise<void> {
         (inheritedStyle && inheritedLayout);
       applyTextStyle.disabled = selectedSceneNodeId === null || studioProjection === null;
       textStyleHelp.textContent = `${textStyleHelp.textContent} This occurrence · inherited values resolve into a project-owned template override · edits use document history.`;
+      if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
     }
     const editable = editableFor(semanticId);
     const effective = editable === null ? null : contentValue(editable.effectiveDisplay.content);
@@ -1170,7 +1195,21 @@ async function main(): Promise<void> {
       return false;
     }
     const applyScope = textStyleScope.value as
-      "occurrence" | "all-selected" | "column-default" | "named-style";
+      "occurrence" | "all-selected" | "column-default" | "named-style" | "template-default";
+    const templatePropertyOrder: readonly TextTemplateProperty[] = [
+      "fontFamilyId",
+      "fontSizeMpt",
+      "fontWeight",
+      "lineHeightMpt",
+      "letterSpacingMpt",
+      "wordSpacingMpt",
+      "paragraphSpacingMpt",
+      "color",
+      "textDecoration",
+    ];
+    const propertyMask = templatePropertyOrder.filter((property) =>
+      templateTextPropertyMask.has(property),
+    );
     const selectedTargetNodes = [
       node,
       ...page.nodes.filter(
@@ -1190,11 +1229,19 @@ async function main(): Promise<void> {
       ({ occurrenceNodeId }) => occurrenceNodeId === node.id,
     );
     if (
-      (applyScope === "named-style" || applyScope === "column-default") &&
+      (applyScope === "named-style" ||
+        applyScope === "column-default" ||
+        applyScope === "template-default") &&
       presentationState?.typography === "occurrence"
     ) {
       status.textContent =
         "Reset this occurrence to inherited typography before changing its broader default.";
+      textStyleScope.focus();
+      return false;
+    }
+    if (applyScope === "template-default" && propertyMask.length === 0) {
+      status.textContent =
+        "Change at least one typography control before applying it to the embedded template.";
       textStyleScope.focus();
       return false;
     }
@@ -1283,6 +1330,9 @@ async function main(): Promise<void> {
     status.textContent = `Applying text properties to ${node.id}…`;
     if (applyScope === "named-style") {
       status.textContent = `Applying typography to named style ${style.id}...`;
+    } else if (applyScope === "template-default") {
+      const summary = studioProjection.textTemplateScopeSummary;
+      status.textContent = `Applying ${propertyMask.length} changed typography ${propertyMask.length === 1 ? "property" : "properties"} to ${summary.authoredStyleCount} embedded-template styles; preserving ${summary.excludedOverrideStyleCount} override styles...`;
     } else if (applyScope === "column-default") {
       status.textContent = `Applying typography to ${columnId}...`;
     } else if (applyScope === "all-selected") {
@@ -1298,6 +1348,7 @@ async function main(): Promise<void> {
     const raw = await apis.studio.setTextOccurrenceStyle({
       expectedWorkingRevision: studioProjection.workingRevision,
       applyScope,
+      ...(applyScope === "template-default" ? { propertyMask } : {}),
       occurrenceNodeId: node.id,
       semanticId: node.semanticId,
       baseStyleId: node.styleId,
@@ -1334,20 +1385,28 @@ async function main(): Promise<void> {
       return false;
     }
     const result = raw as Record<string, unknown>;
-    if (result["accepted"] !== true || !Number.isSafeInteger(result["workingRevision"])) {
+    if (
+      result["accepted"] !== true ||
+      !Number.isSafeInteger(result["workingRevision"]) ||
+      (applyScope === "template-default" &&
+        (!Number.isSafeInteger(result["affectedStyleCount"]) ||
+          !Number.isSafeInteger(result["excludedStyleCount"])))
+    ) {
       applyTextStyle.disabled = false;
       status.textContent = `Text property edit rejected${typeof result["code"] === "string" ? `: ${result["code"]}` : "."}`;
       return false;
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
-      applyScope === "named-style"
-        ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
-        : applyScope === "column-default"
-          ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
-          : applyScope === "all-selected"
-            ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
-            : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+      applyScope === "template-default"
+        ? `Changed typography applied to ${String(result["affectedStyleCount"])} embedded-template styles at revision ${String(result["workingRevision"])}; ${String(result["excludedStyleCount"])} occurrence/column override styles were preserved.`
+        : applyScope === "named-style"
+          ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
+          : applyScope === "column-default"
+            ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
+            : applyScope === "all-selected"
+              ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
+              : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -1670,16 +1729,44 @@ async function main(): Promise<void> {
   textOverflowPolicy.addEventListener("change", () => {
     textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
   });
-  textStyleScope.addEventListener("change", () => {
+  function updateTextStyleScopeHelp(): void {
+    const summary = studioProjection?.textTemplateScopeSummary;
+    const changed = templateTextPropertyMask.size;
     textStyleHelp.textContent =
       textStyleScope.value === "named-style"
         ? "Named style default updates template-local typography for inherited occurrences. Occurrence geometry, layout, and existing overrides are unchanged."
-        : textStyleScope.value === "column-default"
-          ? "Log Column default updates inherited text in this column through a template-local renderer binding. Occurrence overrides and geometry are unchanged."
-          : textStyleScope.value === "all-selected"
-            ? `All selected applies typography to ${selectedTextNodeIds.size} exact text occurrences in one history command. Their frames, positions, and locks are unchanged.`
-            : "This occurrence receives project-owned typography and layout overrides through document history.";
+        : textStyleScope.value === "template-default"
+          ? summary === undefined
+            ? "Embedded-template scope is unavailable until the document projection is ready."
+            : `Template default applies only the ${changed} changed typography ${changed === 1 ? "property" : "properties"} to ${summary.authoredStyleCount} base styles in this project's embedded template. ${summary.excludedOverrideStyleCount} occurrence/column override styles stay unchanged; title/body/footer differences stay intact unless you change those properties.`
+          : textStyleScope.value === "column-default"
+            ? "Log Column default updates inherited text in this column through a template-local renderer binding. Occurrence overrides and geometry are unchanged."
+            : textStyleScope.value === "all-selected"
+              ? `All selected applies typography to ${selectedTextNodeIds.size} exact text occurrences in one history command. Their frames, positions, and locks are unchanged.`
+              : "This occurrence receives project-owned typography and layout overrides through document history.";
+  }
+  textStyleScope.addEventListener("change", () => {
+    updateTextStyleScopeHelp();
   });
+  const markTemplateProperties = (...properties: readonly TextTemplateProperty[]): void => {
+    for (const property of properties) templateTextPropertyMask.add(property);
+    if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
+  };
+  textFontFamily.addEventListener("change", () => markTemplateProperties("fontFamilyId"));
+  textFontSize.addEventListener("input", () =>
+    markTemplateProperties("fontSizeMpt", "lineHeightMpt"),
+  );
+  textFontWeight.addEventListener("change", () => markTemplateProperties("fontWeight"));
+  textDecoration.addEventListener("change", () => markTemplateProperties("textDecoration"));
+  textLineHeight.addEventListener("input", () =>
+    markTemplateProperties("fontSizeMpt", "lineHeightMpt"),
+  );
+  textLetterSpacing.addEventListener("input", () => markTemplateProperties("letterSpacingMpt"));
+  textWordSpacing.addEventListener("input", () => markTemplateProperties("wordSpacingMpt"));
+  textParagraphSpacing.addEventListener("input", () =>
+    markTemplateProperties("paragraphSpacingMpt"),
+  );
+  textColor.addEventListener("input", () => markTemplateProperties("color"));
   textFrameFillEnabled.addEventListener("change", () => {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;
   });

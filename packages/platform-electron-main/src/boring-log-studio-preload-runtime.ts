@@ -85,6 +85,7 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "canUndo",
     "canRedo",
     "editableValues",
+    "textTemplateScopeSummary",
     "textOccurrencePresentationStates",
     "scene",
   ]);
@@ -102,8 +103,23 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     typeof projection["canRedo"] !== "boolean" ||
     !Array.isArray(projection["editableValues"]) ||
     projection["editableValues"].length > 256 ||
+    typeof projection["textTemplateScopeSummary"] !== "object" ||
+    projection["textTemplateScopeSummary"] === null ||
     !Array.isArray(projection["textOccurrencePresentationStates"]) ||
     projection["textOccurrencePresentationStates"].length > 512
+  ) {
+    return null;
+  }
+  const textTemplateScopeSummary = exactRecord(projection["textTemplateScopeSummary"], [
+    "authoredStyleCount",
+    "excludedOverrideStyleCount",
+  ]);
+  if (
+    textTemplateScopeSummary === null ||
+    !isNonnegativeSafeInteger(textTemplateScopeSummary["authoredStyleCount"]) ||
+    !isNonnegativeSafeInteger(textTemplateScopeSummary["excludedOverrideStyleCount"]) ||
+    textTemplateScopeSummary["authoredStyleCount"] > 512 ||
+    textTemplateScopeSummary["excludedOverrideStyleCount"] > 512
   ) {
     return null;
   }
@@ -305,9 +321,12 @@ const lifecycle = Object.freeze(async function lifecycle(input: unknown) {
 
 const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceStyle(input: unknown) {
   if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const hasPropertyMask =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "propertyMask");
   const args = exactRecord(input, [
     "expectedWorkingRevision",
     "applyScope",
+    ...(hasPropertyMask ? ["propertyMask"] : []),
     "occurrenceNodeId",
     "semanticId",
     "baseStyleId",
@@ -366,9 +385,29 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
-    !["occurrence", "all-selected", "column-default", "named-style"].includes(
+    !["occurrence", "all-selected", "column-default", "named-style", "template-default"].includes(
       String(args["applyScope"]),
     ) ||
+    (args["applyScope"] === "template-default" &&
+      (!Array.isArray(args["propertyMask"]) ||
+        args["propertyMask"].length < 1 ||
+        args["propertyMask"].length > 9 ||
+        args["propertyMask"].some(
+          (property) =>
+            ![
+              "fontFamilyId",
+              "fontSizeMpt",
+              "fontWeight",
+              "lineHeightMpt",
+              "letterSpacingMpt",
+              "wordSpacingMpt",
+              "paragraphSpacingMpt",
+              "color",
+              "textDecoration",
+            ].includes(String(property)),
+        ) ||
+        new Set(args["propertyMask"]).size !== args["propertyMask"].length)) ||
+    (args["applyScope"] !== "template-default" && hasPropertyMask) ||
     !boundedText(args["occurrenceNodeId"]) ||
     !boundedText(args["semanticId"]) ||
     !boundedText(args["baseStyleId"]) ||
@@ -710,7 +749,19 @@ export interface BoringLogStudioPreloadApi {
   }) => Promise<unknown>;
   readonly setTextOccurrenceStyle: (input: {
     readonly expectedWorkingRevision: number;
-    readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
+    readonly applyScope:
+      "occurrence" | "all-selected" | "column-default" | "named-style" | "template-default";
+    readonly propertyMask?: readonly (
+      | "fontFamilyId"
+      | "fontSizeMpt"
+      | "fontWeight"
+      | "lineHeightMpt"
+      | "letterSpacingMpt"
+      | "wordSpacingMpt"
+      | "paragraphSpacingMpt"
+      | "color"
+      | "textDecoration"
+    )[];
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
     readonly baseStyleId: string;

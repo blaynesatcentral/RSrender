@@ -5,6 +5,7 @@ import test from "node:test";
 import { sha256CanonicalJson } from "../packages/contracts/dist/index.js";
 
 import {
+  applyBoringLogTemplateTextStyleProperties,
   applyBoringLogTextOccurrenceStyles,
   clearBoringLogTextOccurrencePresentation,
   prepareBoringLogLayout,
@@ -77,8 +78,10 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(
     html,
-    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Log Column default \(typography\)[\s\S]*?Named style default \(typography\)/u,
+    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Log Column default \(typography\)[\s\S]*?Named style default \(typography\)[\s\S]*?Template default \(changed typography\)/u,
   );
+  assert.match(html, /Only exactly qualified font faces are listed/u);
+  assert.match(html, /never synthesizes faux italic/u);
   assert.match(html, /id="text-layout-properties"/u);
   assert.match(html, /id="text-frame-x"/u);
   assert.match(html, /id="text-frame-y"[^>]+readonly/u);
@@ -122,6 +125,8 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /All selected applies typography/u);
   assert.match(entry, /boringLogTextColumnSemanticId/u);
   assert.match(entry, /Log Column default updates inherited text/u);
+  assert.match(entry, /Template default applies only the/u);
+  assert.match(entry, /propertyMask/u);
   assert.match(entry, /their geometry was unchanged/u);
   assert.match(entry, /Reset this occurrence to inherited typography/u);
   assert.match(entry, /Occurrence geometry, layout, and existing overrides are unchanged/u);
@@ -494,6 +499,116 @@ test("BLD-037 resolves exact occurrence before Log Column typography before auth
   );
   assert.match(target.styleId, /^style-occurrence-/u);
   assert.equal(peer.styleId, columnStyle.id);
+});
+
+test("BLD-037 applies only changed typography properties across authored embedded-template styles", () => {
+  const baselineJob = boringLogMvpFixtureJob();
+  const columnStyle = {
+    id: "style-column-description-template-mask",
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: 5_500,
+    fontWeight: 400,
+    lineHeightMpt: 6_875,
+    letterSpacingMpt: 0,
+    wordSpacingMpt: 0,
+    paragraphSpacingMpt: 0,
+    color: "#1d4ed8",
+    textDecoration: "underline",
+  };
+  const columnTemplate = {
+    ...baselineJob.template,
+    styles: [...baselineJob.template.styles, columnStyle],
+    bindings: [
+      ...baselineJob.template.bindings,
+      {
+        elementId: "column-description",
+        path: "presentation.text-column-style",
+        styleId: columnStyle.id,
+      },
+    ],
+  };
+  const columnJob = {
+    ...baselineJob,
+    templateDigest: sha256CanonicalJson(columnTemplate),
+    template: columnTemplate,
+  };
+  const occurrenceNodeId = "node:lithology:stratum-01:transition:2:text";
+  const occurrence = applyBoringLogTextOccurrenceStyles(columnJob, [
+    {
+      contractVersion: 1,
+      schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+      kind: "boring-log.text-occurrence-style-override",
+      ownerDocumentIdentity: "urn:rsrender:document:bld-037-template-mask",
+      boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+      overrideIdentity: "urn:rsrender:text-style-override:bld-037-template-mask",
+      overrideRevision: 1,
+      scope: "occurrence",
+      occurrenceNodeId,
+      semanticId: "lithology:stratum-01:transition:2",
+      baseStyleId: columnStyle.id,
+      style: {
+        fontFamilyId: columnStyle.fontFamilyId,
+        fontSizeMpt: columnStyle.fontSizeMpt,
+        fontWeight: columnStyle.fontWeight,
+        lineHeightMpt: columnStyle.lineHeightMpt,
+        letterSpacingMpt: columnStyle.letterSpacingMpt,
+        wordSpacingMpt: columnStyle.wordSpacingMpt,
+        paragraphSpacingMpt: columnStyle.paragraphSpacingMpt,
+        color: "#c2410c",
+        textDecoration: "none",
+      },
+      locked: false,
+    },
+  ]);
+  assert.equal(occurrence.accepted, true, occurrence.code);
+  const originalBaseStyles = new Map(
+    baselineJob.template.styles.map((style) => [style.id, structuredClone(style)]),
+  );
+  const applied = applyBoringLogTemplateTextStyleProperties(
+    occurrence.job,
+    {
+      fontFamilyId: "font.logical.rsrender-sans",
+      fontSizeMpt: 5_500,
+      fontWeight: 400,
+      lineHeightMpt: 6_875,
+      letterSpacingMpt: 0,
+      wordSpacingMpt: 0,
+      paragraphSpacingMpt: 0,
+      color: "#047857",
+      textDecoration: "underline",
+    },
+    ["color", "textDecoration"],
+  );
+  assert.equal(applied.accepted, true, applied.code);
+  assert.equal(applied.affectedStyleCount, 5);
+  assert.equal(applied.excludedStyleCount, 2);
+  for (const [id, before] of originalBaseStyles) {
+    const after = applied.job.template.styles.find((style) => style.id === id);
+    assert.equal(after.color, "#047857");
+    assert.equal(after.textDecoration, "underline");
+    assert.equal(after.fontSizeMpt, before.fontSizeMpt);
+    assert.equal(after.lineHeightMpt, before.lineHeightMpt);
+    assert.equal(after.fontWeight, before.fontWeight);
+  }
+  assert.equal(
+    applied.job.template.styles.find(({ id }) => id === columnStyle.id).color,
+    "#1d4ed8",
+  );
+  const occurrenceBinding = applied.job.template.bindings.find(
+    ({ elementId, path }) =>
+      elementId === occurrenceNodeId && path === "presentation.text-occurrence-style",
+  );
+  assert.equal(
+    applied.job.template.styles.find(({ id }) => id === occurrenceBinding.styleId).color,
+    "#c2410c",
+  );
+  const invalidPairStyle = structuredClone(columnStyle);
+  delete invalidPairStyle.id;
+  assert.equal(
+    applyBoringLogTemplateTextStyleProperties(occurrence.job, invalidPairStyle, ["fontSizeMpt"])
+      .code,
+    "BORING_LOG_TEMPLATE_TEXT_PROPERTY_MASK_REJECTED",
+  );
 });
 
 test("BLD-037 reset removes only one occurrence presentation and restores inheritance", () => {

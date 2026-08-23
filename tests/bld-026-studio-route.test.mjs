@@ -286,6 +286,36 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
     }),
     { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
   );
+  const templateArgs = {
+    ...args,
+    applyScope: "template-default",
+    propertyMask: ["color", "textDecoration"],
+  };
+  const templateAccepted = await route.setTextOccurrenceStyle(routeContext, {
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence: 4,
+    documentIdentity,
+    ownerGeneration: 1,
+    args: templateArgs,
+  });
+  assert.equal(templateAccepted.accepted, true, templateAccepted.code);
+  assert.deepEqual(received, templateArgs);
+  for (const propertyMask of [[], ["not-a-property"], ["color", "color"]]) {
+    assert.deepEqual(
+      await route.setTextOccurrenceStyle(routeContext, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence: 5,
+        documentIdentity,
+        ownerGeneration: 1,
+        args: { ...args, applyScope: "template-default", propertyMask },
+      }),
+      { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+    );
+  }
 });
 
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
@@ -465,6 +495,8 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.accepted, true);
   assert.equal(result.projection.scene.kind, "boring-log.resolved-page-scene");
   assert.equal(result.projection.editableValues.length, 24);
+  assert.equal(result.projection.textTemplateScopeSummary.authoredStyleCount, 5);
+  assert.equal(result.projection.textTemplateScopeSummary.excludedOverrideStyleCount, 0);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
   const occurrenceResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setTextOccurrenceStyle(${JSON.stringify({

@@ -4,6 +4,7 @@ import {
   validateBoringLogTextOccurrenceLayoutOverride,
   validateBoringLogTextOccurrenceStyleOverride,
   type BoringLogLayoutJobInput,
+  type BoringLogTextStyleInput,
   type BoringLogTextOccurrenceLayoutOverride,
   type BoringLogTextOccurrenceStyleOverride,
 } from "@rsrender/contracts";
@@ -51,6 +52,24 @@ export type BoringLogTextOccurrencePresentationResetResult =
         | "BORING_LOG_TEXT_OCCURRENCE_ALREADY_INHERITED";
     };
 
+export type BoringLogTemplateTextProperty = Exclude<keyof BoringLogTextStyleInput, "id">;
+
+export type BoringLogTemplateTextStyleResult =
+  | {
+      readonly accepted: true;
+      readonly job: BoringLogLayoutJobInput;
+      readonly affectedStyleCount: number;
+      readonly excludedStyleCount: number;
+    }
+  | {
+      readonly accepted: false;
+      readonly code:
+        | "BORING_LOG_TEMPLATE_TEXT_JOB_REJECTED"
+        | "BORING_LOG_TEMPLATE_TEXT_STYLE_REJECTED"
+        | "BORING_LOG_TEMPLATE_TEXT_PROPERTY_MASK_REJECTED"
+        | "BORING_LOG_TEMPLATE_TEXT_NO_CHANGE";
+    };
+
 function rejected(
   code: Exclude<BoringLogTextOccurrenceAuthoringResult, { readonly accepted: true }>["code"],
 ): Exclude<BoringLogTextOccurrenceAuthoringResult, { readonly accepted: true }> {
@@ -64,6 +83,94 @@ function resetRejected(
   >["code"],
 ): Exclude<BoringLogTextOccurrencePresentationResetResult, { readonly accepted: true }> {
   return Object.freeze({ accepted: false, code });
+}
+
+function templateTextRejected(
+  code: Exclude<BoringLogTemplateTextStyleResult, { readonly accepted: true }>["code"],
+): Exclude<BoringLogTemplateTextStyleResult, { readonly accepted: true }> {
+  return Object.freeze({ accepted: false, code });
+}
+
+const templateTextProperties: readonly BoringLogTemplateTextProperty[] = Object.freeze([
+  "fontFamilyId",
+  "fontSizeMpt",
+  "fontWeight",
+  "lineHeightMpt",
+  "letterSpacingMpt",
+  "wordSpacingMpt",
+  "paragraphSpacingMpt",
+  "color",
+  "textDecoration",
+]);
+
+export function applyBoringLogTemplateTextStyleProperties(
+  jobInput: unknown,
+  styleInput: unknown,
+  propertyMaskInput: unknown,
+): BoringLogTemplateTextStyleResult {
+  const job = validateBoringLogLayoutJobInput(jobInput);
+  if (!job.accepted) return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_JOB_REJECTED");
+  if (
+    typeof styleInput !== "object" ||
+    styleInput === null ||
+    Array.isArray(styleInput) ||
+    Reflect.ownKeys(styleInput).some(
+      (key) => typeof key !== "string" || !templateTextProperties.includes(key as never),
+    ) ||
+    templateTextProperties.some((property) => !Object.hasOwn(styleInput, property))
+  ) {
+    return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_STYLE_REJECTED");
+  }
+  if (
+    !Array.isArray(propertyMaskInput) ||
+    propertyMaskInput.length < 1 ||
+    propertyMaskInput.length > templateTextProperties.length ||
+    propertyMaskInput.some(
+      (property) =>
+        typeof property !== "string" ||
+        !templateTextProperties.includes(property as BoringLogTemplateTextProperty),
+    ) ||
+    new Set(propertyMaskInput).size !== propertyMaskInput.length ||
+    propertyMaskInput.includes("fontSizeMpt") !== propertyMaskInput.includes("lineHeightMpt")
+  ) {
+    return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_PROPERTY_MASK_REJECTED");
+  }
+  const propertyMask = propertyMaskInput as readonly BoringLogTemplateTextProperty[];
+  const style = styleInput as Readonly<Record<BoringLogTemplateTextProperty, unknown>>;
+  const excludedStyleIds = new Set(
+    job.value.template.bindings
+      .filter(
+        ({ path }) =>
+          path === "presentation.text-occurrence-style" ||
+          path === "presentation.text-column-style",
+      )
+      .map(({ styleId }) => styleId),
+  );
+  const styles = job.value.template.styles.map((candidate) => {
+    if (excludedStyleIds.has(candidate.id)) return candidate;
+    return Object.freeze({
+      ...candidate,
+      ...Object.fromEntries(propertyMask.map((property) => [property, style[property]] as const)),
+    });
+  });
+  const template = { ...job.value.template, styles };
+  const effective = validateBoringLogLayoutJobInput({
+    ...job.value,
+    templateDigest: sha256CanonicalJson(template),
+    template,
+  });
+  if (!effective.accepted) {
+    return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_STYLE_REJECTED");
+  }
+  if (effective.value.templateDigest === job.value.templateDigest) {
+    return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_NO_CHANGE");
+  }
+  return Object.freeze({
+    accepted: true,
+    job: effective.value,
+    affectedStyleCount: styles.length - excludedStyleIds.size,
+    excludedStyleCount: excludedStyleIds.size,
+  });
 }
 
 export function clearBoringLogTextOccurrencePresentation(

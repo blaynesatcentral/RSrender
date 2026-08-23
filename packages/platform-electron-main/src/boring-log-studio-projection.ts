@@ -50,6 +50,10 @@ export interface BoringLogStudioProjection {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly BoringLogStudioEditableValue[];
+  readonly textTemplateScopeSummary: Readonly<{
+    readonly authoredStyleCount: number;
+    readonly excludedOverrideStyleCount: number;
+  }>;
   readonly textOccurrencePresentationStates: readonly BoringLogStudioTextOccurrencePresentationState[];
   readonly scene: ResolvedBoringLogPageScene;
 }
@@ -300,6 +304,15 @@ export function prepareBoringLogStudioProjection(
     if (!effectiveJob.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
     const prepared = prepareBoringLogLayout(effectiveJob.value);
     if (!prepared.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
+    const excludedOverrideStyleIds = new Set(
+      effectiveJob.value.template.bindings
+        .filter(
+          ({ path }) =>
+            path === "presentation.text-occurrence-style" ||
+            path === "presentation.text-column-style",
+        )
+        .map(({ styleId }) => styleId),
+    );
     return Object.freeze({
       accepted: true as const,
       preparation: Object.freeze({
@@ -314,6 +327,14 @@ export function prepareBoringLogStudioProjection(
           canUndo: input.dataset.canUndo,
           canRedo: input.dataset.canRedo,
           editableValues: Object.freeze(editableValues),
+          textTemplateScopeSummary: Object.freeze({
+            authoredStyleCount: effectiveJob.value.template.styles.filter(
+              ({ id }) => !excludedOverrideStyleIds.has(id),
+            ).length,
+            excludedOverrideStyleCount: effectiveJob.value.template.styles.filter(({ id }) =>
+              excludedOverrideStyleIds.has(id),
+            ).length,
+          }),
         }),
         provenanceEntries: Object.freeze(
           [...provenanceByNode.entries()].map(([key, provenance]) =>

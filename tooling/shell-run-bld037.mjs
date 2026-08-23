@@ -188,6 +188,28 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.columnStyleRedo?.peerFill !== "#047857" ||
     style?.columnStyleRedo?.overriddenFill !== "#c2410c" ||
     style?.columnStyleRedo?.candidateDecoration !== null ||
+    style?.templateStyleBefore?.titleFill !== "#17202a" ||
+    style?.templateStyleBefore?.titleFontSize !== "16000" ||
+    style?.templateStyleBefore?.companyFontSize !== "13000" ||
+    style?.templateStyleBefore?.sheetFill !== "#1d4ed8" ||
+    style?.templateStyleApplied?.authoredStyleCount !== 5 ||
+    style?.templateStyleApplied?.excludedStyleCount !== 3 ||
+    style?.templateStyleApplied?.titleFill !== "#7c3aed" ||
+    style?.templateStyleApplied?.titleFontSize !== "16000" ||
+    style?.templateStyleApplied?.companyFontSize !== "13000" ||
+    style?.templateStyleApplied?.sheetFill !== "#7c3aed" ||
+    style?.templateStyleApplied?.sheetFontSize !== "5500" ||
+    style?.templateStyleApplied?.sheetDecoration !== "underline" ||
+    style?.templateStyleApplied?.columnFill !== "#047857" ||
+    style?.templateStyleApplied?.occurrenceFill !== "#c2410c" ||
+    style?.templateStyleUndo?.titleFill !== "#17202a" ||
+    style?.templateStyleUndo?.sheetFill !== "#1d4ed8" ||
+    style?.templateStyleUndo?.columnFill !== "#047857" ||
+    style?.templateStyleUndo?.occurrenceFill !== "#c2410c" ||
+    style?.templateStyleRedo?.titleFill !== "#7c3aed" ||
+    style?.templateStyleRedo?.sheetFill !== "#7c3aed" ||
+    style?.templateStyleRedo?.columnFill !== "#047857" ||
+    style?.templateStyleRedo?.occurrenceFill !== "#c2410c" ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -224,6 +246,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     ({ id }) => id === layoutBinding?.styleId,
   );
   const persistedNamedStyle = layoutJob?.template.styles.find(({ id }) => id === "style-small");
+  const persistedTitleStyle = layoutJob?.template.styles.find(({ id }) => id === "style-title");
+  const persistedCompanyStyle = layoutJob?.template.styles.find(({ id }) => id === "style-company");
   const columnBinding = layoutJob?.template.bindings.find(
     ({ elementId, path: bindingPath }) =>
       elementId === "column-description" && bindingPath === "presentation.text-column-style",
@@ -247,8 +271,14 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     persistedLayout !== undefined ||
     persistedNamedStyle?.fontSizeMpt !== 5_500 ||
     persistedNamedStyle?.lineHeightMpt !== 6_875 ||
-    persistedNamedStyle?.color !== "#1d4ed8" ||
+    persistedNamedStyle?.color !== "#7c3aed" ||
     persistedNamedStyle?.textDecoration !== "underline" ||
+    persistedTitleStyle?.fontSizeMpt !== 16_000 ||
+    persistedTitleStyle?.lineHeightMpt !== 20_000 ||
+    persistedTitleStyle?.color !== "#7c3aed" ||
+    persistedCompanyStyle?.fontSizeMpt !== 13_000 ||
+    persistedCompanyStyle?.lineHeightMpt !== 16_250 ||
+    persistedCompanyStyle?.color !== "#7c3aed" ||
     columnBinding === undefined ||
     persistedColumnStyle?.fontSizeMpt !== 5_500 ||
     persistedColumnStyle?.lineHeightMpt !== 6_875 ||
@@ -256,7 +286,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     persistedColumnStyle?.textDecoration !== "none"
   ) {
     throw new Error(
-      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, peerBinding, persistedPeerStyle, layoutBinding, persistedLayout, persistedNamedStyle, columnBinding, persistedColumnStyle })}`,
+      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, peerBinding, persistedPeerStyle, layoutBinding, persistedLayout, persistedNamedStyle, persistedTitleStyle, persistedCompanyStyle, columnBinding, persistedColumnStyle })}`,
     );
   }
 
@@ -280,6 +310,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       persistedLayout: null,
       namedStyleId: persistedNamedStyle.id,
       persistedNamedStyle,
+      persistedTitleStyle,
+      persistedCompanyStyle,
       columnStyleId: columnBinding.styleId,
       persistedColumnStyle,
     },
@@ -305,6 +337,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       templateLocalNamedStyleTypography: true,
       explicitAllSelectedTypography: true,
       templateLocalLogColumnTypography: true,
+      changedPropertyEmbeddedTemplateTypography: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

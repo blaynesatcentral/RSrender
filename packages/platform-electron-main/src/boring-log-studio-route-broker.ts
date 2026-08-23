@@ -60,7 +60,19 @@ export type BoringLogStudioLifecycleResult =
 
 export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly expectedWorkingRevision: number;
-  readonly applyScope: "occurrence" | "all-selected" | "column-default" | "named-style";
+  readonly applyScope:
+    "occurrence" | "all-selected" | "column-default" | "named-style" | "template-default";
+  readonly propertyMask?: readonly (
+    | "fontFamilyId"
+    | "fontSizeMpt"
+    | "fontWeight"
+    | "lineHeightMpt"
+    | "letterSpacingMpt"
+    | "wordSpacingMpt"
+    | "paragraphSpacingMpt"
+    | "color"
+    | "textDecoration"
+  )[];
   readonly occurrenceNodeId: string;
   readonly semanticId: string;
   readonly baseStyleId: string;
@@ -517,9 +529,15 @@ export class BoringLogStudioRouteBroker {
     ) {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }
-    const args = exactRecord(request["args"], [
+    const requestArgs = request["args"];
+    const hasPropertyMask =
+      typeof requestArgs === "object" &&
+      requestArgs !== null &&
+      Object.hasOwn(requestArgs, "propertyMask");
+    const args = exactRecord(requestArgs, [
       "expectedWorkingRevision",
       "applyScope",
+      ...(hasPropertyMask ? ["propertyMask"] : []),
       "occurrenceNodeId",
       "semanticId",
       "baseStyleId",
@@ -579,9 +597,29 @@ export class BoringLogStudioRouteBroker {
       args === null ||
       !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
       (args["expectedWorkingRevision"] as number) < 0 ||
-      !["occurrence", "all-selected", "column-default", "named-style"].includes(
+      !["occurrence", "all-selected", "column-default", "named-style", "template-default"].includes(
         String(args["applyScope"]),
       ) ||
+      (args["applyScope"] === "template-default" &&
+        (!Array.isArray(args["propertyMask"]) ||
+          args["propertyMask"].length < 1 ||
+          args["propertyMask"].length > 9 ||
+          args["propertyMask"].some(
+            (property) =>
+              ![
+                "fontFamilyId",
+                "fontSizeMpt",
+                "fontWeight",
+                "lineHeightMpt",
+                "letterSpacingMpt",
+                "wordSpacingMpt",
+                "paragraphSpacingMpt",
+                "color",
+                "textDecoration",
+              ].includes(String(property)),
+          ) ||
+          new Set(args["propertyMask"]).size !== args["propertyMask"].length)) ||
+      (args["applyScope"] !== "template-default" && hasPropertyMask) ||
       !boundedText(args["occurrenceNodeId"]) ||
       !boundedText(args["semanticId"]) ||
       !boundedText(args["baseStyleId"]) ||

@@ -27,6 +27,7 @@ import {
 } from "@rsrender/contracts";
 import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 import {
+  applyBoringLogTemplateTextStyleProperties,
   applyBoringLogTextOccurrenceStyles,
   clearBoringLogTextOccurrencePresentation,
 } from "@rsrender/scene";
@@ -2710,6 +2711,85 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
+        `(() => { const candidate = document.getElementById("node:header-title"); if (!(candidate instanceof SVGElement)) return false; candidate.dispatchEvent(new MouseEvent("click", { bubbles: true })); const scope = document.getElementById("text-style-scope"); const color = document.getElementById("text-color"); if (!(scope instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement)) return false; scope.value = "template-default"; scope.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#7c3aed"; color.dispatchEvent(new Event("input", { bubbles: true })); return scope.value === "template-default" && document.getElementById("text-template-default-scope")?.disabled === false && document.getElementById("text-style-help")?.textContent?.includes("1 changed typography property") === true && document.getElementById("text-style-help")?.textContent?.includes("5 base styles") === true && document.getElementById("text-style-help")?.textContent?.includes("3 occurrence/column override styles") === true; })()`,
+      )) === true,
+      "TEXT_TEMPLATE_STYLE_SCOPE_INVALID",
+    );
+    const templateStyleBefore = record(
+      await pageValue(
+        window,
+        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
+      ),
+    );
+    await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_APPLY");
+    emitStudioProbePhase("template-apply-pressed");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Changed typography applied to 5 embedded-template styles at revision ") === true && document.getElementById("node:header-title")?.getAttribute("fill") === "#7c3aed" && document.getElementById("node:header-company")?.getAttribute("fill") === "#7c3aed" && document.getElementById("node:header-sheet")?.getAttribute("fill") === "#7c3aed" && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_TEMPLATE_STYLE_APPLY",
+    );
+    const templateStyleApplied = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, authoredStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.authoredStyleCount : null, excludedStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.excludedOverrideStyleCount : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:header-title")?.getAttribute("fill") === "#17202a" && document.getElementById("node:header-sheet")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_TEMPLATE_STYLE_UNDO",
+    );
+    const templateStyleUndo = record(
+      await pageValue(
+        window,
+        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
+      ),
+    );
+    await press(window, "#redo", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:header-title")?.getAttribute("fill") === "#7c3aed" && document.getElementById("node:header-sheet")?.getAttribute("fill") === "#7c3aed" && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_TEMPLATE_STYLE_REDO",
+    );
+    const templateStyleRedo = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
+      ),
+    );
+    requireProbe(
+      templateStyleBefore["titleFill"] === "#17202a" &&
+        templateStyleBefore["titleFontSize"] === "16000" &&
+        templateStyleBefore["companyFontSize"] === "13000" &&
+        templateStyleBefore["sheetFill"] === "#1d4ed8" &&
+        templateStyleBefore["sheetFontSize"] === "5500" &&
+        templateStyleApplied["workingRevision"] === columnStyleRedo["workingRevision"] + 1 &&
+        templateStyleApplied["authoredStyleCount"] === 5 &&
+        templateStyleApplied["excludedStyleCount"] === 3 &&
+        templateStyleApplied["titleFill"] === "#7c3aed" &&
+        templateStyleApplied["titleFontSize"] === "16000" &&
+        templateStyleApplied["companyFontSize"] === "13000" &&
+        templateStyleApplied["sheetFill"] === "#7c3aed" &&
+        templateStyleApplied["sheetFontSize"] === "5500" &&
+        templateStyleApplied["sheetDecoration"] === "underline" &&
+        templateStyleApplied["columnFill"] === "#047857" &&
+        templateStyleApplied["occurrenceFill"] === "#c2410c" &&
+        templateStyleUndo["titleFill"] === "#17202a" &&
+        templateStyleUndo["sheetFill"] === "#1d4ed8" &&
+        templateStyleUndo["columnFill"] === "#047857" &&
+        templateStyleUndo["occurrenceFill"] === "#c2410c" &&
+        templateStyleRedo["workingRevision"] === templateStyleApplied["workingRevision"] + 2 &&
+        templateStyleRedo["titleFill"] === "#7c3aed" &&
+        templateStyleRedo["sheetFill"] === "#7c3aed" &&
+        templateStyleRedo["columnFill"] === "#047857" &&
+        templateStyleRedo["occurrenceFill"] === "#c2410c",
+      `TEXT_TEMPLATE_STYLE_HISTORY_INVALID:${JSON.stringify({ templateStyleBefore, templateStyleApplied, templateStyleUndo, templateStyleRedo })}`,
+    );
+    emitStudioProbePhase("template-redo-observed");
+    requireProbe(
+      (await pageValue(
+        window,
         `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false; })()`,
       )) === true,
       "TEXT_OCCURRENCE_PUBLICATION_TAB_INVALID",
@@ -2749,6 +2829,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       columnStyleApplied,
       columnStyleUndo,
       columnStyleRedo,
+      templateStyleBefore,
+      templateStyleApplied,
+      templateStyleUndo,
+      templateStyleRedo,
     });
     requireProbe(
       (await pageValue(
@@ -3523,7 +3607,40 @@ async function main(): Promise<void> {
         textDecoration: input.textDecoration,
       });
       let authoredJob: BoringLogLayoutJobInput;
-      if (input.applyScope === "named-style") {
+      let templateStyleCounts:
+        | Readonly<{ readonly affectedStyleCount: number; readonly excludedStyleCount: number }>
+        | undefined;
+      if (input.applyScope === "template-default") {
+        const occurrenceBinding = currentJob.template.bindings.some(
+          ({ elementId, path }) =>
+            elementId === input.occurrenceNodeId && path === "presentation.text-occurrence-style",
+        );
+        const propertyMask = input.propertyMask;
+        if (
+          occurrenceBinding ||
+          propertyMask === undefined ||
+          propertyMask.length < 1 ||
+          propertyMask.includes("fontSizeMpt") !== propertyMask.includes("lineHeightMpt")
+        ) {
+          return Object.freeze({
+            accepted: false,
+            code: "TEXT_TEMPLATE_STYLE_REQUIRES_INHERITED",
+          });
+        }
+        const templateStyleJob = applyBoringLogTemplateTextStyleProperties(
+          currentJob,
+          authoredStyle,
+          propertyMask,
+        );
+        if (!templateStyleJob.accepted) {
+          return Object.freeze({ accepted: false, code: templateStyleJob.code });
+        }
+        templateStyleCounts = Object.freeze({
+          affectedStyleCount: templateStyleJob.affectedStyleCount,
+          excludedStyleCount: templateStyleJob.excludedStyleCount,
+        });
+        authoredJob = templateStyleJob.job;
+      } else if (input.applyScope === "named-style") {
         const occurrenceBinding = currentJob.template.bindings.some(
           ({ elementId, path }) =>
             elementId === input.occurrenceNodeId && path === "presentation.text-occurrence-style",
@@ -3685,13 +3802,15 @@ async function main(): Promise<void> {
         expectedEffectiveContentDigest: representation.effectiveContentDigest,
         replacementEffectiveContentDigest: authoredJob.templateDigest,
         reason:
-          input.applyScope === "named-style"
-            ? "Set template-local named text style in Boring Log Studio"
-            : input.applyScope === "column-default"
-              ? `Set ${columnId ?? "Log Column"} text style in Boring Log Studio`
-              : input.applyScope === "all-selected"
-                ? "Set typography for selected text occurrences in Boring Log Studio"
-                : "Set text occurrence style in Boring Log Studio",
+          input.applyScope === "template-default"
+            ? "Apply changed typography properties to embedded template styles in Boring Log Studio"
+            : input.applyScope === "named-style"
+              ? "Set template-local named text style in Boring Log Studio"
+              : input.applyScope === "column-default"
+                ? `Set ${columnId ?? "Log Column"} text style in Boring Log Studio`
+                : input.applyScope === "all-selected"
+                  ? "Set typography for selected text occurrences in Boring Log Studio"
+                  : "Set text occurrence style in Boring Log Studio",
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -3702,14 +3821,17 @@ async function main(): Promise<void> {
       return Object.freeze({
         accepted: true,
         code:
-          input.applyScope === "named-style"
-            ? "TEXT_NAMED_STYLE_SET"
-            : input.applyScope === "column-default"
-              ? "TEXT_COLUMN_STYLE_SET"
-              : input.applyScope === "all-selected"
-                ? "TEXT_SELECTED_STYLES_SET"
-                : "TEXT_OCCURRENCE_STYLE_SET",
+          input.applyScope === "template-default"
+            ? "TEXT_TEMPLATE_STYLES_SET"
+            : input.applyScope === "named-style"
+              ? "TEXT_NAMED_STYLE_SET"
+              : input.applyScope === "column-default"
+                ? "TEXT_COLUMN_STYLE_SET"
+                : input.applyScope === "all-selected"
+                  ? "TEXT_SELECTED_STYLES_SET"
+                  : "TEXT_OCCURRENCE_STYLE_SET",
         applyScope: input.applyScope,
+        ...(templateStyleCounts ?? {}),
         targetCount: input.targets.length,
         workingRevision: committed.workingRevision,
         dirty: committed.dirty,
@@ -3717,18 +3839,20 @@ async function main(): Promise<void> {
         canRedo: committed.canRedo,
         occurrenceNodeId: input.occurrenceNodeId,
         effectiveStyleId:
-          input.applyScope === "named-style"
-            ? input.baseStyleId
-            : input.applyScope === "column-default"
-              ? authoredJob.template.bindings.find(
-                  ({ elementId, path }) =>
-                    elementId === columnId && path === "presentation.text-column-style",
-                )?.styleId
-              : authoredJob.template.bindings.find(
-                  ({ elementId, path }) =>
-                    elementId === input.occurrenceNodeId &&
-                    path === "presentation.text-occurrence-style",
-                )?.styleId,
+          input.applyScope === "template-default"
+            ? undefined
+            : input.applyScope === "named-style"
+              ? input.baseStyleId
+              : input.applyScope === "column-default"
+                ? authoredJob.template.bindings.find(
+                    ({ elementId, path }) =>
+                      elementId === columnId && path === "presentation.text-column-style",
+                  )?.styleId
+                : authoredJob.template.bindings.find(
+                    ({ elementId, path }) =>
+                      elementId === input.occurrenceNodeId &&
+                      path === "presentation.text-occurrence-style",
+                  )?.styleId,
       });
     };
     const handleTextOccurrencePresentationReset = async (
