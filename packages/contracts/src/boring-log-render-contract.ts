@@ -67,6 +67,12 @@ export interface BoringLogTextStyleInput {
   readonly fontSizeMpt: Mpt;
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
+  /** Absent only in legacy v1 resources, where zero is the exact default. */
+  readonly letterSpacingMpt?: Mpt;
+  /** Absent only in legacy v1 resources, where zero is the exact default. */
+  readonly wordSpacingMpt?: Mpt;
+  /** Added after an explicit paragraph break; absent legacy value is zero. */
+  readonly paragraphSpacingMpt?: Mpt;
   readonly color: string;
   /** Absent only in legacy v1 resources, where none is the exact default. */
   readonly textDecoration?: "none" | "underline";
@@ -349,6 +355,9 @@ export interface BoringLogTextMeasurementRequest {
   readonly fontSizeMpt: Mpt;
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
+  readonly letterSpacingMpt?: Mpt;
+  readonly wordSpacingMpt?: Mpt;
+  readonly paragraphSpacingMpt?: Mpt;
   readonly maximumWidthMpt: Mpt;
   readonly maximumHeightMpt: Mpt;
   readonly maximumLines: number;
@@ -791,12 +800,18 @@ function validateTemplate(input: unknown): void {
   const styleIds: string[] = [];
   for (const styleInput of array(value["styles"])) {
     const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
+    const hasLetterSpacing = Object.hasOwn(styleInput as object, "letterSpacingMpt");
+    const hasWordSpacing = Object.hasOwn(styleInput as object, "wordSpacingMpt");
+    const hasParagraphSpacing = Object.hasOwn(styleInput as object, "paragraphSpacingMpt");
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
+      ...(hasLetterSpacing ? ["letterSpacingMpt"] : []),
+      ...(hasWordSpacing ? ["wordSpacingMpt"] : []),
+      ...(hasParagraphSpacing ? ["paragraphSpacingMpt"] : []),
       "color",
       ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
@@ -807,6 +822,10 @@ function validateTemplate(input: unknown): void {
     }
     const weight = nonnegativeInteger(style["fontWeight"]);
     if (weight < 1 || weight > 1000) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    if (hasLetterSpacing) mpt(style["letterSpacingMpt"]);
+    if (hasWordSpacing) mpt(style["wordSpacingMpt"]);
+    if (hasParagraphSpacing && mpt(style["paragraphSpacingMpt"]) < 0)
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     textValue(style["color"]);
     if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
@@ -1304,6 +1323,12 @@ function validatePagePlanUnchecked(input: unknown): void {
 }
 
 function validateTextRequest(input: unknown): void {
+  const hasLetterSpacing =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "letterSpacingMpt");
+  const hasWordSpacing =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "wordSpacingMpt");
+  const hasParagraphSpacing =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "paragraphSpacingMpt");
   const value = record(input, [
     "measurementId",
     "text",
@@ -1314,6 +1339,9 @@ function validateTextRequest(input: unknown): void {
     "fontSizeMpt",
     "fontWeight",
     "lineHeightMpt",
+    ...(hasLetterSpacing ? ["letterSpacingMpt"] : []),
+    ...(hasWordSpacing ? ["wordSpacingMpt"] : []),
+    ...(hasParagraphSpacing ? ["paragraphSpacingMpt"] : []),
     "maximumWidthMpt",
     "maximumHeightMpt",
     "maximumLines",
@@ -1342,6 +1370,10 @@ function validateTextRequest(input: unknown): void {
   if (weight < 1 || weight > 1000 || nonnegativeInteger(value["maximumLines"]) < 1) {
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
+  if (hasLetterSpacing) mpt(value["letterSpacingMpt"]);
+  if (hasWordSpacing) mpt(value["wordSpacingMpt"]);
+  if (hasParagraphSpacing && mpt(value["paragraphSpacingMpt"]) < 0)
+    fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   if (!["word-v1", "no-wrap"].includes(textValue(value["wrapPolicy"])))
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   if (!["clip-with-diagnostic", "shrink-to-minimum"].includes(textValue(value["overflowPolicy"])))
@@ -1616,12 +1648,18 @@ function validateSceneUnchecked(input: unknown): void {
   const styleIds: string[] = [];
   for (const styleInput of array(resources["textStyles"])) {
     const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
+    const hasLetterSpacing = Object.hasOwn(styleInput as object, "letterSpacingMpt");
+    const hasWordSpacing = Object.hasOwn(styleInput as object, "wordSpacingMpt");
+    const hasParagraphSpacing = Object.hasOwn(styleInput as object, "paragraphSpacingMpt");
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
+      ...(hasLetterSpacing ? ["letterSpacingMpt"] : []),
+      ...(hasWordSpacing ? ["wordSpacingMpt"] : []),
+      ...(hasParagraphSpacing ? ["paragraphSpacingMpt"] : []),
       "color",
       ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
@@ -1631,6 +1669,10 @@ function validateSceneUnchecked(input: unknown): void {
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
     nonnegativeInteger(style["fontWeight"]);
+    if (hasLetterSpacing) mpt(style["letterSpacingMpt"]);
+    if (hasWordSpacing) mpt(style["wordSpacingMpt"]);
+    if (hasParagraphSpacing && mpt(style["paragraphSpacingMpt"]) < 0)
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     textValue(style["color"]);
     if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");

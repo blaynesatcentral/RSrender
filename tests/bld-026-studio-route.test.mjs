@@ -153,6 +153,9 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
     fontSizeMpt: 9_000,
     fontWeight: 700,
     lineHeightMpt: 11_000,
+    letterSpacingMpt: 0,
+    wordSpacingMpt: 0,
+    paragraphSpacingMpt: 0,
     color: "#b42318",
     textDecoration: "none",
     layout: {
@@ -427,6 +430,9 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
       fontSizeMpt: 9_000,
       fontWeight: 700,
       lineHeightMpt: 11_000,
+      letterSpacingMpt: 250,
+      wordSpacingMpt: 500,
+      paragraphSpacingMpt: 2_000,
       color: "#b42318",
       textDecoration: "underline",
       layout: {

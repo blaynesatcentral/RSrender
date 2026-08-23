@@ -344,6 +344,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       fontSizeMpt: style.fontSizeMpt,
       fontWeight: style.fontWeight,
       lineHeightMpt: style.lineHeightMpt,
+      ...(style.letterSpacingMpt === undefined ? {} : { letterSpacingMpt: style.letterSpacingMpt }),
+      ...(style.wordSpacingMpt === undefined ? {} : { wordSpacingMpt: style.wordSpacingMpt }),
+      ...(style.paragraphSpacingMpt === undefined
+        ? {}
+        : { paragraphSpacingMpt: style.paragraphSpacingMpt }),
       maximumWidthMpt: asMpt(effectiveFrame.widthMpt - horizontalPadding),
       maximumHeightMpt,
       maximumLines: effectiveMaximumLines,

@@ -314,6 +314,9 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     "fontSizeMpt",
     "fontWeight",
     "lineHeightMpt",
+    "letterSpacingMpt",
+    "wordSpacingMpt",
+    "paragraphSpacingMpt",
     "color",
     "textDecoration",
     "layout",
@@ -360,6 +363,14 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     !isPositiveSafeInteger(args["fontWeight"]) ||
     args["fontWeight"] > 1_000 ||
     !isPositiveSafeInteger(args["lineHeightMpt"]) ||
+    !Number.isSafeInteger(args["letterSpacingMpt"]) ||
+    Number(args["letterSpacingMpt"]) < -2_000 ||
+    Number(args["letterSpacingMpt"]) > 12_000 ||
+    !Number.isSafeInteger(args["wordSpacingMpt"]) ||
+    Number(args["wordSpacingMpt"]) < -2_000 ||
+    Number(args["wordSpacingMpt"]) > 24_000 ||
+    !isNonnegativeSafeInteger(args["paragraphSpacingMpt"]) ||
+    Number(args["paragraphSpacingMpt"]) > 72_000 ||
     !boundedText(args["color"]) ||
     !["none", "underline"].includes(String(args["textDecoration"])) ||
     layout === null ||
@@ -668,6 +679,9 @@ export interface BoringLogStudioPreloadApi {
     readonly fontSizeMpt: number;
     readonly fontWeight: number;
     readonly lineHeightMpt: number;
+    readonly letterSpacingMpt: number;
+    readonly wordSpacingMpt: number;
+    readonly paragraphSpacingMpt: number;
     readonly color: string;
     readonly textDecoration: "none" | "underline";
     readonly layout: {

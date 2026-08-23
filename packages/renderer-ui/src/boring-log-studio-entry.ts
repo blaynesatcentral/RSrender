@@ -148,6 +148,9 @@ type StudioApis = Readonly<{
       readonly fontSizeMpt: number;
       readonly fontWeight: number;
       readonly lineHeightMpt: number;
+      readonly letterSpacingMpt: number;
+      readonly wordSpacingMpt: number;
+      readonly paragraphSpacingMpt: number;
       readonly color: string;
       readonly textDecoration: "none" | "underline";
       readonly layout: {
@@ -307,6 +310,9 @@ async function main(): Promise<void> {
   const textFontWeight = element<HTMLSelectElement>("text-font-weight");
   const textDecoration = element<HTMLSelectElement>("text-decoration");
   const textLineHeight = element<HTMLInputElement>("text-line-height");
+  const textLetterSpacing = element<HTMLInputElement>("text-letter-spacing");
+  const textWordSpacing = element<HTMLInputElement>("text-word-spacing");
+  const textParagraphSpacing = element<HTMLInputElement>("text-paragraph-spacing");
   const textColor = element<HTMLInputElement>("text-color");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
@@ -841,6 +847,9 @@ async function main(): Promise<void> {
       textFontWeight.value = String(textStyle.fontWeight);
       textDecoration.value = textStyle.textDecoration ?? "none";
       textLineHeight.value = String(textStyle.lineHeightMpt / 1_000);
+      textLetterSpacing.value = String((textStyle.letterSpacingMpt ?? 0) / 1_000);
+      textWordSpacing.value = String((textStyle.wordSpacingMpt ?? 0) / 1_000);
+      textParagraphSpacing.value = String((textStyle.paragraphSpacingMpt ?? 0) / 1_000);
       textColor.value = /^#[0-9a-f]{6}$/iu.test(textStyle.color) ? textStyle.color : "#111827";
       const presentation = representative.presentation;
       const request = scene.textRequests.find(
@@ -1063,6 +1072,9 @@ async function main(): Promise<void> {
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
+    const letterSpacingMpt = Math.round(Number(textLetterSpacing.value) * 1_000);
+    const wordSpacingMpt = Math.round(Number(textWordSpacing.value) * 1_000);
+    const paragraphSpacingMpt = Math.round(Number(textParagraphSpacing.value) * 1_000);
     const minimumFontSizeMpt = Math.round(Number(textMinimumFontSize.value) * 1_000);
     const frameAnchor = textFrameAnchor.value as BoringLogTextFrameAnchor;
     const frame = frameFromAnchor(
@@ -1092,6 +1104,15 @@ async function main(): Promise<void> {
       !Number.isSafeInteger(lineHeightMpt) ||
       lineHeightMpt < fontSizeMpt ||
       lineHeightMpt > 72_000 ||
+      !Number.isSafeInteger(letterSpacingMpt) ||
+      letterSpacingMpt < -2_000 ||
+      letterSpacingMpt > 12_000 ||
+      !Number.isSafeInteger(wordSpacingMpt) ||
+      wordSpacingMpt < -2_000 ||
+      wordSpacingMpt > 24_000 ||
+      !Number.isSafeInteger(paragraphSpacingMpt) ||
+      paragraphSpacingMpt < 0 ||
+      paragraphSpacingMpt > 72_000 ||
       !Number.isSafeInteger(minimumFontSizeMpt) ||
       minimumFontSizeMpt < 4_000 ||
       minimumFontSizeMpt > fontSizeMpt ||
@@ -1128,6 +1149,9 @@ async function main(): Promise<void> {
       fontSizeMpt,
       fontWeight,
       lineHeightMpt,
+      letterSpacingMpt,
+      wordSpacingMpt,
+      paragraphSpacingMpt,
       color: textColor.value,
       textDecoration: textDecoration.value as "none" | "underline",
       layout: {

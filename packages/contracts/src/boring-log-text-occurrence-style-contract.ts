@@ -120,11 +120,26 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       typeof value["style"] === "object" &&
       value["style"] !== null &&
       Object.hasOwn(value["style"], "textDecoration");
+    const hasLetterSpacing =
+      typeof value["style"] === "object" &&
+      value["style"] !== null &&
+      Object.hasOwn(value["style"], "letterSpacingMpt");
+    const hasWordSpacing =
+      typeof value["style"] === "object" &&
+      value["style"] !== null &&
+      Object.hasOwn(value["style"], "wordSpacingMpt");
+    const hasParagraphSpacing =
+      typeof value["style"] === "object" &&
+      value["style"] !== null &&
+      Object.hasOwn(value["style"], "paragraphSpacingMpt");
     const style = record(value["style"], [
       "fontFamilyId",
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
+      ...(hasLetterSpacing ? ["letterSpacingMpt"] : []),
+      ...(hasWordSpacing ? ["wordSpacingMpt"] : []),
+      ...(hasParagraphSpacing ? ["paragraphSpacingMpt"] : []),
       "color",
       ...(hasTextDecoration ? ["textDecoration"] : []),
     ]);
@@ -132,6 +147,11 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       !Number.isSafeInteger(style["fontWeight"]) ||
       (style["fontWeight"] as number) < 1 ||
       (style["fontWeight"] as number) > 1_000 ||
+      (hasLetterSpacing && !Number.isSafeInteger(style["letterSpacingMpt"])) ||
+      (hasWordSpacing && !Number.isSafeInteger(style["wordSpacingMpt"])) ||
+      (hasParagraphSpacing &&
+        (!Number.isSafeInteger(style["paragraphSpacingMpt"]) ||
+          (style["paragraphSpacingMpt"] as number) < 0)) ||
       (hasTextDecoration && !["none", "underline"].includes(String(style["textDecoration"])))
     ) {
       return fail("BORING_LOG_TEXT_STYLE_OVERRIDE_WRONG_TYPE");
@@ -153,6 +173,11 @@ export function validateBoringLogTextOccurrenceStyleOverride(
         fontSizeMpt: positiveMpt(style["fontSizeMpt"]),
         fontWeight: style["fontWeight"] as number,
         lineHeightMpt: positiveMpt(style["lineHeightMpt"]),
+        ...(hasLetterSpacing ? { letterSpacingMpt: style["letterSpacingMpt"] as Mpt } : {}),
+        ...(hasWordSpacing ? { wordSpacingMpt: style["wordSpacingMpt"] as Mpt } : {}),
+        ...(hasParagraphSpacing
+          ? { paragraphSpacingMpt: style["paragraphSpacingMpt"] as Mpt }
+          : {}),
         color: text(style["color"]),
         ...(hasTextDecoration
           ? { textDecoration: style["textDecoration"] as "none" | "underline" }

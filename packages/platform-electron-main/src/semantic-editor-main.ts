@@ -635,6 +635,7 @@ async function measureBoringLogTextInChromium(
     const measured = await withLayoutHostTimeout(
       measurementWindow.webContents.executeJavaScript(
         `(() => {
+        try {
         const requests = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(${JSON.stringify(payload)}), (value) => value.charCodeAt(0))));
         const measurementStarted = performance.now();
         const root = document.getElementById("measurement-root");
@@ -651,11 +652,20 @@ async function measureBoringLogTextInChromium(
         const measure = (text, request) => {
           context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
           const bounds = context.measureText(text);
+          const scalarCount = Array.from(text).length;
+          const spaces = Array.from(text).filter((value) => value === " ").length;
+          const spacingAdvanceMpt =
+            Math.max(0, scalarCount - 1) * request.letterSpacingMpt +
+            spaces * request.wordSpacingMpt;
           return {
-            advanceMpt: pxToMpt(bounds.width),
+            advanceMpt: Math.max(0, pxToMpt(bounds.width) + spacingAdvanceMpt),
             xMpt: pxToMpt(-bounds.actualBoundingBoxLeft),
             yFromBaselineMpt: pxToMpt(-bounds.actualBoundingBoxAscent),
-            widthMpt: pxToMpt(bounds.actualBoundingBoxLeft + bounds.actualBoundingBoxRight),
+            widthMpt: Math.max(
+              0,
+              pxToMpt(bounds.actualBoundingBoxLeft + bounds.actualBoundingBoxRight) +
+                spacingAdvanceMpt,
+            ),
             heightMpt: pxToMpt(bounds.actualBoundingBoxAscent + bounds.actualBoundingBoxDescent),
           };
         };
@@ -675,6 +685,21 @@ async function measureBoringLogTextInChromium(
             ...authoredRequest,
             fontSizeMpt,
             lineHeightMpt,
+            letterSpacingMpt: Math.round(
+              (authoredRequest.letterSpacingMpt ?? 0) *
+                fontSizeMpt /
+                authoredRequest.fontSizeMpt,
+            ),
+            wordSpacingMpt: Math.round(
+              (authoredRequest.wordSpacingMpt ?? 0) *
+                fontSizeMpt /
+                authoredRequest.fontSizeMpt,
+            ),
+            paragraphSpacingMpt: Math.round(
+              (authoredRequest.paragraphSpacingMpt ?? 0) *
+                fontSizeMpt /
+                authoredRequest.fontSizeMpt,
+            ),
             maximumLines:
               authoredRequest.overflowPolicy === "shrink-to-minimum"
                 ? Math.min(
@@ -686,14 +711,17 @@ async function measureBoringLogTextInChromium(
           probe.setAttribute("font-family", "RSrender Qualified Arial");
           probe.setAttribute("font-size", String(request.fontSizeMpt / 750));
           probe.setAttribute("font-weight", String(request.fontWeight));
+          probe.setAttribute("letter-spacing", String(request.letterSpacingMpt / 750));
+          probe.setAttribute("word-spacing", String(request.wordSpacingMpt / 750));
           probe.textContent = request.text.length === 0 ? "\u200b" : request.text;
           context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
           const advance = (start, end) =>
-            start === end ? 0 : pxToMpt(context.measureText(request.text.slice(start, end)).width);
+            start === end ? 0 : measure(request.text.slice(start, end), request).advanceMpt;
           const lines = [];
           const ink = [];
           let cursor = 0;
           let overwide = false;
+          let paragraphOffsetMpt = 0;
           while (cursor < request.text.length && lines.length < request.maximumLines) {
             totalLines += 1;
             if (totalLines > 16_000) throw new Error("MEASUREMENT_LINE_LIMIT");
@@ -701,11 +729,14 @@ async function measureBoringLogTextInChromium(
               throw new Error("MEASUREMENT_TIME_LIMIT");
             }
             const start = cursor;
-            let end = request.text.length;
+            const paragraphEndCandidate = request.text.indexOf("\\n", cursor);
+            const paragraphEnd =
+              paragraphEndCandidate === -1 ? request.text.length : paragraphEndCandidate;
+            let end = paragraphEnd;
             if (request.wrapPolicy === "word-v1") {
               const boundaries = [start];
               let boundary = start;
-              while (boundary < request.text.length) {
+              while (boundary < paragraphEnd) {
                 boundary = nextBoundary(request.text, boundary);
                 boundaries.push(boundary);
               }
@@ -722,22 +753,28 @@ async function measureBoringLogTextInChromium(
                   high = middle - 1;
                 }
               }
-              end = boundaries[Math.max(1, best)];
-              if (end < request.text.length) {
+              end = boundaries[Math.min(boundaries.length - 1, Math.max(1, best))];
+              if (end < paragraphEnd) {
                 const breakAt = request.text.lastIndexOf(" ", end);
                 if (breakAt >= start) end = breakAt + 1;
               }
-              end = Math.min(request.text.length, end);
+              end = Math.min(paragraphEnd, end);
             }
-            const text = request.text.slice(start, end);
-            const metrics = measure(text, request);
-            const baselineMpt = lines.length * request.lineHeightMpt - metrics.yFromBaselineMpt;
+            const visibleText = request.text.slice(start, end);
+            const hasParagraphBreak = end === paragraphEnd && paragraphEndCandidate !== -1;
+            const text = request.text.slice(start, end + (hasParagraphBreak ? 1 : 0));
+            const metrics = measure(visibleText, request);
+            const baselineMpt =
+              lines.length * request.lineHeightMpt +
+              paragraphOffsetMpt -
+              metrics.yFromBaselineMpt;
             const lineXMpt = Math.max(0, -metrics.xMpt);
             overwide ||= metrics.advanceMpt > request.maximumWidthMpt;
             lines.push({
               text,
               sourceStartUtf16: request.sourceStartUtf16 + start,
-              sourceEndUtf16: request.sourceStartUtf16 + end,
+              sourceEndUtf16:
+                request.sourceStartUtf16 + end + (hasParagraphBreak ? 1 : 0),
               xMpt: lineXMpt,
               baselineMpt,
               advanceMpt: metrics.advanceMpt,
@@ -748,8 +785,11 @@ async function measureBoringLogTextInChromium(
               width: metrics.widthMpt,
               height: metrics.heightMpt,
             });
-            cursor = end;
-            if (request.wrapPolicy === "no-wrap") break;
+            cursor = end + (hasParagraphBreak ? 1 : 0);
+            if (hasParagraphBreak) {
+              paragraphOffsetMpt += request.paragraphSpacingMpt;
+            }
+            if (request.wrapPolicy === "no-wrap" && paragraphEndCandidate === -1) break;
           }
           if (request.text.length === 0) {
             lines.push({
@@ -771,7 +811,7 @@ async function measureBoringLogTextInChromium(
               xMpt: 0,
               yMpt: 0,
               widthMpt: Math.max(0, ...lines.map(({ advanceMpt }) => advanceMpt)),
-              heightMpt: lines.length * request.lineHeightMpt,
+              heightMpt: lines.length * request.lineHeightMpt + paragraphOffsetMpt,
             },
             inkBounds: {
               xMpt: minimumX,
@@ -780,7 +820,14 @@ async function measureBoringLogTextInChromium(
               heightMpt: maximumY - minimumY,
             },
             lines,
-            overflow: cursor < request.text.length || overwide ? "clipped" : "none",
+            overflow:
+              cursor < request.text.length ||
+              overwide ||
+              (request.paragraphSpacingMpt !== 0 &&
+                lines.length * request.lineHeightMpt + paragraphOffsetMpt >
+                  request.maximumHeightMpt)
+                ? "clipped"
+                : "none",
             effectiveFontSizeMpt: fontSizeMpt,
             effectiveLineHeightMpt: lineHeightMpt,
           };
@@ -805,13 +852,21 @@ async function measureBoringLogTextInChromium(
           }
           return best ?? resolveAtSize(request, request.minimumFontSizeMpt);
         });
-        const calibrationRequest = { fontSizeMpt: 10000, fontWeight: 400 };
+        const calibrationRequest = {
+          fontSizeMpt: 10000,
+          fontWeight: 400,
+          letterSpacingMpt: 0,
+          wordSpacingMpt: 0,
+        };
         return {
           fontReady: document.fonts.check("10pt 'RSrender Qualified Arial'"),
           computedFamily: getComputedStyle(probe).fontFamily,
           calibration: measure("RSrender 0123456789", calibrationRequest),
           results,
         };
+        } catch (error) {
+          return { measurementExecutionError: error instanceof Error ? error.name + ":" + error.message : String(error) };
+        }
       })()`,
         true,
       ) as Promise<unknown>,
@@ -825,6 +880,12 @@ async function measureBoringLogTextInChromium(
       return Object.freeze({ accepted: false, reason: "WITNESS_TOO_LARGE" });
     }
     const witness = measured as DataRecord;
+    if (typeof witness["measurementExecutionError"] === "string") {
+      return Object.freeze({
+        accepted: false,
+        reason: `MEASUREMENT_SCRIPT:${witness["measurementExecutionError"]}`.slice(0, 256),
+      });
+    }
     if (
       witness["fontReady"] !== true ||
       typeof witness["computedFamily"] !== "string" ||
@@ -1046,7 +1107,8 @@ async function waitFor(
     window,
     `(() => ({ revision: document.getElementById("working-revision")?.textContent, status: document.getElementById("editor-status")?.textContent, error: document.getElementById("form-error")?.textContent, selected: document.querySelectorAll('input[type="checkbox"]:checked').length, applyDisabled: document.getElementById("apply-override")?.disabled, activeId: document.activeElement?.id }))()`,
   );
-  requireProbe(false, `${code}:${JSON.stringify(debug)}`);
+  const upstream = probeFailure === "UNCLASSIFIED" ? "" : `:${probeFailure}`;
+  requireProbe(false, `${code}${upstream}:${JSON.stringify(debug)}`);
 }
 
 async function press(
@@ -2144,6 +2206,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     await typeText(window, "#text-font-size", "9");
     await typeText(window, "#text-line-height", "11");
+    await typeText(window, "#text-letter-spacing", "0.25");
+    await typeText(window, "#text-word-spacing", "0.5");
+    await typeText(window, "#text-paragraph-spacing", "2");
     await typeText(window, "#text-frame-x", "125");
     await typeText(window, "#text-frame-width", "150");
     await typeText(window, "#text-frame-height", "22");
@@ -2168,7 +2233,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const applied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
     requireProbe(applied["canUndo"] === true, "TEXT_OCCURRENCE_AUTHORITY_UNDO_INVALID");
@@ -2189,7 +2254,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const undo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_REDO");
@@ -2201,7 +2266,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const redo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform") }; })()`,
       ),
     );
     requireProbe(
@@ -2212,6 +2277,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         applied["verticalAlignment"] === "middle" &&
         applied["wrapPolicy"] === "no-wrap" &&
         applied["textDecoration"] === "underline" &&
+        applied["letterSpacing"] === "250" &&
+        applied["wordSpacing"] === "500" &&
+        applied["paragraphSpacing"] === "2000" &&
         applied["locked"] === "true",
       `TEXT_OCCURRENCE_LAYOUT_APPLY_INVALID:${JSON.stringify(applied)}`,
     );
@@ -2220,13 +2288,21 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       `TEXT_OCCURRENCE_ROTATION_INVALID:${String(applied["transform"])}`,
     );
     requireProbe(
-      undo["frameX"] === null && undo["textDecoration"] === null && undo["firstLineX"] === "114750",
+      undo["frameX"] === null &&
+        undo["textDecoration"] === null &&
+        undo["letterSpacing"] === null &&
+        undo["wordSpacing"] === null &&
+        undo["paragraphSpacing"] === null &&
+        undo["firstLineX"] === "114750",
       `TEXT_OCCURRENCE_LAYOUT_UNDO_INVALID:${JSON.stringify(undo)}`,
     );
     requireProbe(
       redo["frameX"] === "125000" &&
         redo["horizontalAlignment"] === "center" &&
         redo["textDecoration"] === "underline" &&
+        redo["letterSpacing"] === "250" &&
+        redo["wordSpacing"] === "500" &&
+        redo["paragraphSpacing"] === "2000" &&
         redo["locked"] === "true" &&
         redo["transform"] === "rotate(5 200000 304338)",
       `TEXT_OCCURRENCE_LAYOUT_REDO_INVALID:${JSON.stringify(redo)}`,
@@ -2838,12 +2914,16 @@ async function main(): Promise<void> {
         prepared.preparation.layout.textRequests,
       );
       if (!measured.accepted) {
+        if (probeMode) probeFailure = `STUDIO_MEASUREMENT:${measured.reason}`.slice(0, 256);
         return Object.freeze({
           accepted: false as const,
           code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
         });
       }
       const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
+      if (!completed.accepted && probeMode) {
+        probeFailure = `STUDIO_COMPLETION:${completed.code}`.slice(0, 256);
+      }
       if (completed.accepted) {
         projectionCache.set(cacheKey, completed.projection);
         if (projectionCache.size > 8) {
@@ -3133,6 +3213,12 @@ async function main(): Promise<void> {
         input.fontSizeMpt > 48_000 ||
         input.lineHeightMpt < input.fontSizeMpt ||
         input.lineHeightMpt > 72_000 ||
+        input.letterSpacingMpt < -2_000 ||
+        input.letterSpacingMpt > 12_000 ||
+        input.wordSpacingMpt < -2_000 ||
+        input.wordSpacingMpt > 24_000 ||
+        input.paragraphSpacingMpt < 0 ||
+        input.paragraphSpacingMpt > 72_000 ||
         !/^#[0-9a-f]{6}$/iu.test(input.color) ||
         (input.layout.positionMode === "depth-bound" &&
           input.layout.frame.yMpt !== node.frame.yMpt) ||
@@ -3185,6 +3271,9 @@ async function main(): Promise<void> {
               fontSizeMpt: input.fontSizeMpt,
               fontWeight: input.fontWeight,
               lineHeightMpt: input.lineHeightMpt,
+              letterSpacingMpt: input.letterSpacingMpt,
+              wordSpacingMpt: input.wordSpacingMpt,
+              paragraphSpacingMpt: input.paragraphSpacingMpt,
               color: input.color.toLowerCase(),
               textDecoration: input.textDecoration,
             },

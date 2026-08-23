@@ -103,6 +103,48 @@ test("BLD-037 shrink-to-minimum never crosses the authored legibility floor", ()
   assert.equal(measured.results[0].overflow, "clipped");
 });
 
+test("BLD-037 letter, word, and paragraph spacing deterministically affect measurement", () => {
+  const text = "A B\nC D";
+  const base = {
+    measurementId: "measure:bld-037-spacing",
+    text,
+    sourceIdentity: "annotation:bld-037-spacing",
+    sourceStartUtf16: 0,
+    sourceEndUtf16: text.length,
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: 10_000,
+    fontWeight: 400,
+    lineHeightMpt: 12_000,
+    maximumWidthMpt: 100_000,
+    maximumHeightMpt: 100_000,
+    maximumLines: 4,
+    wrapPolicy: "no-wrap",
+    overflowPolicy: "clip-with-diagnostic",
+    minimumFontSizeMpt: 10_000,
+  };
+  const plain = measureBoringLogTextRequests([base]);
+  const spaced = measureBoringLogTextRequests([
+    {
+      ...base,
+      letterSpacingMpt: 500,
+      wordSpacingMpt: 1_000,
+      paragraphSpacingMpt: 3_000,
+    },
+  ]);
+  assert.equal(plain.accepted, true);
+  assert.equal(spaced.accepted, true);
+  assert.equal(spaced.results[0].lines.length, 2);
+  assert.ok(spaced.results[0].logicalBounds.widthMpt > plain.results[0].logicalBounds.widthMpt);
+  assert.equal(
+    spaced.results[0].logicalBounds.heightMpt,
+    plain.results[0].logicalBounds.heightMpt + 3_000,
+  );
+  assert.equal(
+    spaced.results[0].lines[1].baselineMpt,
+    plain.results[0].lines[1].baselineMpt + 3_000,
+  );
+});
+
 test("BLD-026 Layout Host rejects duplicate, malformed, or excessive text requests", () => {
   const prepared = preparation();
   assert.equal(prepared.accepted, true);

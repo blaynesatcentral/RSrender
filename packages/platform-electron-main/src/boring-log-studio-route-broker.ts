@@ -67,6 +67,9 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly fontSizeMpt: number;
   readonly fontWeight: number;
   readonly lineHeightMpt: number;
+  readonly letterSpacingMpt: number;
+  readonly wordSpacingMpt: number;
+  readonly paragraphSpacingMpt: number;
   readonly color: string;
   readonly textDecoration: "none" | "underline";
   readonly layout: {
@@ -514,6 +517,9 @@ export class BoringLogStudioRouteBroker {
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
+      "letterSpacingMpt",
+      "wordSpacingMpt",
+      "paragraphSpacingMpt",
       "color",
       "textDecoration",
       "layout",
@@ -564,6 +570,15 @@ export class BoringLogStudioRouteBroker {
       (args["fontWeight"] as number) > 1_000 ||
       !Number.isSafeInteger(args["lineHeightMpt"]) ||
       (args["lineHeightMpt"] as number) < 1 ||
+      !Number.isSafeInteger(args["letterSpacingMpt"]) ||
+      (args["letterSpacingMpt"] as number) < -2_000 ||
+      (args["letterSpacingMpt"] as number) > 12_000 ||
+      !Number.isSafeInteger(args["wordSpacingMpt"]) ||
+      (args["wordSpacingMpt"] as number) < -2_000 ||
+      (args["wordSpacingMpt"] as number) > 24_000 ||
+      !Number.isSafeInteger(args["paragraphSpacingMpt"]) ||
+      (args["paragraphSpacingMpt"] as number) < 0 ||
+      (args["paragraphSpacingMpt"] as number) > 72_000 ||
       !boundedText(args["color"]) ||
       !["none", "underline"].includes(String(args["textDecoration"])) ||
       layout === null ||

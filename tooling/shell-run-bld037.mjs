@@ -63,6 +63,9 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.fontSize !== "9000" ||
     style?.applied?.fontWeight !== "700" ||
     style?.applied?.textDecoration !== "underline" ||
+    style?.applied?.letterSpacing !== "250" ||
+    style?.applied?.wordSpacing !== "500" ||
+    style?.applied?.paragraphSpacing !== "2000" ||
     style?.applied?.fill !== "#b42318" ||
     style?.applied?.frameX !== "125000" ||
     style?.applied?.frameWidth !== "150000" ||
@@ -79,6 +82,9 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
     style?.redo?.textDecoration !== "underline" ||
+    style?.redo?.letterSpacing !== "250" ||
+    style?.redo?.wordSpacing !== "500" ||
+    style?.redo?.paragraphSpacing !== "2000" ||
     style?.redo?.fill !== "#b42318" ||
     style?.redo?.frameX !== "125000" ||
     style?.redo?.horizontalAlignment !== "center" ||
@@ -190,6 +196,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       occurrenceResetToInherited: true,
       deterministicShrinkToMinimumWithLegibilityFloor: true,
       occurrenceUnderlineEmphasis: true,
+      occurrenceLetterWordParagraphSpacing: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

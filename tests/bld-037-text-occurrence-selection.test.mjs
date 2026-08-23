@@ -69,6 +69,9 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-font-weight"/u);
   assert.match(html, /id="text-decoration"[\s\S]*?Underline/u);
   assert.match(html, /id="text-line-height"/u);
+  assert.match(html, /id="text-letter-spacing"[^>]+min="-2"[^>]+max="12"/u);
+  assert.match(html, /id="text-word-spacing"[^>]+min="-2"[^>]+max="24"/u);
+  assert.match(html, /id="text-paragraph-spacing"[^>]+min="0"[^>]+max="72"/u);
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(html, /id="text-style-scope"[^>]*>[\s\S]*?This occurrence/u);
   assert.match(html, /id="text-layout-properties"/u);
@@ -133,6 +136,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
           fontSizeMpt: 9_000,
           fontWeight: 700,
           lineHeightMpt: 11_000,
+          letterSpacingMpt: 250,
+          wordSpacingMpt: 500,
+          paragraphSpacingMpt: 2_000,
           color: "#b42318",
           textDecoration: "underline",
         },
@@ -173,6 +179,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.equal(request?.fontSizeMpt, 9_000);
   assert.equal(request?.fontWeight, 700);
   assert.equal(request?.lineHeightMpt, 11_000);
+  assert.equal(request?.letterSpacingMpt, 250);
+  assert.equal(request?.wordSpacingMpt, 500);
+  assert.equal(request?.paragraphSpacingMpt, 2_000);
   assert.equal(request?.maximumWidthMpt, 146_000);
   assert.equal(request?.maximumLines, 1);
   assert.equal(request?.wrapPolicy, "no-wrap");
@@ -202,6 +211,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.match(screen.markup, /data-horizontal-alignment="center"/u);
   assert.match(screen.markup, /text-decoration="underline"/u);
   assert.match(screen.markup, /data-text-decoration="underline"/u);
+  assert.match(screen.markup, /letter-spacing="250"/u);
+  assert.match(screen.markup, /word-spacing="500"/u);
+  assert.match(screen.markup, /data-paragraph-spacing-mpt="2000"/u);
   assert.match(screen.markup, /data-frame-anchor="bottom-center"/u);
   assert.match(screen.markup, /transform="rotate\(5 200000 304338\)"/u);
   assert.match(
@@ -211,6 +223,9 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
   assert.match(publication.projection.svgMarkup, /text-decoration="underline"/u);
   assert.match(publication.projection.svgMarkup, /data-text-decoration="underline"/u);
+  assert.match(publication.projection.svgMarkup, /letter-spacing="0\.250"/u);
+  assert.match(publication.projection.svgMarkup, /word-spacing="0\.500"/u);
+  assert.match(publication.projection.svgMarkup, /data-paragraph-spacing-mpt="2000"/u);
   assert.match(publication.projection.svgMarkup, /data-frame-anchor="bottom-center"/u);
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
 });
