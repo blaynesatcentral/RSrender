@@ -2555,6 +2555,77 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
+        `(() => { const target = document.getElementById("node:lithology:stratum-01:transition:2:text"); if (!(target instanceof SVGElement)) return false; target.dispatchEvent(new MouseEvent("click", { bubbles: true })); const peer = document.getElementById("node:lithology:stratum-01:transition:1:text"); if (!(peer instanceof SVGElement)) return false; peer.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true })); const scope = document.getElementById("text-style-scope"); const color = document.getElementById("text-color"); const decoration = document.getElementById("text-decoration"); if (!(scope instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(decoration instanceof HTMLSelectElement)) return false; scope.value = "all-selected"; scope.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#c2410c"; color.dispatchEvent(new Event("input", { bubbles: true })); decoration.value = "none"; decoration.dispatchEvent(new Event("change", { bubbles: true })); return scope.value === "all-selected" && document.getElementById("text-all-selected-scope")?.disabled === false && document.querySelectorAll("#svg-page .scene-node.is-selected").length === 2; })()`,
+      )) === true,
+      "TEXT_ALL_SELECTED_SCOPE_INVALID",
+    );
+    await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_ALL_SELECTED_APPLY");
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Typography applied to 2 selected occurrences at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_ALL_SELECTED_APPLY",
+    );
+    const allSelectedApplied = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const target = value.accepted ? value.projection.scene.pages[0]?.nodes.find((node) => node.id === "node:lithology:stratum-01:transition:2:text") : null; const peer = value.accepted ? value.projection.scene.pages[0]?.nodes.find((node) => node.id === "node:lithology:stratum-01:transition:1:text") : null; const targetState = value.accepted ? value.projection.textOccurrencePresentationStates.find((candidate) => candidate.occurrenceNodeId === target?.id) : null; const peerState = value.accepted ? value.projection.textOccurrencePresentationStates.find((candidate) => candidate.occurrenceNodeId === peer?.id) : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, targetFill: document.getElementById(target?.id ?? "")?.getAttribute("fill"), peerFill: document.getElementById(peer?.id ?? "")?.getAttribute("fill"), targetDecoration: document.getElementById(target?.id ?? "")?.getAttribute("text-decoration"), peerDecoration: document.getElementById(peer?.id ?? "")?.getAttribute("text-decoration"), targetStyleId: target?.styleId, peerStyleId: peer?.styleId, targetFrame: target?.frame, peerFrame: peer?.frame, targetTypography: targetState?.typography, peerTypography: peerState?.typography, targetLayout: targetState?.layout, peerLayout: peerState?.layout, selectedCount: document.querySelectorAll("#svg-page .scene-node.is-selected").length }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_TEXT_ALL_SELECTED_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#1d4ed8"`,
+      "WAIT_TEXT_ALL_SELECTED_UNDO",
+    );
+    const allSelectedUndo = record(
+      await pageValue(
+        window,
+        `(() => ({ targetFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill"), peerFill: document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill"), targetDecoration: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration"), peerDecoration: document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("text-decoration") }))()`,
+      ),
+    );
+    await press(window, "#redo", "Space", "FOCUS_TEXT_ALL_SELECTED_REDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#c2410c"`,
+      "WAIT_TEXT_ALL_SELECTED_REDO",
+    );
+    const allSelectedRedo = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, targetFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill"), peerFill: document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill"), targetDecoration: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration"), peerDecoration: document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("text-decoration") }; })()`,
+      ),
+    );
+    requireProbe(
+      allSelectedApplied["workingRevision"] === namedStyleRedo["workingRevision"] + 1 &&
+        allSelectedApplied["targetFill"] === "#c2410c" &&
+        allSelectedApplied["peerFill"] === "#c2410c" &&
+        allSelectedApplied["targetDecoration"] === null &&
+        allSelectedApplied["peerDecoration"] === null &&
+        (allSelectedApplied["targetStyleId"] as string).startsWith("style-occurrence-") &&
+        (allSelectedApplied["peerStyleId"] as string).startsWith("style-occurrence-") &&
+        allSelectedApplied["targetTypography"] === "occurrence" &&
+        allSelectedApplied["peerTypography"] === "occurrence" &&
+        allSelectedApplied["targetLayout"] === "inherited" &&
+        allSelectedApplied["peerLayout"] === "inherited" &&
+        allSelectedApplied["selectedCount"] === 2 &&
+        JSON.stringify(allSelectedApplied["targetFrame"]) ===
+          JSON.stringify(namedStyleApplied["targetFrame"]) &&
+        JSON.stringify(allSelectedApplied["peerFrame"]) ===
+          JSON.stringify(namedStyleApplied["peerFrame"]) &&
+        allSelectedUndo["targetFill"] === "#1d4ed8" &&
+        allSelectedUndo["peerFill"] === "#1d4ed8" &&
+        allSelectedUndo["targetDecoration"] === "underline" &&
+        allSelectedUndo["peerDecoration"] === "underline" &&
+        allSelectedRedo["workingRevision"] === allSelectedApplied["workingRevision"] + 2 &&
+        allSelectedRedo["targetFill"] === "#c2410c" &&
+        allSelectedRedo["peerFill"] === "#c2410c" &&
+        allSelectedRedo["targetDecoration"] === null &&
+        allSelectedRedo["peerDecoration"] === null,
+      `TEXT_ALL_SELECTED_HISTORY_INVALID:${JSON.stringify({ allSelectedApplied, allSelectedUndo, allSelectedRedo })}`,
+    );
+    requireProbe(
+      (await pageValue(
+        window,
         `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false; })()`,
       )) === true,
       "TEXT_OCCURRENCE_PUBLICATION_TAB_INVALID",
@@ -2586,6 +2657,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       namedStyleApplied,
       namedStyleUndo,
       namedStyleRedo,
+      allSelectedApplied,
+      allSelectedUndo,
+      allSelectedRedo,
     });
     requireProbe(
       (await pageValue(
@@ -3284,10 +3358,20 @@ async function main(): Promise<void> {
         node?.kind === "text"
           ? projected.projection.scene.resources.textStyles.find(({ id }) => id === node.styleId)
           : undefined;
+      const targetNodes = input.targets.map((target) =>
+        projected.projection.scene.pages[0]?.nodes.find(
+          (candidate) =>
+            candidate.id === target.occurrenceNodeId &&
+            candidate.semanticId === target.semanticId &&
+            candidate.kind === "text" &&
+            candidate.styleId === target.baseStyleId,
+        ),
+      );
       if (
         node?.kind !== "text" ||
         currentStyle === undefined ||
         currentStyle.id !== input.baseStyleId ||
+        targetNodes.some((target) => target?.kind !== "text") ||
         input.fontFamilyId !== currentStyle.fontFamilyId ||
         input.fontSizeMpt < 4_000 ||
         input.fontSizeMpt > 48_000 ||
@@ -3377,6 +3461,36 @@ async function main(): Promise<void> {
           return Object.freeze({ accepted: false, code: "TEXT_NAMED_STYLE_INVALID" });
         }
         authoredJob = namedStyleJob.value;
+      } else if (input.applyScope === "all-selected") {
+        const authored = applyBoringLogTextOccurrenceStyles(
+          currentJob,
+          input.targets.map((target) => {
+            const targetIdentityDigest = sha256CanonicalJson({
+              boringLogIdentity: document.boringLogIdentity,
+              occurrenceNodeId: target.occurrenceNodeId,
+            }).slice("sha256:".length);
+            return {
+              contractVersion: 1,
+              schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+              kind: "boring-log.text-occurrence-style-override",
+              ownerDocumentIdentity: documentIdentity,
+              boringLogIdentity: document.boringLogIdentity,
+              overrideIdentity: `urn:rsrender:text-style-override:${targetIdentityDigest}`,
+              overrideRevision: input.expectedWorkingRevision + 1,
+              scope: "occurrence",
+              occurrenceNodeId: target.occurrenceNodeId,
+              semanticId: target.semanticId,
+              baseStyleId: target.baseStyleId,
+              style: authoredStyle,
+              locked: false,
+            } as const;
+          }),
+          [],
+        );
+        if (!authored.accepted) {
+          return Object.freeze({ accepted: false, code: authored.code });
+        }
+        authoredJob = authored.job;
       } else {
         const authored = applyBoringLogTextOccurrenceStyles(
           currentJob,
@@ -3430,7 +3544,9 @@ async function main(): Promise<void> {
         reason:
           input.applyScope === "named-style"
             ? "Set template-local named text style in Boring Log Studio"
-            : "Set text occurrence style in Boring Log Studio",
+            : input.applyScope === "all-selected"
+              ? "Set typography for selected text occurrences in Boring Log Studio"
+              : "Set text occurrence style in Boring Log Studio",
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -3441,8 +3557,13 @@ async function main(): Promise<void> {
       return Object.freeze({
         accepted: true,
         code:
-          input.applyScope === "named-style" ? "TEXT_NAMED_STYLE_SET" : "TEXT_OCCURRENCE_STYLE_SET",
+          input.applyScope === "named-style"
+            ? "TEXT_NAMED_STYLE_SET"
+            : input.applyScope === "all-selected"
+              ? "TEXT_SELECTED_STYLES_SET"
+              : "TEXT_OCCURRENCE_STYLE_SET",
         applyScope: input.applyScope,
+        targetCount: input.targets.length,
         workingRevision: committed.workingRevision,
         dirty: committed.dirty,
         canUndo: committed.canUndo,

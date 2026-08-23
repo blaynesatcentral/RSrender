@@ -75,7 +75,7 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-color" type="color"/u);
   assert.match(
     html,
-    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?Named style default \(typography\)/u,
+    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Named style default \(typography\)/u,
   );
   assert.match(html, /id="text-layout-properties"/u);
   assert.match(html, /id="text-frame-x"/u);
@@ -107,12 +107,18 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   );
   assert.match(entry, /selectedSceneNodeId/u);
   assert.match(entry, /addEventListener\("contextmenu"/u);
-  assert.match(entry, /event\.preventDefault\(\);[\s\S]+select\(semantic, nodeId\);/u);
+  assert.match(
+    entry,
+    /event\.preventDefault\(\);[\s\S]+select\(semantic, nodeId, selectedTextNodeIds\.has\(nodeId\)\);/u,
+  );
   assert.match(entry, /propertyNodeId\.textContent = representative\.id/u);
   assert.match(entry, /propertiesScroll\.focus\(\)/u);
   assert.match(entry, /selectionByBoring[\s\S]+nodeId: selectedSceneNodeId/u);
   assert.match(entry, /setTextOccurrenceStyle/u);
   assert.match(entry, /const applyScope = textStyleScope\.value/u);
+  assert.match(entry, /event\.ctrlKey \|\| event\.metaKey/u);
+  assert.match(entry, /All selected applies typography/u);
+  assert.match(entry, /their geometry was unchanged/u);
   assert.match(entry, /Reset this occurrence to inherited typography/u);
   assert.match(entry, /Occurrence geometry, layout, and existing overrides are unchanged/u);
   assert.match(entry, /resetTextOccurrencePresentation/u);
@@ -332,6 +338,72 @@ test("BLD-037 projects one deterministic shrink result identically to screen and
       markup,
       new RegExp(`data-effective-font-size-mpt="${result.effectiveFontSizeMpt}"`, "u"),
     );
+  }
+});
+
+test("BLD-037 applies one typography command to multiple exact occurrences without geometry overrides", () => {
+  const targets = [
+    {
+      occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+      semanticId: "lithology:stratum-01:transition:2",
+    },
+    {
+      occurrenceNodeId: "node:lithology:stratum-01:transition:1:text",
+      semanticId: "lithology:stratum-01:transition:1",
+    },
+  ];
+  const authored = applyBoringLogTextOccurrenceStyles(
+    boringLogMvpFixtureJob(),
+    targets.map((target, index) => ({
+      contractVersion: 1,
+      schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+      kind: "boring-log.text-occurrence-style-override",
+      ownerDocumentIdentity: "urn:rsrender:document:bld-037-all-selected",
+      boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+      overrideIdentity: `urn:rsrender:text-style-override:bld-037-all-selected-${index + 1}`,
+      overrideRevision: 1,
+      scope: "occurrence",
+      occurrenceNodeId: target.occurrenceNodeId,
+      semanticId: target.semanticId,
+      baseStyleId: "style-small",
+      style: {
+        fontFamilyId: "font.logical.rsrender-sans",
+        fontSizeMpt: 5_500,
+        fontWeight: 400,
+        lineHeightMpt: 6_875,
+        color: "#c2410c",
+        textDecoration: "none",
+      },
+      locked: false,
+    })),
+  );
+  assert.equal(authored.accepted, true);
+  assert.equal(authored.layoutOverrides.length, 0);
+  assert.equal(authored.job.template.occurrenceLayouts?.length ?? 0, 0);
+  const baseline = prepareBoringLogLayout(boringLogMvpFixtureJob());
+  const prepared = prepareBoringLogLayout(authored.job);
+  assert.equal(baseline.accepted, true);
+  assert.equal(prepared.accepted, true);
+  const baselineScene = resolveBoringLogPageScene(
+    baseline.value,
+    deterministicTextResults(baseline.value.textRequests),
+  );
+  const authoredScene = resolveBoringLogPageScene(
+    prepared.value,
+    deterministicTextResults(prepared.value.textRequests),
+  );
+  assert.equal(baselineScene.accepted, true);
+  assert.equal(authoredScene.accepted, true);
+  for (const target of targets) {
+    const baselineNode = baselineScene.value.pages[0].nodes.find(
+      ({ id }) => id === target.occurrenceNodeId,
+    );
+    const authoredNode = authoredScene.value.pages[0].nodes.find(
+      ({ id }) => id === target.occurrenceNodeId,
+    );
+    assert.deepEqual(authoredNode.frame, baselineNode.frame);
+    const style = authored.job.template.styles.find(({ id }) => id === authoredNode.styleId);
+    assert.equal(style.color, "#c2410c");
   }
 });
 

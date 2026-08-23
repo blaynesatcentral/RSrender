@@ -311,6 +311,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     "occurrenceNodeId",
     "semanticId",
     "baseStyleId",
+    "targets",
     "fontFamilyId",
     "fontSizeMpt",
     "fontWeight",
@@ -356,13 +357,35 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
       : exactRecord(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
   const boundedText = (value: unknown): value is string =>
     typeof value === "string" && value.length > 0 && value.length <= 512;
+  const targets =
+    args !== null && Array.isArray(args["targets"])
+      ? args["targets"].map((target) =>
+          exactRecord(target, ["occurrenceNodeId", "semanticId", "baseStyleId"]),
+        )
+      : null;
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
-    !["occurrence", "named-style"].includes(String(args["applyScope"])) ||
+    !["occurrence", "all-selected", "named-style"].includes(String(args["applyScope"])) ||
     !boundedText(args["occurrenceNodeId"]) ||
     !boundedText(args["semanticId"]) ||
     !boundedText(args["baseStyleId"]) ||
+    targets === null ||
+    targets.length < 1 ||
+    targets.length > 64 ||
+    targets.some(
+      (target) =>
+        target === null ||
+        !boundedText(target["occurrenceNodeId"]) ||
+        !boundedText(target["semanticId"]) ||
+        !boundedText(target["baseStyleId"]),
+    ) ||
+    new Set(targets.map((target) => target!["occurrenceNodeId"])).size !== targets.length ||
+    targets[0]?.["occurrenceNodeId"] !== args["occurrenceNodeId"] ||
+    targets[0]?.["semanticId"] !== args["semanticId"] ||
+    targets[0]?.["baseStyleId"] !== args["baseStyleId"] ||
+    (args["applyScope"] === "all-selected" && targets.length < 2) ||
+    (args["applyScope"] !== "all-selected" && targets.length !== 1) ||
     !boundedText(args["fontFamilyId"]) ||
     !isPositiveSafeInteger(args["fontSizeMpt"]) ||
     !isPositiveSafeInteger(args["fontWeight"]) ||
@@ -685,10 +708,15 @@ export interface BoringLogStudioPreloadApi {
   }) => Promise<unknown>;
   readonly setTextOccurrenceStyle: (input: {
     readonly expectedWorkingRevision: number;
-    readonly applyScope: "occurrence" | "named-style";
+    readonly applyScope: "occurrence" | "all-selected" | "named-style";
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
     readonly baseStyleId: string;
+    readonly targets: readonly Readonly<{
+      readonly occurrenceNodeId: string;
+      readonly semanticId: string;
+      readonly baseStyleId: string;
+    }>[];
     readonly fontFamilyId: string;
     readonly fontSizeMpt: number;
     readonly fontWeight: number;

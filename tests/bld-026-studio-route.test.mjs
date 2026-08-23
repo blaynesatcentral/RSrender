@@ -150,6 +150,13 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
     occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
     semanticId: "lithology:stratum-01:transition:2",
     baseStyleId: "style-small",
+    targets: [
+      {
+        occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+        semanticId: "lithology:stratum-01:transition:2",
+        baseStyleId: "style-small",
+      },
+    ],
     fontFamilyId: "font.logical.rsrender-sans",
     fontSizeMpt: 9_000,
     fontWeight: 700,
@@ -205,12 +212,35 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   });
   assert.equal(shrinkAccepted.accepted, true, shrinkAccepted.code);
   assert.deepEqual(received, shrinkArgs);
+  const allSelectedArgs = {
+    ...args,
+    applyScope: "all-selected",
+    targets: [
+      args.targets[0],
+      {
+        occurrenceNodeId: "node:lithology:stratum-01:transition:1:text",
+        semanticId: "lithology:stratum-01:transition:1",
+        baseStyleId: "style-small",
+      },
+    ],
+  };
+  const allSelectedAccepted = await route.setTextOccurrenceStyle(routeContext, {
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence: 3,
+    documentIdentity,
+    ownerGeneration: 1,
+    args: allSelectedArgs,
+  });
+  assert.equal(allSelectedAccepted.accepted, true, allSelectedAccepted.code);
+  assert.deepEqual(received, allSelectedArgs);
   assert.deepEqual(
     await route.setTextOccurrenceStyle(routeContext, {
       transportVersion: 1,
       capability: binding.capability,
       generation: binding.generation,
-      sequence: 3,
+      sequence: 4,
       documentIdentity,
       ownerGeneration: 1,
       args: {
@@ -225,7 +255,7 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
       transportVersion: 1,
       capability: binding.capability,
       generation: binding.generation,
-      sequence: 3,
+      sequence: 4,
       documentIdentity,
       ownerGeneration: 1,
       args: { ...args, layout: { ...args.layout, frameAnchor: "baseline" } },
@@ -237,10 +267,22 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
       transportVersion: 1,
       capability: binding.capability,
       generation: binding.generation,
-      sequence: 3,
+      sequence: 4,
       documentIdentity,
       ownerGeneration: 1,
       args: { ...args, fontSizeMpt: 0 },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
+  assert.deepEqual(
+    await route.setTextOccurrenceStyle(routeContext, {
+      transportVersion: 1,
+      capability: binding.capability,
+      generation: binding.generation,
+      sequence: 4,
+      documentIdentity,
+      ownerGeneration: 1,
+      args: { ...args, applyScope: "all-selected" },
     }),
     { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
   );
@@ -431,6 +473,13 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
       occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
       semanticId: "lithology:stratum-01:transition:2",
       baseStyleId: "style-small",
+      targets: [
+        {
+          occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+          semanticId: "lithology:stratum-01:transition:2",
+          baseStyleId: "style-small",
+        },
+      ],
       fontFamilyId: "font.logical.rsrender-sans",
       fontSizeMpt: 9_000,
       fontWeight: 700,

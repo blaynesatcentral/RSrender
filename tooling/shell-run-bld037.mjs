@@ -26,6 +26,7 @@ const pdfPath = path.join(
   "Text Occurrence Proof.pdf",
 );
 const targetNodeId = "node:lithology:stratum-01:transition:2:text";
+const peerNodeId = "node:lithology:stratum-01:transition:1:text";
 
 export async function runTextOccurrenceStyleQualification({ record = false } = {}) {
   await mkdir(path.dirname(projectPath), { recursive: true });
@@ -41,7 +42,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     profileLabel: `rsrender-bld037-text-occurrence-${process.pid}`,
     probeArgument: "--rsrender-bld037-probe",
     profileArgumentPrefix: "--rsrender-bld027-profile=",
-    timeoutMs: 420_000,
+    timeoutMs: 600_000,
     extraArguments: [
       `--rsrender-bld027-output=${pdfPath}`,
       `--rsrender-bld035-output=${projectPath}`,
@@ -151,6 +152,25 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.namedStyleRedo?.targetFill !== "#1d4ed8" ||
     style?.namedStyleRedo?.peerFill !== "#1d4ed8" ||
     style?.namedStyleRedo?.targetDecoration !== "underline" ||
+    style?.allSelectedApplied?.targetFill !== "#c2410c" ||
+    style?.allSelectedApplied?.peerFill !== "#c2410c" ||
+    style?.allSelectedApplied?.targetDecoration !== null ||
+    style?.allSelectedApplied?.peerDecoration !== null ||
+    !style?.allSelectedApplied?.targetStyleId?.startsWith("style-occurrence-") ||
+    !style?.allSelectedApplied?.peerStyleId?.startsWith("style-occurrence-") ||
+    style?.allSelectedApplied?.targetTypography !== "occurrence" ||
+    style?.allSelectedApplied?.peerTypography !== "occurrence" ||
+    style?.allSelectedApplied?.targetLayout !== "inherited" ||
+    style?.allSelectedApplied?.peerLayout !== "inherited" ||
+    style?.allSelectedApplied?.selectedCount !== 2 ||
+    style?.allSelectedUndo?.targetFill !== "#1d4ed8" ||
+    style?.allSelectedUndo?.peerFill !== "#1d4ed8" ||
+    style?.allSelectedUndo?.targetDecoration !== "underline" ||
+    style?.allSelectedUndo?.peerDecoration !== "underline" ||
+    style?.allSelectedRedo?.targetFill !== "#c2410c" ||
+    style?.allSelectedRedo?.peerFill !== "#c2410c" ||
+    style?.allSelectedRedo?.targetDecoration !== null ||
+    style?.allSelectedRedo?.peerDecoration !== null ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -172,6 +192,13 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       elementId === targetNodeId && bindingPath === "presentation.text-occurrence-style",
   );
   const persistedStyle = layoutJob?.template.styles.find(({ id }) => id === binding?.styleId);
+  const peerBinding = layoutJob?.template.bindings.find(
+    ({ elementId, path: bindingPath }) =>
+      elementId === peerNodeId && bindingPath === "presentation.text-occurrence-style",
+  );
+  const persistedPeerStyle = layoutJob?.template.styles.find(
+    ({ id }) => id === peerBinding?.styleId,
+  );
   const layoutBinding = layoutJob?.template.bindings.find(
     ({ elementId, path: bindingPath }) =>
       elementId === targetNodeId && bindingPath === "presentation.text-occurrence-layout",
@@ -182,8 +209,16 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
   const persistedNamedStyle = layoutJob?.template.styles.find(({ id }) => id === "style-small");
   if (
     !layoutJob ||
-    binding !== undefined ||
-    persistedStyle !== undefined ||
+    binding === undefined ||
+    persistedStyle?.fontSizeMpt !== 5_500 ||
+    persistedStyle?.lineHeightMpt !== 6_875 ||
+    persistedStyle?.color !== "#c2410c" ||
+    persistedStyle?.textDecoration !== "none" ||
+    peerBinding === undefined ||
+    persistedPeerStyle?.fontSizeMpt !== 5_500 ||
+    persistedPeerStyle?.lineHeightMpt !== 6_875 ||
+    persistedPeerStyle?.color !== "#c2410c" ||
+    persistedPeerStyle?.textDecoration !== "none" ||
     layoutBinding !== undefined ||
     persistedLayout !== undefined ||
     persistedNamedStyle?.fontSizeMpt !== 5_500 ||
@@ -192,7 +227,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     persistedNamedStyle?.textDecoration !== "underline"
   ) {
     throw new Error(
-      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, layoutBinding, persistedLayout, persistedNamedStyle })}`,
+      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, peerBinding, persistedPeerStyle, layoutBinding, persistedLayout, persistedNamedStyle })}`,
     );
   }
 
@@ -207,8 +242,11 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       bytes: (await stat(projectPath)).size,
       authoritativeDigest: reopened.value.project.authoritativeDigest,
       targetNodeId,
-      styleId: null,
-      persistedStyle: null,
+      styleId: binding.styleId,
+      persistedStyle,
+      peerNodeId,
+      peerStyleId: peerBinding.styleId,
+      persistedPeerStyle,
       layoutId: null,
       persistedLayout: null,
       namedStyleId: persistedNamedStyle.id,
@@ -234,6 +272,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       occurrenceLetterWordParagraphSpacing: true,
       occurrenceFrameStyling: true,
       templateLocalNamedStyleTypography: true,
+      explicitAllSelectedTypography: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

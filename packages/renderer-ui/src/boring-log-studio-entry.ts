@@ -141,10 +141,15 @@ type StudioApis = Readonly<{
     }) => Promise<unknown>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
-      readonly applyScope: "occurrence" | "named-style";
+      readonly applyScope: "occurrence" | "all-selected" | "named-style";
       readonly occurrenceNodeId: string;
       readonly semanticId: string;
       readonly baseStyleId: string;
+      readonly targets: readonly Readonly<{
+        readonly occurrenceNodeId: string;
+        readonly semanticId: string;
+        readonly baseStyleId: string;
+      }>[];
       readonly fontFamilyId: string;
       readonly fontSizeMpt: number;
       readonly fontWeight: number;
@@ -319,6 +324,7 @@ async function main(): Promise<void> {
   const textParagraphSpacing = element<HTMLInputElement>("text-paragraph-spacing");
   const textColor = element<HTMLInputElement>("text-color");
   const textStyleScope = element<HTMLSelectElement>("text-style-scope");
+  const textAllSelectedScope = element<HTMLOptionElement>("text-all-selected-scope");
   const textNamedStyleScope = element<HTMLOptionElement>("text-named-style-scope");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
@@ -385,12 +391,17 @@ async function main(): Promise<void> {
   const lastBoringButton = element<HTMLButtonElement>("last-boring");
   let selectedSemanticId: string | null = null;
   let selectedSceneNodeId: string | null = null;
+  const selectedTextNodeIds = new Set<string>();
   let currentTextFrameAnchor: BoringLogTextFrameAnchor = "top-left";
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
   const selectionByBoring = new Map<
     string,
-    Readonly<{ readonly semanticId: string; readonly nodeId: string | null }> | null
+    Readonly<{
+      readonly semanticId: string;
+      readonly nodeId: string | null;
+      readonly textNodeIds: readonly string[];
+    }> | null
   >();
   const collapsedTreeItems = new Set<string>();
   let contentsMode: "drawing" | "source" = "drawing";
@@ -563,7 +574,11 @@ async function main(): Promise<void> {
         priorBoringIdentity,
         selectedSemanticId === null
           ? null
-          : Object.freeze({ semanticId: selectedSemanticId, nodeId: selectedSceneNodeId }),
+          : Object.freeze({
+              semanticId: selectedSemanticId,
+              nodeId: selectedSceneNodeId,
+              textNodeIds: Object.freeze([...selectedTextNodeIds]),
+            }),
       );
     }
     const expected = operation === "get-state" ? null : (studioProjection?.workingRevision ?? null);
@@ -593,6 +608,8 @@ async function main(): Promise<void> {
       const selection = selectionByBoring.get(result.state.activeBoringLogIdentity) ?? null;
       selectedSemanticId = selection?.semanticId ?? null;
       selectedSceneNodeId = selection?.nodeId ?? null;
+      selectedTextNodeIds.clear();
+      for (const nodeId of selection?.textNodeIds ?? []) selectedTextNodeIds.add(nodeId);
       await refreshStudioProjection(
         result.state.workingRevision,
         `${boringPosition.value}: ${boringSelector.value}`,
@@ -615,14 +632,21 @@ async function main(): Promise<void> {
     if (parsed.querySelector("parsererror") !== null)
       throw new Error("SVG projection parse failed");
     pageHost.replaceChildren(document.importNode(parsed.documentElement, true));
-    if (selectedSceneNodeId !== null) {
+    if (selectedSceneNodeId !== null || selectedTextNodeIds.size > 0) {
       for (const selected of pageHost.querySelectorAll<SVGElement>(".scene-node.is-selected")) {
         selected.classList.remove("is-selected");
       }
-      const occurrence = [...pageHost.querySelectorAll<SVGElement>("[data-node-id]")].find(
-        (candidate) => candidate.dataset["nodeId"] === selectedSceneNodeId,
-      );
-      occurrence?.classList.add("is-selected");
+      for (const occurrence of pageHost.querySelectorAll<SVGElement>("[data-node-id]")) {
+        if (selectedTextNodeIds.has(occurrence.dataset["nodeId"] ?? "")) {
+          occurrence.classList.add("is-selected");
+        }
+      }
+      if (selectedTextNodeIds.size === 0) {
+        const occurrence = [...pageHost.querySelectorAll<SVGElement>("[data-node-id]")].find(
+          (candidate) => candidate.dataset["nodeId"] === selectedSceneNodeId,
+        );
+        occurrence?.classList.add("is-selected");
+      }
     }
     pageHost.setAttribute("aria-busy", "false");
   }
@@ -634,6 +658,12 @@ async function main(): Promise<void> {
     const sourceSemanticIds = new Set(
       page.nodes.filter((node) => node.provenance !== null).map(({ semanticId }) => semanticId),
     );
+    const selectedSemanticIds = new Set(
+      page.nodes
+        .filter(({ id }) => selectedTextNodeIds.has(id))
+        .map(({ semanticId }) => semanticId),
+    );
+    if (selectedSemanticId !== null) selectedSemanticIds.add(selectedSemanticId);
     if (contentsMode === "source") {
       const byId = new Map(items.map((item) => [item.semanticId, item]));
       for (const semanticId of [...sourceSemanticIds]) {
@@ -647,10 +677,10 @@ async function main(): Promise<void> {
     for (const item of visibleItems) {
       if (contentsMode === "source" && !sourceSemanticIds.has(item.semanticId)) continue;
       const row = document.createElement("div");
-      row.className = `tree-row tree-level-${item.level}${item.semanticId === selectedSemanticId ? " is-selected" : ""}`;
+      row.className = `tree-row tree-level-${item.level}${selectedSemanticIds.has(item.semanticId) ? " is-selected" : ""}`;
       row.setAttribute("role", "treeitem");
       row.setAttribute("aria-level", String(item.level));
-      row.setAttribute("aria-selected", String(item.semanticId === selectedSemanticId));
+      row.setAttribute("aria-selected", String(selectedSemanticIds.has(item.semanticId)));
       if (item.hasChildren) {
         row.setAttribute("aria-expanded", String(!collapsedTreeItems.has(item.semanticId)));
       }
@@ -807,7 +837,11 @@ async function main(): Promise<void> {
     status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
   }
 
-  function select(semanticId: string, nodeId: string | null = null): void {
+  function select(
+    semanticId: string,
+    nodeId: string | null = null,
+    additiveTextSelection = false,
+  ): void {
     selectedSemanticId = semanticId;
     selectedSceneNodeId = nodeId;
     showPropertyPanel("element");
@@ -816,12 +850,21 @@ async function main(): Promise<void> {
       (nodeId === null ? undefined : nodes.find((node) => node.id === nodeId)) ??
       nodes.find((node) => node.kind === "text") ??
       nodes[0];
+    const exactTextNode =
+      representative?.kind === "text" && representative.id === nodeId ? representative : undefined;
+    if (additiveTextSelection && exactTextNode !== undefined) {
+      selectedTextNodeIds.add(exactTextNode.id);
+    } else {
+      selectedTextNodeIds.clear();
+      if (exactTextNode !== undefined) selectedTextNodeIds.add(exactTextNode.id);
+    }
     if (
       nodeId === null &&
       representative?.kind === "text" &&
       nodes.filter((node) => node.kind === "text").length === 1
     ) {
       selectedSceneNodeId = representative.id;
+      selectedTextNodeIds.add(representative.id);
     }
     installSvg();
     renderTree();
@@ -918,7 +961,11 @@ async function main(): Promise<void> {
       );
       const inheritedStyle = presentationState?.typography !== "occurrence";
       const inheritedLayout = presentationState?.layout !== "occurrence";
+      textAllSelectedScope.disabled = selectedTextNodeIds.size < 2;
       textNamedStyleScope.disabled = !inheritedStyle;
+      if (selectedTextNodeIds.size < 2 && textStyleScope.value === "all-selected") {
+        textStyleScope.value = "occurrence";
+      }
       if (!inheritedStyle && textStyleScope.value === "named-style") {
         textStyleScope.value = "occurrence";
       }
@@ -957,7 +1004,13 @@ async function main(): Promise<void> {
       sourceOriginal === null ? "Computed" : String(sourceOriginal);
     propertyEffectiveValue.textContent = effective === null ? "Computed" : String(effective);
     selectionStatus.textContent = `${humanize(semanticId)} · ${representative.id}`;
-    status.textContent = `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
+    if (selectedTextNodeIds.size > 1) {
+      selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; primary ${representative.id}`;
+    }
+    status.textContent =
+      selectedTextNodeIds.size > 1
+        ? `${selectedTextNodeIds.size} exact text occurrences selected. Ctrl-click adds another; Properties shows the primary occurrence.`
+        : `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
   }
 
   async function refreshStudioProjection(
@@ -979,7 +1032,16 @@ async function main(): Promise<void> {
       installSvg();
       renderTree();
     } else {
-      select(selectedSemanticId);
+      const priorTextNodeIds = [...selectedTextNodeIds];
+      select(selectedSemanticId, selectedSceneNodeId);
+      for (const nodeId of priorTextNodeIds) {
+        if (page.nodes.some((node) => node.id === nodeId && node.kind === "text")) {
+          selectedTextNodeIds.add(nodeId);
+        }
+      }
+      textAllSelectedScope.disabled = selectedTextNodeIds.size < 2;
+      installSvg();
+      renderTree();
     }
     updateHistoryControls();
     sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
@@ -1096,7 +1158,22 @@ async function main(): Promise<void> {
       status.textContent = "Select one exact text occurrence before applying text properties.";
       return false;
     }
-    const applyScope = textStyleScope.value as "occurrence" | "named-style";
+    const applyScope = textStyleScope.value as "occurrence" | "all-selected" | "named-style";
+    const selectedTargetNodes = [
+      node,
+      ...page.nodes.filter(
+        (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+          candidate.kind === "text" &&
+          candidate.id !== node.id &&
+          selectedTextNodeIds.has(candidate.id),
+      ),
+    ];
+    if (applyScope === "all-selected" && selectedTargetNodes.length < 2) {
+      status.textContent =
+        "Ctrl-click at least two exact text occurrences before applying to all selected.";
+      textStyleScope.focus();
+      return false;
+    }
     const presentationState = studioProjection.textOccurrencePresentationStates.find(
       ({ occurrenceNodeId }) => occurrenceNodeId === node.id,
     );
@@ -1185,13 +1262,23 @@ async function main(): Promise<void> {
     status.textContent = `Applying text properties to ${node.id}…`;
     if (applyScope === "named-style") {
       status.textContent = `Applying typography to named style ${style.id}...`;
+    } else if (applyScope === "all-selected") {
+      status.textContent = `Applying typography to ${selectedTargetNodes.length} selected occurrences...`;
     }
+    const targets = (applyScope === "all-selected" ? selectedTargetNodes : [node]).map(
+      (target) => ({
+        occurrenceNodeId: target.id,
+        semanticId: target.semanticId,
+        baseStyleId: target.styleId,
+      }),
+    );
     const raw = await apis.studio.setTextOccurrenceStyle({
       expectedWorkingRevision: studioProjection.workingRevision,
       applyScope,
       occurrenceNodeId: node.id,
       semanticId: node.semanticId,
       baseStyleId: node.styleId,
+      targets,
       fontFamilyId: textFontFamily.value,
       fontSizeMpt,
       fontWeight,
@@ -1233,7 +1320,9 @@ async function main(): Promise<void> {
       result["workingRevision"] as number,
       applyScope === "named-style"
         ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
-        : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+        : applyScope === "all-selected"
+          ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
+          : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -1411,7 +1500,9 @@ async function main(): Promise<void> {
     if (!(target instanceof Element)) return;
     const occurrence = target.closest<SVGElement>("[data-semantic-id][data-node-id]");
     const semantic = occurrence?.dataset["semanticId"];
-    if (semantic !== undefined) select(semantic, occurrence?.dataset["nodeId"] ?? null);
+    if (semantic !== undefined) {
+      select(semantic, occurrence?.dataset["nodeId"] ?? null, event.ctrlKey || event.metaKey);
+    }
   });
   pageHost.addEventListener("contextmenu", (event) => {
     if (interactionMode !== "select") return;
@@ -1422,7 +1513,7 @@ async function main(): Promise<void> {
     const nodeId = occurrence?.dataset["nodeId"];
     if (semantic === undefined || nodeId === undefined) return;
     event.preventDefault();
-    select(semantic, nodeId);
+    select(semantic, nodeId, selectedTextNodeIds.has(nodeId));
     openCanvasContextMenu();
   });
   document.addEventListener("pointerdown", (event) => {
@@ -1558,7 +1649,9 @@ async function main(): Promise<void> {
     textStyleHelp.textContent =
       textStyleScope.value === "named-style"
         ? "Named style default updates template-local typography for inherited occurrences. Occurrence geometry, layout, and existing overrides are unchanged."
-        : "This occurrence receives project-owned typography and layout overrides through document history.";
+        : textStyleScope.value === "all-selected"
+          ? `All selected applies typography to ${selectedTextNodeIds.size} exact text occurrences in one history command. Their frames, positions, and locks are unchanged.`
+          : "This occurrence receives project-owned typography and layout overrides through document history.";
   });
   textFrameFillEnabled.addEventListener("change", () => {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;
