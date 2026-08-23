@@ -70,6 +70,10 @@ import {
   buildBoringLogStudioTree,
   visibleBoringLogStudioTreeItems,
 } from "./boring-log-studio-tree.js";
+import {
+  resolveBoringLogDirectManipulationFrame,
+  type BoringLogDirectManipulationHandle,
+} from "./boring-log-direct-manipulation.js";
 
 type EditableValue = Readonly<{
   readonly semanticId: string;
@@ -437,6 +441,23 @@ async function main(): Promise<void> {
         scrollTop: number;
       }>
     | undefined;
+  let directManipulationGesture:
+    | {
+        readonly pointerId: number;
+        readonly nodeId: string;
+        readonly semanticId: string;
+        readonly handle: BoringLogDirectManipulationHandle;
+        readonly startPoint: Readonly<{ xMpt: number; yMpt: number }>;
+        readonly originalFrame: TextFrame;
+        previewFrame: TextFrame;
+        readonly positionMode: "depth-bound" | "free";
+        readonly minimumWidthMpt: number;
+        readonly minimumHeightMpt: number;
+        readonly originalTransform: string | null;
+        readonly originalFrameTransform: string | null;
+      }
+    | undefined;
+  let suppressCanvasClick = false;
 
   function studioApis(): StudioApis | null {
     const world = globalThis as typeof globalThis & {
@@ -669,7 +690,188 @@ async function main(): Promise<void> {
         occurrence?.classList.add("is-selected");
       }
     }
+    installDirectManipulationOverlay();
     pageHost.setAttribute("aria-busy", "false");
+  }
+
+  const directHandleCenters = (
+    frame: TextFrame,
+  ): Readonly<
+    Record<Exclude<BoringLogDirectManipulationHandle, "move">, readonly [number, number]>
+  > =>
+    Object.freeze({
+      "north-west": [frame.xMpt, frame.yMpt],
+      north: [frame.xMpt + Math.round(frame.widthMpt / 2), frame.yMpt],
+      "north-east": [frame.xMpt + frame.widthMpt, frame.yMpt],
+      east: [frame.xMpt + frame.widthMpt, frame.yMpt + Math.round(frame.heightMpt / 2)],
+      "south-east": [frame.xMpt + frame.widthMpt, frame.yMpt + frame.heightMpt],
+      south: [frame.xMpt + Math.round(frame.widthMpt / 2), frame.yMpt + frame.heightMpt],
+      "south-west": [frame.xMpt, frame.yMpt + frame.heightMpt],
+      west: [frame.xMpt, frame.yMpt + Math.round(frame.heightMpt / 2)],
+    });
+
+  function installDirectManipulationOverlay(): void {
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    if (svg === null || interactionMode !== "select" || selectedSceneNodeId === null) return;
+    const node = page.nodes.find(
+      (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        candidate.id === selectedSceneNodeId && candidate.kind === "text",
+    );
+    if (node === undefined) return;
+    const namespace = "http://www.w3.org/2000/svg";
+    const locked = node.presentation?.locked ?? false;
+    const positionMode = node.presentation?.positionMode ?? "depth-bound";
+    const group = document.createElementNS(namespace, "g");
+    group.id = "direct-manipulation-overlay";
+    group.dataset["nodeId"] = node.id;
+    group.dataset["semanticId"] = node.semanticId;
+    group.dataset["positionMode"] = positionMode;
+    group.dataset["locked"] = String(locked);
+    group.setAttribute("aria-label", `Canvas geometry controls for ${node.id}`);
+    const moveTarget = document.createElementNS(namespace, "rect");
+    moveTarget.id = "direct-manipulation-move";
+    moveTarget.classList.add("direct-manipulation-move-target");
+    moveTarget.dataset["directManipulationHandle"] = "move";
+    moveTarget.setAttribute("x", String(node.frame.xMpt));
+    moveTarget.setAttribute("y", String(node.frame.yMpt));
+    moveTarget.setAttribute("width", String(node.frame.widthMpt));
+    moveTarget.setAttribute("height", String(node.frame.heightMpt));
+    moveTarget.setAttribute("role", "button");
+    moveTarget.setAttribute("tabindex", "0");
+    moveTarget.setAttribute("aria-disabled", String(locked));
+    moveTarget.setAttribute(
+      "aria-label",
+      positionMode === "free"
+        ? "Move selected text frame"
+        : "Move selected depth-bound text frame horizontally",
+    );
+    const outline = document.createElementNS(namespace, "rect");
+    outline.id = "direct-manipulation-frame";
+    outline.classList.add("direct-manipulation-frame");
+    outline.setAttribute("x", String(node.frame.xMpt));
+    outline.setAttribute("y", String(node.frame.yMpt));
+    outline.setAttribute("width", String(node.frame.widthMpt));
+    outline.setAttribute("height", String(node.frame.heightMpt));
+    group.append(moveTarget, outline);
+    const handleSizeMpt = 8_000;
+    for (const [handle, [xMpt, yMpt]] of Object.entries(directHandleCenters(node.frame)) as Array<
+      readonly [Exclude<BoringLogDirectManipulationHandle, "move">, readonly [number, number]]
+    >) {
+      const control = document.createElementNS(namespace, "rect");
+      control.classList.add("direct-manipulation-handle");
+      control.dataset["directManipulationHandle"] = handle;
+      control.setAttribute("x", String(xMpt - Math.round(handleSizeMpt / 2)));
+      control.setAttribute("y", String(yMpt - Math.round(handleSizeMpt / 2)));
+      control.setAttribute("width", String(handleSizeMpt));
+      control.setAttribute("height", String(handleSizeMpt));
+      control.setAttribute("role", "button");
+      control.setAttribute("tabindex", "0");
+      control.setAttribute("aria-disabled", String(locked));
+      control.setAttribute("aria-label", `Resize selected text frame from ${humanize(handle)}`);
+      group.append(control);
+    }
+    const moveControl = document.createElementNS(namespace, "rect");
+    const moveCenterYMpt =
+      node.frame.yMpt >= 14_000
+        ? node.frame.yMpt - 12_000
+        : node.frame.yMpt + node.frame.heightMpt + 12_000;
+    moveControl.id = "direct-manipulation-move-control";
+    moveControl.classList.add("direct-manipulation-move-control");
+    moveControl.dataset["directManipulationHandle"] = "move";
+    moveControl.setAttribute(
+      "x",
+      String(node.frame.xMpt + Math.round(node.frame.widthMpt / 2) - 4_000),
+    );
+    moveControl.setAttribute("y", String(moveCenterYMpt - 4_000));
+    moveControl.setAttribute("width", "8000");
+    moveControl.setAttribute("height", "8000");
+    moveControl.setAttribute("role", "button");
+    moveControl.setAttribute("tabindex", "0");
+    moveControl.setAttribute("aria-disabled", String(locked));
+    moveControl.setAttribute(
+      "aria-label",
+      positionMode === "free"
+        ? "Move selected text frame"
+        : "Move selected depth-bound text frame horizontally",
+    );
+    group.append(moveControl);
+    svg.append(group);
+  }
+
+  function pointerPagePoint(event: PointerEvent): Readonly<{ xMpt: number; yMpt: number }> | null {
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    if (svg === null) return null;
+    const transform = svg.getScreenCTM();
+    if (transform === null || !Number.isFinite(transform.a)) return null;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const pagePoint = point.matrixTransform(transform.inverse());
+    return Object.freeze({ xMpt: Math.round(pagePoint.x), yMpt: Math.round(pagePoint.y) });
+  }
+
+  function syncTextFrameInputs(frame: TextFrame): void {
+    const anchorPoint = frameAnchorPoint(frame, currentTextFrameAnchor);
+    textFrameX.value = String(anchorPoint.xMpt / 1_000);
+    textFrameY.value = String(anchorPoint.yMpt / 1_000);
+    textFrameWidth.value = String(frame.widthMpt / 1_000);
+    textFrameHeight.value = String(frame.heightMpt / 1_000);
+    propertyBounds.textContent = `${(frame.xMpt / 1_000).toFixed(1)}, ${(frame.yMpt / 1_000).toFixed(1)} Â· ${(frame.widthMpt / 1_000).toFixed(1)} Ã— ${(frame.heightMpt / 1_000).toFixed(1)} pt`;
+  }
+
+  function previewDirectManipulationFrame(frame: TextFrame): void {
+    const gesture = directManipulationGesture;
+    if (gesture === undefined) return;
+    gesture.previewFrame = frame;
+    syncTextFrameInputs(frame);
+    const outline = pageHost.querySelector<SVGRectElement>("#direct-manipulation-frame");
+    const moveTarget = pageHost.querySelector<SVGRectElement>("#direct-manipulation-move");
+    for (const element of [outline, moveTarget]) {
+      element?.setAttribute("x", String(frame.xMpt));
+      element?.setAttribute("y", String(frame.yMpt));
+      element?.setAttribute("width", String(frame.widthMpt));
+      element?.setAttribute("height", String(frame.heightMpt));
+    }
+    const handles = directHandleCenters(frame);
+    for (const control of pageHost.querySelectorAll<SVGRectElement>(
+      "[data-direct-manipulation-handle]:not([data-direct-manipulation-handle='move'])",
+    )) {
+      const handle = control.dataset["directManipulationHandle"] as Exclude<
+        BoringLogDirectManipulationHandle,
+        "move"
+      >;
+      const center = handles[handle];
+      const widthMpt = Number(control.getAttribute("width"));
+      control.setAttribute("x", String(center[0] - Math.round(widthMpt / 2)));
+      control.setAttribute("y", String(center[1] - Math.round(widthMpt / 2)));
+    }
+    const moveControl = pageHost.querySelector<SVGRectElement>("#direct-manipulation-move-control");
+    const moveCenterYMpt =
+      frame.yMpt >= 14_000 ? frame.yMpt - 12_000 : frame.yMpt + frame.heightMpt + 12_000;
+    moveControl?.setAttribute("x", String(frame.xMpt + Math.round(frame.widthMpt / 2) - 4_000));
+    moveControl?.setAttribute("y", String(moveCenterYMpt - 4_000));
+    const text = pageHost.querySelector<SVGTextElement>(`#${CSS.escape(gesture.nodeId)}`);
+    const presentationFrame = pageHost.querySelector<SVGRectElement>(
+      `#${CSS.escape(`${gesture.nodeId}:presentation-frame`)}`,
+    );
+    const deltaX = frame.xMpt - gesture.originalFrame.xMpt;
+    const deltaY = frame.yMpt - gesture.originalFrame.yMpt;
+    if (text !== null && gesture.handle === "move") {
+      text.setAttribute(
+        "transform",
+        `translate(${deltaX} ${deltaY})${gesture.originalTransform === null ? "" : ` ${gesture.originalTransform}`}`,
+      );
+    }
+    if (presentationFrame !== null) {
+      presentationFrame.setAttribute("x", String(frame.xMpt));
+      presentationFrame.setAttribute("y", String(frame.yMpt));
+      presentationFrame.setAttribute("width", String(frame.widthMpt));
+      presentationFrame.setAttribute("height", String(frame.heightMpt));
+      if (gesture.handle === "move") {
+        presentationFrame.setAttribute("transform", gesture.originalFrameTransform ?? "");
+      }
+    }
+    status.textContent = `Canvas preview ${Math.round(frame.xMpt)} / ${Math.round(frame.yMpt)} / ${Math.round(frame.widthMpt)} / ${Math.round(frame.heightMpt)} mpt. Release to commit and reflow; Esc cancels.`;
   }
 
   function renderTree(): void {
@@ -1177,7 +1379,9 @@ async function main(): Promise<void> {
     propertyContent.focus();
   }
 
-  async function applySelectedTextStyle(): Promise<boolean> {
+  async function applySelectedTextStyle(
+    origin: "properties" | "canvas" = "properties",
+  ): Promise<boolean> {
     const apis = studioApis();
     const node =
       selectedSceneNodeId === null
@@ -1405,11 +1609,13 @@ async function main(): Promise<void> {
             ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
             : applyScope === "all-selected"
               ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
-              : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+              : origin === "canvas"
+                ? `Canvas geometry committed for ${node.id} at revision ${String(result["workingRevision"])}; text was reflowed by the shared layout authority.`
+                : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
-    textFontSize.focus();
+    if (origin === "properties") textFontSize.focus();
     return true;
   }
 
@@ -1576,7 +1782,193 @@ async function main(): Promise<void> {
     status.textContent = `Page fitted to the current Canvas at ${zoom.value}%.`;
   }
 
+  function beginDirectManipulation(event: PointerEvent): void {
+    if (
+      interactionMode !== "select" ||
+      event.button !== 0 ||
+      directManipulationGesture !== undefined
+    )
+      return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const control = target.closest<SVGElement>("[data-direct-manipulation-handle]");
+    const handle = control?.dataset["directManipulationHandle"] as
+      BoringLogDirectManipulationHandle | undefined;
+    if (control === null || handle === undefined || selectedSceneNodeId === null) return;
+    const node = page.nodes.find(
+      (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        candidate.id === selectedSceneNodeId && candidate.kind === "text",
+    );
+    if (node === undefined) return;
+    if (lifecycleState?.readOnly === true) {
+      status.textContent = "This Log Project is read-only; canvas transforms are unavailable.";
+      return;
+    }
+    if (node.presentation?.locked === true) {
+      status.textContent =
+        "This text frame is locked. Clear Lock canvas transforms in Properties first.";
+      return;
+    }
+    const point = pointerPagePoint(event);
+    if (point === null) {
+      status.textContent = "Canvas coordinates are unavailable for this gesture.";
+      return;
+    }
+    const padding = node.presentation?.paddingMpt ?? {
+      topMpt: 0,
+      rightMpt: 0,
+      bottomMpt: 0,
+      leftMpt: 0,
+    };
+    const presentationFrame = pageHost.querySelector<SVGRectElement>(
+      `#${CSS.escape(`${node.id}:presentation-frame`)}`,
+    );
+    directManipulationGesture = {
+      pointerId: event.pointerId,
+      nodeId: node.id,
+      semanticId: node.semanticId,
+      handle,
+      startPoint: point,
+      originalFrame: node.frame,
+      previewFrame: node.frame,
+      positionMode: node.presentation?.positionMode ?? "depth-bound",
+      minimumWidthMpt: Math.max(1_000, padding.leftMpt + padding.rightMpt + 1_000),
+      minimumHeightMpt: Math.max(1_000, padding.topMpt + padding.bottomMpt + 1_000),
+      originalTransform:
+        pageHost
+          .querySelector<SVGTextElement>(`#${CSS.escape(node.id)}`)
+          ?.getAttribute("transform") ?? null,
+      originalFrameTransform: presentationFrame?.getAttribute("transform") ?? null,
+    };
+    pageHost.setPointerCapture(event.pointerId);
+    canvasStage.classList.add("is-direct-manipulating");
+    canvasStage.dataset["directManipulationHandle"] = handle;
+    event.preventDefault();
+    event.stopPropagation();
+    status.textContent = `${humanize(handle)} gesture active for ${node.id}. Geometry is integer mpt; release commits one Undo/Redo step and Esc cancels.`;
+  }
+
+  function updateDirectManipulation(event: PointerEvent): void {
+    const gesture = directManipulationGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const point = pointerPagePoint(event);
+    if (point === null) return;
+    const resolved = resolveBoringLogDirectManipulationFrame({
+      original: gesture.originalFrame,
+      handle: gesture.handle,
+      deltaXMpt: point.xMpt - gesture.startPoint.xMpt,
+      deltaYMpt: point.yMpt - gesture.startPoint.yMpt,
+      pageWidthMpt: page.widthMpt,
+      pageHeightMpt: page.heightMpt,
+      minimumWidthMpt: gesture.minimumWidthMpt,
+      minimumHeightMpt: gesture.minimumHeightMpt,
+      positionMode: gesture.positionMode,
+    });
+    if (!resolved.accepted) return;
+    previewDirectManipulationFrame(resolved.frame);
+    event.preventDefault();
+  }
+
+  function releaseDirectManipulationCapture(pointerId: number): void {
+    if (pageHost.hasPointerCapture(pointerId)) pageHost.releasePointerCapture(pointerId);
+    canvasStage.classList.remove("is-direct-manipulating");
+    Reflect.deleteProperty(canvasStage.dataset, "directManipulationHandle");
+  }
+
+  function cancelDirectManipulation(): void {
+    const gesture = directManipulationGesture;
+    if (gesture === undefined) return;
+    releaseDirectManipulationCapture(gesture.pointerId);
+    directManipulationGesture = undefined;
+    suppressCanvasClick = true;
+    installSvg();
+    syncTextFrameInputs(gesture.originalFrame);
+    status.textContent = `Canvas gesture canceled for ${gesture.nodeId}; document history and scene authority were unchanged.`;
+  }
+
+  async function finishDirectManipulation(event: PointerEvent): Promise<void> {
+    const gesture = directManipulationGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    releaseDirectManipulationCapture(gesture.pointerId);
+    directManipulationGesture = undefined;
+    suppressCanvasClick = true;
+    event.preventDefault();
+    event.stopPropagation();
+    if (
+      gesture.previewFrame.xMpt === gesture.originalFrame.xMpt &&
+      gesture.previewFrame.yMpt === gesture.originalFrame.yMpt &&
+      gesture.previewFrame.widthMpt === gesture.originalFrame.widthMpt &&
+      gesture.previewFrame.heightMpt === gesture.originalFrame.heightMpt
+    ) {
+      installSvg();
+      syncTextFrameInputs(gesture.originalFrame);
+      status.textContent =
+        "Canvas gesture ended without a geometry change; no history item was created.";
+      return;
+    }
+    syncTextFrameInputs(gesture.previewFrame);
+    textStyleScope.value = "occurrence";
+    await applySelectedTextStyle("canvas");
+  }
+
+  pageHost.addEventListener("pointerdown", beginDirectManipulation);
+  pageHost.addEventListener("pointermove", updateDirectManipulation);
+  pageHost.addEventListener("pointerup", (event) => void finishDirectManipulation(event));
+  pageHost.addEventListener("pointercancel", () => cancelDirectManipulation());
+  pageHost.addEventListener("keydown", (event) => {
+    if (!event.key.startsWith("Arrow") || directManipulationGesture !== undefined) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const control = target.closest<SVGElement>("[data-direct-manipulation-handle]");
+    const handle = control?.dataset["directManipulationHandle"] as
+      BoringLogDirectManipulationHandle | undefined;
+    if (handle === undefined || selectedSceneNodeId === null) return;
+    const node = page.nodes.find(
+      (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        candidate.id === selectedSceneNodeId && candidate.kind === "text",
+    );
+    if (
+      node === undefined ||
+      node.presentation?.locked === true ||
+      lifecycleState?.readOnly === true
+    )
+      return;
+    const step = event.shiftKey ? 10_000 : 1_000;
+    const deltaXMpt = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
+    const deltaYMpt = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+    const padding = node.presentation?.paddingMpt ?? {
+      topMpt: 0,
+      rightMpt: 0,
+      bottomMpt: 0,
+      leftMpt: 0,
+    };
+    const resolved = resolveBoringLogDirectManipulationFrame({
+      original: node.frame,
+      handle,
+      deltaXMpt,
+      deltaYMpt,
+      pageWidthMpt: page.widthMpt,
+      pageHeightMpt: page.heightMpt,
+      minimumWidthMpt: Math.max(1_000, padding.leftMpt + padding.rightMpt + 1_000),
+      minimumHeightMpt: Math.max(1_000, padding.topMpt + padding.bottomMpt + 1_000),
+      positionMode: node.presentation?.positionMode ?? "depth-bound",
+    });
+    if (!resolved.accepted || !resolved.changed) return;
+    event.preventDefault();
+    syncTextFrameInputs(resolved.frame);
+    textStyleScope.value = "occurrence";
+    void applySelectedTextStyle("canvas");
+  });
   pageHost.addEventListener("click", (event) => {
+    if (suppressCanvasClick) {
+      suppressCanvasClick = false;
+      const target = event.target;
+      if (target instanceof Element && target.closest("#direct-manipulation-overlay") !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+    }
     hideCanvasContextMenu();
     if (interactionMode !== "select") return;
     const target = event.target;
@@ -1777,6 +2169,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && directManipulationGesture !== undefined) {
+      event.preventDefault();
+      cancelDirectManipulation();
+      return;
+    }
     if (event.key === "Escape" && !canvasContextMenu.hidden) {
       event.preventDefault();
       hideCanvasContextMenu();

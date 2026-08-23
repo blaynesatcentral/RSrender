@@ -42,3 +42,9 @@ export {
   boringLogStudioStylesheetUrl,
   createBoringLogStudioHtml,
 } from "./boring-log-studio-route.js";
+export {
+  resolveBoringLogDirectManipulationFrame,
+  type BoringLogDirectManipulationFrame,
+  type BoringLogDirectManipulationHandle,
+  type BoringLogDirectManipulationResult,
+} from "./boring-log-direct-manipulation.js";

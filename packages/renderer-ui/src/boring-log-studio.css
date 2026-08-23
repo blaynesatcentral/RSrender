@@ -540,6 +540,57 @@ textarea {
   stroke: #168ac0 !important;
   stroke-width: 1800 !important;
 }
+.direct-manipulation-move-target {
+  fill: transparent;
+  pointer-events: all;
+  cursor: move;
+}
+.direct-manipulation-move-control {
+  fill: #007ac2;
+  stroke: #fff;
+  stroke-width: 1400;
+  cursor: move;
+  pointer-events: all;
+}
+.direct-manipulation-frame {
+  fill: none;
+  stroke: #007ac2;
+  stroke-width: 1600;
+  stroke-dasharray: 5000 3000;
+  pointer-events: none;
+}
+.direct-manipulation-handle {
+  fill: #fff;
+  stroke: #007ac2;
+  stroke-width: 1600;
+  pointer-events: all;
+}
+.direct-manipulation-handle[data-direct-manipulation-handle="north"],
+.direct-manipulation-handle[data-direct-manipulation-handle="south"] {
+  cursor: ns-resize;
+}
+.direct-manipulation-handle[data-direct-manipulation-handle="east"],
+.direct-manipulation-handle[data-direct-manipulation-handle="west"] {
+  cursor: ew-resize;
+}
+.direct-manipulation-handle[data-direct-manipulation-handle="north-west"],
+.direct-manipulation-handle[data-direct-manipulation-handle="south-east"] {
+  cursor: nwse-resize;
+}
+.direct-manipulation-handle[data-direct-manipulation-handle="north-east"],
+.direct-manipulation-handle[data-direct-manipulation-handle="south-west"] {
+  cursor: nesw-resize;
+}
+#direct-manipulation-overlay[data-locked="true"] .direct-manipulation-handle,
+#direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-control,
+#direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-target {
+  cursor: not-allowed;
+}
+.canvas-stage.is-direct-manipulating,
+.canvas-stage.is-direct-manipulating .scene-node {
+  cursor: grabbing;
+  user-select: none;
+}
 .canvas-context-menu {
   position: fixed;
   top: 124px;

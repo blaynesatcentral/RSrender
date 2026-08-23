@@ -113,6 +113,7 @@ const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
 const LIFECYCLE_PROBE_ARGUMENT = "--rsrender-bld035-probe";
 const MULTI_BORING_PROBE_ARGUMENT = "--rsrender-bld036-probe";
 const TEXT_STYLE_PROBE_ARGUMENT = "--rsrender-bld037-probe";
+const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -227,7 +228,9 @@ const runtimeProjectInputPath = process.argv
   ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
-const textStyleProbeMode = process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT);
+const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
+const textStyleProbeMode =
+  process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
 const multiBoringProbeMode =
   process.argv.includes(MULTI_BORING_PROBE_ARGUMENT) || textStyleProbeMode;
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
@@ -1137,6 +1140,40 @@ async function press(
   window.webContents.sendInputEvent({ type: "keyDown", keyCode });
   window.webContents.sendInputEvent({ type: "keyUp", keyCode });
   await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
+async function dragMouse(
+  window: BrowserWindow,
+  start: Readonly<{ x: number; y: number }>,
+  end: Readonly<{ x: number; y: number }>,
+  release = true,
+): Promise<void> {
+  window.webContents.focus();
+  window.webContents.sendInputEvent({
+    type: "mouseDown",
+    x: start.x,
+    y: start.y,
+    button: "left",
+    clickCount: 1,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 75));
+  window.webContents.sendInputEvent({
+    type: "mouseMove",
+    x: end.x,
+    y: end.y,
+    movementX: end.x - start.x,
+    movementY: end.y - start.y,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 75));
+  if (release) {
+    window.webContents.sendInputEvent({
+      type: "mouseUp",
+      x: end.x,
+      y: end.y,
+      button: "left",
+      clickCount: 1,
+    });
+  }
 }
 
 async function typeText(window: BrowserWindow, selector: string, value: string): Promise<void> {
@@ -2191,6 +2228,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
   }
   let textOccurrenceStyle: DataRecord | null = null;
+  let directManipulation: DataRecord | null = null;
   if (textStyleProbeMode) {
     requireProbe(
       (await pageValue(
@@ -2794,6 +2832,155 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       `TEXT_TEMPLATE_STYLE_HISTORY_INVALID:${JSON.stringify({ templateStyleBefore, templateStyleApplied, templateStyleUndo, templateStyleRedo })}`,
     );
     emitStudioProbePhase("template-redo-observed");
+    if (directManipulationProbeMode) {
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); if (!(node instanceof SVGElement)) return false; node.scrollIntoView({ block: "center", inline: "center" }); node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+        )) === true,
+        "DIRECT_MANIPULATION_SELECTION_INVALID",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("property-node-id")?.textContent === "node:lithology:stratum-01:transition:2:text" && document.getElementById("direct-manipulation-overlay")?.getAttribute("data-locked") === "false" && document.querySelectorAll(".direct-manipulation-handle").length === 8`,
+        "WAIT_DIRECT_MANIPULATION_HANDLES",
+      );
+      const directSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = value.accepted ? value.projection.scene.pages[0]?.nodes.find((candidate) => candidate.id === "node:lithology:stratum-01:transition:2:text") : null; const overlay = document.getElementById("direct-manipulation-overlay"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, frame: node?.kind === "text" ? node.frame : null, overlayFrame: { xMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("x")), yMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("y")), widthMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")), heightMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("height")) }, handleCount: document.querySelectorAll(".direct-manipulation-handle").length, roleButtonCount: document.querySelectorAll("#direct-manipulation-overlay [role=button][tabindex='0']").length, interactionMode: document.getElementById("canvas-stage")?.dataset.interactionMode, gestureHandle: document.getElementById("canvas-stage")?.dataset.directManipulationHandle ?? null, positionMode: overlay?.getAttribute("data-position-mode"), locked: overlay?.getAttribute("data-locked"), status: document.getElementById("editor-status")?.textContent }; })()`;
+      const directBefore = record(await pageValue(window, directSnapshotExpression));
+      const handleCenter = async (handle: string) =>
+        record(
+          await pageValue(
+            window,
+            `(() => { const node = document.querySelector(${JSON.stringify(handle === "move" ? "#direct-manipulation-move-control" : `[data-direct-manipulation-handle="${handle}"]`)}); if (!(node instanceof SVGElement)) return {}; node.scrollIntoView({ block: "center", inline: "center" }); const bounds = node.getBoundingClientRect(); return { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2), innerWidth: window.innerWidth, innerHeight: window.innerHeight }; })()`,
+          ),
+        );
+      const moveStart = await handleCenter("move");
+      requireProbe(
+        typeof moveStart["x"] === "number" &&
+          typeof moveStart["y"] === "number" &&
+          typeof moveStart["innerWidth"] === "number" &&
+          typeof moveStart["innerHeight"] === "number" &&
+          moveStart["x"] > 0 &&
+          moveStart["x"] < moveStart["innerWidth"] &&
+          moveStart["y"] > 0 &&
+          moveStart["y"] < moveStart["innerHeight"],
+        "DIRECT_MANIPULATION_MOVE_BOUNDS_INVALID",
+      );
+      await dragMouse(
+        window,
+        { x: moveStart["x"], y: moveStart["y"] },
+        { x: moveStart["x"] + 24, y: moveStart["y"] + 12 },
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("direct-manipulation-overlay") !== null`,
+        "WAIT_DIRECT_MANIPULATION_MOVE",
+      );
+      const directMoved = record(await pageValue(window, directSnapshotExpression));
+      const beforeFrame = record(directBefore["frame"]);
+      const movedFrame = record(directMoved["frame"]);
+      requireProbe(
+        directBefore["handleCount"] === 8 &&
+          directBefore["roleButtonCount"] === 10 &&
+          directBefore["interactionMode"] === "select" &&
+          directBefore["positionMode"] === "depth-bound" &&
+          directBefore["locked"] === "false" &&
+          directMoved["workingRevision"] === (directBefore["workingRevision"] as number) + 1 &&
+          movedFrame["xMpt"] !== beforeFrame["xMpt"] &&
+          movedFrame["yMpt"] === beforeFrame["yMpt"] &&
+          movedFrame["widthMpt"] === beforeFrame["widthMpt"] &&
+          movedFrame["heightMpt"] === beforeFrame["heightMpt"] &&
+          JSON.stringify(directMoved["frame"]) === JSON.stringify(directMoved["overlayFrame"]) &&
+          directMoved["gestureHandle"] === null,
+        `DIRECT_MANIPULATION_MOVE_INVALID:${JSON.stringify({ directBefore, directMoved })}`,
+      );
+      await press(window, "#undo", "Space", "FOCUS_DIRECT_MANIPULATION_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("direct-manipulation-frame")?.getAttribute("x") === "${String(beforeFrame["xMpt"])}"`,
+        "WAIT_DIRECT_MANIPULATION_UNDO",
+      );
+      const directUndo = record(await pageValue(window, directSnapshotExpression));
+      await press(window, "#redo", "Space", "FOCUS_DIRECT_MANIPULATION_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("direct-manipulation-frame")?.getAttribute("x") === "${String(movedFrame["xMpt"])}"`,
+        "WAIT_DIRECT_MANIPULATION_REDO",
+      );
+      const directRedo = record(await pageValue(window, directSnapshotExpression));
+      requireProbe(
+        JSON.stringify(directUndo["frame"]) === JSON.stringify(directBefore["frame"]) &&
+          directUndo["workingRevision"] === directMoved["workingRevision"] + 1 &&
+          JSON.stringify(directRedo["frame"]) === JSON.stringify(directMoved["frame"]) &&
+          directRedo["workingRevision"] === directMoved["workingRevision"] + 2,
+        `DIRECT_MANIPULATION_HISTORY_INVALID:${JSON.stringify({ directUndo, directRedo })}`,
+      );
+      const eastStart = await handleCenter("east");
+      await dragMouse(
+        window,
+        { x: eastStart["x"] as number, y: eastStart["y"] as number },
+        { x: (eastStart["x"] as number) + 20, y: eastStart["y"] as number },
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")) !== ${String(movedFrame["widthMpt"])}`,
+        "WAIT_DIRECT_MANIPULATION_RESIZE",
+      );
+      const directResized = record(await pageValue(window, directSnapshotExpression));
+      const resizedFrame = record(directResized["frame"]);
+      requireProbe(
+        directResized["workingRevision"] === directRedo["workingRevision"] + 1 &&
+          resizedFrame["xMpt"] === movedFrame["xMpt"] &&
+          resizedFrame["yMpt"] === movedFrame["yMpt"] &&
+          resizedFrame["widthMpt"] !== movedFrame["widthMpt"] &&
+          resizedFrame["heightMpt"] === movedFrame["heightMpt"] &&
+          JSON.stringify(directResized["frame"]) === JSON.stringify(directResized["overlayFrame"]),
+        `DIRECT_MANIPULATION_RESIZE_INVALID:${JSON.stringify({ directMoved, directResized })}`,
+      );
+      const southStart = await handleCenter("south");
+      await dragMouse(
+        window,
+        { x: southStart["x"] as number, y: southStart["y"] as number },
+        { x: southStart["x"] as number, y: (southStart["y"] as number) + 18 },
+        false,
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas preview ") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === "south"`,
+        "WAIT_DIRECT_MANIPULATION_CANCEL_PREVIEW",
+      );
+      window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+      window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+      window.webContents.sendInputEvent({
+        type: "mouseUp",
+        x: southStart["x"] as number,
+        y: (southStart["y"] as number) + 18,
+        button: "left",
+        clickCount: 1,
+      });
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas gesture canceled for node:lithology:stratum-01:transition:2:text") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === undefined`,
+        "WAIT_DIRECT_MANIPULATION_CANCEL",
+      );
+      const directCanceled = record(await pageValue(window, directSnapshotExpression));
+      requireProbe(
+        directCanceled["workingRevision"] === directResized["workingRevision"] &&
+          JSON.stringify(directCanceled["frame"]) === JSON.stringify(directResized["frame"]) &&
+          JSON.stringify(directCanceled["overlayFrame"]) ===
+            JSON.stringify(directResized["overlayFrame"]),
+        `DIRECT_MANIPULATION_CANCEL_INVALID:${JSON.stringify({ directResized, directCanceled })}`,
+      );
+      directManipulation = Object.freeze({
+        before: directBefore,
+        moved: directMoved,
+        undo: directUndo,
+        redo: directRedo,
+        resized: directResized,
+        canceled: directCanceled,
+      });
+      emitStudioProbePhase("direct-manipulation-observed");
+    }
     requireProbe(
       (await pageValue(
         window,
@@ -2906,17 +3093,19 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
   }
   return Object.freeze({
-    schema: textStyleProbeMode
-      ? "rsrender.bld037.text-occurrence-style-probe.v1"
-      : multiBoringProbeMode
-        ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-        : lifecycleProbeMode
-          ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-          : pdfProbeMode
-            ? "rsrender.bld027.boring-log-pdf-probe.v1"
-            : studioEditingMode
-              ? "rsrender.bld026.boring-log-editor-probe.v1"
-              : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: directManipulationProbeMode
+      ? "rsrender.bld038.direct-manipulation-probe.v1"
+      : textStyleProbeMode
+        ? "rsrender.bld037.text-occurrence-style-probe.v1"
+        : multiBoringProbeMode
+          ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+          : lifecycleProbeMode
+            ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+            : pdfProbeMode
+              ? "rsrender.bld027.boring-log-pdf-probe.v1"
+              : studioEditingMode
+                ? "rsrender.bld026.boring-log-editor-probe.v1"
+                : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
@@ -2926,6 +3115,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     editing,
     boringNavigation,
     textOccurrenceStyle,
+    directManipulation,
     publication,
     persistence,
     zoomPercent: 90,
@@ -2966,17 +3156,19 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? textStyleProbeMode
-            ? "rsrender.bld037.text-occurrence-style-probe.v1"
-            : multiBoringProbeMode
-              ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-              : lifecycleProbeMode
-                ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                : pdfProbeMode
-                  ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                  : studioEditingMode
-                    ? "rsrender.bld026.boring-log-editor-probe.v1"
-                    : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? directManipulationProbeMode
+            ? "rsrender.bld038.direct-manipulation-probe.v1"
+            : textStyleProbeMode
+              ? "rsrender.bld037.text-occurrence-style-probe.v1"
+              : multiBoringProbeMode
+                ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                : lifecycleProbeMode
+                  ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                  : pdfProbeMode
+                    ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                    : studioEditingMode
+                      ? "rsrender.bld026.boring-log-editor-probe.v1"
+                      : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
