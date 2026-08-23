@@ -89,7 +89,7 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
   readonly wordSpacingMpt: number;
   readonly paragraphSpacingMpt: number;
   readonly color: string;
-  readonly textDecoration: "none" | "underline";
+  readonly textDecoration: "none" | "underline" | "line-through" | "underline line-through";
   readonly layout: {
     readonly frame: {
       readonly xMpt: number;
@@ -642,9 +642,7 @@ export class BoringLogStudioRouteBroker {
       !boundedText(args["fontFamilyId"]) ||
       !Number.isSafeInteger(args["fontSizeMpt"]) ||
       (args["fontSizeMpt"] as number) < 1 ||
-      !Number.isSafeInteger(args["fontWeight"]) ||
-      (args["fontWeight"] as number) < 1 ||
-      (args["fontWeight"] as number) > 1_000 ||
+      ![400, 700].includes(Number(args["fontWeight"])) ||
       !Number.isSafeInteger(args["lineHeightMpt"]) ||
       (args["lineHeightMpt"] as number) < 1 ||
       !Number.isSafeInteger(args["letterSpacingMpt"]) ||
@@ -657,7 +655,9 @@ export class BoringLogStudioRouteBroker {
       (args["paragraphSpacingMpt"] as number) < 0 ||
       (args["paragraphSpacingMpt"] as number) > 72_000 ||
       !boundedText(args["color"]) ||
-      !["none", "underline"].includes(String(args["textDecoration"])) ||
+      !["none", "underline", "line-through", "underline line-through"].includes(
+        String(args["textDecoration"]),
+      ) ||
       layout === null ||
       frame === null ||
       padding === null ||

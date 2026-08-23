@@ -316,6 +316,23 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
       { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
     );
   }
+  for (const invalidArgs of [
+    { ...args, fontWeight: 500 },
+    { ...args, textDecoration: "overline" },
+  ]) {
+    assert.deepEqual(
+      await route.setTextOccurrenceStyle(routeContext, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence: 5,
+        documentIdentity,
+        ownerGeneration: 1,
+        args: invalidArgs,
+      }),
+      { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+    );
+  }
 });
 
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
@@ -520,7 +537,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
       wordSpacingMpt: 500,
       paragraphSpacingMpt: 2_000,
       color: "#b42318",
-      textDecoration: "underline",
+      textDecoration: "underline line-through",
       layout: {
         frame: { xMpt: 125_000, yMpt: 293_338, widthMpt: 150_000, heightMpt: 22_000 },
         frameAnchor: "bottom-center",

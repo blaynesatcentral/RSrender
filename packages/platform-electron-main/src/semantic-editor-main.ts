@@ -2227,7 +2227,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); const frameFillEnabled = document.getElementById("text-frame-fill-enabled"); const frameFillColor = document.getElementById("text-frame-fill-color"); const frameStrokeEnabled = document.getElementById("text-frame-stroke-enabled"); const frameStrokeColor = document.getElementById("text-frame-stroke-color"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement) || !(frameFillEnabled instanceof HTMLInputElement) || !(frameFillColor instanceof HTMLInputElement) || !(frameStrokeEnabled instanceof HTMLInputElement) || !(frameStrokeColor instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); frameFillEnabled.checked = true; frameFillEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameFillColor.value = "#fff4cc"; frameFillColor.dispatchEvent(new Event("input", { bubbles: true })); frameStrokeEnabled.checked = true; frameStrokeEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameStrokeColor.value = "#b42318"; frameStrokeColor.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
+        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); const frameFillEnabled = document.getElementById("text-frame-fill-enabled"); const frameFillColor = document.getElementById("text-frame-fill-color"); const frameStrokeEnabled = document.getElementById("text-frame-stroke-enabled"); const frameStrokeColor = document.getElementById("text-frame-stroke-color"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement) || !(frameFillEnabled instanceof HTMLInputElement) || !(frameFillColor instanceof HTMLInputElement) || !(frameStrokeEnabled instanceof HTMLInputElement) || !(frameStrokeColor instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline line-through"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); frameFillEnabled.checked = true; frameFillEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameFillColor.value = "#fff4cc"; frameFillColor.dispatchEvent(new Event("input", { bubbles: true })); frameStrokeEnabled.checked = true; frameStrokeEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameStrokeColor.value = "#b42318"; frameStrokeColor.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
       )) === true,
       "TEXT_OCCURRENCE_CONTROLS_INVALID",
     );
@@ -2284,7 +2284,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         applied["horizontalAlignment"] === "center" &&
         applied["verticalAlignment"] === "middle" &&
         applied["wrapPolicy"] === "no-wrap" &&
-        applied["textDecoration"] === "underline" &&
+        applied["textDecoration"] === "underline line-through" &&
         applied["letterSpacing"] === "250" &&
         applied["wordSpacing"] === "500" &&
         applied["paragraphSpacing"] === "2000" &&
@@ -2312,7 +2312,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       redo["frameX"] === "125000" &&
         redo["horizontalAlignment"] === "center" &&
-        redo["textDecoration"] === "underline" &&
+        redo["textDecoration"] === "underline line-through" &&
         redo["letterSpacing"] === "250" &&
         redo["wordSpacing"] === "500" &&
         redo["paragraphSpacing"] === "2000" &&
@@ -2341,7 +2341,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         undo["fontWeight"] === "400" &&
         redo["fontSize"] === "9000" &&
         redo["fontWeight"] === "700" &&
-        redo["textDecoration"] === "underline" &&
+        redo["textDecoration"] === "underline line-through" &&
         redo["fill"] === "#b42318" &&
         redo["sceneInputDigest"] !== before["sceneInputDigest"],
       "TEXT_OCCURRENCE_STYLE_HISTORY_INVALID",
@@ -2711,14 +2711,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const candidate = document.getElementById("node:header-title"); if (!(candidate instanceof SVGElement)) return false; candidate.dispatchEvent(new MouseEvent("click", { bubbles: true })); const scope = document.getElementById("text-style-scope"); const color = document.getElementById("text-color"); if (!(scope instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement)) return false; scope.value = "template-default"; scope.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#7c3aed"; color.dispatchEvent(new Event("input", { bubbles: true })); return scope.value === "template-default" && document.getElementById("text-template-default-scope")?.disabled === false && document.getElementById("text-style-help")?.textContent?.includes("1 changed typography property") === true && document.getElementById("text-style-help")?.textContent?.includes("5 base styles") === true && document.getElementById("text-style-help")?.textContent?.includes("3 occurrence/column override styles") === true; })()`,
+        `(() => { const candidate = document.getElementById("node:header-title"); if (!(candidate instanceof SVGElement)) return false; candidate.dispatchEvent(new MouseEvent("click", { bubbles: true })); const scope = document.getElementById("text-style-scope"); const color = document.getElementById("text-color"); const decoration = document.getElementById("text-decoration"); if (!(scope instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(decoration instanceof HTMLSelectElement)) return false; scope.value = "template-default"; scope.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#7c3aed"; color.dispatchEvent(new Event("input", { bubbles: true })); decoration.value = "underline line-through"; decoration.dispatchEvent(new Event("change", { bubbles: true })); return scope.value === "template-default" && document.getElementById("text-template-default-scope")?.disabled === false && document.getElementById("text-style-help")?.textContent?.includes("2 changed typography properties") === true && document.getElementById("text-style-help")?.textContent?.includes("5 base styles") === true && document.getElementById("text-style-help")?.textContent?.includes("3 occurrence/column override styles") === true; })()`,
       )) === true,
       "TEXT_TEMPLATE_STYLE_SCOPE_INVALID",
     );
     const templateStyleBefore = record(
       await pageValue(
         window,
-        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
+        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), titleDecoration: document.getElementById("node:header-title")?.getAttribute("text-decoration"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
       ),
     );
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_APPLY");
@@ -2731,7 +2731,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const templateStyleApplied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, authoredStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.authoredStyleCount : null, excludedStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.excludedOverrideStyleCount : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, authoredStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.authoredStyleCount : null, excludedStyleCount: value.accepted ? value.projection.textTemplateScopeSummary.excludedOverrideStyleCount : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleFontSize: document.getElementById("node:header-title")?.getAttribute("font-size"), titleDecoration: document.getElementById("node:header-title")?.getAttribute("text-decoration"), companyFontSize: document.getElementById("node:header-company")?.getAttribute("font-size"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetFontSize: document.getElementById("node:header-sheet")?.getAttribute("font-size"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
       ),
     );
     await press(window, "#undo", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_UNDO");
@@ -2743,7 +2743,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const templateStyleUndo = record(
       await pageValue(
         window,
-        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
+        `(() => ({ titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleDecoration: document.getElementById("node:header-title")?.getAttribute("text-decoration"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }))()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_TEMPLATE_STYLE_REDO");
@@ -2755,33 +2755,40 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const templateStyleRedo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, titleFill: document.getElementById("node:header-title")?.getAttribute("fill"), titleDecoration: document.getElementById("node:header-title")?.getAttribute("text-decoration"), sheetFill: document.getElementById("node:header-sheet")?.getAttribute("fill"), sheetDecoration: document.getElementById("node:header-sheet")?.getAttribute("text-decoration"), columnFill: document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill"), occurrenceFill: document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") }; })()`,
       ),
     );
     requireProbe(
       templateStyleBefore["titleFill"] === "#17202a" &&
         templateStyleBefore["titleFontSize"] === "16000" &&
+        templateStyleBefore["titleDecoration"] === null &&
         templateStyleBefore["companyFontSize"] === "13000" &&
         templateStyleBefore["sheetFill"] === "#1d4ed8" &&
         templateStyleBefore["sheetFontSize"] === "5500" &&
+        templateStyleBefore["sheetDecoration"] === "underline" &&
         templateStyleApplied["workingRevision"] === columnStyleRedo["workingRevision"] + 1 &&
         templateStyleApplied["authoredStyleCount"] === 5 &&
         templateStyleApplied["excludedStyleCount"] === 3 &&
         templateStyleApplied["titleFill"] === "#7c3aed" &&
         templateStyleApplied["titleFontSize"] === "16000" &&
+        templateStyleApplied["titleDecoration"] === "underline line-through" &&
         templateStyleApplied["companyFontSize"] === "13000" &&
         templateStyleApplied["sheetFill"] === "#7c3aed" &&
         templateStyleApplied["sheetFontSize"] === "5500" &&
-        templateStyleApplied["sheetDecoration"] === "underline" &&
+        templateStyleApplied["sheetDecoration"] === "underline line-through" &&
         templateStyleApplied["columnFill"] === "#047857" &&
         templateStyleApplied["occurrenceFill"] === "#c2410c" &&
         templateStyleUndo["titleFill"] === "#17202a" &&
+        templateStyleUndo["titleDecoration"] === null &&
         templateStyleUndo["sheetFill"] === "#1d4ed8" &&
+        templateStyleUndo["sheetDecoration"] === "underline" &&
         templateStyleUndo["columnFill"] === "#047857" &&
         templateStyleUndo["occurrenceFill"] === "#c2410c" &&
         templateStyleRedo["workingRevision"] === templateStyleApplied["workingRevision"] + 2 &&
         templateStyleRedo["titleFill"] === "#7c3aed" &&
+        templateStyleRedo["titleDecoration"] === "underline line-through" &&
         templateStyleRedo["sheetFill"] === "#7c3aed" &&
+        templateStyleRedo["sheetDecoration"] === "underline line-through" &&
         templateStyleRedo["columnFill"] === "#047857" &&
         templateStyleRedo["occurrenceFill"] === "#c2410c",
       `TEXT_TEMPLATE_STYLE_HISTORY_INVALID:${JSON.stringify({ templateStyleBefore, templateStyleApplied, templateStyleUndo, templateStyleRedo })}`,
@@ -2854,7 +2861,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-property", "Space", "FOCUS_PROJECT_PERSISTED_EDIT");
     await waitFor(
       window,
-      `document.getElementById("property-effective-value")?.textContent === "192000" && document.getElementById("document-state")?.textContent === "Unsaved changes"`,
+      `document.getElementById("property-effective-value")?.textContent === "192000" && document.getElementById("document-state")?.textContent === "Unsaved changes" && document.getElementById("apply-property")?.disabled === false && document.activeElement?.id === "property-content"`,
       "WAIT_PROJECT_PERSISTED_EDIT",
     );
     await press(window, "#save-project-as", "Space", "FOCUS_PROJECT_SAVE_AS");
@@ -3547,6 +3554,7 @@ async function main(): Promise<void> {
         currentStyle.id !== input.baseStyleId ||
         targetNodes.some((target) => target?.kind !== "text") ||
         input.fontFamilyId !== currentStyle.fontFamilyId ||
+        ![400, 700].includes(input.fontWeight) ||
         input.fontSizeMpt < 4_000 ||
         input.fontSizeMpt > 48_000 ||
         input.lineHeightMpt < input.fontSizeMpt ||

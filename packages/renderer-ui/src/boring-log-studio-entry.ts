@@ -176,7 +176,7 @@ type StudioApis = Readonly<{
       readonly wordSpacingMpt: number;
       readonly paragraphSpacingMpt: number;
       readonly color: string;
-      readonly textDecoration: "none" | "underline";
+      readonly textDecoration: "none" | "underline" | "line-through" | "underline line-through";
       readonly layout: {
         readonly frame: {
           readonly xMpt: number;
@@ -1281,9 +1281,7 @@ async function main(): Promise<void> {
       !Number.isSafeInteger(fontSizeMpt) ||
       fontSizeMpt < 4_000 ||
       fontSizeMpt > 48_000 ||
-      !Number.isSafeInteger(fontWeight) ||
-      fontWeight < 1 ||
-      fontWeight > 1_000 ||
+      ![400, 700].includes(fontWeight) ||
       !Number.isSafeInteger(lineHeightMpt) ||
       lineHeightMpt < fontSizeMpt ||
       lineHeightMpt > 72_000 ||
@@ -1361,7 +1359,8 @@ async function main(): Promise<void> {
       wordSpacingMpt,
       paragraphSpacingMpt,
       color: textColor.value,
-      textDecoration: textDecoration.value as "none" | "underline",
+      textDecoration: textDecoration.value as
+        "none" | "underline" | "line-through" | "underline line-through",
       layout: {
         frame,
         frameAnchor,

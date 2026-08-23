@@ -63,7 +63,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.workingRevision !== style.before.workingRevision + 1 ||
     style?.applied?.fontSize !== "9000" ||
     style?.applied?.fontWeight !== "700" ||
-    style?.applied?.textDecoration !== "underline" ||
+    style?.applied?.textDecoration !== "underline line-through" ||
     style?.applied?.letterSpacing !== "250" ||
     style?.applied?.wordSpacing !== "500" ||
     style?.applied?.paragraphSpacing !== "2000" ||
@@ -87,7 +87,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.undo?.presentationFrame !== false ||
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
-    style?.redo?.textDecoration !== "underline" ||
+    style?.redo?.textDecoration !== "underline line-through" ||
     style?.redo?.letterSpacing !== "250" ||
     style?.redo?.wordSpacing !== "500" ||
     style?.redo?.paragraphSpacing !== "2000" ||
@@ -199,15 +199,20 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.templateStyleApplied?.companyFontSize !== "13000" ||
     style?.templateStyleApplied?.sheetFill !== "#7c3aed" ||
     style?.templateStyleApplied?.sheetFontSize !== "5500" ||
-    style?.templateStyleApplied?.sheetDecoration !== "underline" ||
+    style?.templateStyleApplied?.titleDecoration !== "underline line-through" ||
+    style?.templateStyleApplied?.sheetDecoration !== "underline line-through" ||
     style?.templateStyleApplied?.columnFill !== "#047857" ||
     style?.templateStyleApplied?.occurrenceFill !== "#c2410c" ||
     style?.templateStyleUndo?.titleFill !== "#17202a" ||
+    style?.templateStyleUndo?.titleDecoration !== null ||
     style?.templateStyleUndo?.sheetFill !== "#1d4ed8" ||
+    style?.templateStyleUndo?.sheetDecoration !== "underline" ||
     style?.templateStyleUndo?.columnFill !== "#047857" ||
     style?.templateStyleUndo?.occurrenceFill !== "#c2410c" ||
     style?.templateStyleRedo?.titleFill !== "#7c3aed" ||
+    style?.templateStyleRedo?.titleDecoration !== "underline line-through" ||
     style?.templateStyleRedo?.sheetFill !== "#7c3aed" ||
+    style?.templateStyleRedo?.sheetDecoration !== "underline line-through" ||
     style?.templateStyleRedo?.columnFill !== "#047857" ||
     style?.templateStyleRedo?.occurrenceFill !== "#c2410c" ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
@@ -272,13 +277,15 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     persistedNamedStyle?.fontSizeMpt !== 5_500 ||
     persistedNamedStyle?.lineHeightMpt !== 6_875 ||
     persistedNamedStyle?.color !== "#7c3aed" ||
-    persistedNamedStyle?.textDecoration !== "underline" ||
+    persistedNamedStyle?.textDecoration !== "underline line-through" ||
     persistedTitleStyle?.fontSizeMpt !== 16_000 ||
     persistedTitleStyle?.lineHeightMpt !== 20_000 ||
     persistedTitleStyle?.color !== "#7c3aed" ||
+    persistedTitleStyle?.textDecoration !== "underline line-through" ||
     persistedCompanyStyle?.fontSizeMpt !== 13_000 ||
     persistedCompanyStyle?.lineHeightMpt !== 16_250 ||
     persistedCompanyStyle?.color !== "#7c3aed" ||
+    persistedCompanyStyle?.textDecoration !== "underline line-through" ||
     columnBinding === undefined ||
     persistedColumnStyle?.fontSizeMpt !== 5_500 ||
     persistedColumnStyle?.lineHeightMpt !== 6_875 ||
@@ -331,13 +338,14 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       explicitDetachUnlocksFreeY: true,
       occurrenceResetToInherited: true,
       deterministicShrinkToMinimumWithLegibilityFloor: true,
-      occurrenceUnderlineEmphasis: true,
+      occurrenceCombinedUnderlineStrikethroughEmphasis: true,
       occurrenceLetterWordParagraphSpacing: true,
       occurrenceFrameStyling: true,
       templateLocalNamedStyleTypography: true,
       explicitAllSelectedTypography: true,
       templateLocalLogColumnTypography: true,
       changedPropertyEmbeddedTemplateTypography: true,
+      exactQualifiedArialRegularAndBoldFacesOnly: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

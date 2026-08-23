@@ -70,7 +70,11 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-style-properties"/u);
   assert.match(html, /id="text-font-size"[^>]+min="4"[^>]+max="48"/u);
   assert.match(html, /id="text-font-weight"/u);
-  assert.match(html, /id="text-decoration"[\s\S]*?Underline/u);
+  assert.match(
+    html,
+    /id="text-decoration"[\s\S]*?Underline[\s\S]*?Strikethrough[\s\S]*?Underline \+ strikethrough/u,
+  );
+  assert.match(html, /Font style \/ weight[\s\S]*?Regular · 400[\s\S]*?Bold · 700/u);
   assert.match(html, /id="text-line-height"/u);
   assert.match(html, /id="text-letter-spacing"[^>]+min="-2"[^>]+max="12"/u);
   assert.match(html, /id="text-word-spacing"[^>]+min="-2"[^>]+max="24"/u);
@@ -166,7 +170,7 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
           wordSpacingMpt: 500,
           paragraphSpacingMpt: 2_000,
           color: "#b42318",
-          textDecoration: "underline",
+          textDecoration: "underline line-through",
         },
         locked: false,
       },
@@ -241,8 +245,8 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9000"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(screen.markup, /data-horizontal-alignment="center"/u);
-  assert.match(screen.markup, /text-decoration="underline"/u);
-  assert.match(screen.markup, /data-text-decoration="underline"/u);
+  assert.match(screen.markup, /text-decoration="underline line-through"/u);
+  assert.match(screen.markup, /data-text-decoration="underline line-through"/u);
   assert.match(screen.markup, /letter-spacing="250"/u);
   assert.match(screen.markup, /word-spacing="500"/u);
   assert.match(screen.markup, /data-paragraph-spacing-mpt="2000"/u);
@@ -257,8 +261,8 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
     /id="node:lithology:stratum-01:transition:2:text"[^>]+font-size="9"[^>]+font-weight="700"[^>]+fill="#b42318"/u,
   );
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
-  assert.match(publication.projection.svgMarkup, /text-decoration="underline"/u);
-  assert.match(publication.projection.svgMarkup, /data-text-decoration="underline"/u);
+  assert.match(publication.projection.svgMarkup, /text-decoration="underline line-through"/u);
+  assert.match(publication.projection.svgMarkup, /data-text-decoration="underline line-through"/u);
   assert.match(publication.projection.svgMarkup, /letter-spacing="0\.250"/u);
   assert.match(publication.projection.svgMarkup, /word-spacing="0\.500"/u);
   assert.match(publication.projection.svgMarkup, /data-paragraph-spacing-mpt="2000"/u);

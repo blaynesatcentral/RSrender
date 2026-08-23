@@ -429,8 +429,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     (args["applyScope"] !== "all-selected" && targets.length !== 1) ||
     !boundedText(args["fontFamilyId"]) ||
     !isPositiveSafeInteger(args["fontSizeMpt"]) ||
-    !isPositiveSafeInteger(args["fontWeight"]) ||
-    args["fontWeight"] > 1_000 ||
+    ![400, 700].includes(Number(args["fontWeight"])) ||
     !isPositiveSafeInteger(args["lineHeightMpt"]) ||
     !Number.isSafeInteger(args["letterSpacingMpt"]) ||
     Number(args["letterSpacingMpt"]) < -2_000 ||
@@ -441,7 +440,9 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     !isNonnegativeSafeInteger(args["paragraphSpacingMpt"]) ||
     Number(args["paragraphSpacingMpt"]) > 72_000 ||
     !boundedText(args["color"]) ||
-    !["none", "underline"].includes(String(args["textDecoration"])) ||
+    !["none", "underline", "line-through", "underline line-through"].includes(
+      String(args["textDecoration"]),
+    ) ||
     layout === null ||
     frame === null ||
     padding === null ||
@@ -778,7 +779,7 @@ export interface BoringLogStudioPreloadApi {
     readonly wordSpacingMpt: number;
     readonly paragraphSpacingMpt: number;
     readonly color: string;
-    readonly textDecoration: "none" | "underline";
+    readonly textDecoration: "none" | "underline" | "line-through" | "underline line-through";
     readonly layout: {
       readonly frame: {
         readonly xMpt: number;

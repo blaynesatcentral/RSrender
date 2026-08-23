@@ -152,7 +152,10 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       (hasParagraphSpacing &&
         (!Number.isSafeInteger(style["paragraphSpacingMpt"]) ||
           (style["paragraphSpacingMpt"] as number) < 0)) ||
-      (hasTextDecoration && !["none", "underline"].includes(String(style["textDecoration"])))
+      (hasTextDecoration &&
+        !["none", "underline", "line-through", "underline line-through"].includes(
+          String(style["textDecoration"]),
+        ))
     ) {
       return fail("BORING_LOG_TEXT_STYLE_OVERRIDE_WRONG_TYPE");
     }
@@ -180,7 +183,10 @@ export function validateBoringLogTextOccurrenceStyleOverride(
           : {}),
         color: text(style["color"]),
         ...(hasTextDecoration
-          ? { textDecoration: style["textDecoration"] as "none" | "underline" }
+          ? {
+              textDecoration: style["textDecoration"] as
+                "none" | "underline" | "line-through" | "underline line-through",
+            }
           : {}),
       }),
       locked: value["locked"],

@@ -97,7 +97,7 @@ export interface BoringLogTextStyleInput {
   readonly paragraphSpacingMpt?: Mpt;
   readonly color: string;
   /** Absent only in legacy v1 resources, where none is the exact default. */
-  readonly textDecoration?: "none" | "underline";
+  readonly textDecoration?: "none" | "underline" | "line-through" | "underline line-through";
 }
 
 export type BoringLogTextFrameAnchor =
@@ -853,7 +853,12 @@ function validateTemplate(input: unknown): void {
     if (hasParagraphSpacing && mpt(style["paragraphSpacingMpt"]) < 0)
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     textValue(style["color"]);
-    if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
+    if (
+      hasTextDecoration &&
+      !["none", "underline", "line-through", "underline line-through"].includes(
+        textValue(style["textDecoration"]),
+      )
+    )
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
   unique(styleIds);
@@ -1723,7 +1728,12 @@ function validateSceneUnchecked(input: unknown): void {
     if (hasParagraphSpacing && mpt(style["paragraphSpacingMpt"]) < 0)
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     textValue(style["color"]);
-    if (hasTextDecoration && !["none", "underline"].includes(textValue(style["textDecoration"])))
+    if (
+      hasTextDecoration &&
+      !["none", "underline", "line-through", "underline line-through"].includes(
+        textValue(style["textDecoration"]),
+      )
+    )
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
   unique(styleIds);
