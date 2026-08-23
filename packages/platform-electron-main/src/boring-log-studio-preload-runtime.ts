@@ -318,6 +318,11 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     "layout",
     "locked",
   ]);
+  const hasMinimumFontSize =
+    args !== null &&
+    typeof args["layout"] === "object" &&
+    args["layout"] !== null &&
+    Object.hasOwn(args["layout"], "minimumFontSizeMpt");
   const layout =
     args === null
       ? null
@@ -329,6 +334,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
           "verticalAlignment",
           "wrapPolicy",
           "overflowPolicy",
+          ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
           "rotationMilliDegrees",
           "positionMode",
         ]);
@@ -375,7 +381,11 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     !["start", "center", "end"].includes(String(layout["horizontalAlignment"])) ||
     !["top", "middle", "bottom"].includes(String(layout["verticalAlignment"])) ||
     !["word-v1", "no-wrap"].includes(String(layout["wrapPolicy"])) ||
-    layout["overflowPolicy"] !== "clip-with-diagnostic" ||
+    !["clip-with-diagnostic", "shrink-to-minimum"].includes(String(layout["overflowPolicy"])) ||
+    (layout["overflowPolicy"] === "shrink-to-minimum" && !hasMinimumFontSize) ||
+    (hasMinimumFontSize &&
+      (!isPositiveSafeInteger(layout["minimumFontSizeMpt"]) ||
+        layout["minimumFontSizeMpt"] > args["fontSizeMpt"])) ||
     !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
     (layout["rotationMilliDegrees"] as number) < -180_000 ||
     (layout["rotationMilliDegrees"] as number) > 180_000 ||

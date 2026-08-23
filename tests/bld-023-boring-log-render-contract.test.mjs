@@ -98,8 +98,11 @@ function resolvedScene() {
         fontWeight: 700,
         lineHeightMpt: 20_000,
         maximumWidthMpt: 250_000,
+        maximumHeightMpt: 20_000,
         maximumLines: 1,
         wrapPolicy: "no-wrap",
+        overflowPolicy: "clip-with-diagnostic",
+        minimumFontSizeMpt: 16_000,
       },
     ],
     textResults: [
@@ -120,6 +123,8 @@ function resolvedScene() {
           },
         ],
         overflow: "none",
+        effectiveFontSizeMpt: 16_000,
+        effectiveLineHeightMpt: 20_000,
       },
     ],
     resources: {

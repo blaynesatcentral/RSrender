@@ -166,7 +166,8 @@ type StudioApis = Readonly<{
         readonly horizontalAlignment: "start" | "center" | "end";
         readonly verticalAlignment: "top" | "middle" | "bottom";
         readonly wrapPolicy: "word-v1" | "no-wrap";
-        readonly overflowPolicy: "clip-with-diagnostic";
+        readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
+        readonly minimumFontSizeMpt?: number;
         readonly rotationMilliDegrees: number;
         readonly positionMode: "depth-bound" | "free";
       };
@@ -314,6 +315,7 @@ async function main(): Promise<void> {
   const textVerticalAlignment = element<HTMLSelectElement>("text-vertical-alignment");
   const textWrapPolicy = element<HTMLSelectElement>("text-wrap-policy");
   const textOverflowPolicy = element<HTMLSelectElement>("text-overflow-policy");
+  const textMinimumFontSize = element<HTMLInputElement>("text-minimum-font-size");
   const textRotation = element<HTMLInputElement>("text-rotation");
   const textPaddingTop = element<HTMLInputElement>("text-padding-top");
   const textPaddingRight = element<HTMLInputElement>("text-padding-right");
@@ -841,6 +843,9 @@ async function main(): Promise<void> {
       const request = scene.textRequests.find(
         ({ measurementId }) => measurementId === representative.measurementId,
       );
+      const measurement = scene.textResults.find(
+        ({ measurementId }) => measurementId === representative.measurementId,
+      );
       currentTextFrameAnchor = presentation?.frameAnchor ?? "top-left";
       textFrameAnchor.value = currentTextFrameAnchor;
       const anchorPoint = frameAnchorPoint(representative.frame, currentTextFrameAnchor);
@@ -852,6 +857,14 @@ async function main(): Promise<void> {
       textVerticalAlignment.value = presentation?.verticalAlignment ?? "top";
       textWrapPolicy.value = presentation?.wrapPolicy ?? request?.wrapPolicy ?? "word-v1";
       textOverflowPolicy.value = presentation?.overflowPolicy ?? "clip-with-diagnostic";
+      textMinimumFontSize.value = String(
+        (presentation?.minimumFontSizeMpt ?? textStyle.fontSizeMpt) / 1_000,
+      );
+      textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
+      textStyleHelp.textContent =
+        measurement === undefined
+          ? "Text fit has not been measured."
+          : `Authored ${(textStyle.fontSizeMpt / 1_000).toFixed(1)} pt · effective ${(measurement.effectiveFontSizeMpt / 1_000).toFixed(1)} pt · ${measurement.overflow === "none" ? "fits" : `${measurement.overflow}; export blocked`}. Changes apply to this exact occurrence.`;
       textRotation.value = String((presentation?.rotationMilliDegrees ?? 0) / 1_000);
       textPaddingTop.value = String((presentation?.paddingMpt.topMpt ?? 0) / 1_000);
       textPaddingRight.value = String((presentation?.paddingMpt.rightMpt ?? 0) / 1_000);
@@ -878,8 +891,7 @@ async function main(): Promise<void> {
         lifecycleState?.readOnly === true ||
         (inheritedStyle && inheritedLayout);
       applyTextStyle.disabled = selectedSceneNodeId === null || studioProjection === null;
-      textStyleHelp.textContent =
-        "This occurrence · inherited values resolve into a project-owned template override · edits use document history.";
+      textStyleHelp.textContent = `${textStyleHelp.textContent} This occurrence · inherited values resolve into a project-owned template override · edits use document history.`;
     }
     const editable = editableFor(semanticId);
     const effective = editable === null ? null : contentValue(editable.effectiveDisplay.content);
@@ -1048,6 +1060,7 @@ async function main(): Promise<void> {
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
+    const minimumFontSizeMpt = Math.round(Number(textMinimumFontSize.value) * 1_000);
     const frameAnchor = textFrameAnchor.value as BoringLogTextFrameAnchor;
     const frame = frameFromAnchor(
       {
@@ -1076,6 +1089,9 @@ async function main(): Promise<void> {
       !Number.isSafeInteger(lineHeightMpt) ||
       lineHeightMpt < fontSizeMpt ||
       lineHeightMpt > 72_000 ||
+      !Number.isSafeInteger(minimumFontSizeMpt) ||
+      minimumFontSizeMpt < 4_000 ||
+      minimumFontSizeMpt > fontSizeMpt ||
       !/^#[0-9a-f]{6}$/iu.test(textColor.value) ||
       !Object.values(frame).every(Number.isSafeInteger) ||
       frame.xMpt < 0 ||
@@ -1117,7 +1133,8 @@ async function main(): Promise<void> {
         horizontalAlignment: textHorizontalAlignment.value as "start" | "center" | "end",
         verticalAlignment: textVerticalAlignment.value as "top" | "middle" | "bottom",
         wrapPolicy: textWrapPolicy.value as "word-v1" | "no-wrap",
-        overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic",
+        overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic" | "shrink-to-minimum",
+        ...(textOverflowPolicy.value === "shrink-to-minimum" ? { minimumFontSizeMpt } : {}),
         rotationMilliDegrees,
         positionMode,
       },
@@ -1454,6 +1471,9 @@ async function main(): Promise<void> {
     }
   }
   document.body.dataset["ownedCommandCount"] = String(Object.keys(commandRegistry).length);
+  textOverflowPolicy.addEventListener("change", () => {
+    textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
+  });
   window.addEventListener("resize", () => {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });

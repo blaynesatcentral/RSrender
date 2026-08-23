@@ -178,12 +178,46 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   });
   assert.equal(accepted.accepted, true, accepted.code);
   assert.deepEqual(received, args);
+  const shrinkArgs = {
+    ...args,
+    layout: {
+      ...args.layout,
+      overflowPolicy: "shrink-to-minimum",
+      minimumFontSizeMpt: 6_000,
+    },
+  };
+  const shrinkAccepted = await route.setTextOccurrenceStyle(routeContext, {
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence: 2,
+    documentIdentity,
+    ownerGeneration: 1,
+    args: shrinkArgs,
+  });
+  assert.equal(shrinkAccepted.accepted, true, shrinkAccepted.code);
+  assert.deepEqual(received, shrinkArgs);
   assert.deepEqual(
     await route.setTextOccurrenceStyle(routeContext, {
       transportVersion: 1,
       capability: binding.capability,
       generation: binding.generation,
-      sequence: 2,
+      sequence: 3,
+      documentIdentity,
+      ownerGeneration: 1,
+      args: {
+        ...args,
+        layout: { ...args.layout, overflowPolicy: "shrink-to-minimum" },
+      },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
+  assert.deepEqual(
+    await route.setTextOccurrenceStyle(routeContext, {
+      transportVersion: 1,
+      capability: binding.capability,
+      generation: binding.generation,
+      sequence: 3,
       documentIdentity,
       ownerGeneration: 1,
       args: { ...args, layout: { ...args.layout, frameAnchor: "baseline" } },
@@ -195,7 +229,7 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
       transportVersion: 1,
       capability: binding.capability,
       generation: binding.generation,
-      sequence: 2,
+      sequence: 3,
       documentIdentity,
       ownerGeneration: 1,
       args: { ...args, fontSizeMpt: 0 },

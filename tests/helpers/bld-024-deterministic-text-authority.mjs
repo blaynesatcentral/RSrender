@@ -59,6 +59,8 @@ export function deterministicTextResults(requests, forcedOverflowIds = new Set()
       inkBounds: { xMpt: 0, yMpt: 0, widthMpt, heightMpt },
       lines: resolved.lines,
       overflow,
+      effectiveFontSizeMpt: request.fontSizeMpt,
+      effectiveLineHeightMpt: request.lineHeightMpt,
     };
   });
 }

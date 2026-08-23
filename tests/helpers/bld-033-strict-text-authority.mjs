@@ -16,5 +16,7 @@ export function strictCoverageTextResults(requests) {
       },
     ],
     overflow: "none",
+    effectiveFontSizeMpt: request.fontSizeMpt,
+    effectiveLineHeightMpt: request.lineHeightMpt,
   }));
 }

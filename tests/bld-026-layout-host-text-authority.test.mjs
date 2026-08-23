@@ -32,7 +32,7 @@ test("BLD-026 Layout Host deterministically resolves every scene text request", 
   assert.equal(prepared.accepted, true);
   const first = measureBoringLogTextRequests(prepared.value.textRequests);
   const second = measureBoringLogTextRequests(structuredClone(prepared.value.textRequests));
-  assert.equal(boringLogTextAuthorityRevision, "bld-026-layout-host-text-v1");
+  assert.equal(boringLogTextAuthorityRevision, "bld-037-layout-host-text-fit-v1");
   assert.equal(first.accepted, true);
   assert.deepEqual(first, second);
   assert.equal(first.results.length, prepared.value.textRequests.length);
@@ -42,6 +42,65 @@ test("BLD-026 Layout Host deterministically resolves every scene text request", 
   const scene = resolveBoringLogPageScene(prepared.value, first.results);
   assert.equal(scene.accepted, true);
   assert.equal(scene.value.pages[0].nodes.length, 328);
+});
+
+test("BLD-037 shrink-to-minimum chooses the largest fitting deterministic size", () => {
+  const request = {
+    measurementId: "measure:bld-037-shrink",
+    text: "deterministic fitting preserves all source text",
+    sourceIdentity: "annotation:bld-037-shrink",
+    sourceStartUtf16: 0,
+    sourceEndUtf16: 47,
+    fontFamilyId: "font.logical.rsrender-sans",
+    fontSizeMpt: 12_000,
+    fontWeight: 400,
+    lineHeightMpt: 14_000,
+    maximumWidthMpt: 80_000,
+    maximumHeightMpt: 28_000,
+    maximumLines: 4,
+    wrapPolicy: "word-v1",
+    overflowPolicy: "shrink-to-minimum",
+    minimumFontSizeMpt: 6_000,
+  };
+  const measured = measureBoringLogTextRequests([request]);
+  assert.equal(measured.accepted, true);
+  const [result] = measured.results;
+  assert.equal(result.overflow, "none");
+  assert.ok(result.effectiveFontSizeMpt < request.fontSizeMpt);
+  assert.ok(result.effectiveFontSizeMpt >= request.minimumFontSizeMpt);
+  assert.equal(result.lines.at(-1).sourceEndUtf16, request.sourceEndUtf16);
+
+  const oneMptLarger = measureBoringLogTextRequests([
+    { ...request, minimumFontSizeMpt: result.effectiveFontSizeMpt + 1 },
+  ]);
+  assert.equal(oneMptLarger.accepted, true);
+  assert.equal(oneMptLarger.results[0].overflow, "clipped");
+});
+
+test("BLD-037 shrink-to-minimum never crosses the authored legibility floor", () => {
+  const text = "unbreakable-required-evidence";
+  const measured = measureBoringLogTextRequests([
+    {
+      measurementId: "measure:bld-037-floor",
+      text,
+      sourceIdentity: "annotation:bld-037-floor",
+      sourceStartUtf16: 0,
+      sourceEndUtf16: text.length,
+      fontFamilyId: "font.logical.rsrender-sans",
+      fontSizeMpt: 12_000,
+      fontWeight: 400,
+      lineHeightMpt: 14_000,
+      maximumWidthMpt: 20_000,
+      maximumHeightMpt: 8_000,
+      maximumLines: 1,
+      wrapPolicy: "no-wrap",
+      overflowPolicy: "shrink-to-minimum",
+      minimumFontSizeMpt: 8_000,
+    },
+  ]);
+  assert.equal(measured.accepted, true);
+  assert.equal(measured.results[0].effectiveFontSizeMpt, 8_000);
+  assert.equal(measured.results[0].overflow, "clipped");
 });
 
 test("BLD-026 Layout Host rejects duplicate, malformed, or excessive text requests", () => {

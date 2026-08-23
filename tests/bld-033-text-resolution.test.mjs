@@ -51,6 +51,8 @@ function authority() {
         },
       ],
       overflow: "none",
+      effectiveFontSizeMpt: request.fontSizeMpt,
+      effectiveLineHeightMpt: request.lineHeightMpt,
     };
   });
   return { scene: scene.value, requests: prepared.value.textRequests, exact };

@@ -77,10 +77,14 @@ export function applyBoringLogTextMeasurements(
         return rejected("BORING_LOG_TEXT_RESULTS_REJECTED");
       }
       if (result.overflow !== "none") {
+        const fitDetail =
+          request.overflowPolicy === "shrink-to-minimum"
+            ? ` after shrinking ${(request.fontSizeMpt / 1_000).toFixed(1)} pt to the ${(result.effectiveFontSizeMpt / 1_000).toFixed(1)} pt effective size (minimum ${(request.minimumFontSizeMpt / 1_000).toFixed(1)} pt)`
+            : " under clip-with-diagnostic";
         textDiagnostics.push({
           code: "BORING_LOG_TEXT_OVERFLOW",
           severity: result.overflow === "continued" ? "warning" : "error",
-          message: `Text measurement ${result.measurementId} resolved with ${result.overflow}`,
+          message: `Text measurement ${result.measurementId} resolved with ${result.overflow}${fitDetail}`,
           semanticId: request.sourceIdentity,
         });
       }

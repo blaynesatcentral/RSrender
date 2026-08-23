@@ -115,6 +115,10 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       typeof value["layout"] === "object" &&
       value["layout"] !== null &&
       Object.hasOwn(value["layout"], "frameAnchor");
+    const hasMinimumFontSize =
+      typeof value["layout"] === "object" &&
+      value["layout"] !== null &&
+      Object.hasOwn(value["layout"], "minimumFontSizeMpt");
     const layout = record(value["layout"], [
       "frame",
       ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -123,6 +127,7 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       "verticalAlignment",
       "wrapPolicy",
       "overflowPolicy",
+      ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -151,6 +156,7 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
     const verticalAlignment = layout["verticalAlignment"];
     const frameAnchor = hasFrameAnchor ? layout["frameAnchor"] : "top-left";
     const wrapPolicy = layout["wrapPolicy"];
+    const overflowPolicy = layout["overflowPolicy"];
     const rotationMilliDegrees = layout["rotationMilliDegrees"];
     const positionMode = layout["positionMode"];
     if (
@@ -176,7 +182,8 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
         frameAnchor === "bottom-right"
       ) ||
       !(wrapPolicy === "word-v1" || wrapPolicy === "no-wrap") ||
-      layout["overflowPolicy"] !== "clip-with-diagnostic" ||
+      !(overflowPolicy === "clip-with-diagnostic" || overflowPolicy === "shrink-to-minimum") ||
+      (overflowPolicy === "shrink-to-minimum" && !hasMinimumFontSize) ||
       !Number.isSafeInteger(rotationMilliDegrees) ||
       (rotationMilliDegrees as number) < -180_000 ||
       (rotationMilliDegrees as number) > 180_000 ||
@@ -205,7 +212,10 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
           horizontalAlignment,
           verticalAlignment,
           wrapPolicy,
-          overflowPolicy: "clip-with-diagnostic",
+          overflowPolicy,
+          ...(hasMinimumFontSize
+            ? { minimumFontSizeMpt: positiveMpt(layout["minimumFontSizeMpt"]) }
+            : {}),
           rotationMilliDegrees: rotationMilliDegrees as number,
           positionMode,
           locked: layout["locked"],

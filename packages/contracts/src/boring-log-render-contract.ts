@@ -95,7 +95,9 @@ export interface BoringLogTextOccurrenceLayoutInput {
   readonly horizontalAlignment: "start" | "center" | "end";
   readonly verticalAlignment: "top" | "middle" | "bottom";
   readonly wrapPolicy: "word-v1" | "no-wrap";
-  readonly overflowPolicy: "clip-with-diagnostic";
+  readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
+  /** Required for shrink-to-minimum; absent only for legacy clip-only layouts. */
+  readonly minimumFontSizeMpt?: Mpt;
   readonly rotationMilliDegrees: number;
   readonly positionMode: "depth-bound" | "free";
   readonly locked: boolean;
@@ -346,8 +348,11 @@ export interface BoringLogTextMeasurementRequest {
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
   readonly maximumWidthMpt: Mpt;
+  readonly maximumHeightMpt: Mpt;
   readonly maximumLines: number;
   readonly wrapPolicy: "word-v1" | "no-wrap";
+  readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
+  readonly minimumFontSizeMpt: Mpt;
 }
 
 export interface BoringLogResolvedTextLine {
@@ -367,6 +372,8 @@ export interface BoringLogTextMeasurementResult {
   readonly inkBounds: MptRect;
   readonly lines: readonly BoringLogResolvedTextLine[];
   readonly overflow: "none" | "ellipsized" | "clipped" | "continued";
+  readonly effectiveFontSizeMpt: Mpt;
+  readonly effectiveLineHeightMpt: Mpt;
 }
 
 interface BoringLogSceneNodeBase {
@@ -802,6 +809,7 @@ function validateTemplate(input: unknown): void {
   const occurrenceLayoutIds: string[] = [];
   for (const layoutInput of hasOccurrenceLayouts ? array(value["occurrenceLayouts"]) : []) {
     const hasFrameAnchor = Object.hasOwn(layoutInput as object, "frameAnchor");
+    const hasMinimumFontSize = Object.hasOwn(layoutInput as object, "minimumFontSizeMpt");
     const layout = record(layoutInput, [
       "id",
       "frame",
@@ -811,6 +819,7 @@ function validateTemplate(input: unknown): void {
       "verticalAlignment",
       "wrapPolicy",
       "overflowPolicy",
+      ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -846,7 +855,16 @@ function validateTemplate(input: unknown): void {
     if (!["word-v1", "no-wrap"].includes(textValue(layout["wrapPolicy"]))) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
-    literal(layout["overflowPolicy"], "clip-with-diagnostic");
+    const overflowPolicy = textValue(layout["overflowPolicy"]);
+    if (!["clip-with-diagnostic", "shrink-to-minimum"].includes(overflowPolicy)) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    if (
+      (overflowPolicy === "shrink-to-minimum" && !hasMinimumFontSize) ||
+      (hasMinimumFontSize && mpt(layout["minimumFontSizeMpt"]) <= 0)
+    ) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     const rotation = finite(layout["rotationMilliDegrees"]);
     if (!Number.isSafeInteger(rotation) || rotation < -180_000 || rotation > 180_000) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
@@ -1291,8 +1309,11 @@ function validateTextRequest(input: unknown): void {
     "fontWeight",
     "lineHeightMpt",
     "maximumWidthMpt",
+    "maximumHeightMpt",
     "maximumLines",
     "wrapPolicy",
+    "overflowPolicy",
+    "minimumFontSizeMpt",
   ]);
   textValue(value["measurementId"]);
   const content = textValue(value["text"], true);
@@ -1304,7 +1325,10 @@ function validateTextRequest(input: unknown): void {
   if (
     mpt(value["fontSizeMpt"]) <= 0 ||
     mpt(value["lineHeightMpt"]) <= 0 ||
-    mpt(value["maximumWidthMpt"]) <= 0
+    mpt(value["maximumWidthMpt"]) <= 0 ||
+    mpt(value["maximumHeightMpt"]) <= 0 ||
+    mpt(value["minimumFontSizeMpt"]) <= 0 ||
+    mpt(value["minimumFontSizeMpt"]) > mpt(value["fontSizeMpt"])
   ) {
     fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   }
@@ -1313,6 +1337,8 @@ function validateTextRequest(input: unknown): void {
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
   if (!["word-v1", "no-wrap"].includes(textValue(value["wrapPolicy"])))
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  if (!["clip-with-diagnostic", "shrink-to-minimum"].includes(textValue(value["overflowPolicy"])))
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
 }
 
@@ -1325,6 +1351,8 @@ function validateTextResult(input: unknown): void {
     "inkBounds",
     "lines",
     "overflow",
+    "effectiveFontSizeMpt",
+    "effectiveLineHeightMpt",
   ]);
   textValue(value["measurementId"]);
   if (!isSha256Digest(value["fontFaceDigest"]) || !isSha256Digest(value["fontMetricsDigest"])) {
@@ -1352,6 +1380,9 @@ function validateTextResult(input: unknown): void {
     if (mpt(line["advanceMpt"]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   }
   if (!["none", "ellipsized", "clipped", "continued"].includes(textValue(value["overflow"]))) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  if (mpt(value["effectiveFontSizeMpt"]) <= 0 || mpt(value["effectiveLineHeightMpt"]) <= 0) {
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
 }
@@ -1433,6 +1464,10 @@ function validateSceneNode(input: unknown): {
     validateRect(value["frame"]);
     if (Object.hasOwn(value, "presentation")) {
       const hasFrameAnchor = Object.hasOwn(value["presentation"] as object, "frameAnchor");
+      const hasMinimumFontSize = Object.hasOwn(
+        value["presentation"] as object,
+        "minimumFontSizeMpt",
+      );
       const presentation = record(value["presentation"], [
         "paddingMpt",
         ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -1440,6 +1475,7 @@ function validateSceneNode(input: unknown): {
         "verticalAlignment",
         "wrapPolicy",
         "overflowPolicy",
+        ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
         "rotationMilliDegrees",
         "positionMode",
         "locked",
@@ -1475,7 +1511,14 @@ function validateSceneNode(input: unknown): {
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
       if (!["word-v1", "no-wrap"].includes(textValue(presentation["wrapPolicy"])))
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-      literal(presentation["overflowPolicy"], "clip-with-diagnostic");
+      const overflowPolicy = textValue(presentation["overflowPolicy"]);
+      if (!["clip-with-diagnostic", "shrink-to-minimum"].includes(overflowPolicy))
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (
+        (overflowPolicy === "shrink-to-minimum" && !hasMinimumFontSize) ||
+        (hasMinimumFontSize && mpt(presentation["minimumFontSizeMpt"]) <= 0)
+      )
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
       const rotation = finite(presentation["rotationMilliDegrees"]);
       if (!Number.isSafeInteger(rotation) || rotation < -180_000 || rotation > 180_000)
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
@@ -1533,6 +1576,19 @@ function validateSceneUnchecked(input: unknown): void {
     const requestStart = request["sourceStartUtf16"] as number;
     const requestEnd = request["sourceEndUtf16"] as number;
     const requestText = request["text"] as string;
+    const effectiveFontSizeMpt = resultRecord["effectiveFontSizeMpt"] as number;
+    const effectiveLineHeightMpt = resultRecord["effectiveLineHeightMpt"] as number;
+    if (
+      effectiveFontSizeMpt < (request["minimumFontSizeMpt"] as number) ||
+      effectiveFontSizeMpt > (request["fontSizeMpt"] as number) ||
+      effectiveLineHeightMpt < effectiveFontSizeMpt ||
+      effectiveLineHeightMpt > (request["lineHeightMpt"] as number) ||
+      (request["overflowPolicy"] === "clip-with-diagnostic" &&
+        (effectiveFontSizeMpt !== request["fontSizeMpt"] ||
+          effectiveLineHeightMpt !== request["lineHeightMpt"]))
+    ) {
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    }
     for (const line of resultRecord["lines"] as readonly DataRecord[]) {
       const lineStart = line["sourceStartUtf16"] as number;
       const lineEnd = line["sourceEndUtf16"] as number;

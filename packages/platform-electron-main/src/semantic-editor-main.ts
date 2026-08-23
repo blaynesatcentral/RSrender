@@ -666,7 +666,23 @@ async function measureBoringLogTextInChromium(
             : offset + 1;
         };
         let totalLines = 0;
-        const results = requests.map((request) => {
+        const resolveAtSize = (authoredRequest, fontSizeMpt) => {
+          const lineHeightMpt = Math.max(
+            fontSizeMpt,
+            Math.round(authoredRequest.lineHeightMpt * fontSizeMpt / authoredRequest.fontSizeMpt),
+          );
+          const request = {
+            ...authoredRequest,
+            fontSizeMpt,
+            lineHeightMpt,
+            maximumLines:
+              authoredRequest.overflowPolicy === "shrink-to-minimum"
+                ? Math.min(
+                    authoredRequest.maximumLines,
+                    Math.max(1, Math.floor(authoredRequest.maximumHeightMpt / lineHeightMpt)),
+                  )
+                : authoredRequest.maximumLines,
+          };
           probe.setAttribute("font-family", "RSrender Qualified Arial");
           probe.setAttribute("font-size", String(request.fontSizeMpt / 750));
           probe.setAttribute("font-weight", String(request.fontWeight));
@@ -680,7 +696,7 @@ async function measureBoringLogTextInChromium(
           let overwide = false;
           while (cursor < request.text.length && lines.length < request.maximumLines) {
             totalLines += 1;
-            if (totalLines > 1_000) throw new Error("MEASUREMENT_LINE_LIMIT");
+            if (totalLines > 16_000) throw new Error("MEASUREMENT_LINE_LIMIT");
             if (performance.now() - measurementStarted > 5_000) {
               throw new Error("MEASUREMENT_TIME_LIMIT");
             }
@@ -765,7 +781,29 @@ async function measureBoringLogTextInChromium(
             },
             lines,
             overflow: cursor < request.text.length || overwide ? "clipped" : "none",
+            effectiveFontSizeMpt: fontSizeMpt,
+            effectiveLineHeightMpt: lineHeightMpt,
           };
+        };
+        const results = requests.map((request) => {
+          const authored = resolveAtSize(request, request.fontSizeMpt);
+          if (authored.overflow === "none" || request.overflowPolicy === "clip-with-diagnostic") {
+            return authored;
+          }
+          let low = request.minimumFontSizeMpt;
+          let high = request.fontSizeMpt - 1;
+          let best = null;
+          while (low <= high) {
+            const candidateSize = Math.floor((low + high) / 2);
+            const candidate = resolveAtSize(request, candidateSize);
+            if (candidate.overflow === "none") {
+              best = candidate;
+              low = candidateSize + 1;
+            } else {
+              high = candidateSize - 1;
+            }
+          }
+          return best ?? resolveAtSize(request, request.minimumFontSizeMpt);
         });
         const calibrationRequest = { fontSizeMpt: 10000, fontWeight: 400 };
         return {
@@ -2244,7 +2282,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         detached["anchorY"] === "315.338" &&
         detached["yReadOnly"] === false &&
         detached["detachDisabled"] === true &&
-        freeMoved["workingRevision"] === (detached["workingRevision"] as number) + 1 &&
+        freeMoved["workingRevision"] === detached["workingRevision"] + 1 &&
         freeMoved["positionMode"] === "free" &&
         freeMoved["frameY"] === "303338" &&
         freeMoved["anchorY"] === "325.338",
@@ -2283,11 +2321,11 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const resetRedo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, fontSize: node?.getAttribute("font-size"), frameX: node?.getAttribute("data-frame-x-mpt"), resetDisabled: document.getElementById("reset-text-presentation")?.disabled }; })()`,
       ),
     );
     requireProbe(
-      reset["workingRevision"] === (freeMoved["workingRevision"] as number) + 1 &&
+      reset["workingRevision"] === freeMoved["workingRevision"] + 1 &&
         reset["fontSize"] === "5500" &&
         reset["frameX"] === null &&
         reset["styleInheritance"] === "inherited" &&
@@ -2302,6 +2340,61 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         resetRedo["frameX"] === null &&
         resetRedo["resetDisabled"] === true,
       `TEXT_OCCURRENCE_RESET_HISTORY_INVALID:${JSON.stringify({ reset, resetUndo, resetRedo })}`,
+    );
+    await typeText(window, "#text-font-size", "12");
+    await typeText(window, "#text-line-height", "14");
+    await typeText(window, "#text-frame-width", "80");
+    await typeText(window, "#text-frame-height", "20");
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const overflow = document.getElementById("text-overflow-policy"); const wrap = document.getElementById("text-wrap-policy"); if (!(overflow instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement)) return false; overflow.value = "shrink-to-minimum"; overflow.dispatchEvent(new Event("change", { bubbles: true })); wrap.value = "word-v1"; wrap.dispatchEvent(new Event("change", { bubbles: true })); return document.getElementById("text-minimum-font-size")?.disabled === false; })()`,
+      )) === true,
+      "TEXT_OCCURRENCE_FIT_CONTROLS_INVALID",
+    );
+    await typeText(window, "#text-minimum-font-size", "6");
+    await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_FIT_APPLY");
+    await waitFor(
+      window,
+      `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const effective = Number(node?.getAttribute("data-effective-font-size-mpt")); return node?.getAttribute("data-overflow-policy") === "shrink-to-minimum" && node?.getAttribute("data-minimum-font-size-mpt") === "6000" && node?.getAttribute("data-authored-font-size-mpt") === "12000" && node?.getAttribute("data-overflow") === "none" && effective >= 6000 && effective < 12000; })()`,
+      "WAIT_TEXT_OCCURRENCE_FIT_APPLY",
+    );
+    const fitted = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, authoredFontSize: node?.getAttribute("data-authored-font-size-mpt"), effectiveFontSize: node?.getAttribute("data-effective-font-size-mpt"), paintedFontSize: node?.getAttribute("font-size"), overflowPolicy: node?.getAttribute("data-overflow-policy"), minimumFontSize: node?.getAttribute("data-minimum-font-size-mpt"), overflow: node?.getAttribute("data-overflow"), help: document.getElementById("text-style-help")?.textContent }; })()`,
+      ),
+    );
+    requireProbe(
+      fitted["workingRevision"] === (resetRedo["workingRevision"] as number) + 1 &&
+        fitted["authoredFontSize"] === "12000" &&
+        fitted["paintedFontSize"] === fitted["effectiveFontSize"] &&
+        Number(fitted["effectiveFontSize"]) >= 6_000 &&
+        Number(fitted["effectiveFontSize"]) < 12_000 &&
+        fitted["overflowPolicy"] === "shrink-to-minimum" &&
+        fitted["minimumFontSize"] === "6000" &&
+        fitted["overflow"] === "none" &&
+        (fitted["help"] as string).includes("effective"),
+      `TEXT_OCCURRENCE_FIT_INVALID:${JSON.stringify(fitted)}`,
+    );
+    await press(window, "#undo", "Space", "FOCUS_TEXT_OCCURRENCE_FIT_UNDO");
+    await waitFor(
+      window,
+      `document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-overflow-policy") === false`,
+      "WAIT_TEXT_OCCURRENCE_FIT_UNDO",
+    );
+    const fitUndo = record(
+      await pageValue(
+        window,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), overflowPolicy: node?.getAttribute("data-overflow-policy"), styleInheritance: document.getElementById("text-style-inheritance")?.textContent, layoutInheritance: document.getElementById("text-layout-inheritance")?.textContent }; })()`,
+      ),
+    );
+    requireProbe(
+      fitUndo["fontSize"] === "5500" &&
+        fitUndo["overflowPolicy"] === null &&
+        fitUndo["styleInheritance"] === "Inherited" &&
+        fitUndo["layoutInheritance"] === "Inherited",
+      `TEXT_OCCURRENCE_FIT_UNDO_INVALID:${JSON.stringify(fitUndo)}`,
     );
     requireProbe(
       (await pageValue(
@@ -2332,6 +2425,8 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       reset,
       resetUndo,
       resetRedo,
+      fitted,
+      fitUndo,
     });
     requireProbe(
       (await pageValue(

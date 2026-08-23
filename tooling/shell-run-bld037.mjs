@@ -106,6 +106,15 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.resetRedo?.fontSize !== "5500" ||
     style?.resetRedo?.frameX !== null ||
     style?.resetRedo?.resetDisabled !== true ||
+    style?.fitted?.authoredFontSize !== "12000" ||
+    style?.fitted?.paintedFontSize !== style?.fitted?.effectiveFontSize ||
+    Number(style?.fitted?.effectiveFontSize) < 6_000 ||
+    Number(style?.fitted?.effectiveFontSize) >= 12_000 ||
+    style?.fitted?.overflowPolicy !== "shrink-to-minimum" ||
+    style?.fitted?.minimumFontSize !== "6000" ||
+    style?.fitted?.overflow !== "none" ||
+    style?.fitUndo?.fontSize !== "5500" ||
+    style?.fitUndo?.overflowPolicy !== null ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -177,6 +186,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       explicitNinePointFrameAnchor: true,
       explicitDetachUnlocksFreeY: true,
       occurrenceResetToInherited: true,
+      deterministicShrinkToMinimumWithLegibilityFloor: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

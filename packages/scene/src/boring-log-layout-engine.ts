@@ -312,12 +312,26 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       (occurrenceLayout?.paddingMpt.leftMpt ?? 0) + (occurrenceLayout?.paddingMpt.rightMpt ?? 0);
     const verticalPadding =
       (occurrenceLayout?.paddingMpt.topMpt ?? 0) + (occurrenceLayout?.paddingMpt.bottomMpt ?? 0);
+    const maximumHeightMpt = asMpt(effectiveFrame.heightMpt - verticalPadding);
+    const minimumFontSizeMpt =
+      occurrenceLayout?.overflowPolicy === "shrink-to-minimum"
+        ? (occurrenceLayout.minimumFontSizeMpt ?? style.fontSizeMpt)
+        : style.fontSizeMpt;
+    const minimumLineHeightMpt = Math.max(
+      minimumFontSizeMpt,
+      Math.round((style.lineHeightMpt * minimumFontSizeMpt) / style.fontSizeMpt),
+    );
     const effectiveMaximumLines =
       occurrenceLayout === undefined
         ? maximumLines
         : Math.max(
             1,
-            Math.floor((effectiveFrame.heightMpt - verticalPadding) / style.lineHeightMpt),
+            Math.floor(
+              maximumHeightMpt /
+                (occurrenceLayout.overflowPolicy === "shrink-to-minimum"
+                  ? minimumLineHeightMpt
+                  : style.lineHeightMpt),
+            ),
           );
     const measurementId = `measure:${id}`;
     textRequests.push({
@@ -331,8 +345,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       fontWeight: style.fontWeight,
       lineHeightMpt: style.lineHeightMpt,
       maximumWidthMpt: asMpt(effectiveFrame.widthMpt - horizontalPadding),
+      maximumHeightMpt,
       maximumLines: effectiveMaximumLines,
       wrapPolicy: occurrenceLayout?.wrapPolicy ?? wrapPolicy,
+      overflowPolicy: occurrenceLayout?.overflowPolicy ?? "clip-with-diagnostic",
+      minimumFontSizeMpt,
     });
     append({
       id,
@@ -356,6 +373,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
               verticalAlignment: occurrenceLayout.verticalAlignment,
               wrapPolicy: occurrenceLayout.wrapPolicy,
               overflowPolicy: occurrenceLayout.overflowPolicy,
+              ...(occurrenceLayout.minimumFontSizeMpt === undefined
+                ? {}
+                : { minimumFontSizeMpt: occurrenceLayout.minimumFontSizeMpt }),
               rotationMilliDegrees: occurrenceLayout.rotationMilliDegrees,
               positionMode: occurrenceLayout.positionMode,
               locked: occurrenceLayout.locked,

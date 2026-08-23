@@ -9,7 +9,10 @@ import {
   prepareBoringLogLayoutWithTextOccurrenceStyles,
   resolveBoringLogPageScene,
 } from "../packages/scene/dist/index.js";
-import { projectBoringLogSceneForPublication } from "../packages/layout-host/dist/index.js";
+import {
+  measureBoringLogTextRequests,
+  projectBoringLogSceneForPublication,
+} from "../packages/layout-host/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
   BORING_LOG_MVP_TEMPLATE_DIGEST,
@@ -75,6 +78,8 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-frame-anchor"/u);
   assert.match(html, /id="text-horizontal-alignment"/u);
   assert.match(html, /id="text-wrap-policy"/u);
+  assert.match(html, /id="text-overflow-policy"[\s\S]*?Shrink to minimum/u);
+  assert.match(html, /id="text-minimum-font-size"[^>]+min="4"[^>]+max="48"/u);
   assert.match(html, /id="text-locked"/u);
   assert.match(html, /id="apply-text-style"[^>]*>Apply text properties/u);
   assert.match(html, /id="detach-text-annotation"[^>]*>Detach as Annotation/u);
@@ -99,6 +104,8 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /resetSelectedTextPresentation/u);
   assert.match(entry, /applySelectedTextStyle/u);
   assert.match(entry, /detachSelectedTextAsAnnotation/u);
+  assert.match(entry, /measurement\.effectiveFontSizeMpt/u);
+  assert.match(entry, /textMinimumFontSize\.disabled/u);
   assert.match(entry, /textFrameY\.readOnly = textPositionMode\.value !== "free"/u);
   assert.match(entry, /expectedWorkingRevision: studioProjection\.workingRevision/u);
 });
@@ -200,6 +207,86 @@ test("BLD-037 resolves one occurrence style before common screen and PDF project
   assert.match(publication.projection.svgMarkup, /data-horizontal-alignment="center"/u);
   assert.match(publication.projection.svgMarkup, /data-frame-anchor="bottom-center"/u);
   assert.match(publication.projection.svgMarkup, /transform="rotate\(5 200 304\.338\)"/u);
+});
+
+test("BLD-037 projects one deterministic shrink result identically to screen and PDF", () => {
+  const occurrenceNodeId = "node:lithology:stratum-01:transition:2:text";
+  const prepared = prepareBoringLogLayoutWithTextOccurrenceStyles(
+    boringLogMvpFixtureJob(),
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-style-override.v1",
+        kind: "boring-log.text-occurrence-style-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-fit",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-style-override:bld-037-fit",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId: "lithology:stratum-01:transition:2",
+        baseStyleId: "style-small",
+        style: {
+          fontFamilyId: "font.logical.rsrender-sans",
+          fontSizeMpt: 12_000,
+          fontWeight: 400,
+          lineHeightMpt: 14_000,
+          color: "#111827",
+        },
+        locked: false,
+      },
+    ],
+    [
+      {
+        contractVersion: 1,
+        schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+        kind: "boring-log.text-occurrence-layout-override",
+        ownerDocumentIdentity: "urn:rsrender:document:bld-037-fit",
+        boringLogIdentity: boringLogMvpFixture.identity.boringLogId,
+        overrideIdentity: "urn:rsrender:text-layout-override:bld-037-fit",
+        overrideRevision: 1,
+        scope: "occurrence",
+        occurrenceNodeId,
+        semanticId: "lithology:stratum-01:transition:2",
+        layout: {
+          frame: { xMpt: 120_000, yMpt: 293_338, widthMpt: 80_000, heightMpt: 20_000 },
+          frameAnchor: "top-left",
+          paddingMpt: { topMpt: 0, rightMpt: 0, bottomMpt: 0, leftMpt: 0 },
+          horizontalAlignment: "start",
+          verticalAlignment: "top",
+          wrapPolicy: "word-v1",
+          overflowPolicy: "shrink-to-minimum",
+          minimumFontSizeMpt: 6_000,
+          rotationMilliDegrees: 0,
+          positionMode: "depth-bound",
+          locked: false,
+        },
+      },
+    ],
+  );
+  assert.equal(prepared.accepted, true);
+  const measured = measureBoringLogTextRequests(prepared.value.textRequests);
+  assert.equal(measured.accepted, true);
+  const resolved = resolveBoringLogPageScene(prepared.value, measured.results);
+  assert.equal(resolved.accepted, true);
+  const result = resolved.value.textResults.find(
+    ({ measurementId }) => measurementId === `measure:${occurrenceNodeId}`,
+  );
+  assert.equal(result.overflow, "none");
+  assert.ok(result.effectiveFontSizeMpt >= 6_000 && result.effectiveFontSizeMpt < 12_000);
+  const screen = projectBoringLogSceneToSvg(resolved.value);
+  const publication = projectBoringLogSceneForPublication(resolved.value);
+  assert.equal(screen.accepted, true);
+  assert.equal(publication.accepted, true);
+  for (const markup of [screen.markup, publication.projection.svgMarkup]) {
+    assert.match(markup, /data-overflow-policy="shrink-to-minimum"/u);
+    assert.match(markup, /data-minimum-font-size-mpt="6000"/u);
+    assert.match(markup, /data-authored-font-size-mpt="12000"/u);
+    assert.match(
+      markup,
+      new RegExp(`data-effective-font-size-mpt="${result.effectiveFontSizeMpt}"`, "u"),
+    );
+  }
 });
 
 test("BLD-037 reset removes only one occurrence presentation and restores inheritance", () => {
