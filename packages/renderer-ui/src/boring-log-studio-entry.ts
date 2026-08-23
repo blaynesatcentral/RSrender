@@ -141,6 +141,7 @@ type StudioApis = Readonly<{
     }) => Promise<unknown>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
+      readonly applyScope: "occurrence" | "named-style";
       readonly occurrenceNodeId: string;
       readonly semanticId: string;
       readonly baseStyleId: string;
@@ -317,6 +318,8 @@ async function main(): Promise<void> {
   const textWordSpacing = element<HTMLInputElement>("text-word-spacing");
   const textParagraphSpacing = element<HTMLInputElement>("text-paragraph-spacing");
   const textColor = element<HTMLInputElement>("text-color");
+  const textStyleScope = element<HTMLSelectElement>("text-style-scope");
+  const textNamedStyleScope = element<HTMLOptionElement>("text-named-style-scope");
   const textFrameX = element<HTMLInputElement>("text-frame-x");
   const textFrameY = element<HTMLInputElement>("text-frame-y");
   const textFrameAnchor = element<HTMLSelectElement>("text-frame-anchor");
@@ -915,6 +918,10 @@ async function main(): Promise<void> {
       );
       const inheritedStyle = presentationState?.typography !== "occurrence";
       const inheritedLayout = presentationState?.layout !== "occurrence";
+      textNamedStyleScope.disabled = !inheritedStyle;
+      if (!inheritedStyle && textStyleScope.value === "named-style") {
+        textStyleScope.value = "occurrence";
+      }
       textStyleInheritance.textContent = inheritedStyle ? "Inherited" : "This occurrence";
       textLayoutInheritance.textContent = inheritedLayout ? "Inherited" : "This occurrence";
       resetTextPresentation.disabled =
@@ -1089,6 +1096,16 @@ async function main(): Promise<void> {
       status.textContent = "Select one exact text occurrence before applying text properties.";
       return false;
     }
+    const applyScope = textStyleScope.value as "occurrence" | "named-style";
+    const presentationState = studioProjection.textOccurrencePresentationStates.find(
+      ({ occurrenceNodeId }) => occurrenceNodeId === node.id,
+    );
+    if (applyScope === "named-style" && presentationState?.typography === "occurrence") {
+      status.textContent =
+        "Reset this occurrence to inherited typography before changing its named style default.";
+      textStyleScope.focus();
+      return false;
+    }
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
@@ -1166,8 +1183,12 @@ async function main(): Promise<void> {
     }
     applyTextStyle.disabled = true;
     status.textContent = `Applying text properties to ${node.id}…`;
+    if (applyScope === "named-style") {
+      status.textContent = `Applying typography to named style ${style.id}...`;
+    }
     const raw = await apis.studio.setTextOccurrenceStyle({
       expectedWorkingRevision: studioProjection.workingRevision,
+      applyScope,
       occurrenceNodeId: node.id,
       semanticId: node.semanticId,
       baseStyleId: node.styleId,
@@ -1210,7 +1231,9 @@ async function main(): Promise<void> {
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
-      `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+      applyScope === "named-style"
+        ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
+        : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -1530,6 +1553,12 @@ async function main(): Promise<void> {
   document.body.dataset["ownedCommandCount"] = String(Object.keys(commandRegistry).length);
   textOverflowPolicy.addEventListener("change", () => {
     textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
+  });
+  textStyleScope.addEventListener("change", () => {
+    textStyleHelp.textContent =
+      textStyleScope.value === "named-style"
+        ? "Named style default updates template-local typography for inherited occurrences. Occurrence geometry, layout, and existing overrides are unchanged."
+        : "This occurrence receives project-owned typography and layout overrides through document history.";
   });
   textFrameFillEnabled.addEventListener("change", () => {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;

@@ -132,6 +132,25 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.fitted?.overflow !== "none" ||
     style?.fitUndo?.fontSize !== "5500" ||
     style?.fitUndo?.overflowPolicy !== null ||
+    style?.namedStyleApplied?.targetFontSize !== "5500" ||
+    style?.namedStyleApplied?.peerFontSize !== "5500" ||
+    style?.namedStyleApplied?.targetFill !== "#1d4ed8" ||
+    style?.namedStyleApplied?.peerFill !== "#1d4ed8" ||
+    style?.namedStyleApplied?.targetDecoration !== "underline" ||
+    style?.namedStyleApplied?.targetStyleId !== "style-small" ||
+    style?.namedStyleApplied?.peerStyleId !== "style-small" ||
+    style?.namedStyleApplied?.typographyInheritance !== "inherited" ||
+    style?.namedStyleApplied?.layoutInheritance !== "inherited" ||
+    style?.namedStyleUndo?.targetFontSize !== "5500" ||
+    style?.namedStyleUndo?.peerFontSize !== "5500" ||
+    style?.namedStyleUndo?.targetFill !== "#17202a" ||
+    style?.namedStyleUndo?.peerFill !== "#17202a" ||
+    style?.namedStyleUndo?.targetDecoration !== null ||
+    style?.namedStyleRedo?.targetFontSize !== "5500" ||
+    style?.namedStyleRedo?.peerFontSize !== "5500" ||
+    style?.namedStyleRedo?.targetFill !== "#1d4ed8" ||
+    style?.namedStyleRedo?.peerFill !== "#1d4ed8" ||
+    style?.namedStyleRedo?.targetDecoration !== "underline" ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.publication?.activeBoringLogIdentity !== "urn:rsrender:boring-log:test-01" ||
@@ -160,15 +179,20 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
   const persistedLayout = layoutJob?.template.occurrenceLayouts?.find(
     ({ id }) => id === layoutBinding?.styleId,
   );
+  const persistedNamedStyle = layoutJob?.template.styles.find(({ id }) => id === "style-small");
   if (
     !layoutJob ||
     binding !== undefined ||
     persistedStyle !== undefined ||
     layoutBinding !== undefined ||
-    persistedLayout !== undefined
+    persistedLayout !== undefined ||
+    persistedNamedStyle?.fontSizeMpt !== 5_500 ||
+    persistedNamedStyle?.lineHeightMpt !== 6_875 ||
+    persistedNamedStyle?.color !== "#1d4ed8" ||
+    persistedNamedStyle?.textDecoration !== "underline"
   ) {
     throw new Error(
-      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, layoutBinding, persistedLayout })}`,
+      `BLD037_PACKAGED_PROJECT_STYLE_INVALID:${JSON.stringify({ binding, persistedStyle, layoutBinding, persistedLayout, persistedNamedStyle })}`,
     );
   }
 
@@ -187,6 +211,8 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       persistedStyle: null,
       layoutId: null,
       persistedLayout: null,
+      namedStyleId: persistedNamedStyle.id,
+      persistedNamedStyle,
     },
     pdf: {
       relativePath: path.relative(root, pdfPath).replaceAll("\\", "/"),
@@ -207,6 +233,7 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
       occurrenceUnderlineEmphasis: true,
       occurrenceLetterWordParagraphSpacing: true,
       occurrenceFrameStyling: true,
+      templateLocalNamedStyleTypography: true,
       projectSaveReopenRetainsInheritedReset: true,
       screenAndPdfUseSameResolvedScene: true,
       fontAdmissionExpanded: false,

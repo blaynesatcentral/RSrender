@@ -146,6 +146,7 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   assert.equal(binding.accepted, true, binding.code);
   const args = {
     expectedWorkingRevision: 0,
+    applyScope: "occurrence",
     occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
     semanticId: "lithology:stratum-01:transition:2",
     baseStyleId: "style-small",
@@ -426,6 +427,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   const occurrenceResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setTextOccurrenceStyle(${JSON.stringify({
       expectedWorkingRevision: result.projection.workingRevision,
+      applyScope: "occurrence",
       occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
       semanticId: "lithology:stratum-01:transition:2",
       baseStyleId: "style-small",

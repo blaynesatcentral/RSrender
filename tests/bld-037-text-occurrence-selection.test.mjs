@@ -73,7 +73,10 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
   assert.match(html, /id="text-word-spacing"[^>]+min="-2"[^>]+max="24"/u);
   assert.match(html, /id="text-paragraph-spacing"[^>]+min="0"[^>]+max="72"/u);
   assert.match(html, /id="text-color" type="color"/u);
-  assert.match(html, /id="text-style-scope"[^>]*>[\s\S]*?This occurrence/u);
+  assert.match(
+    html,
+    /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?Named style default \(typography\)/u,
+  );
   assert.match(html, /id="text-layout-properties"/u);
   assert.match(html, /id="text-frame-x"/u);
   assert.match(html, /id="text-frame-y"[^>]+readonly/u);
@@ -109,6 +112,9 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /propertiesScroll\.focus\(\)/u);
   assert.match(entry, /selectionByBoring[\s\S]+nodeId: selectedSceneNodeId/u);
   assert.match(entry, /setTextOccurrenceStyle/u);
+  assert.match(entry, /const applyScope = textStyleScope\.value/u);
+  assert.match(entry, /Reset this occurrence to inherited typography/u);
+  assert.match(entry, /Occurrence geometry, layout, and existing overrides are unchanged/u);
   assert.match(entry, /resetTextOccurrencePresentation/u);
   assert.match(entry, /resetSelectedTextPresentation/u);
   assert.match(entry, /applySelectedTextStyle/u);

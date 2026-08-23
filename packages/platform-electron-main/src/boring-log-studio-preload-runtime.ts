@@ -307,6 +307,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
   if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
   const args = exactRecord(input, [
     "expectedWorkingRevision",
+    "applyScope",
     "occurrenceNodeId",
     "semanticId",
     "baseStyleId",
@@ -358,6 +359,7 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    !["occurrence", "named-style"].includes(String(args["applyScope"])) ||
     !boundedText(args["occurrenceNodeId"]) ||
     !boundedText(args["semanticId"]) ||
     !boundedText(args["baseStyleId"]) ||
@@ -683,6 +685,7 @@ export interface BoringLogStudioPreloadApi {
   }) => Promise<unknown>;
   readonly setTextOccurrenceStyle: (input: {
     readonly expectedWorkingRevision: number;
+    readonly applyScope: "occurrence" | "named-style";
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
     readonly baseStyleId: string;
