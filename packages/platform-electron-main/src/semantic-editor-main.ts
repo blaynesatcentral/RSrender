@@ -63,6 +63,10 @@ import {
   decodeBoringLogDocumentBundle,
   maximumBoringLogDocumentBundleBytes,
 } from "./boring-log-document-ingress.js";
+import {
+  inspectRsLogProjectDataJson,
+  maximumRsLogProjectDataBytes,
+} from "./rslog-project-data-ingress.js";
 import { publishBoringLogPdfPackage } from "./boring-log-pdf-publication.js";
 import { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
 import {
@@ -142,6 +146,7 @@ const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
 const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
 const LITHOLOGY_APPEARANCE_PROBE_ARGUMENT = "--rsrender-bld043-probe";
 const PUBLICATION_PACKAGE_PROBE_ARGUMENT = "--rsrender-bld044-probe";
+const RSLOG_IMPORT_PROBE_ARGUMENT = "--rsrender-bld045-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -149,6 +154,7 @@ const PDF_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld027-output=";
 const PROJECT_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld035-output=";
 const DOCUMENT_INPUT_ARGUMENT_PREFIX = "--rsrender-boring-log-input=";
 const PROJECT_INPUT_ARGUMENT_PREFIX = "--rsrender-log-project=";
+const RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX = "--rsrender-bld045-input=";
 const DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH = path.join(
   "example-data",
   "rsrender-example-boring-log.json",
@@ -159,12 +165,12 @@ const QUALIFIED_ARIAL_REGULAR_DIGEST =
   "sha256:b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a";
 const QUALIFIED_ARIAL_BOLD_DIGEST =
   "sha256:e8f4e3baf6cc35fed6fcce3a540e8b39e8f6cda1d22a28f2ec8f526fef7a43f5";
-function readBoundedRuntimeDocument(inputPath: string): Uint8Array {
+function readBoundedLocalFile(inputPath: string, maximumBytes: number): Uint8Array {
   const descriptor = openSync(inputPath, "r");
   try {
     const details = fstatSync(descriptor);
-    if (!details.isFile() || details.size > maximumBoringLogDocumentBundleBytes) {
-      throw new Error("BORING_LOG_DOCUMENT_INPUT_SIZE_REJECTED");
+    if (!details.isFile() || details.size > maximumBytes) {
+      throw new Error("LOCAL_FILE_INPUT_SIZE_REJECTED");
     }
     const bytes = new Uint8Array(details.size);
     let offset = 0;
@@ -177,6 +183,10 @@ function readBoundedRuntimeDocument(inputPath: string): Uint8Array {
   } finally {
     closeSync(descriptor);
   }
+}
+
+function readBoundedRuntimeDocument(inputPath: string): Uint8Array {
+  return readBoundedLocalFile(inputPath, maximumBoringLogDocumentBundleBytes);
 }
 
 const runtimeDocumentInput = (() => {
@@ -259,6 +269,7 @@ const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_ARGUMENT);
 const lithologyAppearanceProbeMode = process.argv.includes(LITHOLOGY_APPEARANCE_PROBE_ARGUMENT);
 const publicationPackageProbeMode = process.argv.includes(PUBLICATION_PACKAGE_PROBE_ARGUMENT);
+const rsLogImportProbeMode = process.argv.includes(RSLOG_IMPORT_PROBE_ARGUMENT);
 const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
 const textStyleProbeMode =
   process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
@@ -271,6 +282,7 @@ const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringPro
 const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
 const studioProbeMode =
   process.argv.includes(STUDIO_PROBE_ARGUMENT) ||
+  rsLogImportProbeMode ||
   pdfProbeMode ||
   lifecycleProbeMode ||
   authoringSurfaceProbeMode;
@@ -306,6 +318,9 @@ const pdfProbeOutput = process.argv
 const lifecycleProbeOutput = process.argv
   .find((value) => value.startsWith(PROJECT_OUTPUT_ARGUMENT_PREFIX))
   ?.slice(PROJECT_OUTPUT_ARGUMENT_PREFIX.length);
+const rsLogImportProbeInput = process.argv
+  .find((value) => value.startsWith(RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX))
+  ?.slice(RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX.length);
 const preloadPath = path.join(
   app.getAppPath(),
   ...(studioEditingMode
@@ -1527,6 +1542,58 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
       .digest("hex"),
     projectionDigest: finalProjection["projectionDigest"],
     datasetLogicalDigest: finalProjection["datasetLogicalDigest"],
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+    securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
+  });
+}
+
+async function runRsLogImportProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
+  emitStudioProbePhase("rslog-import-started");
+  await waitFor(
+    window,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."`,
+    "WAIT_RSLOG_IMPORT_STUDIO",
+    60_000,
+  );
+  const before = record(
+    await pageValue(
+      window,
+      `(() => ({ activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, sceneInputDigest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"), importButton: document.getElementById("import-rslog-project-data")?.textContent?.trim(), openButton: document.getElementById("open-project")?.textContent?.trim(), authoritativeFileBound: document.body.dataset.authoritativeFileBound }))()`,
+    ),
+  );
+  requireProbe(
+    typeof before["sceneInputDigest"] === "string" &&
+      typeof before["importButton"] === "string" &&
+      before["importButton"].includes("Import RSLog") &&
+      typeof before["openButton"] === "string" &&
+      before["openButton"].includes("Open"),
+    `RSLOG_IMPORT_INITIAL_INVALID:${JSON.stringify(before)}`,
+  );
+  await press(window, "#import-rslog-project-data", "Space", "FOCUS_RSLOG_IMPORT");
+  await waitFor(
+    window,
+    `document.getElementById("editor-status")?.textContent === "RSLog Project Data JSON was valid, but its vendor export schema has not been admitted yet. The current project is unchanged."`,
+    "WAIT_RSLOG_IMPORT_DIAGNOSTIC",
+    60_000,
+  );
+  const after = record(
+    await pageValue(
+      window,
+      `(() => ({ activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, sceneInputDigest: document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest"), status: document.getElementById("editor-status")?.textContent, authoritativeFileBound: document.body.dataset.authoritativeFileBound, activeId: document.activeElement?.id }))()`,
+    ),
+  );
+  requireProbe(
+    after["activeBoringLogIdentity"] === before["activeBoringLogIdentity"] &&
+      after["sceneInputDigest"] === before["sceneInputDigest"] &&
+      after["authoritativeFileBound"] === before["authoritativeFileBound"] &&
+      after["activeId"] === "import-rslog-project-data",
+    `RSLOG_IMPORT_MUTATED_PROJECT:${JSON.stringify({ before, after })}`,
+  );
+  return Object.freeze({
+    schema: "rsrender.bld045.rslog-project-data-import-probe.v1",
+    result: "PASS",
+    before,
+    after,
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
   });
@@ -4108,25 +4175,27 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? publicationPackageProbeMode
-            ? "rsrender.bld044.pdf-package-probe.v1"
-            : lithologyAppearanceProbeMode
-              ? "rsrender.bld043.lithology-appearance-probe.v1"
-              : authoringSurfaceProbeMode
-                ? "rsrender.bld040.authoring-surface-probe.v1"
-                : directManipulationProbeMode
-                  ? "rsrender.bld038.direct-manipulation-probe.v1"
-                  : textStyleProbeMode
-                    ? "rsrender.bld037.text-occurrence-style-probe.v1"
-                    : multiBoringProbeMode
-                      ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-                      : lifecycleProbeMode
-                        ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                        : pdfProbeMode
-                          ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                          : studioEditingMode
-                            ? "rsrender.bld026.boring-log-editor-probe.v1"
-                            : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? rsLogImportProbeMode
+            ? "rsrender.bld045.rslog-project-data-import-probe.v1"
+            : publicationPackageProbeMode
+              ? "rsrender.bld044.pdf-package-probe.v1"
+              : lithologyAppearanceProbeMode
+                ? "rsrender.bld043.lithology-appearance-probe.v1"
+                : authoringSurfaceProbeMode
+                  ? "rsrender.bld040.authoring-surface-probe.v1"
+                  : directManipulationProbeMode
+                    ? "rsrender.bld038.direct-manipulation-probe.v1"
+                    : textStyleProbeMode
+                      ? "rsrender.bld037.text-occurrence-style-probe.v1"
+                      : multiBoringProbeMode
+                        ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                        : lifecycleProbeMode
+                          ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                          : pdfProbeMode
+                            ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                            : studioEditingMode
+                              ? "rsrender.bld026.boring-log-editor-probe.v1"
+                              : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -4728,6 +4797,47 @@ async function main(): Promise<void> {
       }
       if (operation === "save-project-as") {
         return performProjectSave(expectedWorkingRevision, true);
+      }
+      if (operation === "import-rslog-project-data") {
+        const importPath = rsLogImportProbeMode
+          ? typeof rsLogImportProbeInput === "string" && rsLogImportProbeInput.length > 0
+            ? path.resolve(rsLogImportProbeInput)
+            : null
+          : await dialog
+              .showOpenDialog(window, {
+                title: "Import RSLog Project Data JSON",
+                buttonLabel: "Inspect RSLog Export",
+                filters: [{ name: "RSLog Project Data JSON", extensions: ["json"] }],
+                properties: ["openFile", "dontAddToRecent"],
+              })
+              .then((selected) =>
+                selected.canceled || selected.filePaths.length !== 1
+                  ? null
+                  : selected.filePaths[0]!,
+              );
+        if (importPath === null) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_IMPORT_CANCELED", current);
+        }
+        let bytes: Uint8Array;
+        try {
+          bytes = readBoundedLocalFile(importPath, maximumRsLogProjectDataBytes);
+        } catch {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_INPUT_TOO_LARGE", current);
+        }
+        const inspected = inspectRsLogProjectDataJson(bytes);
+        if (inspected.code === "RSLOG_PROJECT_DATA_SCHEMA_UNADMITTED" && !rsLogImportProbeMode) {
+          await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "RSLog export schema not admitted",
+            message: "This is valid JSON, but RSrender cannot safely map this RSLog export yet.",
+            detail:
+              "The current project was left unchanged. Supply an authorized sanitized multi-test-hole Project Data JSON export so its exact field, null, unit, and identity contract can be admitted without guessing.",
+            buttons: ["OK"],
+            defaultId: 0,
+            noLink: true,
+          });
+        }
+        return lifecycleResponse(false, inspected.code, current);
       }
 
       if (current.dirty) {
@@ -6732,9 +6842,11 @@ async function main(): Promise<void> {
   await window.loadURL(DOCUMENT_ROUTE_URL);
   if (probeMode) {
     const result = studioProbeMode
-      ? publicationPackageProbeMode
-        ? await runPublicationPackageProbe(window, counters)
-        : await runStudioProbe(window, counters)
+      ? rsLogImportProbeMode
+        ? await runRsLogImportProbe(window, counters)
+        : publicationPackageProbeMode
+          ? await runPublicationPackageProbe(window, counters)
+          : await runStudioProbe(window, counters)
       : await runProbe(window, counters);
     emitResult(result);
     await teardown();

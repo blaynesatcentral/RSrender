@@ -454,6 +454,7 @@ const lifecycle = Object.freeze(async function lifecycle(input: unknown) {
       "get-state",
       "new-project",
       "open-project",
+      "import-rslog-project-data",
       "save-project",
       "save-project-as",
       "first-boring",
@@ -1481,6 +1482,7 @@ export interface BoringLogStudioPreloadApi {
       | "get-state"
       | "new-project"
       | "open-project"
+      | "import-rslog-project-data"
       | "save-project"
       | "save-project-as"
       | "first-boring"

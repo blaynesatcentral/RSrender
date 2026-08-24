@@ -124,26 +124,26 @@
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 7569,
-      "sha256": "d98c1056fd8f44a03b88e6d5f5b15916fd3d6361ae941a99fca24c9fdcb040aa"
+      "bytes": 7837,
+      "sha256": "35de9d1df322aa71f3b257bbe6d201e7896bf17072037059e49601c4931781b9"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 3454,
-      "sha256": "2e713bc0b7943c3fdc9ef7b343c130ee89474fc104238a1bb416328320d05b01"
+      "bytes": 3585,
+      "sha256": "2124a027e0834ac2b84212177e16195cf496fe98165c1fdecf2bf4c62e8cb22b"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js",
-      "bytes": 4357,
-      "sha256": "27c47d33c4fea7612ef7d16f994419a4d464fa3676019fb14cd20a76eae72778"
+      "bytes": 4500,
+      "sha256": "fbdeb166d13139a14a0efbcf282f5e217d9d0132fda034f9763aafe5b5d2e088"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
-      "bytes": 2036,
-      "sha256": "acaf6f7eddc61d17b8465aee2bef6bd7fb677d6b52b97dfc3f7b6d9b7d91f65f"
+      "bytes": 2108,
+      "sha256": "e4edf58bb955ddd4f5e4a0dd3abaf2b189d2e55396f7f523e1f2c7d507f1e875"
     },
     {
       "package": "platform-zipjs",

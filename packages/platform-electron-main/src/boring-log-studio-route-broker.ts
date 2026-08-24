@@ -41,6 +41,7 @@ export type BoringLogStudioLifecycleOperation =
   | "get-state"
   | "new-project"
   | "open-project"
+  | "import-rslog-project-data"
   | "save-project"
   | "save-project-as"
   | "first-boring"
@@ -638,6 +639,7 @@ export class BoringLogStudioRouteBroker {
         "get-state",
         "new-project",
         "open-project",
+        "import-rslog-project-data",
         "save-project",
         "save-project-as",
         "first-boring",

@@ -234,6 +234,7 @@ type LifecycleOperation =
   | "get-state"
   | "new-project"
   | "open-project"
+  | "import-rslog-project-data"
   | "save-project"
   | "save-project-as"
   | "first-boring"
@@ -1075,7 +1076,9 @@ async function main(): Promise<void> {
     if (!result.accepted) {
       status.textContent = result.code.endsWith("_CANCELED")
         ? `${humanize(operation)} canceled; the current project is unchanged.`
-        : `${humanize(operation)} failed: ${result.code}`;
+        : result.code === "RSLOG_PROJECT_DATA_SCHEMA_UNADMITTED"
+          ? "RSLog Project Data JSON was valid, but its vendor export schema has not been admitted yet. The current project is unchanged."
+          : `${humanize(operation)} failed: ${result.code}`;
       return;
     }
     if (result.code === "PROJECT_SAVE_VERIFIED") {
@@ -4641,6 +4644,7 @@ async function main(): Promise<void> {
     "select-page": () => select("page-root"),
     "new-project": () => void invokeLifecycle("new-project"),
     "open-project": () => void invokeLifecycle("open-project"),
+    "import-rslog-project-data": () => void invokeLifecycle("import-rslog-project-data"),
     "save-project": () => void invokeLifecycle("save-project"),
     "save-project-as": () => void invokeLifecycle("save-project-as"),
     "first-boring": () => void invokeLifecycle("first-boring"),

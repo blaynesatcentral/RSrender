@@ -189,6 +189,15 @@ export type {
   BoringLogPdfRenderRequest,
 } from "./boring-log-pdf-publication.js";
 export {
+  inspectRsLogProjectDataJson,
+  maximumRsLogProjectDataBytes,
+  rsLogProjectDataIngressRevision,
+} from "./rslog-project-data-ingress.js";
+export type {
+  RsLogProjectDataIngressRejectionCode,
+  RsLogProjectDataIngressResult,
+} from "./rslog-project-data-ingress.js";
+export {
   BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
   SEMANTIC_EDITOR_SECURITY_PROFILE,
