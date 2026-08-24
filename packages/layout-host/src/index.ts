@@ -16,3 +16,17 @@ export type {
   BoringLogPublicationProjectionManifest,
   BoringLogPublicationProjectionResult,
 } from "./boring-log-publication-projection.js";
+
+export {
+  boringLogPublicationPackageProjectionRevision,
+  projectBoringLogSceneSetForPublication,
+} from "./boring-log-publication-package-projection.js";
+export type {
+  BoringLogPublicationPackageEntryManifest,
+  BoringLogPublicationPackagePageManifest,
+  BoringLogPublicationPackageProjection,
+  BoringLogPublicationPackageProjectionManifest,
+  BoringLogPublicationPackageProjectionResult,
+  BoringLogPublicationSceneSet,
+  BoringLogPublicationSceneSetEntry,
+} from "./boring-log-publication-package-projection.js";
