@@ -23,6 +23,14 @@ export {
   clearBoringLogTextOccurrencePresentation,
   prepareBoringLogLayoutWithTextOccurrenceStyles,
 } from "./boring-log-text-occurrence-authoring.js";
+export {
+  boringLogColumnResizeRevision,
+  resizeAdjacentBoringLogColumns,
+} from "./boring-log-column-resize.js";
+export type {
+  BoringLogAdjacentColumnResizeResult,
+  BoringLogColumnResizeConstraint,
+} from "./boring-log-column-resize.js";
 export type {
   BoringLogTemplateTextProperty,
   BoringLogTemplateTextStyleResult,
