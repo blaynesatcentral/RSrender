@@ -42,6 +42,7 @@ export function applyBoringLogTextMeasurements(
       string,
       Readonly<{
         readonly semanticId: string;
+        readonly pageId: string;
         readonly xMpt: number;
         readonly yMpt: number;
         readonly widthMpt: number;
@@ -92,6 +93,7 @@ export function applyBoringLogTextMeasurements(
       if (textNode === undefined) return rejected("BORING_LOG_TEXT_RESULTS_REJECTED");
       const absolute = Object.freeze({
         semanticId: textNode.node.semanticId,
+        pageId: textNode.page.pageId,
         xMpt: textNode.node.frame.xMpt + result.inkBounds.xMpt,
         yMpt: textNode.node.frame.yMpt + result.inkBounds.yMpt,
         widthMpt: result.inkBounds.widthMpt,
@@ -125,6 +127,7 @@ export function applyBoringLogTextMeasurements(
       for (let rightIndex = leftIndex + 1; rightIndex < orderedInk.length; rightIndex += 1) {
         const [rightId, right] = orderedInk[rightIndex]!;
         if (right.widthMpt === 0 || right.heightMpt === 0) continue;
+        if (left.pageId !== right.pageId) continue;
         const overlaps =
           Math.min(left.xMpt + left.widthMpt, right.xMpt + right.widthMpt) >
             Math.max(left.xMpt, right.xMpt) &&
@@ -150,11 +153,13 @@ export function applyBoringLogTextMeasurements(
     const pagePlan = {
       ...candidate.value.pagePlan,
       overflow:
-        textDiagnostics.length === 0
-          ? ("none" as const)
-          : candidate.value.textResults.some(({ overflow }) => overflow === "continued")
-            ? ("continued" as const)
-            : ("clipped-with-diagnostic" as const),
+        candidate.value.pages.length > 1
+          ? ("continued" as const)
+          : textDiagnostics.length === 0
+            ? ("none" as const)
+            : candidate.value.textResults.some(({ overflow }) => overflow === "continued")
+              ? ("continued" as const)
+              : ("clipped-with-diagnostic" as const),
       diagnostics,
     };
     const resolved = validateResolvedBoringLogPageScene({

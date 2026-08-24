@@ -207,7 +207,7 @@ export function projectBoringLogSceneForPublication(
   }
   const scene = validated.value;
   if (scene.pages.length > 1) {
-    const projections = scene.pages.map((scenePage, pageIndex) => {
+    const projections = scene.pages.map((scenePage) => {
       const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === scenePage.pageId)!;
       const pageScene = {
         ...scene,
@@ -254,11 +254,22 @@ export function projectBoringLogSceneForPublication(
     });
     const projectionDigest = sha256CanonicalJson(manifest);
     const documentTitle = `RSrender Boring Log | Scene ${manifest.sceneDigest} | Projection ${projectionDigest}`;
-    const svgMarkup = projections.map(({ svgMarkup }) => svgMarkup).join("");
-    const pagesMarkup = projections
+    const normalizedPageSvgMarkup = projections.map(({ svgMarkup }) =>
+      svgMarkup
+        .replace(
+          /data-scene-digest="sha256:[0-9a-f]{64}"/u,
+          `data-scene-digest="${manifest.sceneDigest}"`,
+        )
+        .replace(
+          /data-projection-digest="sha256:[0-9a-f]{64}"/u,
+          `data-projection-digest="${projectionDigest}"`,
+        ),
+    );
+    const svgMarkup = normalizedPageSvgMarkup.join("");
+    const pagesMarkup = normalizedPageSvgMarkup
       .map(
-        ({ svgMarkup }, pageIndex) =>
-          `<section class="publication-page" data-page-index="${pageIndex}">${svgMarkup}</section>`,
+        (pageSvgMarkup, pageIndex) =>
+          `<section class="publication-page" data-page-index="${pageIndex}">${pageSvgMarkup}</section>`,
       )
       .join("");
     const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-regular.ttf') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-bold.ttf') format('truetype');font-style:normal;font-weight:700}@page{size:${points(first.widthMpt)}pt ${points(first.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;background:#fff}.publication-page{width:${points(first.widthMpt)}pt;height:${points(first.heightMpt)}pt;overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pagesMarkup}</body></html>`;

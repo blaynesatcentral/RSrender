@@ -1063,9 +1063,17 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   }
 
   const remarksColumn = columnByRole(job, "remarks");
+  const remarkLineBudgetMpt =
+    job.template.pagination === undefined ? 9_375 : styleById(job, "style-small").lineHeightMpt;
   for (const remark of job.document.remarks) {
     const yFrom = depthToYMpt(job, remark.depthFromFt);
     const yTo = depthToYMpt(job, remark.depthToFt);
+    const remarkHeightMpt =
+      job.template.pagination !== undefined &&
+      job.document.referenceDepthRange.terminalInclusive &&
+      remark.depthToFt === job.document.referenceDepthRange.endFt
+        ? depthBody.yMpt + depthBody.heightMpt - yFrom - 4_000
+        : yTo - yFrom - 4_000;
     addText(
       `node:remark:${remark.id}`,
       `remark:${remark.id}`,
@@ -1076,11 +1084,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
         remarksColumn.xMpt + 2_000,
         yFrom + 2_000,
         remarksColumn.widthMpt - 4_000,
-        yTo - yFrom - 4_000,
+        remarkHeightMpt,
       ),
       "style-small",
       sourceFor(job, remark.id, "text"),
-      Math.max(1, Math.floor((yTo - yFrom - 4_000) / 9_375)),
+      Math.max(1, Math.floor(remarkHeightMpt / remarkLineBudgetMpt)),
     );
   }
 
@@ -1493,15 +1501,15 @@ function namespaceDraft(draft: DraftScene, pageIndex: number): DraftScene {
       return Object.freeze({
         ...common,
         childIds: Object.freeze(node.childIds.map(nodeId)),
-      }) as BoringLogSceneNode;
+      });
     }
     if (node.kind === "text") {
       return Object.freeze({
         ...common,
         measurementId: measurementId(node.measurementId),
-      }) as BoringLogSceneNode;
+      });
     }
-    return Object.freeze(common) as BoringLogSceneNode;
+    return Object.freeze(common);
   });
   return Object.freeze({
     nodes: Object.freeze(nodes),
@@ -1528,6 +1536,11 @@ function createPageDrafts(
           depthFt >= startFt && (depthFt < endFt || (terminalInclusive && depthFt <= endFt)),
       );
       const sampleIds = new Set(samples.map(({ id }) => id));
+      const continuedLithologySemanticIds = new Set(
+        job.document.lithologyIntervals
+          .filter(({ depthFromFt, depthToFt }) => depthFromFt < startFt && depthToFt > startFt)
+          .map(({ id }) => `lithology:${id}`),
+      );
       const lithologyIntervals = job.document.lithologyIntervals
         .filter(({ depthFromFt, depthToFt }) => depthToFt > startFt && depthFromFt < endFt)
         .map((interval) => {
@@ -1544,6 +1557,32 @@ function createPageDrafts(
             ),
           });
         });
+      const continuedRemarkSemanticIds = new Set(
+        job.document.remarks
+          .filter(
+            ({ depthFromFt, depthToFt }) =>
+              depthFromFt < startFt &&
+              depthToFt > startFt &&
+              !(
+                terminalInclusive &&
+                job.document.referenceDepthRange.terminalInclusive &&
+                depthToFt === job.document.referenceDepthRange.endFt
+              ),
+          )
+          .map(({ id }) => `remark:${id}`),
+      );
+      const deferredTerminalRemarkSemanticIds = new Set(
+        terminalInclusive
+          ? []
+          : job.document.remarks
+              .filter(
+                ({ depthToFt }) =>
+                  job.document.referenceDepthRange.terminalInclusive &&
+                  depthToFt === job.document.referenceDepthRange.endFt &&
+                  depthToFt > endFt,
+              )
+              .map(({ id }) => `remark:${id}`),
+      );
       const remarks = job.document.remarks
         .filter(({ depthFromFt, depthToFt }) => depthToFt > startFt && depthFromFt < endFt)
         .map((remark) =>
@@ -1586,9 +1625,19 @@ function createPageDrafts(
         }),
       }) as BoringLogLayoutJobInput;
       const rawDraft = buildDraft(pageJob);
-      const retainedNodes = terminalInclusive
-        ? rawDraft.nodes
-        : rawDraft.nodes.filter(({ role }) => role !== "log-completion-note");
+      const retainedNodes = rawDraft.nodes.filter(
+        ({ role, semanticId }) =>
+          (terminalInclusive || role !== "log-completion-note") &&
+          !(
+            role === "material-description-interval" &&
+            continuedLithologySemanticIds.has(semanticId)
+          ) &&
+          !(
+            role === "remark-interval" &&
+            (continuedRemarkSemanticIds.has(semanticId) ||
+              deferredTerminalRemarkSemanticIds.has(semanticId))
+          ),
+      );
       const retainedNodeIds = new Set(retainedNodes.map(({ id }) => id));
       const normalizedNodes = retainedNodes.map((node, order) =>
         node.kind === "group"

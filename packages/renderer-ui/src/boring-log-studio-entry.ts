@@ -809,8 +809,11 @@ async function main(): Promise<void> {
     pageHost.replaceChildren(...pageElements);
     element<HTMLElement>("page-status").textContent =
       `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} in active Boring Log`;
+    const activeBoringDisplayName = lifecycleState?.boringLogs.find(
+      ({ boringLogIdentity }) => boringLogIdentity === lifecycleState?.activeBoringLogIdentity,
+    )?.displayName;
     element<HTMLElement>("canvas-title").textContent =
-      `Boring Log - ${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"}`;
+      `${activeBoringDisplayName ?? "Boring Log"} - ${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"}`;
     sceneSummary.textContent = `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} - ${scene.pages.reduce((total, scenePage) => total + scenePage.nodes.length, 0)} vector nodes - ${scene.diagnostics.length} diagnostics`;
     if (selectedSceneNodeId !== null || selectedTextNodeIds.size > 0) {
       for (const selected of pageHost.querySelectorAll<SVGElement>(".scene-node.is-selected")) {
@@ -2926,6 +2929,7 @@ async function main(): Promise<void> {
     exportPdfButton.dataset["sceneDigest"] = result.result.sceneDigest;
     exportPdfButton.dataset["projectionDigest"] = result.result.projectionDigest;
     exportPdfButton.dataset["pdfBytes"] = String(result.result.pdfBytes);
+    exportPdfButton.dataset["pageCount"] = String(result.result.pageCount);
     status.textContent = `PDF exported and reopened successfully: ${result.result.destinationPath}`;
     exportPdfButton.disabled = false;
     exportPdfButton.focus();

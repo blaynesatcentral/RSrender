@@ -231,6 +231,16 @@ test("BLD-039 renderer-neutral Page Plan materializes the authored continuation 
       ({ depthTransform }) => depthTransform.mptPerFoot === 12_025,
     ),
   );
+  const terminalRemarkRequest = prepared.value.textRequests.find(
+    ({ sourceIdentity }) => sourceIdentity === "remark:remark-07",
+  );
+  assert.ok(terminalRemarkRequest);
+  assert.match(terminalRemarkRequest.measurementId, /:page:2$/u);
+  assert.equal(
+    terminalRemarkRequest.maximumLines,
+    Math.floor(terminalRemarkRequest.maximumHeightMpt / terminalRemarkRequest.lineHeightMpt),
+  );
+  assert.ok(terminalRemarkRequest.maximumLines >= 4);
   const resolved = resolveBoringLogPageScene(
     prepared.value,
     deterministicTextResults(prepared.value.textRequests),
@@ -254,6 +264,14 @@ test("BLD-039 renderer-neutral Page Plan materializes the authored continuation 
     resolved.value.pages[1].nodes.every(({ id }) => id.endsWith(":page:2")),
     true,
   );
+  assert.equal(
+    resolved.value.pages[0].nodes.some(({ semanticId }) => semanticId === "remark:remark-07"),
+    false,
+  );
+  assert.equal(
+    resolved.value.pages[1].nodes.some(({ semanticId }) => semanticId === "remark:remark-07"),
+    true,
+  );
   const secondPageSvg = projectBoringLogSceneToSvg(
     resolved.value,
     null,
@@ -271,6 +289,22 @@ test("BLD-039 renderer-neutral Page Plan materializes the authored continuation 
     resolved.value.pages.map(({ pageId }) => pageId),
   );
   assert.equal([...publication.projection.html.matchAll(/class="publication-page"/gu)].length, 2);
+  assert.equal(
+    [
+      ...publication.projection.html.matchAll(
+        new RegExp(`data-scene-digest="${publication.projection.manifest.sceneDigest}"`, "gu"),
+      ),
+    ].length,
+    2,
+  );
+  assert.equal(
+    [
+      ...publication.projection.html.matchAll(
+        new RegExp(`data-projection-digest="${publication.projection.projectionDigest}"`, "gu"),
+      ),
+    ].length,
+    2,
+  );
   assert.match(publication.projection.svgMarkup, /node:depth-label:40:page:2/u);
 });
 

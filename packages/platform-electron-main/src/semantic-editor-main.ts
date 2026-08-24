@@ -3318,11 +3318,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.includes("requires 2 pages at the fixed depth scale") === true && document.getElementById("canvas-stage")?.dataset.regionPreviewPages === "2"`,
+        `document.getElementById("editor-status")?.textContent?.includes("creates 2 pages at the fixed depth scale") === true && document.getElementById("canvas-stage")?.dataset.regionPreviewPages === "2"`,
         "WAIT_REGION_REPAGINATION_PREVIEW",
       );
-      window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
-      window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
       window.webContents.sendInputEvent({
         type: "mouseUp",
         x: blockedStart["x"] as number,
@@ -3332,14 +3330,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       });
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Page Region gesture canceled for header-depth") === true`,
-        "WAIT_REGION_REPAGINATION_CANCEL",
+        `document.getElementById("editor-status")?.textContent?.includes("2 pages now preserve the fixed depth scale") === true && document.querySelectorAll("#svg-page > svg").length === 2`,
+        "WAIT_REGION_REPAGINATION_COMMIT",
       );
-      const regionCanceled = record(await pageValue(window, regionSnapshotExpression));
+      const regionRepaginated = record(await pageValue(window, regionSnapshotExpression));
       requireProbe(
-        regionCanceled["workingRevision"] === regionRedo["workingRevision"] &&
-          JSON.stringify(regionCanceled["regions"]) === JSON.stringify(regionRedo["regions"]),
-        `REGION_REPAGINATION_CANCEL_INVALID:${JSON.stringify({ regionRedo, regionCanceled })}`,
+        regionRepaginated["workingRevision"] === (regionRedo["workingRevision"] as number) + 1 &&
+          JSON.stringify(regionRepaginated["regions"]) !== JSON.stringify(regionRedo["regions"]),
+        `REGION_REPAGINATION_COMMIT_INVALID:${JSON.stringify({ regionRedo, regionRepaginated })}`,
       );
       directManipulation = Object.freeze({
         before: directBefore,
@@ -3376,7 +3374,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           committed: regionCommitted,
           undo: regionUndo,
           redo: regionRedo,
-          repaginationCanceled: regionCanceled,
+          repaginated: regionRepaginated,
         }),
       });
       emitStudioProbePhase("direct-manipulation-observed");
@@ -3388,6 +3386,19 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       )) === true,
       "TEXT_OCCURRENCE_PUBLICATION_TAB_INVALID",
     );
+    const publicationPreflight = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { accepted: value.accepted, pageCount: value.accepted ? value.projection.scene.pages.length : null, diagnostics: value.accepted ? value.projection.scene.diagnostics : null }; })()`,
+      ),
+    );
+    requireProbe(
+      publicationPreflight["accepted"] === true &&
+        (publicationPreflight["diagnostics"] as readonly DataRecord[]).every(
+          ({ severity }) => severity !== "error",
+        ),
+      `MULTIPAGE_PUBLICATION_PREFLIGHT_INVALID:${JSON.stringify(publicationPreflight)}`,
+    );
     emitStudioProbePhase("publication-starting");
     await press(window, "#export-pdf", "Space", "FOCUS_TEXT_OCCURRENCE_EXPORT");
     await waitFor(
@@ -3398,7 +3409,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     publication = record(
       await pageValue(
         window,
-        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
+        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), pageCount: Number(button?.dataset.pageCount), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
       ),
     );
     textOccurrenceStyle = Object.freeze({
