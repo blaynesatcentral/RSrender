@@ -152,6 +152,7 @@ type CommandResult = Readonly<{
   readonly accepted: boolean;
   readonly code?: string;
   readonly workingRevision?: number;
+  readonly pageCount?: number;
 }>;
 
 type PublicationResult =
@@ -1358,7 +1359,7 @@ async function main(): Promise<void> {
     line?.setAttribute("y2", String(outcome.effectiveYMpt));
     canvasStage.dataset["regionPreviewPages"] = String(outcome.pageCount);
     status.textContent = outcome.repaginationRequired
-      ? `Region preview: ${gesture.boundary} at ${outcome.effectiveYMpt / 1_000} pt requires ${outcome.pageCount} pages at the fixed depth scale; release remains blocked and Esc cancels.`
+      ? `Region preview: ${gesture.boundary} at ${outcome.effectiveYMpt / 1_000} pt creates ${outcome.pageCount} pages at the fixed depth scale; release commits one Undo item and Esc cancels.`
       : `Region preview: ${gesture.boundary} at ${outcome.effectiveYMpt / 1_000} pt fits 1 page at the fixed depth scale; release commits one Undo item and Esc cancels.`;
     event.preventDefault();
   }
@@ -1387,16 +1388,13 @@ async function main(): Promise<void> {
       requestedBoundaryYMpt,
     });
     if (!result.accepted || result.workingRevision === undefined) {
-      const outcome = regionBoundaryOutcome(boundary, requestedBoundaryYMpt);
-      status.textContent = outcome.repaginationRequired
-        ? `Region change blocked: ${outcome.pageCount} pages are required at the fixed depth scale; no history item was created and publication remains blocked for this unresolved request.`
-        : `Page Region command failed: ${result.code ?? "REGION_BOUNDARY_UNAVAILABLE"}`;
+      status.textContent = `Page Region command failed: ${result.code ?? "REGION_BOUNDARY_UNAVAILABLE"}`;
       installSvg();
       return false;
     }
     return refreshStudioProjection(
       result.workingRevision,
-      `Page Region boundary committed at revision ${result.workingRevision}; page size and depth scale were preserved.`,
+      `Page Region boundary committed at revision ${result.workingRevision}; ${result.pageCount ?? 1} page${result.pageCount === 1 ? "" : "s"} now preserve the fixed depth scale.`,
     );
   }
 

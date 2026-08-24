@@ -316,11 +316,11 @@ test("BLD-039 region commands expose exact route, Canvas, Properties, and histor
   assert.match(broker, /setRegionBoundary[\s\S]*requestedBoundaryYMpt/u);
   assert.match(preload, /BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL/u);
   assert.match(main, /resizeBoringLogPageRegions/u);
-  assert.match(main, /REGION_REPAGINATION_REQUIRED/u);
+  assert.match(main, /fixed-scale-continuation-v1/u);
   assert.match(main, /commitEmbeddedTemplateReplacement/u);
   assert.match(main, /operation: "region-boundary-resize"/u);
   assert.match(entry, /id = "region-boundary-controls"/u);
-  assert.match(entry, /Region preview:[\s\S]*requires \$\{outcome.pageCount\} pages/u);
+  assert.match(entry, /Region preview:[\s\S]*creates \$\{outcome.pageCount\} pages/u);
   assert.match(entry, /Page Region gesture canceled/u);
   assert.match(entry, /ArrowUp[\s\S]*ArrowDown/u);
   assert.match(uiRoute, /id="region-resize-properties"/u);

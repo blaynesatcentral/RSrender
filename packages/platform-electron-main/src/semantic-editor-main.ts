@@ -4907,14 +4907,10 @@ async function main(): Promise<void> {
         minimumDepthBodyHeightMpt: 300_000,
         minimumFooterHeightMpt: 72_000,
       });
-      if (!resized.accepted || !resized.changed || resized.depthTransform === null) {
+      if (!resized.accepted || !resized.changed) {
         return Object.freeze({
           accepted: false,
-          code: !resized.accepted
-            ? resized.code
-            : !resized.changed
-              ? "REGION_BOUNDARY_NO_CHANGE"
-              : "REGION_REPAGINATION_REQUIRED",
+          code: !resized.accepted ? resized.code : "REGION_BOUNDARY_NO_CHANGE",
           ...(resized.accepted
             ? {
                 pageCount: resized.pageCount,
@@ -4942,10 +4938,35 @@ async function main(): Promise<void> {
       if (representation === undefined) {
         return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
       }
-      const template = Object.freeze({
+      const currentDepthBody = currentJob.template.regions.find(
+        ({ role }) => role === "depth-body",
+      )!;
+      const nextDepthBody = resized.regions.find(({ role }) => role === "depth-body")!;
+      const yStartMpt =
+        nextDepthBody.yMpt + (currentJob.template.depthTransform.yStartMpt - currentDepthBody.yMpt);
+      const depthTransform =
+        resized.depthTransform ??
+        Object.freeze({
+          ...currentJob.template.depthTransform,
+          yStartMpt,
+          yEndMpt: yStartMpt + resized.requiredPlotHeightMpt,
+        });
+      const templateWithoutPagination: BoringLogLayoutJobInput["template"] = {
         ...currentJob.template,
+      };
+      Reflect.deleteProperty(templateWithoutPagination, "pagination");
+      const template = Object.freeze({
+        ...templateWithoutPagination,
         regions: resized.regions,
-        depthTransform: resized.depthTransform,
+        depthTransform,
+        ...(resized.repaginationRequired
+          ? {
+              pagination: Object.freeze({
+                policy: "fixed-scale-continuation-v1" as const,
+                yEndLimitMpt: nextDepthBody.yMpt + nextDepthBody.heightMpt,
+              }),
+            }
+          : {}),
       });
       const authored = validateBoringLogLayoutJobInput({
         ...currentJob,
@@ -4983,6 +5004,7 @@ async function main(): Promise<void> {
         boundary: resized.boundary,
         effectiveBoundaryYMpt: resized.effectiveBoundaryYMpt,
         pageCount: resized.pageCount,
+        repaginated: resized.repaginationRequired,
         clamped: resized.clamped,
       });
     };

@@ -94,7 +94,7 @@ export function resizeBoringLogPageRegions(
       footer.yMpt + footer.heightMpt > input.pageHeightMpt ||
       input.depthTransform.regionId !== depthBody.id ||
       input.depthTransform.yStartMpt < depthBody.yMpt ||
-      input.depthTransform.yEndMpt > depthBody.yMpt + depthBody.heightMpt
+      input.depthTransform.yStartMpt >= depthBody.yMpt + depthBody.heightMpt
     ) {
       return rejected("REGION_RESIZE_TOPOLOGY_INVALID");
     }
