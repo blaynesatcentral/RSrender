@@ -167,11 +167,10 @@ export async function publishBoringLogPdf(
   if (!validBoringLogPdfEnvelope(pdfBytes)) return rejected("EXPORT_PDF_ENVELOPE_INVALID");
   const committed = await stagedCreateNew(destinationPath, pdfBytes);
   if (!committed.accepted) return rejected(committed.code);
-  const page = input.scene.pages[0];
-  if (page === undefined) return rejected("EXPORT_PROJECTION_REJECTED");
-  const pageSizes: readonly [Readonly<{ widthMpt: number; heightMpt: number }>] = [
-    Object.freeze({ widthMpt: page.widthMpt, heightMpt: page.heightMpt }),
-  ];
+  if (input.scene.pages.length === 0) return rejected("EXPORT_PROJECTION_REJECTED");
+  const pageSizes = Object.freeze(
+    input.scene.pages.map(({ widthMpt, heightMpt }) => Object.freeze({ widthMpt, heightMpt })),
+  );
   return Object.freeze({
     accepted: true,
     code: "EXPORT_VERIFIED_SUCCESS",
@@ -181,8 +180,8 @@ export async function publishBoringLogPdf(
     projectionDigest: projected.projection.projectionDigest,
     pdfDigest: pdfDigest(committed.reopened),
     pdfBytes: committed.reopened.byteLength,
-    pageCount: 1,
-    pageSizes: Object.freeze(pageSizes),
+    pageCount: input.scene.pages.length,
+    pageSizes,
     destinationPath,
     taggedPdfTarget: true,
     vectorTextTarget: true,

@@ -140,9 +140,10 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
     !Number.isSafeInteger(tagged["pdfBytes"]) ||
     (tagged["pdfBytes"] as number) < 1 ||
     (tagged["pdfBytes"] as number) > 52_428_800 ||
-    tagged["pageCount"] !== 1 ||
+    !Number.isSafeInteger(tagged["pageCount"]) ||
+    (tagged["pageCount"] as number) < 1 ||
     !Array.isArray(tagged["pageSizes"]) ||
-    tagged["pageSizes"].length !== 1 ||
+    tagged["pageSizes"].length !== tagged["pageCount"] ||
     typeof tagged["destinationPath"] !== "string" ||
     tagged["destinationPath"].length < 1 ||
     tagged["destinationPath"].length > 1_024 ||
@@ -151,14 +152,16 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
   ) {
     return false;
   }
-  const size = exactRecord(tagged["pageSizes"][0], ["widthMpt", "heightMpt"]);
-  return (
-    size !== null &&
-    Number.isSafeInteger(size["widthMpt"]) &&
-    (size["widthMpt"] as number) > 0 &&
-    Number.isSafeInteger(size["heightMpt"]) &&
-    (size["heightMpt"] as number) > 0
-  );
+  return tagged["pageSizes"].every((candidate) => {
+    const size = exactRecord(candidate, ["widthMpt", "heightMpt"]);
+    return (
+      size !== null &&
+      Number.isSafeInteger(size["widthMpt"]) &&
+      (size["widthMpt"] as number) > 0 &&
+      Number.isSafeInteger(size["heightMpt"]) &&
+      (size["heightMpt"] as number) > 0
+    );
+  });
 }
 
 function rejected(code: BoringLogPublicationRouteRejectionCode): BoringLogPublicationRouteResult {

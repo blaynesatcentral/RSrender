@@ -14,8 +14,8 @@ export type BoringLogPublicationOutcome =
       projectionDigest: string;
       pdfDigest: string;
       pdfBytes: number;
-      pageCount: 1;
-      pageSizes: readonly [Readonly<{ widthMpt: number; heightMpt: number }>];
+      pageCount: number;
+      pageSizes: readonly Readonly<{ widthMpt: number; heightMpt: number }>[];
       destinationPath: string;
       taggedPdfTarget: true;
       vectorTextTarget: true;

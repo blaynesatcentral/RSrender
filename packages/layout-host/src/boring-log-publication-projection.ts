@@ -25,6 +25,9 @@ export interface BoringLogPublicationProjectionManifest {
   readonly semanticOrderDigest: string;
   readonly fontFaceDigests: readonly string[];
   readonly fontMetricsDigests: readonly string[];
+  readonly pageCount?: number;
+  readonly pageIds?: readonly string[];
+  readonly pageSizes?: readonly Readonly<{ widthMpt: number; heightMpt: number }>[];
 }
 
 export interface BoringLogPublicationProjection {
@@ -203,6 +206,74 @@ export function projectBoringLogSceneForPublication(
     });
   }
   const scene = validated.value;
+  if (scene.pages.length > 1) {
+    const projections = scene.pages.map((scenePage, pageIndex) => {
+      const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === scenePage.pageId)!;
+      const pageScene = {
+        ...scene,
+        pagePlan: {
+          ...scene.pagePlan,
+          pages: [{ ...plannedPage, pageIndex: 0 }],
+        },
+        pages: [scenePage],
+      };
+      const projected = projectBoringLogSceneForPublication(pageScene);
+      if (!projected.accepted) throw new Error(projected.code);
+      return projected.projection;
+    });
+    const first = scene.pages[0]!;
+    const manifest = Object.freeze({
+      ...projections[0]!.manifest,
+      sceneDigest: sha256CanonicalJson(scene),
+      pagePlanDigest: sha256CanonicalJson(scene.pagePlan),
+      pageId: scene.pages[0]!.pageId,
+      sceneNodeCount: scene.pages.reduce((total, page) => total + page.nodes.length, 0),
+      semanticElementCount: scene.pages.reduce(
+        (total, page) => total + page.semanticOrder.length,
+        0,
+      ),
+      textNodeCount: projections.reduce(
+        (total, projection) => total + projection.manifest.textNodeCount,
+        0,
+      ),
+      textLineCount: projections.reduce(
+        (total, projection) => total + projection.manifest.textLineCount,
+        0,
+      ),
+      sourceRangeDigest: sha256CanonicalJson(
+        projections.map(({ manifest }) => manifest.sourceRangeDigest),
+      ),
+      semanticOrderDigest: sha256CanonicalJson(
+        projections.map(({ manifest }) => manifest.semanticOrderDigest),
+      ),
+      pageCount: scene.pages.length,
+      pageIds: Object.freeze(scene.pages.map(({ pageId }) => pageId)),
+      pageSizes: Object.freeze(
+        scene.pages.map(({ widthMpt, heightMpt }) => Object.freeze({ widthMpt, heightMpt })),
+      ),
+    });
+    const projectionDigest = sha256CanonicalJson(manifest);
+    const documentTitle = `RSrender Boring Log | Scene ${manifest.sceneDigest} | Projection ${projectionDigest}`;
+    const svgMarkup = projections.map(({ svgMarkup }) => svgMarkup).join("");
+    const pagesMarkup = projections
+      .map(
+        ({ svgMarkup }, pageIndex) =>
+          `<section class="publication-page" data-page-index="${pageIndex}">${svgMarkup}</section>`,
+      )
+      .join("");
+    const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-regular.ttf') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-bold.ttf') format('truetype');font-style:normal;font-weight:700}@page{size:${points(first.widthMpt)}pt ${points(first.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;background:#fff}.publication-page{width:${points(first.widthMpt)}pt;height:${points(first.heightMpt)}pt;overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pagesMarkup}</body></html>`;
+    return Object.freeze({
+      accepted: true,
+      projection: Object.freeze({
+        schema: "rsrender.boring-log-publication-projection.v1",
+        manifest,
+        projectionDigest,
+        documentTitle,
+        svgMarkup,
+        html,
+      }),
+    });
+  }
   const page = scene.pages[0];
   if (page === undefined) {
     return Object.freeze({

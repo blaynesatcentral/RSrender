@@ -978,9 +978,9 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
       !/^sha256:[0-9a-f]{64}$/u.test(success["pdfDigest"]) ||
       !Number.isSafeInteger(success["pdfBytes"]) ||
       (success["pdfBytes"] as number) < 1 ||
-      success["pageCount"] !== 1 ||
+      !isPositiveSafeInteger(success["pageCount"]) ||
       !Array.isArray(success["pageSizes"]) ||
-      success["pageSizes"].length !== 1 ||
+      success["pageSizes"].length !== success["pageCount"] ||
       typeof success["destinationPath"] !== "string" ||
       success["destinationPath"].length < 1 ||
       success["destinationPath"].length > 1_024 ||
@@ -989,11 +989,15 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
     ) {
       return publicationUnavailable;
     }
-    const size = exactRecord(success["pageSizes"][0], ["widthMpt", "heightMpt"]);
     if (
-      size === null ||
-      !isPositiveSafeInteger(size["widthMpt"]) ||
-      !isPositiveSafeInteger(size["heightMpt"])
+      !success["pageSizes"].every((candidate) => {
+        const size = exactRecord(candidate, ["widthMpt", "heightMpt"]);
+        return (
+          size !== null &&
+          isPositiveSafeInteger(size["widthMpt"]) &&
+          isPositiveSafeInteger(size["heightMpt"])
+        );
+      })
     ) {
       return publicationUnavailable;
     }
