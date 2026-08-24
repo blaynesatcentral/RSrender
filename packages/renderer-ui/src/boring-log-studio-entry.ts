@@ -638,6 +638,17 @@ async function main(): Promise<void> {
   let liveReflowPreviewTimer: number | undefined;
   let liveReflowPreviewFrame: TextFrame | undefined;
   let liveReflowPreviewInFlight: Promise<void> | null = null;
+  let pendingKeyboardNudge:
+    | {
+        readonly expectedWorkingRevision: number;
+        readonly keyElementId: string;
+        readonly occurrenceNodeIds: readonly string[];
+        deltaXMpt: number;
+        deltaYMpt: number;
+        timer: number;
+      }
+    | undefined;
+  let keyboardNudgeCommitInFlight = false;
 
   function studioApis(): StudioApis | null {
     const world = globalThis as typeof globalThis & {
@@ -788,6 +799,9 @@ async function main(): Promise<void> {
   async function invokeLifecycle(operation: LifecycleOperation): Promise<void> {
     const apis = studioApis();
     if (apis === null) return;
+    if (operation !== "get-state" && pendingKeyboardNudge !== undefined) {
+      await flushKeyboardNudge();
+    }
     const navigation = ["first-boring", "previous-boring", "next-boring", "last-boring"].includes(
       operation,
     );
@@ -2456,15 +2470,26 @@ async function main(): Promise<void> {
   async function arrangeSelectedText(
     operation: TextArrangementOperation,
     commandSource: "keyboard" | "ribbon" | "context-menu",
+    selectionSnapshot?: Readonly<{
+      readonly expectedWorkingRevision: number;
+      readonly keyElementId: string;
+      readonly occurrenceNodeIds: readonly string[];
+    }>,
   ): Promise<void> {
+    if (commandSource !== "keyboard" && pendingKeyboardNudge !== undefined) {
+      await flushKeyboardNudge();
+    }
     const apis = studioApis();
-    const keyElementId = selectedSceneNodeId;
-    const occurrenceNodeIds = [...selectedTextNodeIds];
+    const keyElementId = selectionSnapshot?.keyElementId ?? selectedSceneNodeId;
+    const occurrenceNodeIds = selectionSnapshot?.occurrenceNodeIds ?? [...selectedTextNodeIds];
+    const expectedWorkingRevision =
+      selectionSnapshot?.expectedWorkingRevision ?? studioProjection?.workingRevision;
     if (
       apis === null ||
       studioProjection === null ||
       keyElementId === null ||
-      !selectedTextNodeIds.has(keyElementId)
+      expectedWorkingRevision === undefined ||
+      !occurrenceNodeIds.includes(keyElementId)
     ) {
       status.textContent = "Arrangement is unavailable until an exact text selection is active.";
       return;
@@ -2475,7 +2500,7 @@ async function main(): Promise<void> {
     }
     status.textContent = `${humanize(operation.kind)} from ${commandSource}…`;
     const response = await apis.studio.arrangeTextOccurrences({
-      expectedWorkingRevision: studioProjection.workingRevision,
+      expectedWorkingRevision,
       keyElementId,
       occurrenceNodeIds,
       operation,
@@ -2493,6 +2518,138 @@ async function main(): Promise<void> {
       response.workingRevision,
       `${occurrenceNodeIds.length} selected text element${occurrenceNodeIds.length === 1 ? "" : "s"} arranged from ${commandSource}; Undo restores the prior geometry.`,
     );
+  }
+
+  function clearKeyboardNudgePreview(): void {
+    pageHost.querySelector("#keyboard-nudge-preview")?.remove();
+    Reflect.deleteProperty(canvasStage.dataset, "keyboardNudgePending");
+  }
+
+  function renderKeyboardNudgePreview(): void {
+    const pending = pendingKeyboardNudge;
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    if (pending === undefined || svg === null) return;
+    svg.querySelector("#keyboard-nudge-preview")?.remove();
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.id = "keyboard-nudge-preview";
+    group.setAttribute("aria-hidden", "true");
+    for (const occurrenceNodeId of pending.occurrenceNodeIds) {
+      const node = page.nodes.find(
+        (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+          candidate.kind === "text" && candidate.id === occurrenceNodeId,
+      );
+      if (node === undefined) continue;
+      const rectangle = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rectangle.classList.add("keyboard-nudge-preview-frame");
+      rectangle.setAttribute("x", String(node.frame.xMpt + pending.deltaXMpt));
+      rectangle.setAttribute("y", String(node.frame.yMpt + pending.deltaYMpt));
+      rectangle.setAttribute("width", String(node.frame.widthMpt));
+      rectangle.setAttribute("height", String(node.frame.heightMpt));
+      group.append(rectangle);
+    }
+    svg.append(group);
+    canvasStage.dataset["keyboardNudgePending"] = "true";
+  }
+
+  async function flushKeyboardNudge(): Promise<void> {
+    const pending = pendingKeyboardNudge;
+    if (pending === undefined) return;
+    window.clearTimeout(pending.timer);
+    pendingKeyboardNudge = undefined;
+    clearKeyboardNudgePreview();
+    keyboardNudgeCommitInFlight = true;
+    try {
+      await arrangeSelectedText(
+        { kind: "nudge", deltaXMpt: pending.deltaXMpt, deltaYMpt: pending.deltaYMpt },
+        "keyboard",
+        pending,
+      );
+    } finally {
+      keyboardNudgeCommitInFlight = false;
+    }
+  }
+
+  function cancelKeyboardNudge(): void {
+    const pending = pendingKeyboardNudge;
+    if (pending === undefined) return;
+    window.clearTimeout(pending.timer);
+    pendingKeyboardNudge = undefined;
+    clearKeyboardNudgePreview();
+    status.textContent = "Pending keyboard nudge canceled; history and geometry are unchanged.";
+  }
+
+  function queueKeyboardNudge(deltaXMpt: number, deltaYMpt: number): void {
+    if (keyboardNudgeCommitInFlight) {
+      status.textContent = "The prior coalesced keyboard nudge is still committing.";
+      return;
+    }
+    if (studioProjection === null || selectedSceneNodeId === null || selectedTextNodeIds.size === 0)
+      return;
+    const occurrenceNodeIds = [...selectedTextNodeIds];
+    const selectedNodes = occurrenceNodeIds.map((occurrenceNodeId) =>
+      page.nodes.find(
+        (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+          candidate.kind === "text" && candidate.id === occurrenceNodeId,
+      ),
+    );
+    if (selectedNodes.some((node) => node === undefined || node.presentation?.locked === true)) {
+      status.textContent =
+        "Keyboard nudge is unavailable because the selection contains a locked text frame.";
+      return;
+    }
+    if (
+      deltaYMpt !== 0 &&
+      selectedNodes.some(
+        (node) => (node?.presentation?.positionMode ?? "depth-bound") === "depth-bound",
+      )
+    ) {
+      status.textContent =
+        "Vertical nudge is unavailable for depth-bound text. Detach the annotation in Properties first.";
+      return;
+    }
+    const pending = pendingKeyboardNudge;
+    const sameSelection =
+      pending !== undefined &&
+      pending.expectedWorkingRevision === studioProjection.workingRevision &&
+      pending.keyElementId === selectedSceneNodeId &&
+      pending.occurrenceNodeIds.length === occurrenceNodeIds.length &&
+      pending.occurrenceNodeIds.every(
+        (occurrenceNodeId, index) => occurrenceNodeId === occurrenceNodeIds[index],
+      );
+    if (pending !== undefined && !sameSelection) {
+      void flushKeyboardNudge();
+      status.textContent =
+        "The prior keyboard nudge is committing before a new selection can move.";
+      return;
+    }
+    const totalXMpt = (pending?.deltaXMpt ?? 0) + deltaXMpt;
+    const totalYMpt = (pending?.deltaYMpt ?? 0) + deltaYMpt;
+    if (
+      selectedNodes.some(
+        (node) =>
+          node !== undefined &&
+          (node.frame.xMpt + totalXMpt < 0 ||
+            node.frame.yMpt + totalYMpt < 0 ||
+            node.frame.xMpt + node.frame.widthMpt + totalXMpt > page.widthMpt ||
+            node.frame.yMpt + node.frame.heightMpt + totalYMpt > page.heightMpt),
+      )
+    ) {
+      status.textContent = "Keyboard nudge stopped at the page boundary.";
+      return;
+    }
+    if (pending !== undefined) window.clearTimeout(pending.timer);
+    const next = {
+      expectedWorkingRevision: studioProjection.workingRevision,
+      keyElementId: selectedSceneNodeId,
+      occurrenceNodeIds: Object.freeze(occurrenceNodeIds),
+      deltaXMpt: totalXMpt,
+      deltaYMpt: totalYMpt,
+      timer: 0,
+    };
+    next.timer = window.setTimeout(() => void flushKeyboardNudge(), 220);
+    pendingKeyboardNudge = next;
+    renderKeyboardNudgePreview();
+    status.textContent = `Keyboard nudge preview ${(totalXMpt / 1_000).toFixed(1)} pt X, ${(totalYMpt / 1_000).toFixed(1)} pt Y; repeated keys coalesce into one Undo step after 220 ms idle. Esc cancels.`;
   }
 
   function activateRibbonTab(tabId: string): void {
@@ -2517,6 +2674,7 @@ async function main(): Promise<void> {
     nodeId: string | null = null,
     additiveTextSelection = false,
   ): void {
+    if (pendingKeyboardNudge !== undefined) void flushKeyboardNudge();
     showPropertyPanel("element");
     columnResizeProperties.hidden = true;
     regionResizeProperties.hidden = true;
@@ -3263,6 +3421,8 @@ async function main(): Promise<void> {
   async function navigateHistory(operation: "undo" | "redo"): Promise<void> {
     const apis = studioApis();
     if (apis === null || studioProjection === null) return;
+    if (pendingKeyboardNudge !== undefined) await flushKeyboardNudge();
+    if (studioProjection === null) return;
     const result = await apis.document[operation]({
       expectedWorkingRevision: studioProjection.workingRevision,
     });
@@ -3279,6 +3439,7 @@ async function main(): Promise<void> {
   }
 
   async function exportPdf(): Promise<void> {
+    if (pendingKeyboardNudge !== undefined) await flushKeyboardNudge();
     const api = publicationApi();
     if (api === null || studioProjection === null || exportPdfButton.disabled) return;
     exportPdfButton.disabled = true;
@@ -3949,6 +4110,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && pendingKeyboardNudge !== undefined) {
+      event.preventDefault();
+      cancelKeyboardNudge();
+      return;
+    }
     if (event.key === "Escape" && marqueeGesture !== undefined) {
       event.preventDefault();
       cancelMarquee();
@@ -4008,7 +4174,7 @@ async function main(): Promise<void> {
       const deltaYMpt =
         event.key === "ArrowUp" ? -stepMpt : event.key === "ArrowDown" ? stepMpt : 0;
       event.preventDefault();
-      void arrangeSelectedText({ kind: "nudge", deltaXMpt, deltaYMpt }, "keyboard");
+      queueKeyboardNudge(deltaXMpt, deltaYMpt);
       return;
     }
     if (!event.ctrlKey || event.altKey) return;

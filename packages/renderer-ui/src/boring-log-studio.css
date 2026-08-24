@@ -750,6 +750,13 @@ textarea {
   stroke-dasharray: 4500 2500;
   pointer-events: none;
 }
+.keyboard-nudge-preview-frame {
+  fill: rgb(217 119 6 / 8%);
+  stroke: #d97706;
+  stroke-width: 1300;
+  stroke-dasharray: 5000 2500;
+  pointer-events: none;
+}
 .canvas-context-menu {
   position: fixed;
   top: 124px;

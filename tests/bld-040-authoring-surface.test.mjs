@@ -77,3 +77,25 @@ test("BLD-040 supports additive Contents selection and a cancelable unlocked-tex
   assert.match(stylesheet, /\.canvas-marquee-selection/u);
   assert.match(stylesheet, /\.canvas-stage\.is-marquee-selecting/u);
 });
+
+test("BLD-040 coalesces repeated keyboard nudges at an explicit idle boundary", async () => {
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  const stylesheet = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(entry, /pendingKeyboardNudge/u);
+  assert.match(entry, /function queueKeyboardNudge\(/u);
+  assert.match(entry, /async function flushKeyboardNudge\(\)/u);
+  assert.match(entry, /function cancelKeyboardNudge\(\)/u);
+  assert.match(entry, /window\.setTimeout\(\(\) => void flushKeyboardNudge\(\), 220\)/u);
+  assert.match(entry, /repeated keys coalesce into one Undo step after 220 ms idle/u);
+  assert.match(entry, /expectedWorkingRevision: studioProjection\.workingRevision/u);
+  assert.match(entry, /Vertical nudge is unavailable for depth-bound text/u);
+  assert.match(entry, /Keyboard nudge stopped at the page boundary/u);
+  assert.match(entry, /Pending keyboard nudge canceled; history and geometry are unchanged/u);
+  assert.match(stylesheet, /\.keyboard-nudge-preview-frame/u);
+});
