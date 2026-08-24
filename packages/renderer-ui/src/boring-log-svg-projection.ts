@@ -167,6 +167,7 @@ function renderNode(
 export function projectBoringLogSceneToSvg(
   input: unknown,
   selectedSemanticId: string | null = null,
+  requestedPageId: string | null = null,
 ): BoringLogSvgProjectionResult {
   const validated = validateResolvedBoringLogPageScene(input);
   if (!validated.accepted) {
@@ -177,7 +178,10 @@ export function projectBoringLogSceneToSvg(
     });
   }
   const scene = validated.value;
-  const page = scene.pages[0];
+  const page =
+    requestedPageId === null
+      ? scene.pages[0]
+      : scene.pages.find(({ pageId }) => pageId === requestedPageId);
   if (page === undefined) {
     return Object.freeze({
       accepted: false,

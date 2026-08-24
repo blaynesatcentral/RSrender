@@ -606,13 +606,17 @@ textarea {
 }
 .svg-page {
   width: 100%;
-  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  background: transparent;
 }
 .svg-page svg {
   display: block;
   width: 100%;
   height: auto;
   background: #fff;
+  box-shadow: 0 5px 12px #24333e55;
 }
 .svg-page .scene-node {
   cursor: pointer;

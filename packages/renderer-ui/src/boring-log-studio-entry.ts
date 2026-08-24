@@ -791,12 +791,27 @@ async function main(): Promise<void> {
   }
 
   function installSvg(): void {
-    const projection = projectBoringLogSceneToSvg(scene, selectedSemanticId);
-    if (!projection.accepted) throw new Error(projection.detail);
-    const parsed = new DOMParser().parseFromString(projection.markup, "image/svg+xml");
-    if (parsed.querySelector("parsererror") !== null)
-      throw new Error("SVG projection parse failed");
-    pageHost.replaceChildren(document.importNode(parsed.documentElement, true));
+    const pageElements = scene.pages.map((scenePage, pageIndex) => {
+      const projection = projectBoringLogSceneToSvg(scene, selectedSemanticId, scenePage.pageId);
+      if (!projection.accepted) throw new Error(projection.detail);
+      const parsed = new DOMParser().parseFromString(projection.markup, "image/svg+xml");
+      if (parsed.querySelector("parsererror") !== null)
+        throw new Error("SVG projection parse failed");
+      const svg = document.importNode(parsed.documentElement, true);
+      svg.classList.add("resolved-page");
+      svg.setAttribute("data-page-index", String(pageIndex));
+      svg.setAttribute(
+        "aria-label",
+        `Structured boring log page ${pageIndex + 1} of ${scene.pages.length}`,
+      );
+      return svg;
+    });
+    pageHost.replaceChildren(...pageElements);
+    element<HTMLElement>("page-status").textContent =
+      `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} in active Boring Log`;
+    element<HTMLElement>("canvas-title").textContent =
+      `Boring Log - ${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"}`;
+    sceneSummary.textContent = `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} - ${scene.pages.reduce((total, scenePage) => total + scenePage.nodes.length, 0)} vector nodes - ${scene.diagnostics.length} diagnostics`;
     if (selectedSceneNodeId !== null || selectedTextNodeIds.size > 0) {
       for (const selected of pageHost.querySelectorAll<SVGElement>(".scene-node.is-selected")) {
         selected.classList.remove("is-selected");
@@ -2454,6 +2469,7 @@ async function main(): Promise<void> {
     }
     updateHistoryControls();
     sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
+    sceneSummary.textContent = `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} - ${scene.pages.reduce((total, scenePage) => total + scenePage.nodes.length, 0)} vector nodes - ${scene.diagnostics.length} diagnostics`;
     status.textContent = successStatus;
     return true;
   }
@@ -3571,6 +3587,7 @@ async function main(): Promise<void> {
   setInteractionMode("select");
   fitPage();
   sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
+  sceneSummary.textContent = `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} - ${scene.pages.reduce((total, scenePage) => total + scenePage.nodes.length, 0)} vector nodes - ${scene.diagnostics.length} diagnostics`;
   status.textContent = "Structured boring log scene rendered as semantic SVG.";
   if (studioProjection === null) {
     await refreshStudioProjection(

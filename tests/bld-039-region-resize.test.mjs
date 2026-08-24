@@ -17,6 +17,7 @@ import {
   boringLogMvpTemplate,
 } from "../packages/test-support/dist/index.js";
 import { deterministicTextResults } from "./helpers/bld-024-deterministic-text-authority.mjs";
+import { projectBoringLogSceneToSvg } from "../packages/renderer-ui/dist/index.js";
 
 const base = {
   pageHeightMpt: boringLogMvpTemplate.page.heightMpt,
@@ -252,6 +253,15 @@ test("BLD-039 renderer-neutral Page Plan materializes the authored continuation 
     resolved.value.pages[1].nodes.every(({ id }) => id.endsWith(":page:2")),
     true,
   );
+  const secondPageSvg = projectBoringLogSceneToSvg(
+    resolved.value,
+    null,
+    resolved.value.pages[1].pageId,
+  );
+  assert.equal(secondPageSvg.accepted, true);
+  assert.equal(secondPageSvg.pageId, resolved.value.pages[1].pageId);
+  assert.match(secondPageSvg.markup, /data-page-id=/u);
+  assert.match(secondPageSvg.markup, /node:depth-label:40:page:2/u);
 });
 
 test("BLD-039 region boundaries clamp to typed minima and fail closed on bad topology", () => {
