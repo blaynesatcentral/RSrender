@@ -16,6 +16,8 @@ import {
 import {
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
+  type BoringLogPublicationIntent,
+  type BoringLogPublicationOutcome,
 } from "./boring-log-publication-route-contract.js";
 import "./document-preload-runtime.js";
 
@@ -1186,7 +1188,7 @@ const publicationBootstrap = ipcRenderer
     if (
       record === null ||
       record["accepted"] !== true ||
-      record["transportVersion"] !== 1 ||
+      record["transportVersion"] !== 2 ||
       !isPositiveSafeInteger(record["generation"]) ||
       typeof record["capability"] !== "string" ||
       !/^[0-9a-f]{64}$/u.test(record["capability"]) ||
@@ -1207,6 +1209,138 @@ const publicationBootstrap = ipcRenderer
 let publicationSequence = Number("__RSRENDER_PUBLICATION_INITIAL_SEQUENCE_LITERAL__");
 let publicationInFlight = false;
 
+function isWellFormedIdentity(value: unknown): value is string {
+  if (typeof value !== "string" || value.length < 1 || value.length > 512) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const following = value.charCodeAt(index + 1);
+      if (!(following >= 0xdc00 && following <= 0xdfff)) return false;
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function hasExactPublicationArrayKeys(input: readonly unknown[]): boolean {
+  const keys = Reflect.ownKeys(input);
+  if (keys.length !== input.length + 1 || !keys.includes("length")) return false;
+  return keys.every(
+    (key) =>
+      key === "length" ||
+      (typeof key === "string" && /^(0|[1-9][0-9]*)$/u.test(key) && Number(key) < input.length),
+  );
+}
+
+function strictPublicationIdentityList(input: unknown): readonly string[] | null {
+  try {
+    if (
+      !Array.isArray(input) ||
+      input.length < 1 ||
+      input.length > 64 ||
+      !hasExactPublicationArrayKeys(input)
+    ) {
+      return null;
+    }
+    const result: string[] = [];
+    for (let index = 0; index < input.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, String(index));
+      if (
+        descriptor === undefined ||
+        !("value" in descriptor) ||
+        !descriptor.enumerable ||
+        !isWellFormedIdentity(descriptor.value)
+      ) {
+        return null;
+      }
+      result.push(descriptor.value);
+    }
+    return new Set(result).size === result.length ? Object.freeze(result) : null;
+  } catch {
+    return null;
+  }
+}
+
+function validPublicationDigest(value: unknown): value is string {
+  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value);
+}
+
+function validPublicationPageManifest(
+  input: unknown,
+  orderedBoringLogIdentities: readonly string[],
+  pageCount: number,
+): boolean {
+  if (!Array.isArray(input) || input.length !== pageCount || !hasExactPublicationArrayKeys(input)) {
+    return false;
+  }
+  const observedBoringOrder: string[] = [];
+  const pageIds = new Set<string>();
+  const explorationByBoring = new Map<string, string>();
+  const sourceOrdinalByBoring = new Map<string, number>();
+  const nextPageIndexByBoring = new Map<string, number>();
+  for (let packagePageIndex = 0; packagePageIndex < input.length; packagePageIndex += 1) {
+    const page = exactRecord(input[packagePageIndex], [
+      "packagePageIndex",
+      "boringLogIdentity",
+      "explorationIdentity",
+      "sourceOrdinal",
+      "boringPageIndex",
+      "pageId",
+      "widthMpt",
+      "heightMpt",
+      "sceneInputDigest",
+    ]);
+    if (
+      page === null ||
+      page["packagePageIndex"] !== packagePageIndex ||
+      !isWellFormedIdentity(page["boringLogIdentity"]) ||
+      !orderedBoringLogIdentities.includes(page["boringLogIdentity"]) ||
+      !isWellFormedIdentity(page["explorationIdentity"]) ||
+      !isPositiveSafeInteger(page["sourceOrdinal"]) ||
+      page["sourceOrdinal"] > 64 ||
+      !isNonnegativeSafeInteger(page["boringPageIndex"]) ||
+      !isWellFormedIdentity(page["pageId"]) ||
+      pageIds.has(page["pageId"]) ||
+      !isPositiveSafeInteger(page["widthMpt"]) ||
+      !isPositiveSafeInteger(page["heightMpt"]) ||
+      !validPublicationDigest(page["sceneInputDigest"])
+    ) {
+      return false;
+    }
+    const boringLogIdentity = page["boringLogIdentity"];
+    const explorationIdentity = page["explorationIdentity"];
+    const sourceOrdinal = page["sourceOrdinal"];
+    const boringPageIndex = page["boringPageIndex"];
+    if (
+      (explorationByBoring.has(boringLogIdentity) &&
+        explorationByBoring.get(boringLogIdentity) !== explorationIdentity) ||
+      (sourceOrdinalByBoring.has(boringLogIdentity) &&
+        sourceOrdinalByBoring.get(boringLogIdentity) !== sourceOrdinal) ||
+      boringPageIndex !== (nextPageIndexByBoring.get(boringLogIdentity) ?? 0)
+    ) {
+      return false;
+    }
+    if (observedBoringOrder.at(-1) !== boringLogIdentity) {
+      if (observedBoringOrder.includes(boringLogIdentity)) return false;
+      observedBoringOrder.push(boringLogIdentity);
+    }
+    explorationByBoring.set(boringLogIdentity, explorationIdentity);
+    sourceOrdinalByBoring.set(boringLogIdentity, sourceOrdinal);
+    nextPageIndexByBoring.set(boringLogIdentity, boringPageIndex + 1);
+    pageIds.add(page["pageId"]);
+  }
+  return (
+    observedBoringOrder.length === orderedBoringLogIdentities.length &&
+    observedBoringOrder.every(
+      (boringLogIdentity, index) => boringLogIdentity === orderedBoringLogIdentities[index],
+    ) &&
+    new Set(explorationByBoring.values()).size === explorationByBoring.size &&
+    new Set(sourceOrdinalByBoring.values()).size === sourceOrdinalByBoring.size
+  );
+}
+
 const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
   if (
     arguments.length !== 1 ||
@@ -1215,12 +1349,13 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
   ) {
     return publicationUnavailable;
   }
-  const args = exactRecord(input, ["expectedWorkingRevision", "expectedSceneInputDigest"]);
+  const args = exactRecord(input, ["expectedWorkingRevision", "orderedBoringLogIdentities"]);
+  const orderedBoringLogIdentities =
+    args === null ? null : strictPublicationIdentityList(args["orderedBoringLogIdentities"]);
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
-    typeof args["expectedSceneInputDigest"] !== "string" ||
-    !/^sha256:[0-9a-f]{64}$/u.test(args["expectedSceneInputDigest"])
+    orderedBoringLogIdentities === null
   ) {
     return publicationUnavailable;
   }
@@ -1231,7 +1366,7 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
     publicationSequence += 1;
     const response = exactRecord(
       await ipcRenderer.invoke(BORING_LOG_PUBLICATION_EXPORT_CHANNEL, {
-        transportVersion: 1,
+        transportVersion: 2,
         capability: binding.capability,
         generation: binding.generation,
         sequence: publicationSequence,
@@ -1244,7 +1379,7 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
     if (
       response === null ||
       response["accepted"] !== true ||
-      response["transportVersion"] !== 1 ||
+      response["transportVersion"] !== 2 ||
       response["generation"] !== binding.generation ||
       response["sequence"] !== publicationSequence
     ) {
@@ -1259,13 +1394,15 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
       "accepted",
       "code",
       "workingRevision",
-      "sceneInputDigest",
-      "sceneDigest",
-      "projectionDigest",
+      "packageCandidateDigest",
+      "selectionDigest",
+      "orderedBoringLogIdentities",
+      "pageManifest",
+      "aggregateSceneDigest",
+      "aggregateProjectionDigest",
       "pdfDigest",
       "pdfBytes",
       "pageCount",
-      "pageSizes",
       "destinationPath",
       "taggedPdfTarget",
       "vectorTextTarget",
@@ -1275,18 +1412,14 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
       success["accepted"] !== true ||
       success["code"] !== "EXPORT_VERIFIED_SUCCESS" ||
       success["workingRevision"] !== args["expectedWorkingRevision"] ||
-      success["sceneInputDigest"] !== args["expectedSceneInputDigest"] ||
-      typeof success["sceneDigest"] !== "string" ||
-      !/^sha256:[0-9a-f]{64}$/u.test(success["sceneDigest"]) ||
-      typeof success["projectionDigest"] !== "string" ||
-      !/^sha256:[0-9a-f]{64}$/u.test(success["projectionDigest"]) ||
-      typeof success["pdfDigest"] !== "string" ||
-      !/^sha256:[0-9a-f]{64}$/u.test(success["pdfDigest"]) ||
+      !validPublicationDigest(success["packageCandidateDigest"]) ||
+      !validPublicationDigest(success["selectionDigest"]) ||
+      !validPublicationDigest(success["aggregateSceneDigest"]) ||
+      !validPublicationDigest(success["aggregateProjectionDigest"]) ||
+      !validPublicationDigest(success["pdfDigest"]) ||
       !Number.isSafeInteger(success["pdfBytes"]) ||
       (success["pdfBytes"] as number) < 1 ||
       !isPositiveSafeInteger(success["pageCount"]) ||
-      !Array.isArray(success["pageSizes"]) ||
-      success["pageSizes"].length !== success["pageCount"] ||
       typeof success["destinationPath"] !== "string" ||
       success["destinationPath"].length < 1 ||
       success["destinationPath"].length > 1_024 ||
@@ -1295,15 +1428,20 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
     ) {
       return publicationUnavailable;
     }
+    const returnedBoringLogIdentities = strictPublicationIdentityList(
+      success["orderedBoringLogIdentities"],
+    );
     if (
-      !success["pageSizes"].every((candidate) => {
-        const size = exactRecord(candidate, ["widthMpt", "heightMpt"]);
-        return (
-          size !== null &&
-          isPositiveSafeInteger(size["widthMpt"]) &&
-          isPositiveSafeInteger(size["heightMpt"])
-        );
-      })
+      returnedBoringLogIdentities === null ||
+      returnedBoringLogIdentities.length !== orderedBoringLogIdentities.length ||
+      returnedBoringLogIdentities.some(
+        (boringLogIdentity, index) => boringLogIdentity !== orderedBoringLogIdentities[index],
+      ) ||
+      !validPublicationPageManifest(
+        success["pageManifest"],
+        returnedBoringLogIdentities,
+        success["pageCount"],
+      )
     ) {
       return publicationUnavailable;
     }
@@ -1507,11 +1645,11 @@ export interface BoringLogStudioPreloadApi {
 }
 
 export interface BoringLogPublicationPreloadApi {
-  readonly exportPdf: (input: {
-    readonly expectedWorkingRevision: number;
-    readonly expectedSceneInputDigest: string;
-  }) => Promise<
+  readonly exportPdf: (input: BoringLogPublicationIntent) => Promise<
     | { readonly accepted: false; readonly code: string }
-    | { readonly accepted: true; readonly result: Readonly<Record<string, unknown>> }
+    | {
+        readonly accepted: true;
+        readonly result: Extract<BoringLogPublicationOutcome, { readonly accepted: true }>;
+      }
   >;
 }

@@ -1,7 +1,7 @@
 import { boringLogStudioPreloadBundleTemplate } from "./boring-log-studio-preload-bundle.js";
 
 export const generatedBoringLogStudioPreloadRevision =
-  "bld-027-generated-studio-publication-preload-v1" as const;
+  "bld-044-generated-studio-publication-preload-v2" as const;
 
 function replaceOne(source: string, placeholder: string, value: number): string {
   const replacement = `Number(${JSON.stringify(String(value))})`;

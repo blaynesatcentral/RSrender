@@ -1,6 +1,9 @@
 import { DOCUMENT_ROUTE_URL } from "./document-route-contract.js";
 import type { DocumentRouteContext } from "./document-route-broker.js";
-import type { BoringLogPublicationOutcome } from "./boring-log-publication-route-contract.js";
+import type {
+  BoringLogPublicationIntent,
+  BoringLogPublicationOutcome,
+} from "./boring-log-publication-route-contract.js";
 
 export type BoringLogPublicationRouteRejectionCode =
   | "PUBLICATION_ROUTE_UNAVAILABLE"
@@ -16,7 +19,7 @@ export type BoringLogPublicationRouteRejectionCode =
 export type BoringLogPublicationBootstrapResult =
   | {
       readonly accepted: true;
-      readonly transportVersion: 1;
+      readonly transportVersion: 2;
       readonly generation: number;
       readonly capability: string;
       readonly documentIdentity: string;
@@ -27,7 +30,7 @@ export type BoringLogPublicationBootstrapResult =
 export type BoringLogPublicationRouteResult =
   | {
       readonly accepted: true;
-      readonly transportVersion: 1;
+      readonly transportVersion: 2;
       readonly generation: number;
       readonly sequence: number;
       readonly result: BoringLogPublicationOutcome;
@@ -93,7 +96,155 @@ function validDigest(value: unknown): value is string {
   return typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value);
 }
 
-function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const following = value.charCodeAt(index + 1);
+      if (!(following >= 0xdc00 && following <= 0xdfff)) return false;
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function validIdentity(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length >= 1 &&
+    value.length <= 512 &&
+    isWellFormedUnicode(value)
+  );
+}
+
+function hasExactArrayKeys(input: readonly unknown[]): boolean {
+  const keys = Reflect.ownKeys(input);
+  if (keys.length !== input.length + 1 || !keys.includes("length")) return false;
+  return keys.every(
+    (key) =>
+      key === "length" ||
+      (typeof key === "string" && /^(0|[1-9][0-9]*)$/u.test(key) && Number(key) < input.length),
+  );
+}
+
+function strictIdentityList(input: unknown): readonly string[] | null {
+  try {
+    if (
+      !Array.isArray(input) ||
+      input.length < 1 ||
+      input.length > 64 ||
+      !hasExactArrayKeys(input)
+    ) {
+      return null;
+    }
+    const result: string[] = [];
+    for (let index = 0; index < input.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, String(index));
+      if (
+        descriptor === undefined ||
+        !("value" in descriptor) ||
+        !descriptor.enumerable ||
+        !validIdentity(descriptor.value)
+      ) {
+        return null;
+      }
+      result.push(descriptor.value);
+    }
+    return new Set(result).size === result.length ? Object.freeze(result) : null;
+  } catch {
+    return null;
+  }
+}
+
+function validPositiveSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
+
+function validNonnegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function validPageManifest(
+  input: unknown,
+  orderedBoringLogIdentities: readonly string[],
+  pageCount: number,
+): boolean {
+  if (!Array.isArray(input) || input.length !== pageCount || !hasExactArrayKeys(input)) {
+    return false;
+  }
+  const observedBoringOrder: string[] = [];
+  const pageIds = new Set<string>();
+  const explorationByBoring = new Map<string, string>();
+  const sourceOrdinalByBoring = new Map<string, number>();
+  const nextPageIndexByBoring = new Map<string, number>();
+  for (let packagePageIndex = 0; packagePageIndex < input.length; packagePageIndex += 1) {
+    const page = exactRecord(input[packagePageIndex], [
+      "packagePageIndex",
+      "boringLogIdentity",
+      "explorationIdentity",
+      "sourceOrdinal",
+      "boringPageIndex",
+      "pageId",
+      "widthMpt",
+      "heightMpt",
+      "sceneInputDigest",
+    ]);
+    if (
+      page === null ||
+      page["packagePageIndex"] !== packagePageIndex ||
+      !validIdentity(page["boringLogIdentity"]) ||
+      !orderedBoringLogIdentities.includes(page["boringLogIdentity"]) ||
+      !validIdentity(page["explorationIdentity"]) ||
+      !validPositiveSafeInteger(page["sourceOrdinal"]) ||
+      page["sourceOrdinal"] > 64 ||
+      !validNonnegativeSafeInteger(page["boringPageIndex"]) ||
+      !validIdentity(page["pageId"]) ||
+      pageIds.has(page["pageId"]) ||
+      !validPositiveSafeInteger(page["widthMpt"]) ||
+      !validPositiveSafeInteger(page["heightMpt"]) ||
+      !validDigest(page["sceneInputDigest"])
+    ) {
+      return false;
+    }
+    const boringLogIdentity = page["boringLogIdentity"];
+    const explorationIdentity = page["explorationIdentity"];
+    const sourceOrdinal = page["sourceOrdinal"];
+    const boringPageIndex = page["boringPageIndex"];
+    const priorExploration = explorationByBoring.get(boringLogIdentity);
+    const priorSourceOrdinal = sourceOrdinalByBoring.get(boringLogIdentity);
+    if (
+      (priorExploration !== undefined && priorExploration !== explorationIdentity) ||
+      (priorSourceOrdinal !== undefined && priorSourceOrdinal !== sourceOrdinal) ||
+      boringPageIndex !== (nextPageIndexByBoring.get(boringLogIdentity) ?? 0)
+    ) {
+      return false;
+    }
+    if (observedBoringOrder.at(-1) !== boringLogIdentity) {
+      if (observedBoringOrder.includes(boringLogIdentity)) return false;
+      observedBoringOrder.push(boringLogIdentity);
+    }
+    explorationByBoring.set(boringLogIdentity, explorationIdentity);
+    sourceOrdinalByBoring.set(boringLogIdentity, sourceOrdinal);
+    nextPageIndexByBoring.set(boringLogIdentity, boringPageIndex + 1);
+    pageIds.add(page["pageId"]);
+  }
+  return (
+    observedBoringOrder.length === orderedBoringLogIdentities.length &&
+    observedBoringOrder.every(
+      (boringLogIdentity, index) => boringLogIdentity === orderedBoringLogIdentities[index],
+    ) &&
+    new Set(explorationByBoring.values()).size === explorationByBoring.size &&
+    new Set(sourceOrdinalByBoring.values()).size === sourceOrdinalByBoring.size
+  );
+}
+
+function validOutcome(
+  input: unknown,
+  expectedWorkingRevision: number,
+  expectedBoringLogIdentities: readonly string[],
+): input is BoringLogPublicationOutcome {
   const tagged = exactRecord(
     input,
     exactRecord(input, ["accepted", "code"]) === null
@@ -101,13 +252,15 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
           "accepted",
           "code",
           "workingRevision",
-          "sceneInputDigest",
-          "sceneDigest",
-          "projectionDigest",
+          "packageCandidateDigest",
+          "selectionDigest",
+          "orderedBoringLogIdentities",
+          "pageManifest",
+          "aggregateSceneDigest",
+          "aggregateProjectionDigest",
           "pdfDigest",
           "pdfBytes",
           "pageCount",
-          "pageSizes",
           "destinationPath",
           "taggedPdfTarget",
           "vectorTextTarget",
@@ -131,19 +284,17 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
   if (
     tagged["accepted"] !== true ||
     tagged["code"] !== "EXPORT_VERIFIED_SUCCESS" ||
-    !Number.isSafeInteger(tagged["workingRevision"]) ||
-    (tagged["workingRevision"] as number) < 0 ||
-    !validDigest(tagged["sceneInputDigest"]) ||
-    !validDigest(tagged["sceneDigest"]) ||
-    !validDigest(tagged["projectionDigest"]) ||
+    tagged["workingRevision"] !== expectedWorkingRevision ||
+    !validDigest(tagged["packageCandidateDigest"]) ||
+    !validDigest(tagged["selectionDigest"]) ||
+    !validDigest(tagged["aggregateSceneDigest"]) ||
+    !validDigest(tagged["aggregateProjectionDigest"]) ||
     !validDigest(tagged["pdfDigest"]) ||
     !Number.isSafeInteger(tagged["pdfBytes"]) ||
     (tagged["pdfBytes"] as number) < 1 ||
     (tagged["pdfBytes"] as number) > 52_428_800 ||
     !Number.isSafeInteger(tagged["pageCount"]) ||
     (tagged["pageCount"] as number) < 1 ||
-    !Array.isArray(tagged["pageSizes"]) ||
-    tagged["pageSizes"].length !== tagged["pageCount"] ||
     typeof tagged["destinationPath"] !== "string" ||
     tagged["destinationPath"].length < 1 ||
     tagged["destinationPath"].length > 1_024 ||
@@ -152,16 +303,19 @@ function validOutcome(input: unknown): input is BoringLogPublicationOutcome {
   ) {
     return false;
   }
-  return tagged["pageSizes"].every((candidate) => {
-    const size = exactRecord(candidate, ["widthMpt", "heightMpt"]);
-    return (
-      size !== null &&
-      Number.isSafeInteger(size["widthMpt"]) &&
-      (size["widthMpt"] as number) > 0 &&
-      Number.isSafeInteger(size["heightMpt"]) &&
-      (size["heightMpt"] as number) > 0
-    );
-  });
+  const orderedBoringLogIdentities = strictIdentityList(tagged["orderedBoringLogIdentities"]);
+  return (
+    orderedBoringLogIdentities !== null &&
+    orderedBoringLogIdentities.length === expectedBoringLogIdentities.length &&
+    orderedBoringLogIdentities.every(
+      (boringLogIdentity, index) => boringLogIdentity === expectedBoringLogIdentities[index],
+    ) &&
+    validPageManifest(
+      tagged["pageManifest"],
+      orderedBoringLogIdentities,
+      tagged["pageCount"] as number,
+    )
+  );
 }
 
 function rejected(code: BoringLogPublicationRouteRejectionCode): BoringLogPublicationRouteResult {
@@ -174,10 +328,7 @@ export class BoringLogPdfPublicationRouteBroker {
   readonly #documentIdentity: string;
   readonly #ownerGeneration: number;
   readonly #createCapability: () => string;
-  readonly #exportPdf: (input: {
-    readonly expectedWorkingRevision: number;
-    readonly expectedSceneInputDigest: string;
-  }) => Promise<BoringLogPublicationOutcome>;
+  readonly #exportPdf: (input: BoringLogPublicationIntent) => Promise<BoringLogPublicationOutcome>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -187,10 +338,7 @@ export class BoringLogPdfPublicationRouteBroker {
     readonly documentIdentity: string;
     readonly ownerGeneration: number;
     readonly createCapability: () => string;
-    readonly exportPdf: (input: {
-      readonly expectedWorkingRevision: number;
-      readonly expectedSceneInputDigest: string;
-    }) => Promise<BoringLogPublicationOutcome>;
+    readonly exportPdf: (input: BoringLogPublicationIntent) => Promise<BoringLogPublicationOutcome>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -230,7 +378,7 @@ export class BoringLogPdfPublicationRouteBroker {
     };
     return Object.freeze({
       accepted: true,
-      transportVersion: 1,
+      transportVersion: 2,
       generation: this.#generation,
       capability,
       documentIdentity: this.#documentIdentity,
@@ -267,7 +415,7 @@ export class BoringLogPdfPublicationRouteBroker {
       "ownerGeneration",
       "args",
     ]);
-    if (request === null || request["transportVersion"] !== 1) {
+    if (request === null || request["transportVersion"] !== 2) {
       return rejected("PUBLICATION_ROUTE_ARGUMENT_INVALID");
     }
     if (request["capability"] !== binding.capability) {
@@ -291,13 +439,15 @@ export class BoringLogPdfPublicationRouteBroker {
     }
     const args = exactRecord(request["args"], [
       "expectedWorkingRevision",
-      "expectedSceneInputDigest",
+      "orderedBoringLogIdentities",
     ]);
+    const orderedBoringLogIdentities =
+      args === null ? null : strictIdentityList(args["orderedBoringLogIdentities"]);
     if (
       args === null ||
       !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
       (args["expectedWorkingRevision"] as number) < 0 ||
-      !validDigest(args["expectedSceneInputDigest"])
+      orderedBoringLogIdentities === null
     ) {
       return rejected("PUBLICATION_ROUTE_ARGUMENT_INVALID");
     }
@@ -309,19 +459,22 @@ export class BoringLogPdfPublicationRouteBroker {
     try {
       result = await this.#exportPdf({
         expectedWorkingRevision: args["expectedWorkingRevision"] as number,
-        expectedSceneInputDigest: args["expectedSceneInputDigest"],
+        orderedBoringLogIdentities,
       });
     } catch {
       return rejected("PUBLICATION_ROUTE_RESULT_INVALID");
     } finally {
       binding.inFlight = false;
     }
-    if (this.#binding !== binding || !validOutcome(result)) {
+    if (
+      this.#binding !== binding ||
+      !validOutcome(result, args["expectedWorkingRevision"] as number, orderedBoringLogIdentities)
+    ) {
       return rejected("PUBLICATION_ROUTE_RESULT_INVALID");
     }
     return Object.freeze({
       accepted: true,
-      transportVersion: 1,
+      transportVersion: 2,
       generation: binding.generation,
       sequence,
       result,

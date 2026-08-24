@@ -170,13 +170,27 @@ test("BLD-027 publication route is capability-bound, ordered, and scene-specific
     accepted: true,
     code: "EXPORT_VERIFIED_SUCCESS",
     workingRevision: 3,
-    sceneInputDigest: `sha256:${"a".repeat(64)}`,
-    sceneDigest: `sha256:${"b".repeat(64)}`,
-    projectionDigest: `sha256:${"c".repeat(64)}`,
-    pdfDigest: `sha256:${"d".repeat(64)}`,
+    packageCandidateDigest: `sha256:${"a".repeat(64)}`,
+    selectionDigest: `sha256:${"b".repeat(64)}`,
+    orderedBoringLogIdentities: ["urn:test:boring-log:01"],
+    pageManifest: [
+      {
+        packagePageIndex: 0,
+        boringLogIdentity: "urn:test:boring-log:01",
+        explorationIdentity: "urn:test:exploration:01",
+        sourceOrdinal: 1,
+        boringPageIndex: 0,
+        pageId: "urn:test:page:01",
+        widthMpt: 612_000,
+        heightMpt: 792_000,
+        sceneInputDigest: `sha256:${"c".repeat(64)}`,
+      },
+    ],
+    aggregateSceneDigest: `sha256:${"d".repeat(64)}`,
+    aggregateProjectionDigest: `sha256:${"e".repeat(64)}`,
+    pdfDigest: `sha256:${"f".repeat(64)}`,
     pdfBytes: 4_096,
     pageCount: 1,
-    pageSizes: [{ widthMpt: 612_000, heightMpt: 792_000 }],
     destinationPath: "C:\\output\\boring-log.pdf",
     taggedPdfTarget: true,
     vectorTextTarget: true,
@@ -200,15 +214,18 @@ test("BLD-027 publication route is capability-bound, ordered, and scene-specific
   };
   const binding = route.bootstrap(context);
   assert.equal(binding.accepted, true);
-  assert.equal(boringLogPublicationRouteRevision, "bld-027-publication-route-v1");
+  assert.equal(boringLogPublicationRouteRevision, "bld-044-publication-route-v2");
   const request = {
-    transportVersion: 1,
+    transportVersion: 2,
     capability: binding.capability,
     generation: binding.generation,
     sequence: 1,
     documentIdentity: binding.documentIdentity,
     ownerGeneration: binding.ownerGeneration,
-    args: { expectedWorkingRevision: 3, expectedSceneInputDigest: outcome.sceneInputDigest },
+    args: {
+      expectedWorkingRevision: 3,
+      orderedBoringLogIdentities: outcome.orderedBoringLogIdentities,
+    },
   };
   const accepted = await route.exportPdf(context, request);
   assert.equal(accepted.accepted, true, accepted.code);
