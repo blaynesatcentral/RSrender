@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  boringLogContinuationPagesRevision,
   boringLogRegionResizeRevision,
+  planBoringLogContinuationPages,
   resizeBoringLogPageRegions,
 } from "../packages/scene/dist/index.js";
 import { boringLogMvpTemplate } from "../packages/test-support/dist/index.js";
@@ -77,6 +79,94 @@ test("BLD-039 larger Header growth returns explicit repagination instead of scal
   assert.equal(result.requiredPlotHeightMpt, 481_000);
   assert.equal(result.availablePlotHeightMpt, 460_000);
   assert.equal(result.maximumDepthPerPageFt, 460_000 / 12_025);
+});
+
+test("BLD-039 continuation pages preserve fixed scale and exact contiguous depth ownership", () => {
+  assert.equal(boringLogContinuationPagesRevision, "bld-039-continuation-pages-v1");
+  const result = planBoringLogContinuationPages({
+    basePageId: "urn:rsrender:page:test-01",
+    regionId: "region-depth-body",
+    depthStartFt: 0,
+    depthEndFt: 40,
+    yStartMpt: 210_000,
+    yEndLimitMpt: 670_000,
+    mptPerFoot: 12_025,
+  });
+  assert.equal(result.accepted, true);
+  assert.equal(result.pageCount, 2);
+  assert.equal(result.requiredPlotHeightMpt, 481_000);
+  assert.equal(result.availablePlotHeightMpt, 460_000);
+  assert.deepEqual(
+    result.pages.map(({ pageId, pageIndex, pageRole, finalDepthInclusive }) => ({
+      pageId,
+      pageIndex,
+      pageRole,
+      finalDepthInclusive,
+    })),
+    [
+      {
+        pageId: "urn:rsrender:page:test-01",
+        pageIndex: 0,
+        pageRole: "first",
+        finalDepthInclusive: false,
+      },
+      {
+        pageId: "urn:rsrender:page:test-01:continuation:2",
+        pageIndex: 1,
+        pageRole: "last",
+        finalDepthInclusive: true,
+      },
+    ],
+  );
+  assert.equal(result.pages[0].depthRange.startFt, 0);
+  assert.equal(result.pages[0].depthRange.endFt, 460_000 / 12_025);
+  assert.equal(result.pages[1].depthRange.startFt, result.pages[0].depthRange.endFt);
+  assert.equal(result.pages[1].depthRange.endFt, 40);
+  assert.equal(result.pages[0].depthTransform.yEndMpt, 670_000);
+  assert.equal(result.pages[1].depthTransform.yEndMpt, 231_000);
+  assert.equal(
+    result.pages.reduce(
+      (sum, page) => sum + (page.depthTransform.yEndMpt - page.depthTransform.yStartMpt),
+      0,
+    ),
+    481_000,
+  );
+  assert.ok(result.pages.every(({ depthTransform }) => depthTransform.mptPerFoot === 12_025));
+});
+
+test("BLD-039 continuation planner is bounded, total, and emits stable continuation roles", () => {
+  const threePages = planBoringLogContinuationPages({
+    basePageId: "page",
+    regionId: "region-depth-body",
+    depthStartFt: 0,
+    depthEndFt: 40,
+    yStartMpt: 130_000,
+    yEndLimitMpt: 330_000,
+    mptPerFoot: 12_025,
+  });
+  assert.equal(threePages.accepted, true);
+  assert.deepEqual(
+    threePages.pages.map(({ pageRole }) => pageRole),
+    ["first", "continuation", "last"],
+  );
+  assert.equal(threePages.pages[1].depthRange.startFt, threePages.pages[0].depthRange.endFt);
+  assert.equal(threePages.pages[2].depthRange.startFt, threePages.pages[1].depthRange.endFt);
+  assert.deepEqual(planBoringLogContinuationPages(null), {
+    accepted: false,
+    code: "CONTINUATION_PAGES_ARGUMENT_INVALID",
+  });
+  assert.deepEqual(
+    planBoringLogContinuationPages({
+      basePageId: "page",
+      regionId: "region-depth-body",
+      depthStartFt: 0,
+      depthEndFt: 10_001,
+      yStartMpt: 0,
+      yEndLimitMpt: 1,
+      mptPerFoot: 1,
+    }),
+    { accepted: false, code: "CONTINUATION_PAGES_CAPACITY_EXCEEDED" },
+  );
 });
 
 test("BLD-039 region boundaries clamp to typed minima and fail closed on bad topology", () => {

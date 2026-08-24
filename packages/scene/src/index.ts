@@ -42,6 +42,14 @@ export type {
   BoringLogRegionBoundary,
   BoringLogRegionResizeResult,
 } from "./boring-log-region-resize.js";
+export {
+  boringLogContinuationPagesRevision,
+  planBoringLogContinuationPages,
+} from "./boring-log-continuation-pages.js";
+export type {
+  BoringLogContinuationPage,
+  BoringLogContinuationPagesResult,
+} from "./boring-log-continuation-pages.js";
 export type {
   BoringLogTemplateTextProperty,
   BoringLogTemplateTextStyleResult,
