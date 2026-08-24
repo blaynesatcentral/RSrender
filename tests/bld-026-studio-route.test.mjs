@@ -528,10 +528,55 @@ test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene
   );
 });
 
+test("BLD-038 Studio projection query admits one exact non-mutating text-frame preview", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let receivedPreview = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "f".repeat(64),
+    getProjection: async (minimum, preview) => {
+      receivedPreview = preview;
+      return source.getProjection(minimum);
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const preview = {
+    expectedWorkingRevision: 0,
+    occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+    semanticId: "lithology:stratum-01:transition:2",
+    frame: { xMpt: 114_000, yMpt: 293_338, widthMpt: 140_000, heightMpt: 18_000 },
+  };
+  const accepted = await route.getProjection(routeContext, {
+    ...envelope(binding, 1, 0),
+    args: { minimumWorkingRevision: 0, preview },
+  });
+  assert.equal(accepted.accepted, true, accepted.code);
+  assert.deepEqual(receivedPreview, preview);
+  assert.deepEqual(
+    await route.getProjection(routeContext, {
+      ...envelope(binding, 2, 0),
+      args: {
+        minimumWorkingRevision: 0,
+        preview: { ...preview, frame: { ...preview.frame, widthMpt: 0 } },
+      },
+    }),
+    { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" },
+  );
+});
+
 test("BLD-026 generated Studio preload preserves document methods and exposes bounded Studio methods", async () => {
   const routedAuthority = await routed();
   let vmContext;
   let documentSetInput;
+  let studioProjectionInput;
+  let studioProjectionResponse;
   const intoPreloadRealm = (value) =>
     vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, vmContext);
   const sandbox = {
@@ -562,12 +607,12 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
               return intoPreloadRealm(routedAuthority.binding);
             }
             if (channel === BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL) {
-              return intoPreloadRealm(
-                await routedAuthority.route.getProjection(
-                  routedAuthority.routeContext,
-                  JSON.parse(JSON.stringify(input)),
-                ),
+              studioProjectionInput = JSON.parse(JSON.stringify(input));
+              studioProjectionResponse = await routedAuthority.route.getProjection(
+                routedAuthority.routeContext,
+                studioProjectionInput,
               );
+              return intoPreloadRealm(studioProjectionResponse);
             }
             if (channel === BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL) {
               return intoPreloadRealm(
@@ -622,6 +667,36 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.projection.textTemplateScopeSummary.authoredStyleCount, 5);
   assert.equal(result.projection.textTemplateScopeSummary.excludedOverrideStyleCount, 0);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
+  const previewResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.getProjection(${JSON.stringify({
+      minimumWorkingRevision: result.projection.workingRevision,
+      preview: {
+        expectedWorkingRevision: result.projection.workingRevision,
+        occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+        semanticId: "lithology:stratum-01:transition:2",
+        frame: { xMpt: 114_000, yMpt: 293_338, widthMpt: 140_000, heightMpt: 18_000 },
+      },
+    })})`,
+    vmContext,
+  );
+  assert.equal(
+    previewResult.accepted,
+    true,
+    JSON.stringify({ previewResult, studioProjectionInput, studioProjectionResponse }),
+  );
+  const invalidPreview = await vm.runInContext(
+    `globalThis.rsrenderStudio.getProjection(${JSON.stringify({
+      minimumWorkingRevision: result.projection.workingRevision,
+      preview: {
+        expectedWorkingRevision: result.projection.workingRevision,
+        occurrenceNodeId: "node:lithology:stratum-01:transition:2:text",
+        semanticId: "lithology:stratum-01:transition:2",
+        frame: { xMpt: 114_000, yMpt: 293_338, widthMpt: 0, heightMpt: 18_000 },
+      },
+    })})`,
+    vmContext,
+  );
+  assert.equal(invalidPreview.accepted, false);
   const occurrenceResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setTextOccurrenceStyle(${JSON.stringify({
       expectedWorkingRevision: result.projection.workingRevision,

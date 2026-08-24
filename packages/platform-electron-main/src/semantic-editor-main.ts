@@ -61,6 +61,7 @@ import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioPageGuidesInput,
+  type BoringLogStudioProjectionPreviewInput,
   type BoringLogStudioTextOccurrencePresentationResetInput,
   type BoringLogStudioTextOccurrenceStyleInput,
 } from "./boring-log-studio-route-broker.js";
@@ -2848,7 +2849,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         `document.getElementById("property-node-id")?.textContent === "node:lithology:stratum-01:transition:2:text" && document.getElementById("direct-manipulation-overlay")?.getAttribute("data-locked") === "false" && document.querySelectorAll(".direct-manipulation-handle").length === 8`,
         "WAIT_DIRECT_MANIPULATION_HANDLES",
       );
-      const directSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = value.accepted ? value.projection.scene.pages[0]?.nodes.find((candidate) => candidate.id === "node:lithology:stratum-01:transition:2:text") : null; const overlay = document.getElementById("direct-manipulation-overlay"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, frame: node?.kind === "text" ? node.frame : null, overlayFrame: { xMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("x")), yMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("y")), widthMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")), heightMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("height")) }, handleCount: document.querySelectorAll(".direct-manipulation-handle").length, roleButtonCount: document.querySelectorAll("#direct-manipulation-overlay [role=button][tabindex='0']").length, interactionMode: document.getElementById("canvas-stage")?.dataset.interactionMode, gestureHandle: document.getElementById("canvas-stage")?.dataset.directManipulationHandle ?? null, positionMode: overlay?.getAttribute("data-position-mode"), locked: overlay?.getAttribute("data-locked"), status: document.getElementById("editor-status")?.textContent }; })()`;
+      const directSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = value.accepted ? value.projection.scene.pages[0]?.nodes.find((candidate) => candidate.id === "node:lithology:stratum-01:transition:2:text") : null; const overlay = document.getElementById("direct-manipulation-overlay"); const stage = document.getElementById("canvas-stage"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, frame: node?.kind === "text" ? node.frame : null, overlayFrame: { xMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("x")), yMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("y")), widthMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")), heightMpt: Number(document.getElementById("direct-manipulation-frame")?.getAttribute("height")) }, handleCount: document.querySelectorAll(".direct-manipulation-handle").length, roleButtonCount: document.querySelectorAll("#direct-manipulation-overlay [role=button][tabindex='0']").length, interactionMode: stage?.dataset.interactionMode, gestureHandle: stage?.dataset.directManipulationHandle ?? null, liveReflowPreview: stage?.dataset.liveReflowPreview ?? null, liveReflowLineCount: Number(stage?.dataset.liveReflowLineCount), positionMode: overlay?.getAttribute("data-position-mode"), locked: overlay?.getAttribute("data-locked"), status: document.getElementById("editor-status")?.textContent }; })()`;
       const directBefore = record(await pageValue(window, directSnapshotExpression));
       const handleCenter = async (handle: string) =>
         record(
@@ -2949,9 +2950,10 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas preview ") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === "south"`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas preview ") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === "south" && document.getElementById("canvas-stage")?.dataset.liveReflowPreview === "true" && Number(document.getElementById("canvas-stage")?.dataset.liveReflowLineCount) > 0`,
         "WAIT_DIRECT_MANIPULATION_CANCEL_PREVIEW",
       );
+      const directLivePreview = record(await pageValue(window, directSnapshotExpression));
       window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
       window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
       window.webContents.sendInputEvent({
@@ -2969,6 +2971,8 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       const directCanceled = record(await pageValue(window, directSnapshotExpression));
       requireProbe(
         directCanceled["workingRevision"] === directResized["workingRevision"] &&
+          directLivePreview["liveReflowPreview"] === "true" &&
+          (directLivePreview["liveReflowLineCount"] as number) > 0 &&
           JSON.stringify(directCanceled["frame"]) === JSON.stringify(directResized["frame"]) &&
           JSON.stringify(directCanceled["overlayFrame"]) ===
             JSON.stringify(directResized["overlayFrame"]),
@@ -3054,6 +3058,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         undo: directUndo,
         redo: directRedo,
         resized: directResized,
+        livePreview: directLivePreview,
         canceled: directCanceled,
         pageGuides: Object.freeze({
           added: guideAdded,
@@ -3489,7 +3494,10 @@ async function main(): Promise<void> {
           };
     let studioQuerySequence = 0;
     const projectionCache = new Map<string, BoringLogStudioProjection>();
-    const getStudioProjection = async (minimumWorkingRevision: number | null) => {
+    const getStudioProjection = async (
+      minimumWorkingRevision: number | null,
+      preview: BoringLogStudioProjectionPreviewInput | null = null,
+    ) => {
       studioQuerySequence += 1;
       const queried = await hosted.session.getProjection(
         `urn:rsrender:bld-026:request:studio-scene:${studioQuerySequence}`,
@@ -3517,32 +3525,135 @@ async function main(): Promise<void> {
       });
       if (!prepared.accepted) return prepared;
       const cacheKey = `${prepared.preparation.projection.workingRevision}:${sha256CanonicalJson(prepared.preparation.layout.textRequests)}`;
-      const cached = projectionCache.get(cacheKey);
-      if (cached !== undefined) {
-        return Object.freeze({ accepted: true as const, projection: cached });
-      }
-      const measured = await measureBoringLogTextInChromium(
-        prepared.preparation.layout.textRequests,
-      );
-      if (!measured.accepted) {
-        if (probeMode) probeFailure = `STUDIO_MEASUREMENT:${measured.reason}`.slice(0, 256);
-        return Object.freeze({
-          accepted: false as const,
-          code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
-        });
-      }
-      const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
-      if (!completed.accepted && probeMode) {
-        probeFailure = `STUDIO_COMPLETION:${completed.code}`.slice(0, 256);
-      }
-      if (completed.accepted) {
-        projectionCache.set(cacheKey, completed.projection);
+      let baseProjection = projectionCache.get(cacheKey);
+      if (baseProjection === undefined) {
+        const measured = await measureBoringLogTextInChromium(
+          prepared.preparation.layout.textRequests,
+        );
+        if (!measured.accepted) {
+          if (probeMode) probeFailure = `STUDIO_MEASUREMENT:${measured.reason}`.slice(0, 256);
+          return Object.freeze({
+            accepted: false as const,
+            code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
+          });
+        }
+        const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
+        if (!completed.accepted) {
+          if (probeMode) probeFailure = `STUDIO_COMPLETION:${completed.code}`.slice(0, 256);
+          return completed;
+        }
+        baseProjection = completed.projection;
+        projectionCache.set(cacheKey, baseProjection);
         if (projectionCache.size > 8) {
           const oldest = projectionCache.keys().next().value;
           if (oldest !== undefined) projectionCache.delete(oldest);
         }
       }
-      return completed;
+      if (preview === null) {
+        return Object.freeze({ accepted: true as const, projection: baseProjection });
+      }
+      const node = baseProjection.scene.pages[0]?.nodes.find(
+        (candidate) =>
+          candidate.kind === "text" &&
+          candidate.id === preview.occurrenceNodeId &&
+          candidate.semanticId === preview.semanticId,
+      );
+      const request =
+        node?.kind === "text"
+          ? baseProjection.scene.textRequests.find(
+              ({ measurementId }) => measurementId === node.measurementId,
+            )
+          : undefined;
+      const previewFrame = preview.frame;
+      if (
+        node?.kind !== "text" ||
+        request === undefined ||
+        preview.expectedWorkingRevision !== baseProjection.workingRevision ||
+        previewFrame.xMpt + previewFrame.widthMpt > baseProjection.scene.pages[0]!.widthMpt ||
+        previewFrame.yMpt + previewFrame.heightMpt > baseProjection.scene.pages[0]!.heightMpt ||
+        (node.presentation?.positionMode !== "free" && previewFrame.yMpt !== node.frame.yMpt)
+      ) {
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
+        });
+      }
+      const document = activeDocument();
+      const occurrenceIdentityDigest = sha256CanonicalJson({
+        boringLogIdentity: document.boringLogIdentity,
+        occurrenceNodeId: node.id,
+        previewFrame,
+      }).slice("sha256:".length);
+      const overflowPolicy = node.presentation?.overflowPolicy ?? request.overflowPolicy;
+      const authored = applyBoringLogTextOccurrenceStyles(
+        activeLayoutJob,
+        [],
+        [
+          {
+            contractVersion: 1,
+            schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+            kind: "boring-log.text-occurrence-layout-override",
+            ownerDocumentIdentity: documentIdentity,
+            boringLogIdentity: document.boringLogIdentity,
+            overrideIdentity: `urn:rsrender:text-layout-preview:${occurrenceIdentityDigest}`,
+            overrideRevision: preview.expectedWorkingRevision + 1,
+            scope: "occurrence",
+            occurrenceNodeId: node.id,
+            semanticId: node.semanticId,
+            layout: {
+              frame: previewFrame,
+              frameAnchor: node.presentation?.frameAnchor ?? "top-left",
+              paddingMpt: node.presentation?.paddingMpt ?? {
+                topMpt: 0,
+                rightMpt: 0,
+                bottomMpt: 0,
+                leftMpt: 0,
+              },
+              horizontalAlignment: node.presentation?.horizontalAlignment ?? "start",
+              verticalAlignment: node.presentation?.verticalAlignment ?? "top",
+              wrapPolicy: node.presentation?.wrapPolicy ?? request.wrapPolicy,
+              overflowPolicy,
+              ...(overflowPolicy === "shrink-to-minimum"
+                ? {
+                    minimumFontSizeMpt:
+                      node.presentation?.minimumFontSizeMpt ?? request.minimumFontSizeMpt,
+                  }
+                : {}),
+              frameFillColor: node.presentation?.frameFillColor ?? null,
+              frameStrokeColor: node.presentation?.frameStrokeColor ?? null,
+              frameStrokeWidthMpt: node.presentation?.frameStrokeWidthMpt ?? 0,
+              rotationMilliDegrees: node.presentation?.rotationMilliDegrees ?? 0,
+              positionMode: node.presentation?.positionMode ?? "depth-bound",
+              locked: node.presentation?.locked ?? false,
+            },
+          },
+        ],
+      );
+      if (!authored.accepted) {
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_LAYOUT_REJECTED" as const,
+        });
+      }
+      const previewPrepared = prepareBoringLogStudioProjection({
+        layoutJob: authored.job,
+        bindings: document.bindings,
+        dataset: queried.result.projection,
+      });
+      if (!previewPrepared.accepted) return previewPrepared;
+      const previewMeasured = await measureBoringLogTextInChromium(
+        previewPrepared.preparation.layout.textRequests,
+      );
+      if (!previewMeasured.accepted) {
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
+        });
+      }
+      return completeBoringLogStudioProjection(
+        previewPrepared.preparation,
+        previewMeasured.results,
+      );
     };
     const projectState = async () => {
       const queried = await hosted.session.getProjection(

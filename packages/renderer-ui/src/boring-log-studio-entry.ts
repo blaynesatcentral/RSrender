@@ -88,9 +88,12 @@ import {
   visibleBoringLogStudioTreeItems,
 } from "./boring-log-studio-tree.js";
 import {
+  nearestBoringLogDirectManipulationResizeHandle,
   resolveBoringLogDirectManipulationFrame,
   snapBoringLogDirectManipulationFrame,
   type BoringLogDirectManipulationHandle,
+  type BoringLogSnapTarget,
+  type BoringLogSnapTargetKind,
 } from "./boring-log-direct-manipulation.js";
 
 type EditableValue = Readonly<{
@@ -170,6 +173,12 @@ type StudioApis = Readonly<{
   readonly studio: {
     readonly getProjection: (input: {
       readonly minimumWorkingRevision: number | null;
+      readonly preview?: Readonly<{
+        readonly expectedWorkingRevision: number;
+        readonly occurrenceNodeId: string;
+        readonly semanticId: string;
+        readonly frame: TextFrame;
+      }>;
     }) => Promise<
       | { readonly accepted: false; readonly code: string }
       | { readonly accepted: true; readonly projection: StudioProjection }
@@ -482,9 +491,10 @@ async function main(): Promise<void> {
         readonly minimumWidthMpt: number;
         readonly minimumHeightMpt: number;
         readonly snapTargets: Readonly<{
-          readonly xMpt: readonly number[];
-          readonly yMpt: readonly number[];
+          readonly x: readonly BoringLogSnapTarget[];
+          readonly y: readonly BoringLogSnapTarget[];
         }>;
+        readonly baselineOffsetsYMpt: readonly number[];
         readonly originalTransform: string | null;
         readonly originalFrameTransform: string | null;
       }
@@ -502,6 +512,9 @@ async function main(): Promise<void> {
   let suppressCanvasClick = false;
   let smartSnapEnabled = true;
   let gridSnapEnabled = false;
+  let liveReflowPreviewTimer: number | undefined;
+  let liveReflowPreviewFrame: TextFrame | undefined;
+  let liveReflowPreviewInFlight: Promise<void> | null = null;
 
   function studioApis(): StudioApis | null {
     const world = globalThis as typeof globalThis & {
@@ -1019,9 +1032,12 @@ async function main(): Promise<void> {
           ? 6_000
           : Math.max(1, Math.round(6 / Math.max(Math.abs(transform.a), Math.abs(transform.d))));
       const targets = currentSnapTargets(gesture.guideId);
-      const axisTargets = gesture.orientation === "vertical" ? targets.xMpt : targets.yMpt;
+      const axisTargets = gesture.orientation === "vertical" ? targets.x : targets.y;
       const nearest = axisTargets
-        .map((targetMpt) => ({ targetMpt, distanceMpt: Math.abs(targetMpt - unsnapped) }))
+        .map(({ positionMpt: targetMpt }) => ({
+          targetMpt,
+          distanceMpt: Math.abs(targetMpt - unsnapped),
+        }))
         .filter(({ distanceMpt }) => distanceMpt <= thresholdMpt)
         .sort(
           (left, right) => left.distanceMpt - right.distanceMpt || left.targetMpt - right.targetMpt,
@@ -1078,26 +1094,104 @@ async function main(): Promise<void> {
     propertyBounds.textContent = `${(frame.xMpt / 1_000).toFixed(1)}, ${(frame.yMpt / 1_000).toFixed(1)} Â· ${(frame.widthMpt / 1_000).toFixed(1)} Ã— ${(frame.heightMpt / 1_000).toFixed(1)} pt`;
   }
 
+  function textBaselineYMpt(
+    node: Extract<BoringLogSceneNode, { kind: "text" }>,
+  ): readonly number[] {
+    const measurement = scene.textResults.find(
+      ({ measurementId }) => measurementId === node.measurementId,
+    );
+    if (measurement === undefined) return Object.freeze([]);
+    const padding = node.presentation?.paddingMpt ?? {
+      topMpt: 0,
+      rightMpt: 0,
+      bottomMpt: 0,
+      leftMpt: 0,
+    };
+    const innerHeight = node.frame.heightMpt - padding.topMpt - padding.bottomMpt;
+    const verticalOffset =
+      node.presentation?.verticalAlignment === "middle"
+        ? Math.round((innerHeight - measurement.logicalBounds.heightMpt) / 2)
+        : node.presentation?.verticalAlignment === "bottom"
+          ? innerHeight - measurement.logicalBounds.heightMpt
+          : 0;
+    return Object.freeze(
+      measurement.lines.map(
+        ({ baselineMpt }) => node.frame.yMpt + padding.topMpt + verticalOffset + baselineMpt,
+      ),
+    );
+  }
+
   function currentSnapTargets(
     excludedGuideId: string | null = null,
-  ): Readonly<{ xMpt: readonly number[]; yMpt: readonly number[] }> {
-    const xMpt = new Set<number>([0, Math.round(page.widthMpt / 2), page.widthMpt]);
-    const yMpt = new Set<number>([0, Math.round(page.heightMpt / 2), page.heightMpt]);
+  ): Readonly<{ x: readonly BoringLogSnapTarget[]; y: readonly BoringLogSnapTarget[] }> {
+    const x = new Map<string, BoringLogSnapTarget>();
+    const y = new Map<string, BoringLogSnapTarget>();
+    const add = (
+      target: Map<string, BoringLogSnapTarget>,
+      positionMpt: number,
+      kind: BoringLogSnapTargetKind,
+    ): void => {
+      if (!Number.isSafeInteger(positionMpt)) return;
+      target.set(`${positionMpt}:${kind}`, Object.freeze({ positionMpt, kind }));
+    };
+    for (const positionMpt of [0, Math.round(page.widthMpt / 2), page.widthMpt]) {
+      add(x, positionMpt, "page");
+    }
+    for (const positionMpt of [0, Math.round(page.heightMpt / 2), page.heightMpt]) {
+      add(y, positionMpt, "page");
+    }
     if (smartSnapEnabled) {
       for (const guide of studioProjection?.guides ?? []) {
         if (guide.id === excludedGuideId) continue;
-        if (guide.orientation === "vertical") xMpt.add(guide.positionMpt);
-        else yMpt.add(guide.positionMpt);
+        add(guide.orientation === "vertical" ? x : y, guide.positionMpt, "guide");
+      }
+      const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+      for (const region of plannedPage?.regions ?? []) {
+        for (const positionMpt of [
+          region.xMpt,
+          region.xMpt + Math.round(region.widthMpt / 2),
+          region.xMpt + region.widthMpt,
+        ]) {
+          add(x, positionMpt, "region");
+        }
+        for (const positionMpt of [
+          region.yMpt,
+          region.yMpt + Math.round(region.heightMpt / 2),
+          region.yMpt + region.heightMpt,
+        ]) {
+          add(y, positionMpt, "region");
+        }
+      }
+      const depthTransform = plannedPage?.depthTransform;
+      if (depthTransform !== undefined) {
+        for (
+          let depthFt = Math.ceil(depthTransform.depthStartFt);
+          depthFt <= Math.floor(depthTransform.depthEndFt);
+          depthFt += 1
+        ) {
+          add(
+            y,
+            depthTransform.yStartMpt +
+              Math.round((depthFt - depthTransform.depthStartFt) * depthTransform.mptPerFoot),
+            "depth",
+          );
+        }
+      }
+      for (const textNode of page.nodes.filter(
+        (node): node is Extract<BoringLogSceneNode, { kind: "text" }> =>
+          node.kind === "text" && node.id !== selectedSceneNodeId,
+      )) {
+        for (const positionMpt of textBaselineYMpt(textNode)) add(y, positionMpt, "baseline");
       }
       for (const candidate of pageHost.querySelectorAll<SVGGraphicsElement>(".scene-node")) {
         if (candidate.dataset["nodeId"] === selectedSceneNodeId) continue;
         try {
           const bounds = candidate.getBBox();
           for (const value of [bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width]) {
-            if (Number.isFinite(value)) xMpt.add(Math.round(value));
+            if (Number.isFinite(value)) add(x, Math.round(value), "peer");
           }
           for (const value of [bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height]) {
-            if (Number.isFinite(value)) yMpt.add(Math.round(value));
+            if (Number.isFinite(value)) add(y, Math.round(value), "peer");
           }
         } catch {
           // A non-rendered semantic node is not a snap target.
@@ -1105,20 +1199,43 @@ async function main(): Promise<void> {
       }
     }
     if (gridSnapEnabled) {
-      for (let value = 0; value <= page.widthMpt; value += 1_000) xMpt.add(value);
-      for (let value = 0; value <= page.heightMpt; value += 1_000) yMpt.add(value);
+      for (let value = 0; value <= page.widthMpt; value += 1_000) add(x, value, "grid");
+      for (let value = 0; value <= page.heightMpt; value += 1_000) add(y, value, "grid");
     }
+    const priorities: Readonly<Record<BoringLogSnapTargetKind, number>> = Object.freeze({
+      guide: 0,
+      baseline: 1,
+      depth: 2,
+      region: 3,
+      page: 4,
+      peer: 5,
+      grid: 6,
+    });
+    const ordered = (values: Map<string, BoringLogSnapTarget>) =>
+      Object.freeze(
+        [...values.values()].sort(
+          (left, right) =>
+            left.positionMpt - right.positionMpt || priorities[left.kind] - priorities[right.kind],
+        ),
+      );
     return Object.freeze({
-      xMpt: Object.freeze([...xMpt].sort((left, right) => left - right)),
-      yMpt: Object.freeze([...yMpt].sort((left, right) => left - right)),
+      x: ordered(x),
+      y: ordered(y),
     });
   }
 
   function previewDirectManipulationFrame(
     frame: TextFrame,
-    snap: Readonly<{ snapXMpt: number | null; snapYMpt: number | null }> = {
+    snap: Readonly<{
+      snapXMpt: number | null;
+      snapYMpt: number | null;
+      snapXKind: BoringLogSnapTargetKind | null;
+      snapYKind: BoringLogSnapTargetKind | null;
+    }> = {
       snapXMpt: null,
       snapYMpt: null,
+      snapXKind: null,
+      snapYKind: null,
     },
   ): void {
     const gesture = directManipulationGesture;
@@ -1182,6 +1299,7 @@ async function main(): Promise<void> {
       line.setAttribute("x2", String(snap.snapXMpt));
       line.setAttribute("y1", "0");
       line.setAttribute("y2", String(page.heightMpt));
+      line.dataset["snapKind"] = snap.snapXKind ?? "unknown";
       overlay.prepend(line);
     }
     if (overlay !== null && snap.snapYMpt !== null) {
@@ -1191,13 +1309,110 @@ async function main(): Promise<void> {
       line.setAttribute("x2", String(page.widthMpt));
       line.setAttribute("y1", String(snap.snapYMpt));
       line.setAttribute("y2", String(snap.snapYMpt));
+      line.dataset["snapKind"] = snap.snapYKind ?? "unknown";
       overlay.prepend(line);
     }
     const snapStatus =
       snap.snapXMpt === null && snap.snapYMpt === null
         ? ""
-        : ` Snapped${snap.snapXMpt === null ? "" : ` X ${snap.snapXMpt} mpt`}${snap.snapYMpt === null ? "" : ` Y ${snap.snapYMpt} mpt`}; hold Alt to bypass.`;
+        : ` Snapped${snap.snapXMpt === null ? "" : ` X ${snap.snapXKind ?? "target"} ${snap.snapXMpt} mpt`}${snap.snapYMpt === null ? "" : ` Y ${snap.snapYKind ?? "target"} ${snap.snapYMpt} mpt`}; hold Alt to bypass.`;
     status.textContent = `Canvas preview ${Math.round(frame.xMpt)} / ${Math.round(frame.yMpt)} / ${Math.round(frame.widthMpt)} / ${Math.round(frame.heightMpt)} mpt.${snapStatus} Release to commit and reflow; Esc cancels.`;
+  }
+
+  function installLiveReflowPreview(
+    previewScene: ResolvedBoringLogPageScene,
+    occurrenceNodeId: string,
+  ): void {
+    const projection = projectBoringLogSceneToSvg(previewScene, selectedSemanticId);
+    if (!projection.accepted) return;
+    const parsed = new DOMParser().parseFromString(projection.markup, "image/svg+xml");
+    if (parsed.querySelector("parsererror") !== null) return;
+    const escapedNodeId = CSS.escape(occurrenceNodeId);
+    const nextText = parsed.querySelector<SVGTextElement>(`#${escapedNodeId}`);
+    const currentText = pageHost.querySelector<SVGTextElement>(`#${escapedNodeId}`);
+    if (nextText === null || currentText === null) return;
+    const importedText = document.importNode(nextText, true);
+    if (selectedTextNodeIds.has(occurrenceNodeId) || selectedSceneNodeId === occurrenceNodeId) {
+      importedText.classList.add("is-selected");
+    }
+    const frameId = `${occurrenceNodeId}:presentation-frame`;
+    const nextFrame = parsed.querySelector<SVGRectElement>(`#${CSS.escape(frameId)}`);
+    const currentFrame = pageHost.querySelector<SVGRectElement>(`#${CSS.escape(frameId)}`);
+    if (nextFrame === null) currentFrame?.remove();
+    else if (currentFrame === null) {
+      currentText.before(document.importNode(nextFrame, true));
+    } else currentFrame.replaceWith(document.importNode(nextFrame, true));
+    currentText.replaceWith(importedText);
+    const lineCount = importedText.querySelectorAll("tspan").length;
+    canvasStage.dataset["liveReflowPreview"] = "true";
+    canvasStage.dataset["liveReflowLineCount"] = String(lineCount);
+  }
+
+  async function runLiveReflowPreview(): Promise<void> {
+    if (liveReflowPreviewInFlight !== null) return liveReflowPreviewInFlight;
+    const gesture = directManipulationGesture;
+    const frame = liveReflowPreviewFrame;
+    liveReflowPreviewFrame = undefined;
+    if (gesture === undefined || frame === undefined || studioProjection === null) return;
+    const promise = (async () => {
+      const apis = studioApis();
+      if (apis === null) return;
+      const response = await apis.studio.getProjection({
+        minimumWorkingRevision: studioProjection.workingRevision,
+        preview: {
+          expectedWorkingRevision: studioProjection.workingRevision,
+          occurrenceNodeId: gesture.nodeId,
+          semanticId: gesture.semanticId,
+          frame,
+        },
+      });
+      if (
+        response.accepted &&
+        directManipulationGesture === gesture &&
+        gesture.previewFrame.xMpt === frame.xMpt &&
+        gesture.previewFrame.yMpt === frame.yMpt &&
+        gesture.previewFrame.widthMpt === frame.widthMpt &&
+        gesture.previewFrame.heightMpt === frame.heightMpt
+      ) {
+        installLiveReflowPreview(response.projection.scene, gesture.nodeId);
+      }
+    })().finally(() => {
+      liveReflowPreviewInFlight = null;
+      if (liveReflowPreviewFrame !== undefined && directManipulationGesture !== undefined) {
+        liveReflowPreviewTimer = window.setTimeout(() => {
+          liveReflowPreviewTimer = undefined;
+          void runLiveReflowPreview();
+        }, 80);
+      }
+    });
+    liveReflowPreviewInFlight = promise;
+    return promise;
+  }
+
+  function scheduleLiveReflowPreview(frame: TextFrame): void {
+    liveReflowPreviewFrame = frame;
+    if (liveReflowPreviewTimer !== undefined || liveReflowPreviewInFlight !== null) return;
+    liveReflowPreviewTimer = window.setTimeout(() => {
+      liveReflowPreviewTimer = undefined;
+      void runLiveReflowPreview();
+    }, 80);
+  }
+
+  async function flushLiveReflowPreview(): Promise<void> {
+    if (liveReflowPreviewTimer !== undefined) {
+      window.clearTimeout(liveReflowPreviewTimer);
+      liveReflowPreviewTimer = undefined;
+      await runLiveReflowPreview();
+    }
+    if (liveReflowPreviewInFlight !== null) await liveReflowPreviewInFlight;
+  }
+
+  function clearLiveReflowPreview(): void {
+    if (liveReflowPreviewTimer !== undefined) window.clearTimeout(liveReflowPreviewTimer);
+    liveReflowPreviewTimer = undefined;
+    liveReflowPreviewFrame = undefined;
+    Reflect.deleteProperty(canvasStage.dataset, "liveReflowPreview");
+    Reflect.deleteProperty(canvasStage.dataset, "liveReflowLineCount");
   }
 
   function renderTree(): void {
@@ -2145,9 +2360,9 @@ async function main(): Promise<void> {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const control = target.closest<SVGElement>("[data-direct-manipulation-handle]");
-    const handle = control?.dataset["directManipulationHandle"] as
+    const requestedHandle = control?.dataset["directManipulationHandle"] as
       BoringLogDirectManipulationHandle | undefined;
-    if (control === null || handle === undefined || selectedSceneNodeId === null) return;
+    if (control === null || requestedHandle === undefined || selectedSceneNodeId === null) return;
     const node = page.nodes.find(
       (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
         candidate.id === selectedSceneNodeId && candidate.kind === "text",
@@ -2167,6 +2382,11 @@ async function main(): Promise<void> {
       status.textContent = "Canvas coordinates are unavailable for this gesture.";
       return;
     }
+    const handle =
+      requestedHandle === "move"
+        ? requestedHandle
+        : nearestBoringLogDirectManipulationResizeHandle(node.frame, point);
+    if (handle === null) return;
     const padding = node.presentation?.paddingMpt ?? {
       topMpt: 0,
       rightMpt: 0,
@@ -2176,6 +2396,7 @@ async function main(): Promise<void> {
     const presentationFrame = pageHost.querySelector<SVGRectElement>(
       `#${CSS.escape(`${node.id}:presentation-frame`)}`,
     );
+    clearLiveReflowPreview();
     directManipulationGesture = {
       pointerId: event.pointerId,
       nodeId: node.id,
@@ -2188,6 +2409,9 @@ async function main(): Promise<void> {
       minimumWidthMpt: Math.max(1_000, padding.leftMpt + padding.rightMpt + 1_000),
       minimumHeightMpt: Math.max(1_000, padding.topMpt + padding.bottomMpt + 1_000),
       snapTargets: currentSnapTargets(),
+      baselineOffsetsYMpt: Object.freeze(
+        textBaselineYMpt(node).map((baselineMpt) => baselineMpt - node.frame.yMpt),
+      ),
       originalTransform:
         pageHost
           .querySelector<SVGTextElement>(`#${CSS.escape(node.id)}`)
@@ -2228,17 +2452,20 @@ async function main(): Promise<void> {
     const snapped = snapBoringLogDirectManipulationFrame({
       frame: resolved.frame,
       handle: gesture.handle,
-      xTargetsMpt: smartSnapEnabled || gridSnapEnabled ? gesture.snapTargets.xMpt : [],
-      yTargetsMpt:
-        (smartSnapEnabled || gridSnapEnabled) && gesture.positionMode !== "depth-bound"
-          ? gesture.snapTargets.yMpt
+      xTargets: smartSnapEnabled || gridSnapEnabled ? gesture.snapTargets.x : [],
+      yTargets:
+        (smartSnapEnabled || gridSnapEnabled) &&
+        (gesture.positionMode !== "depth-bound" || gesture.handle !== "move")
+          ? gesture.snapTargets.y
           : [],
+      baselineOffsetsYMpt: gesture.baselineOffsetsYMpt,
       thresholdMpt,
       pageWidthMpt: page.widthMpt,
       pageHeightMpt: page.heightMpt,
       bypass: event.altKey,
     });
     previewDirectManipulationFrame(snapped.frame, snapped);
+    if (gesture.handle !== "move") scheduleLiveReflowPreview(snapped.frame);
     event.preventDefault();
   }
 
@@ -2253,6 +2480,7 @@ async function main(): Promise<void> {
     if (gesture === undefined) return;
     releaseDirectManipulationCapture(gesture.pointerId);
     directManipulationGesture = undefined;
+    clearLiveReflowPreview();
     suppressCanvasClick = true;
     installSvg();
     syncTextFrameInputs(gesture.originalFrame);
@@ -2263,7 +2491,9 @@ async function main(): Promise<void> {
     const gesture = directManipulationGesture;
     if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
     releaseDirectManipulationCapture(gesture.pointerId);
+    await flushLiveReflowPreview();
     directManipulationGesture = undefined;
+    clearLiveReflowPreview();
     suppressCanvasClick = true;
     event.preventDefault();
     event.stopPropagation();

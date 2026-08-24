@@ -78,6 +78,8 @@ export async function runDirectManipulationQualification({ record = false } = {}
     !sameFrame(direct?.redo?.frame, movedFrame) ||
     direct?.redo?.workingRevision !== direct.moved.workingRevision + 2 ||
     direct?.resized?.workingRevision !== direct.redo.workingRevision + 1 ||
+    direct?.livePreview?.liveReflowPreview !== "true" ||
+    direct?.livePreview?.liveReflowLineCount < 1 ||
     resizedFrame?.xMpt !== movedFrame?.xMpt ||
     resizedFrame?.yMpt !== movedFrame?.yMpt ||
     resizedFrame?.widthMpt === movedFrame?.widthMpt ||
@@ -164,6 +166,7 @@ export async function runDirectManipulationQualification({ record = false } = {}
       guidesAreNonprintingStudioOverlays: true,
       guideAddLockDeleteUndoRedoPackaged: true,
       projectSaveReopenRetainsGuides: true,
+      rendererNeutralLiveTextReflowPreview: true,
     }),
   });
   const canonical = `${canonicalizeJson(evidence)}\n`;

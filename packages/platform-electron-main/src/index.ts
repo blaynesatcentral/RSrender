@@ -131,6 +131,7 @@ export type {
   BoringLogStudioRouteResult,
   BoringLogStudioLifecycleOperation,
   BoringLogStudioPageGuidesInput,
+  BoringLogStudioProjectionPreviewInput,
   BoringLogStudioTextOccurrencePresentationResetInput,
   BoringLogStudioTextOccurrenceStyleInput,
   BoringLogStudioLifecycleResult,

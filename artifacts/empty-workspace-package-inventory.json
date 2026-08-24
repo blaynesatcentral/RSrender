@@ -124,14 +124,14 @@
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 6910,
-      "sha256": "10f682c69b5e18d39d301a5eaac480b7870506a5bf1282129fa67e9f90b08b3b"
+      "bytes": 6949,
+      "sha256": "8b6614dc9fca440c766e2634c2585eedc1bd41da25ac09fd099772c406510119"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 3245,
-      "sha256": "826a40fee40ff2171f2213bfe4825e387afa8ffe6a4c02a385ef50bd79635b1d"
+      "bytes": 3258,
+      "sha256": "ff76fa865c4ace92c69e52a9763a4d860501819cee6472359ddecbc89329788e"
     },
     {
       "package": "platform-electron-main",
@@ -143,7 +143,7 @@
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
       "bytes": 1944,
-      "sha256": "ff9848f0cf773f28cd806ec4ee5316ace72100e20e81349c27bc2fd2b2dd9525"
+      "sha256": "4d49c882eb7b6a54402eaa4b2a73215ea8277f0bf41a0537d03759f1edb530ac"
     },
     {
       "package": "platform-zipjs",
@@ -172,26 +172,26 @@
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.d.ts",
-      "bytes": 1641,
-      "sha256": "602fb1d0fcbad21c38e04d2918dde14ece8865b227788b9c46268dcdccf2cbf1"
+      "bytes": 1689,
+      "sha256": "6ae915b080821fa490df3b4fc00cde445e96b9c5c875480c2cc0b168bc44ed27"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.d.ts.map",
-      "bytes": 621,
-      "sha256": "53b86347ef78d4c5e7204e8dead79046443c443d86f6ee50af6c9de15a4e837e"
+      "bytes": 634,
+      "sha256": "4f59ffbf0c25dc3239e84be52f6b8a3e81bb81e5dd5edcabe0dc745ca5464538"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.js",
-      "bytes": 1415,
-      "sha256": "277c2cbae11e1dd700054bbadb00b52a22f8fde2d0b4f74471f80a2ac4b6b5d0"
+      "bytes": 1463,
+      "sha256": "5ebea8f6211a9b7b0ca6a40f8451b02307d2489221395cb88208dfb0f210e26d"
     },
     {
       "package": "renderer-ui",
       "file": "packages/renderer-ui/dist/index.js.map",
-      "bytes": 557,
-      "sha256": "6320050abea07b3402d0d74439650da70402b08296529ace4a4a6ba8df330212"
+      "bytes": 570,
+      "sha256": "9e38d65b64a76db5c1533588c786e79923762b096fc41bf77cc7c88eb000e4d2"
     },
     {
       "package": "scene",

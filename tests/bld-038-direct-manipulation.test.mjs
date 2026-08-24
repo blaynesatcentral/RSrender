@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  nearestBoringLogDirectManipulationResizeHandle,
   resolveBoringLogDirectManipulationFrame,
   snapBoringLogDirectManipulationFrame,
 } from "../packages/renderer-ui/dist/index.js";
@@ -82,6 +83,27 @@ test("BLD-038 resolves free and depth-bound resize handles without fractional ge
   });
 });
 
+test("BLD-038 resolves overlapping small-frame controls by nearest semantic handle", () => {
+  assert.equal(
+    nearestBoringLogDirectManipulationResizeHandle(original, {
+      xMpt: original.xMpt + original.widthMpt,
+      yMpt: original.yMpt + Math.round(original.heightMpt / 2),
+    }),
+    "east",
+  );
+  assert.equal(
+    nearestBoringLogDirectManipulationResizeHandle(original, {
+      xMpt: original.xMpt + original.widthMpt,
+      yMpt: original.yMpt + original.heightMpt,
+    }),
+    "south-east",
+  );
+  assert.equal(
+    nearestBoringLogDirectManipulationResizeHandle(original, { xMpt: 0.5, yMpt: 0 }),
+    null,
+  );
+});
+
 test("BLD-038 fails closed for fractional, out-of-page, and impossible gesture inputs", () => {
   for (const input of [
     { ...baseInput, handle: "move", deltaXMpt: 0.5, deltaYMpt: 0, positionMode: "free" },
@@ -113,8 +135,11 @@ test("BLD-038 snaps move and resize edges deterministically with temporary bypas
   const moved = snapBoringLogDirectManipulationFrame({
     frame: { xMpt: 23_750, yMpt: 100_000, widthMpt: 100_000, heightMpt: 20_000 },
     handle: "move",
-    xTargetsMpt: [24_000, 200_000],
-    yTargetsMpt: [99_500],
+    xTargets: [
+      { positionMpt: 24_000, kind: "region" },
+      { positionMpt: 200_000, kind: "peer" },
+    ],
+    yTargets: [{ positionMpt: 99_500, kind: "depth" }],
     thresholdMpt: 1_000,
     pageWidthMpt: 612_000,
     pageHeightMpt: 792_000,
@@ -124,12 +149,14 @@ test("BLD-038 snaps move and resize edges deterministically with temporary bypas
     frame: { xMpt: 24_000, yMpt: 99_500, widthMpt: 100_000, heightMpt: 20_000 },
     snapXMpt: 24_000,
     snapYMpt: 99_500,
+    snapXKind: "region",
+    snapYKind: "depth",
   });
   const resized = snapBoringLogDirectManipulationFrame({
     frame: { xMpt: 24_000, yMpt: 100_000, widthMpt: 99_500, heightMpt: 20_000 },
     handle: "east",
-    xTargetsMpt: [124_000],
-    yTargetsMpt: [],
+    xTargets: [{ positionMpt: 124_000, kind: "guide" }],
+    yTargets: [],
     thresholdMpt: 1_000,
     pageWidthMpt: 612_000,
     pageHeightMpt: 792_000,
@@ -142,17 +169,57 @@ test("BLD-038 snaps move and resize edges deterministically with temporary bypas
     heightMpt: 20_000,
   });
   assert.equal(resized.snapXMpt, 124_000);
+  assert.equal(resized.snapXKind, "guide");
   const bypassed = snapBoringLogDirectManipulationFrame({
     frame: moved.frame,
     handle: "move",
-    xTargetsMpt: [25_000],
-    yTargetsMpt: [100_000],
+    xTargets: [{ positionMpt: 25_000, kind: "grid" }],
+    yTargets: [{ positionMpt: 100_000, kind: "grid" }],
     thresholdMpt: 10_000,
     pageWidthMpt: 612_000,
     pageHeightMpt: 792_000,
     bypass: true,
   });
-  assert.deepEqual(bypassed, { frame: moved.frame, snapXMpt: null, snapYMpt: null });
+  assert.deepEqual(bypassed, {
+    frame: moved.frame,
+    snapXMpt: null,
+    snapYMpt: null,
+    snapXKind: null,
+    snapYKind: null,
+  });
+});
+
+test("BLD-038 snaps text baselines only from an explicit baseline candidate", () => {
+  const input = {
+    frame: { xMpt: 24_000, yMpt: 100_000, widthMpt: 100_000, heightMpt: 20_000 },
+    handle: "move",
+    xTargets: [],
+    yTargets: [{ positionMpt: 108_500, kind: "baseline" }],
+    thresholdMpt: 1_000,
+    pageWidthMpt: 612_000,
+    pageHeightMpt: 792_000,
+    bypass: false,
+  };
+  const withoutCandidate = snapBoringLogDirectManipulationFrame(input);
+  assert.equal(withoutCandidate.snapYMpt, null);
+  const withCandidate = snapBoringLogDirectManipulationFrame({
+    ...input,
+    baselineOffsetsYMpt: [8_000],
+  });
+  assert.deepEqual(withCandidate, {
+    frame: { xMpt: 24_000, yMpt: 100_500, widthMpt: 100_000, heightMpt: 20_000 },
+    snapXMpt: null,
+    snapYMpt: 108_500,
+    snapXKind: null,
+    snapYKind: "baseline",
+  });
+  assert.deepEqual(snapBoringLogDirectManipulationFrame({ ...input, yTargets: [null] }), {
+    frame: input.frame,
+    snapXMpt: null,
+    snapYMpt: null,
+    snapXKind: null,
+    snapYKind: null,
+  });
 });
 
 test("BLD-038 installs accessible SVG handles and coalesces pointer completion through history", async () => {
@@ -181,9 +248,19 @@ test("BLD-038 installs accessible SVG handles and coalesces pointer completion t
   assert.match(entry, /snapBoringLogDirectManipulationFrame/u);
   assert.match(entry, /hold Alt to bypass/u);
   assert.match(entry, /\.direct-snap-feedback/u);
+  assert.match(entry, /depthTransform\.mptPerFoot/u);
+  assert.match(entry, /textBaselineYMpt/u);
+  assert.match(entry, /snapYKind/u);
+  assert.match(entry, /scheduleLiveReflowPreview/u);
+  assert.match(entry, /preview: \{/u);
+  assert.match(entry, /installLiveReflowPreview/u);
+  assert.match(entry, /await flushLiveReflowPreview\(\)/u);
   assert.match(entry, /text was reflowed by the shared layout authority/u);
   assert.match(entry, /node\.presentation\?\.locked === true/u);
   assert.match(stylesheet, /\.direct-manipulation-frame/u);
   assert.match(stylesheet, /\.direct-manipulation-handle/u);
+  assert.match(stylesheet, /data-snap-kind="baseline"/u);
+  assert.match(stylesheet, /data-snap-kind="depth"/u);
+  assert.match(stylesheet, /data-snap-kind="region"/u);
   assert.doesNotMatch(stylesheet, /direct-manipulation[^}]+background-image/su);
 });

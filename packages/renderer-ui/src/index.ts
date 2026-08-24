@@ -43,6 +43,7 @@ export {
   createBoringLogStudioHtml,
 } from "./boring-log-studio-route.js";
 export {
+  nearestBoringLogDirectManipulationResizeHandle,
   resolveBoringLogDirectManipulationFrame,
   snapBoringLogDirectManipulationFrame,
   type BoringLogDirectManipulationFrame,

@@ -146,6 +146,18 @@ export interface BoringLogStudioPageGuidesInput {
     | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 }
 
+export interface BoringLogStudioProjectionPreviewInput {
+  readonly expectedWorkingRevision: number;
+  readonly occurrenceNodeId: string;
+  readonly semanticId: string;
+  readonly frame: Readonly<{
+    readonly xMpt: number;
+    readonly yMpt: number;
+    readonly widthMpt: number;
+    readonly heightMpt: number;
+  }>;
+}
+
 type DataRecord = Readonly<Record<string, unknown>>;
 type Binding = {
   readonly capability: string;
@@ -230,6 +242,7 @@ export class BoringLogStudioRouteBroker {
   readonly #createCapability: () => string;
   readonly #getProjection: (
     minimumWorkingRevision: number | null,
+    preview: BoringLogStudioProjectionPreviewInput | null,
   ) => Promise<BoringLogStudioProjectionResult>;
   readonly #lifecycle: (input: {
     readonly operation: BoringLogStudioLifecycleOperation;
@@ -253,6 +266,7 @@ export class BoringLogStudioRouteBroker {
     readonly createCapability: () => string;
     readonly getProjection: (
       minimumWorkingRevision: number | null,
+      preview: BoringLogStudioProjectionPreviewInput | null,
     ) => Promise<BoringLogStudioProjectionResult>;
     readonly lifecycle?: (input: {
       readonly operation: BoringLogStudioLifecycleOperation;
@@ -387,12 +401,59 @@ export class BoringLogStudioRouteBroker {
     ) {
       return rejected("STUDIO_ROUTE_SEQUENCE_INVALID");
     }
-    const args = exactRecord(request["args"], ["minimumWorkingRevision"]);
+    const hasPreview =
+      typeof request["args"] === "object" &&
+      request["args"] !== null &&
+      Object.hasOwn(request["args"], "preview");
+    const args = exactRecord(request["args"], [
+      "minimumWorkingRevision",
+      ...(hasPreview ? ["preview"] : []),
+    ]);
     const minimum = args?.["minimumWorkingRevision"];
+    const previewRecord =
+      args === null || !hasPreview
+        ? null
+        : exactRecord(args["preview"], [
+            "expectedWorkingRevision",
+            "occurrenceNodeId",
+            "semanticId",
+            "frame",
+          ]);
+    const previewFrame =
+      previewRecord === null
+        ? null
+        : exactRecord(previewRecord["frame"], ["xMpt", "yMpt", "widthMpt", "heightMpt"]);
+    const boundedText = (value: unknown) =>
+      typeof value === "string" && value.length >= 1 && value.length <= 512;
+    const preview =
+      previewRecord !== null &&
+      previewFrame !== null &&
+      Number.isSafeInteger(previewRecord["expectedWorkingRevision"]) &&
+      (previewRecord["expectedWorkingRevision"] as number) >= 0 &&
+      boundedText(previewRecord["occurrenceNodeId"]) &&
+      boundedText(previewRecord["semanticId"]) &&
+      Object.values(previewFrame).every(
+        (value) => Number.isSafeInteger(value) && (value as number) >= 0,
+      ) &&
+      (previewFrame["widthMpt"] as number) > 0 &&
+      (previewFrame["heightMpt"] as number) > 0
+        ? Object.freeze({
+            expectedWorkingRevision: previewRecord["expectedWorkingRevision"] as number,
+            occurrenceNodeId: previewRecord["occurrenceNodeId"] as string,
+            semanticId: previewRecord["semanticId"] as string,
+            frame: Object.freeze({
+              xMpt: previewFrame["xMpt"] as number,
+              yMpt: previewFrame["yMpt"] as number,
+              widthMpt: previewFrame["widthMpt"] as number,
+              heightMpt: previewFrame["heightMpt"] as number,
+            }),
+          })
+        : null;
     if (
       args === null ||
       (minimum !== null &&
-        (typeof minimum !== "number" || !Number.isSafeInteger(minimum) || minimum < 0))
+        (typeof minimum !== "number" || !Number.isSafeInteger(minimum) || minimum < 0)) ||
+      (hasPreview && (preview === null || minimum !== preview.expectedWorkingRevision))
     ) {
       return rejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }
@@ -402,7 +463,7 @@ export class BoringLogStudioRouteBroker {
     binding.nextSequence += 1;
     let result: BoringLogStudioProjectionResult;
     try {
-      result = await this.#getProjection(minimum);
+      result = await this.#getProjection(minimum, preview);
     } catch {
       return rejected("STUDIO_ROUTE_RESULT_INVALID");
     } finally {

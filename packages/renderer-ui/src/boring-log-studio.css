@@ -647,6 +647,18 @@ textarea {
   stroke-dasharray: 4000 2500;
   pointer-events: none;
 }
+.direct-snap-feedback[data-snap-kind="baseline"] {
+  stroke: #00856a;
+}
+.direct-snap-feedback[data-snap-kind="depth"] {
+  stroke: #007ac2;
+}
+.direct-snap-feedback[data-snap-kind="region"] {
+  stroke: #c85b00;
+}
+.direct-snap-feedback[data-snap-kind="guide"] {
+  stroke: #e6007e;
+}
 .direct-manipulation-handle {
   fill: #fff;
   stroke: #007ac2;

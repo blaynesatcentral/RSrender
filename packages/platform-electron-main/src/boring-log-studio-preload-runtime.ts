@@ -245,9 +245,39 @@ const getProjection = Object.freeze(async function getProjection(input: unknown)
   if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) {
     return unavailable;
   }
-  const args = exactRecord(input, ["minimumWorkingRevision"]);
+  const hasPreview = typeof input === "object" && input !== null && Object.hasOwn(input, "preview");
+  const args = exactRecord(input, ["minimumWorkingRevision", ...(hasPreview ? ["preview"] : [])]);
   const minimum = args?.["minimumWorkingRevision"];
-  if (args === null || (minimum !== null && !isNonnegativeSafeInteger(minimum))) {
+  const previewRecord =
+    args === null || !hasPreview
+      ? null
+      : exactRecord(args["preview"], [
+          "expectedWorkingRevision",
+          "occurrenceNodeId",
+          "semanticId",
+          "frame",
+        ]);
+  const frame =
+    previewRecord === null
+      ? null
+      : exactRecord(previewRecord["frame"], ["xMpt", "yMpt", "widthMpt", "heightMpt"]);
+  const boundedText = (value: unknown) =>
+    typeof value === "string" && value.length >= 1 && value.length <= 512;
+  const validPreview =
+    previewRecord !== null &&
+    frame !== null &&
+    isNonnegativeSafeInteger(previewRecord["expectedWorkingRevision"]) &&
+    previewRecord["expectedWorkingRevision"] === minimum &&
+    boundedText(previewRecord["occurrenceNodeId"]) &&
+    boundedText(previewRecord["semanticId"]) &&
+    Object.values(frame).every(isNonnegativeSafeInteger) &&
+    isPositiveSafeInteger(frame["widthMpt"]) &&
+    isPositiveSafeInteger(frame["heightMpt"]);
+  if (
+    args === null ||
+    (minimum !== null && !isNonnegativeSafeInteger(minimum)) ||
+    (hasPreview && !validPreview)
+  ) {
     return unavailable;
   }
   inFlight = true;
@@ -263,7 +293,7 @@ const getProjection = Object.freeze(async function getProjection(input: unknown)
         sequence,
         documentIdentity: binding.documentIdentity,
         ownerGeneration: binding.ownerGeneration,
-        args: { minimumWorkingRevision: minimum },
+        args,
       }),
       ["accepted", "transportVersion", "generation", "sequence", "projection"],
     );
@@ -829,7 +859,20 @@ const exportPdf = Object.freeze(async function exportPdf(input: unknown) {
 contextBridge.exposeInMainWorld("rsrenderPublication", Object.freeze({ exportPdf }));
 
 export interface BoringLogStudioPreloadApi {
-  readonly getProjection: (input: { readonly minimumWorkingRevision: number | null }) => Promise<
+  readonly getProjection: (input: {
+    readonly minimumWorkingRevision: number | null;
+    readonly preview?: Readonly<{
+      readonly expectedWorkingRevision: number;
+      readonly occurrenceNodeId: string;
+      readonly semanticId: string;
+      readonly frame: Readonly<{
+        readonly xMpt: number;
+        readonly yMpt: number;
+        readonly widthMpt: number;
+        readonly heightMpt: number;
+      }>;
+    }>;
+  }) => Promise<
     | { readonly accepted: false; readonly code: "STUDIO_ROUTE_UNAVAILABLE" }
     | {
         readonly accepted: true;

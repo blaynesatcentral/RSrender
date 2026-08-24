@@ -16,6 +16,14 @@ export type BoringLogDirectManipulationFrame = Readonly<{
   heightMpt: number;
 }>;
 
+export type BoringLogSnapTargetKind =
+  "page" | "guide" | "region" | "depth" | "baseline" | "peer" | "grid";
+
+export type BoringLogSnapTarget = Readonly<{
+  positionMpt: number;
+  kind: BoringLogSnapTargetKind;
+}>;
+
 export type BoringLogDirectManipulationResult =
   | Readonly<{
       accepted: true;
@@ -32,7 +40,72 @@ export type BoringLogSnapResult = Readonly<{
   frame: BoringLogDirectManipulationFrame;
   snapXMpt: number | null;
   snapYMpt: number | null;
+  snapXKind: BoringLogSnapTargetKind | null;
+  snapYKind: BoringLogSnapTargetKind | null;
 }>;
+
+export function nearestBoringLogDirectManipulationResizeHandle(
+  frame: BoringLogDirectManipulationFrame,
+  point: Readonly<{ xMpt: number; yMpt: number }>,
+): Exclude<BoringLogDirectManipulationHandle, "move"> | null {
+  if (
+    !exactFrame(frame) ||
+    typeof point !== "object" ||
+    point === null ||
+    !Number.isSafeInteger(point.xMpt) ||
+    !Number.isSafeInteger(point.yMpt)
+  ) {
+    return null;
+  }
+  const centers = Object.freeze({
+    "north-west": Object.freeze({ xMpt: frame.xMpt, yMpt: frame.yMpt }),
+    north: Object.freeze({
+      xMpt: frame.xMpt + Math.round(frame.widthMpt / 2),
+      yMpt: frame.yMpt,
+    }),
+    "north-east": Object.freeze({
+      xMpt: frame.xMpt + frame.widthMpt,
+      yMpt: frame.yMpt,
+    }),
+    east: Object.freeze({
+      xMpt: frame.xMpt + frame.widthMpt,
+      yMpt: frame.yMpt + Math.round(frame.heightMpt / 2),
+    }),
+    "south-east": Object.freeze({
+      xMpt: frame.xMpt + frame.widthMpt,
+      yMpt: frame.yMpt + frame.heightMpt,
+    }),
+    south: Object.freeze({
+      xMpt: frame.xMpt + Math.round(frame.widthMpt / 2),
+      yMpt: frame.yMpt + frame.heightMpt,
+    }),
+    "south-west": Object.freeze({
+      xMpt: frame.xMpt,
+      yMpt: frame.yMpt + frame.heightMpt,
+    }),
+    west: Object.freeze({
+      xMpt: frame.xMpt,
+      yMpt: frame.yMpt + Math.round(frame.heightMpt / 2),
+    }),
+  });
+  let nearest: Exclude<BoringLogDirectManipulationHandle, "move"> | null = null;
+  let nearestDistanceSquared = Number.POSITIVE_INFINITY;
+  for (const [handle, center] of Object.entries(centers) as Array<
+    readonly [
+      Exclude<BoringLogDirectManipulationHandle, "move">,
+      Readonly<{ xMpt: number; yMpt: number }>,
+    ]
+  >) {
+    const deltaX = point.xMpt - center.xMpt;
+    const deltaY = point.yMpt - center.yMpt;
+    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+    if (distanceSquared < nearestDistanceSquared) {
+      nearest = handle;
+      nearestDistanceSquared = distanceSquared;
+    }
+  }
+  return nearest;
+}
 
 const handles: readonly BoringLogDirectManipulationHandle[] = [
   "move",
@@ -44,6 +117,15 @@ const handles: readonly BoringLogDirectManipulationHandle[] = [
   "south",
   "south-west",
   "west",
+];
+const snapTargetKinds: readonly BoringLogSnapTargetKind[] = [
+  "page",
+  "guide",
+  "region",
+  "depth",
+  "baseline",
+  "peer",
+  "grid",
 ];
 
 function bounded(value: number, minimum: number, maximum: number): number {
@@ -60,6 +142,22 @@ function exactFrame(input: unknown): input is BoringLogDirectManipulationFrame {
     ) &&
     (value["widthMpt"] as number) > 0 &&
     (value["heightMpt"] as number) > 0
+  );
+}
+
+function exactSnapTargets(input: unknown): input is readonly BoringLogSnapTarget[] {
+  return (
+    Array.isArray(input) &&
+    input.every(
+      (target: unknown) =>
+        typeof target === "object" &&
+        target !== null &&
+        !Array.isArray(target) &&
+        Reflect.ownKeys(target).length === 2 &&
+        Number.isSafeInteger((target as BoringLogSnapTarget).positionMpt) &&
+        (target as BoringLogSnapTarget).positionMpt >= 0 &&
+        snapTargetKinds.includes((target as BoringLogSnapTarget).kind),
+    )
   );
 }
 
@@ -175,21 +273,46 @@ export function resolveBoringLogDirectManipulationFrame(input: {
 }
 
 function closestSnap(
-  candidates: readonly number[],
-  targets: readonly number[],
+  candidates: readonly Readonly<{ positionMpt: number; kind: "frame" | "baseline" }>[],
+  targets: readonly BoringLogSnapTarget[],
   thresholdMpt: number,
-): Readonly<{ deltaMpt: number; targetMpt: number }> | null {
-  let best: Readonly<{ deltaMpt: number; targetMpt: number }> | null = null;
+): Readonly<{
+  deltaMpt: number;
+  targetMpt: number;
+  targetKind: BoringLogSnapTargetKind;
+}> | null {
+  const priorities: Readonly<Record<BoringLogSnapTargetKind, number>> = Object.freeze({
+    guide: 0,
+    baseline: 1,
+    depth: 2,
+    region: 3,
+    page: 4,
+    peer: 5,
+    grid: 6,
+  });
+  let best: Readonly<{
+    deltaMpt: number;
+    targetMpt: number;
+    targetKind: BoringLogSnapTargetKind;
+  }> | null = null;
   for (const candidate of candidates) {
     for (const target of targets) {
-      const deltaMpt = target - candidate;
+      if (target.kind === "baseline" && candidate.kind !== "baseline") continue;
+      const deltaMpt = target.positionMpt - candidate.positionMpt;
       if (Math.abs(deltaMpt) > thresholdMpt) continue;
       if (
         best === null ||
         Math.abs(deltaMpt) < Math.abs(best.deltaMpt) ||
-        (Math.abs(deltaMpt) === Math.abs(best.deltaMpt) && target < best.targetMpt)
+        (Math.abs(deltaMpt) === Math.abs(best.deltaMpt) &&
+          (target.positionMpt < best.targetMpt ||
+            (target.positionMpt === best.targetMpt &&
+              priorities[target.kind] < priorities[best.targetKind])))
       ) {
-        best = Object.freeze({ deltaMpt, targetMpt: target });
+        best = Object.freeze({
+          deltaMpt,
+          targetMpt: target.positionMpt,
+          targetKind: target.kind,
+        });
       }
     }
   }
@@ -199,35 +322,76 @@ function closestSnap(
 export function snapBoringLogDirectManipulationFrame(input: {
   readonly frame: BoringLogDirectManipulationFrame;
   readonly handle: BoringLogDirectManipulationHandle;
-  readonly xTargetsMpt: readonly number[];
-  readonly yTargetsMpt: readonly number[];
+  readonly xTargets: readonly BoringLogSnapTarget[];
+  readonly yTargets: readonly BoringLogSnapTarget[];
+  readonly baselineOffsetsYMpt?: readonly number[];
   readonly thresholdMpt: number;
   readonly pageWidthMpt: number;
   readonly pageHeightMpt: number;
   readonly bypass: boolean;
 }): BoringLogSnapResult {
-  if (input.bypass || input.thresholdMpt < 0 || !exactFrame(input.frame)) {
-    return Object.freeze({ frame: input.frame, snapXMpt: null, snapYMpt: null });
+  if (
+    input.bypass ||
+    !Number.isSafeInteger(input.thresholdMpt) ||
+    input.thresholdMpt < 0 ||
+    !exactFrame(input.frame) ||
+    !exactSnapTargets(input.xTargets) ||
+    !exactSnapTargets(input.yTargets) ||
+    !Array.isArray(input.baselineOffsetsYMpt ?? []) ||
+    !(input.baselineOffsetsYMpt ?? []).every(
+      (offsetMpt) => Number.isSafeInteger(offsetMpt) && offsetMpt >= 0,
+    )
+  ) {
+    return Object.freeze({
+      frame: input.frame,
+      snapXMpt: null,
+      snapYMpt: null,
+      snapXKind: null,
+      snapYKind: null,
+    });
   }
   const frame = input.frame;
   const horizontalCandidates =
     input.handle === "move"
-      ? [frame.xMpt, frame.xMpt + Math.round(frame.widthMpt / 2), frame.xMpt + frame.widthMpt]
+      ? [frame.xMpt, frame.xMpt + Math.round(frame.widthMpt / 2), frame.xMpt + frame.widthMpt].map(
+          (positionMpt) => Object.freeze({ positionMpt, kind: "frame" as const }),
+        )
       : input.handle.endsWith("west") || input.handle === "west"
-        ? [frame.xMpt]
+        ? [Object.freeze({ positionMpt: frame.xMpt, kind: "frame" as const })]
         : input.handle.endsWith("east") || input.handle === "east"
-          ? [frame.xMpt + frame.widthMpt]
+          ? [
+              Object.freeze({
+                positionMpt: frame.xMpt + frame.widthMpt,
+                kind: "frame" as const,
+              }),
+            ]
           : [];
-  const verticalCandidates =
+  const verticalCandidates: Readonly<
+    Readonly<{ positionMpt: number; kind: "frame" | "baseline" }>[]
+  > =
     input.handle === "move"
-      ? [frame.yMpt, frame.yMpt + Math.round(frame.heightMpt / 2), frame.yMpt + frame.heightMpt]
+      ? [
+          ...[
+            frame.yMpt,
+            frame.yMpt + Math.round(frame.heightMpt / 2),
+            frame.yMpt + frame.heightMpt,
+          ].map((positionMpt) => Object.freeze({ positionMpt, kind: "frame" as const })),
+          ...(input.baselineOffsetsYMpt ?? []).map((offsetMpt) =>
+            Object.freeze({ positionMpt: frame.yMpt + offsetMpt, kind: "baseline" as const }),
+          ),
+        ]
       : input.handle.startsWith("north") || input.handle === "north"
-        ? [frame.yMpt]
+        ? [Object.freeze({ positionMpt: frame.yMpt, kind: "frame" as const })]
         : input.handle.startsWith("south") || input.handle === "south"
-          ? [frame.yMpt + frame.heightMpt]
+          ? [
+              Object.freeze({
+                positionMpt: frame.yMpt + frame.heightMpt,
+                kind: "frame" as const,
+              }),
+            ]
           : [];
-  const xSnap = closestSnap(horizontalCandidates, input.xTargetsMpt, input.thresholdMpt);
-  const ySnap = closestSnap(verticalCandidates, input.yTargetsMpt, input.thresholdMpt);
+  const xSnap = closestSnap(horizontalCandidates, input.xTargets, input.thresholdMpt);
+  const ySnap = closestSnap(verticalCandidates, input.yTargets, input.thresholdMpt);
   let xMpt = frame.xMpt;
   let yMpt = frame.yMpt;
   let widthMpt = frame.widthMpt;
@@ -258,5 +422,7 @@ export function snapBoringLogDirectManipulationFrame(input: {
     frame: valid ? snapped : frame,
     snapXMpt: valid ? (xSnap?.targetMpt ?? null) : null,
     snapYMpt: valid ? (ySnap?.targetMpt ?? null) : null,
+    snapXKind: valid ? (xSnap?.targetKind ?? null) : null,
+    snapYKind: valid ? (ySnap?.targetKind ?? null) : null,
   });
 }
