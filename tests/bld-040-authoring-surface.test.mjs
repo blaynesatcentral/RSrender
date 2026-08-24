@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { measureBoringLogTextRequests } from "../packages/layout-host/dist/index.js";
 import { createBoringLogStudioHtml } from "../packages/renderer-ui/dist/index.js";
+import { findCollisionFreeTextDuplicateOffset } from "../packages/renderer-ui/dist/boring-log-authoring-placement.js";
+import { prepareBoringLogLayout, resolveBoringLogPageScene } from "../packages/scene/dist/index.js";
+import {
+  BORING_LOG_MVP_FIXTURE_DIGEST,
+  BORING_LOG_MVP_TEMPLATE_DIGEST,
+  boringLogMvpFixture,
+  boringLogMvpTemplate,
+} from "../packages/test-support/dist/index.js";
 
 test("BLD-040 exposes arrangement commands in the ribbon and exact Canvas context menu", () => {
   const html = createBoringLogStudioHtml(null);
@@ -191,11 +200,71 @@ test("BLD-040 exposes a shared persisted layout clipboard command surface", asyn
   assert.match(entry, /async function cutSelectedText\(/u);
   assert.match(entry, /function pasteCopiedText\(/u);
   assert.match(entry, /createdOccurrenceNodeIds/u);
-  assert.match(entry, /offsetXMpt: 10_000, offsetYMpt: 10_000/u);
+  assert.match(entry, /function duplicateMutationFor\(/u);
+  assert.match(entry, /findCollisionFreeTextDuplicateOffset/u);
+  assert.match(entry, /Duplicate needs a collision-free location on this page/u);
   assert.match(entry, /event\.key === "Delete"/u);
   assert.match(entry, /kind: event\.shiftKey \? "ungroup" : "group"/u);
   assert.match(entry, /Grouping requires sibling text elements under the same Contents parent/u);
   for (const key of ["c", "x", "v", "d"]) {
     assert.match(entry, new RegExp(`key === "${key}"`, "u"));
+  }
+});
+
+test("BLD-040 places duplicated header text without manufacturing publication collisions", () => {
+  const prepared = prepareBoringLogLayout({
+    contractVersion: 1,
+    schemaVersion: "rsrender.boring-log-layout-job.v1",
+    kind: "boring-log.layout-job",
+    jobId: "job:bld-040-authoring-placement@r1",
+    inputRevision: 1,
+    fixtureDigest: BORING_LOG_MVP_FIXTURE_DIGEST,
+    templateDigest: BORING_LOG_MVP_TEMPLATE_DIGEST,
+    document: structuredClone(boringLogMvpFixture),
+    template: structuredClone(boringLogMvpTemplate),
+  });
+  assert.equal(prepared.accepted, true);
+  const measured = measureBoringLogTextRequests(prepared.value.textRequests);
+  assert.equal(measured.accepted, true);
+  const resolved = resolveBoringLogPageScene(prepared.value, measured.results);
+  assert.equal(resolved.accepted, true);
+  const page = resolved.value.pages[0];
+  const selectedIds = ["node:header-title", "node:header-sheet"];
+  const offset = findCollisionFreeTextDuplicateOffset(resolved.value, page.pageId, selectedIds);
+  assert.notEqual(offset, null);
+  assert.notDeepEqual(offset, { offsetXMpt: 0, offsetYMpt: 0 });
+
+  const results = new Map(
+    resolved.value.textResults.map((result) => [result.measurementId, result]),
+  );
+  const existing = page.nodes
+    .filter((node) => node.kind === "text" && node.presentation?.visible !== false)
+    .map((node) => {
+      const ink = results.get(node.measurementId).inkBounds;
+      return {
+        x: node.frame.xMpt + ink.xMpt,
+        y: node.frame.yMpt + ink.yMpt,
+        width: ink.widthMpt,
+        height: ink.heightMpt,
+      };
+    });
+  for (const node of page.nodes.filter(
+    (candidate) => candidate.kind === "text" && selectedIds.includes(candidate.id),
+  )) {
+    const ink = results.get(node.measurementId).inkBounds;
+    const clone = {
+      x: node.frame.xMpt + ink.xMpt + offset.offsetXMpt,
+      y: node.frame.yMpt + ink.yMpt + offset.offsetYMpt,
+      width: ink.widthMpt,
+      height: ink.heightMpt,
+    };
+    assert.equal(
+      existing.some(
+        (other) =>
+          Math.min(clone.x + clone.width, other.x + other.width) > Math.max(clone.x, other.x) &&
+          Math.min(clone.y + clone.height, other.y + other.height) > Math.max(clone.y, other.y),
+      ),
+      false,
+    );
   }
 });

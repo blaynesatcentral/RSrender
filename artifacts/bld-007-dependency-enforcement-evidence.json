@@ -870,7 +870,7 @@
     }
   ],
   "sourceDigests": {
-    "package.json": "sha256:822d77e2dd7178291b12f82d1df22b4583e4f3117e19f9ee72294ea880f57992",
+    "package.json": "sha256:d5db8439d2e3103f9462f9142d67dda3d2b4bdb2518f90115fca7e31acfe7e8d",
     "package-lock.json": "sha256:3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
     "docs/governance/bld-001-authority-approval-packet.md": "sha256:4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "docs/governance/bld-001-internal-dependency-admission.json": "sha256:52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",

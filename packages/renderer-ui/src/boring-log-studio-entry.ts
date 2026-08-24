@@ -98,6 +98,7 @@ import {
   type BoringLogSnapTarget,
   type BoringLogSnapTargetKind,
 } from "./boring-log-direct-manipulation.js";
+import { findCollisionFreeTextDuplicateOffset } from "./boring-log-authoring-placement.js";
 
 type EditableValue = Readonly<{
   readonly semanticId: string;
@@ -2837,6 +2838,31 @@ async function main(): Promise<void> {
     );
   }
 
+  function duplicateMutationFor(
+    occurrenceNodeIds: readonly string[],
+  ): Extract<TextAuthoringMutation, { readonly kind: "duplicate" }> | null {
+    if (studioProjection === null) return null;
+    const offset = findCollisionFreeTextDuplicateOffset(
+      studioProjection.scene,
+      page.pageId,
+      occurrenceNodeIds,
+    );
+    return offset === null ? null : Object.freeze({ kind: "duplicate", ...offset });
+  }
+
+  function duplicateSelectedText(
+    commandSource: "keyboard" | "ribbon" | "context-menu",
+    occurrenceNodeIds: readonly string[] = [...selectedTextNodeIds],
+  ): void {
+    const mutation = duplicateMutationFor(occurrenceNodeIds);
+    if (mutation === null) {
+      status.textContent =
+        "Duplicate needs a collision-free location on this page; move or resize the selected text first.";
+      return;
+    }
+    void mutateSelectedText(mutation, commandSource, occurrenceNodeIds);
+  }
+
   function pasteCopiedText(commandSource: "keyboard" | "ribbon" | "context-menu"): void {
     if (
       textClipboardNodeIds.length === 0 ||
@@ -2848,11 +2874,7 @@ async function main(): Promise<void> {
           : "The layout clipboard belongs to another Boring Log; switch back or copy here.";
       return;
     }
-    void mutateSelectedText(
-      { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
-      commandSource,
-      textClipboardNodeIds,
-    );
+    duplicateSelectedText(commandSource, textClipboardNodeIds);
   }
 
   async function arrangeSelectedText(
@@ -4358,11 +4380,7 @@ async function main(): Promise<void> {
     "copy-selection": () => copySelectedText("ribbon"),
     "cut-selection": () => void cutSelectedText("ribbon"),
     "paste-selection": () => pasteCopiedText("ribbon"),
-    "duplicate-selection": () =>
-      void mutateSelectedText(
-        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
-        "ribbon",
-      ),
+    "duplicate-selection": () => duplicateSelectedText("ribbon"),
     "delete-selection": () =>
       void mutateSelectedText({ kind: "set-visible", visible: false }, "ribbon"),
     "group-selection": () => void mutateSelectedText({ kind: "group" }, "ribbon"),
@@ -4427,11 +4445,7 @@ async function main(): Promise<void> {
     "context-copy-selection": () => copySelectedText("context-menu"),
     "context-cut-selection": () => void cutSelectedText("context-menu"),
     "context-paste-selection": () => pasteCopiedText("context-menu"),
-    "context-duplicate-selection": () =>
-      void mutateSelectedText(
-        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
-        "context-menu",
-      ),
+    "context-duplicate-selection": () => duplicateSelectedText("context-menu"),
     "context-delete-selection": () =>
       void mutateSelectedText({ kind: "set-visible", visible: false }, "context-menu"),
     "context-group-selection": () => void mutateSelectedText({ kind: "group" }, "context-menu"),
@@ -4671,10 +4685,7 @@ async function main(): Promise<void> {
     }
     if (key === "d" && !editableTarget) {
       event.preventDefault();
-      void mutateSelectedText(
-        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
-        "keyboard",
-      );
+      duplicateSelectedText("keyboard");
       return;
     }
     if (key === "g" && !editableTarget) {

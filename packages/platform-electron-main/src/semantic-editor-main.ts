@@ -132,6 +132,7 @@ const LIFECYCLE_PROBE_ARGUMENT = "--rsrender-bld035-probe";
 const MULTI_BORING_PROBE_ARGUMENT = "--rsrender-bld036-probe";
 const TEXT_STYLE_PROBE_ARGUMENT = "--rsrender-bld037-probe";
 const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
+const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -246,6 +247,7 @@ const runtimeProjectInputPath = process.argv
   ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
+const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_ARGUMENT);
 const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
 const textStyleProbeMode =
   process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
@@ -254,7 +256,10 @@ const multiBoringProbeMode =
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
 const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
 const studioProbeMode =
-  process.argv.includes(STUDIO_PROBE_ARGUMENT) || pdfProbeMode || lifecycleProbeMode;
+  process.argv.includes(STUDIO_PROBE_ARGUMENT) ||
+  pdfProbeMode ||
+  lifecycleProbeMode ||
+  authoringSurfaceProbeMode;
 const probeMode = bld021ProbeMode || studioProbeMode;
 const profileArgument = process.argv.find((value) =>
   value.startsWith(
@@ -1859,7 +1864,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary","arrangeTextOccurrences","mutateTextOccurrences"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -3460,6 +3465,231 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       "WAIT_DESCRIPTION_COLUMN_AFTER_TEXT_STYLE",
     );
   }
+  let authoringSurface: DataRecord | null = null;
+  if (authoringSurfaceProbeMode) {
+    await pageValue(window, `document.getElementById("ribbon-tab-home")?.click(); true`);
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const first = document.getElementById("node:header-title"); if (!(first instanceof SVGElement)) return false; first.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+      )) === true,
+      "AUTHORING_GROUP_FIRST_SELECTION_INVALID",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const second = document.getElementById("node:header-sheet"); if (!(second instanceof SVGElement)) return false; second.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true })); return true; })()`,
+      )) === true,
+      "AUTHORING_GROUP_SECOND_SELECTION_INVALID",
+    );
+    await waitFor(
+      window,
+      `document.getElementById("group-selection")?.disabled === false && document.querySelectorAll("#svg-page .scene-node.is-selected").length === 2`,
+      "WAIT_AUTHORING_GROUP_SELECTION",
+    );
+    const before = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, selectedCount: document.querySelectorAll("#svg-page .scene-node.is-selected").length }; })()`,
+      ),
+    );
+    await press(window, "#group-selection", "Space", "FOCUS_AUTHORING_GROUP");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.some((node) => node.kind === "group" && node.role === "user-text-group") && document.getElementById("ungroup-selection")?.disabled === false; })()`,
+      "WAIT_AUTHORING_GROUP",
+    );
+    const grouped = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const group = value.accepted ? value.projection.scene.pages[0].nodes.find((node) => node.kind === "group" && node.role === "user-text-group") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, groupNodeId: group?.id, childIds: group?.childIds, contentsGroup: document.querySelector('#contents-tree [data-semantic-id^="user-group:"]') !== null }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_AUTHORING_GROUP_UNDO");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && !value.projection.scene.pages[0].nodes.some((node) => node.kind === "group" && node.role === "user-text-group"); })()`,
+      "WAIT_AUTHORING_GROUP_UNDO",
+    );
+    await press(window, "#redo", "Space", "FOCUS_AUTHORING_GROUP_REDO");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.some((node) => node.kind === "group" && node.role === "user-text-group"); })()`,
+      "WAIT_AUTHORING_GROUP_REDO",
+    );
+    await press(window, "#ungroup-selection", "Space", "FOCUS_AUTHORING_UNGROUP");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && !value.projection.scene.pages[0].nodes.some((node) => node.kind === "group" && node.role === "user-text-group") && document.getElementById("group-selection")?.disabled === false; })()`,
+      "WAIT_AUTHORING_UNGROUP",
+    );
+    const ungrouped = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null }; })()`,
+      ),
+    );
+    await press(window, "#duplicate-selection", "Space", "FOCUS_AUTHORING_DUPLICATE");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")).length === 2 && document.querySelectorAll("#svg-page [id^='node:clone:'].is-selected").length === 2; })()`,
+      "WAIT_AUTHORING_DUPLICATE",
+    );
+    const duplicated = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const clones = value.accepted ? value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")) : []; return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, cloneIds: clones.map(({ id }) => id), frames: clones.map(({ frame }) => frame), selectedCount: document.querySelectorAll("#svg-page [id^='node:clone:'].is-selected").length }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_AUTHORING_DUPLICATE_UNDO");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && !value.projection.scene.pages[0].nodes.some((node) => node.kind === "text" && node.id.startsWith("node:clone:")); })()`,
+      "WAIT_AUTHORING_DUPLICATE_UNDO",
+    );
+    await press(window, "#redo", "Space", "FOCUS_AUTHORING_DUPLICATE_REDO");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")).length === 2; })()`,
+      "WAIT_AUTHORING_DUPLICATE_REDO",
+    );
+    const duplicatedCloneIds = Array.isArray(duplicated["cloneIds"]) ? duplicated["cloneIds"] : [];
+    requireProbe(duplicatedCloneIds.length === 2, "AUTHORING_DUPLICATE_IDS_INVALID");
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.getElementById(${JSON.stringify(duplicatedCloneIds[0])}); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+      )) === true,
+      "AUTHORING_REDO_FIRST_SELECTION_INVALID",
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.getElementById(${JSON.stringify(duplicatedCloneIds[1])}); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true })); return true; })()`,
+      )) === true,
+      "AUTHORING_REDO_SECOND_SELECTION_INVALID",
+    );
+    await waitFor(
+      window,
+      `document.querySelectorAll("#svg-page [id^='node:clone:'].is-selected").length === 2`,
+      "WAIT_AUTHORING_REDO_SELECTION",
+    );
+    await press(window, "#copy-selection", "Space", "FOCUS_AUTHORING_COPY");
+    await press(window, "#cut-selection", "Space", "FOCUS_AUTHORING_CUT");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const clones = value.accepted ? value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")) : []; return clones.length === 2 && clones.every((node) => node.presentation?.visible === false) && document.querySelectorAll("#svg-page [id^='node:clone:']").length === 0; })()`,
+      "WAIT_AUTHORING_CUT",
+    );
+    const cut = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const clones = value.accepted ? value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")) : []; return { workingRevision: value.accepted ? value.projection.workingRevision : null, hiddenCount: clones.filter((node) => node.presentation?.visible === false).length, paintedCount: document.querySelectorAll("#svg-page [id^='node:clone:']").length }; })()`,
+      ),
+    );
+    await press(window, "#undo", "Space", "FOCUS_AUTHORING_CUT_UNDO");
+    await waitFor(
+      window,
+      `document.querySelectorAll("#svg-page [id^='node:clone:']").length === 2 && document.getElementById("paste-selection")?.disabled === false`,
+      "WAIT_AUTHORING_CUT_UNDO",
+    );
+    await press(window, "#paste-selection", "Space", "FOCUS_AUTHORING_PASTE");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")).length === 4 && document.querySelectorAll("#svg-page [id^='node:clone:'].is-selected").length === 2; })()`,
+      "WAIT_AUTHORING_PASTE",
+    );
+    const pasted = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const clones = value.accepted ? value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")) : []; return { workingRevision: value.accepted ? value.projection.workingRevision : null, cloneCount: clones.length, selectedIds: clones.filter(({ id }) => document.getElementById(id)?.classList.contains("is-selected")).map(({ id }) => id) }; })()`,
+      ),
+    );
+    await press(window, "#delete-selection", "Space", "FOCUS_AUTHORING_DELETE");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const clones = value.accepted ? value.projection.scene.pages[0].nodes.filter((node) => node.kind === "text" && node.id.startsWith("node:clone:")) : []; return clones.filter((node) => node.presentation?.visible === false).length === 2; })()`,
+      "WAIT_AUTHORING_DELETE",
+    );
+    await press(window, "#undo", "Space", "FOCUS_AUTHORING_DELETE_UNDO");
+    await waitFor(
+      window,
+      `document.querySelectorAll("#svg-page [id^='node:clone:']").length === 4 && document.getElementById("group-selection")?.disabled === false`,
+      "WAIT_AUTHORING_DELETE_UNDO",
+    );
+    await press(window, "#group-selection", "Space", "FOCUS_AUTHORING_PERSISTED_GROUP");
+    await waitFor(
+      window,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return value.accepted && value.projection.scene.pages[0].nodes.some((node) => node.kind === "group" && node.role === "user-text-group"); })()`,
+      "WAIT_AUTHORING_PERSISTED_GROUP",
+    );
+    await press(window, "#save-project-as", "Space", "FOCUS_AUTHORING_SAVE_AS");
+    await waitFor(
+      window,
+      `document.body.dataset.authoritativeFileBound === "true" && document.getElementById("editor-status")?.textContent?.startsWith("Project saved and reopened successfully:") === true`,
+      "WAIT_AUTHORING_SAVE_AS",
+    );
+    const reopened = await openLogProjectFile(path.resolve(lifecycleProbeOutput ?? ""));
+    requireProbe(reopened.accepted, "AUTHORING_PROJECT_REOPEN_INVALID");
+    const savedJob = reopened.accepted
+      ? reopened.value.project.layoutJobs.find(
+          ({ document }) =>
+            document.identity.boringLogId === runtimeLayoutJob?.document.identity.boringLogId,
+        )
+      : undefined;
+    requireProbe(
+      (savedJob?.template.textOccurrenceClones?.length ?? 0) === 4 &&
+        (savedJob?.template.textOccurrenceGroups?.length ?? 0) === 1,
+      "AUTHORING_PROJECT_CONTENT_INVALID",
+    );
+    await pageValue(window, `document.getElementById("ribbon-tab-publish")?.click(); true`);
+    const authoringPublicationPreflight = record(
+      await pageValue(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { accepted: value.accepted, workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, diagnostics: value.accepted ? value.projection.scene.diagnostics : null }; })()`,
+      ),
+    );
+    requireProbe(
+      authoringPublicationPreflight["accepted"] === true &&
+        (authoringPublicationPreflight["diagnostics"] as readonly DataRecord[]).every(
+          ({ severity }) => severity !== "error",
+        ),
+      `AUTHORING_EXPORT_PREFLIGHT_INVALID:${JSON.stringify(authoringPublicationPreflight)}`,
+    );
+    await press(window, "#export-pdf", "Space", "FOCUS_AUTHORING_EXPORT");
+    await waitFor(
+      window,
+      `document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS"`,
+      "WAIT_AUTHORING_EXPORT",
+    );
+    publication = record(
+      await pageValue(
+        window,
+        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), pageCount: Number(button?.dataset.pageCount) }; })()`,
+      ),
+    );
+    requireProbe(
+      Number(grouped["workingRevision"]) === Number(before["workingRevision"]) + 1 &&
+        Array.isArray(grouped["childIds"]) &&
+        grouped["childIds"].length === 2 &&
+        grouped["contentsGroup"] === true &&
+        Number(ungrouped["workingRevision"]) === Number(grouped["workingRevision"]) + 3 &&
+        Number(duplicated["workingRevision"]) === Number(ungrouped["workingRevision"]) + 1 &&
+        Array.isArray(duplicated["cloneIds"]) &&
+        duplicated["cloneIds"].length === 2 &&
+        duplicated["selectedCount"] === 2 &&
+        cut["hiddenCount"] === 2 &&
+        cut["paintedCount"] === 0 &&
+        pasted["cloneCount"] === 4 &&
+        Array.isArray(pasted["selectedIds"]) &&
+        pasted["selectedIds"].length === 2 &&
+        publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+        publication["destinationPath"] === path.resolve(pdfProbeOutput ?? "") &&
+        Number(publication["pdfBytes"]) > 0,
+      `AUTHORING_SURFACE_INVALID:${JSON.stringify({ before, grouped, ungrouped, duplicated, cut, pasted, publication })}`,
+    );
+    authoringSurface = Object.freeze({ before, grouped, ungrouped, duplicated, cut, pasted });
+  }
   let persistence: DataRecord | null = null;
   if (lifecycleProbeMode) {
     await pageValue(window, `document.getElementById("ribbon-tab-home")?.click(); true`);
@@ -3512,19 +3742,21 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
   }
   return Object.freeze({
-    schema: directManipulationProbeMode
-      ? "rsrender.bld038.direct-manipulation-probe.v1"
-      : textStyleProbeMode
-        ? "rsrender.bld037.text-occurrence-style-probe.v1"
-        : multiBoringProbeMode
-          ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-          : lifecycleProbeMode
-            ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-            : pdfProbeMode
-              ? "rsrender.bld027.boring-log-pdf-probe.v1"
-              : studioEditingMode
-                ? "rsrender.bld026.boring-log-editor-probe.v1"
-                : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: authoringSurfaceProbeMode
+      ? "rsrender.bld040.authoring-surface-probe.v1"
+      : directManipulationProbeMode
+        ? "rsrender.bld038.direct-manipulation-probe.v1"
+        : textStyleProbeMode
+          ? "rsrender.bld037.text-occurrence-style-probe.v1"
+          : multiBoringProbeMode
+            ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+            : lifecycleProbeMode
+              ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+              : pdfProbeMode
+                ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                : studioEditingMode
+                  ? "rsrender.bld026.boring-log-editor-probe.v1"
+                  : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
@@ -3535,6 +3767,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     boringNavigation,
     textOccurrenceStyle,
     directManipulation,
+    authoringSurface,
     publication,
     persistence,
     zoomPercent: 90,
@@ -3575,19 +3808,21 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? directManipulationProbeMode
-            ? "rsrender.bld038.direct-manipulation-probe.v1"
-            : textStyleProbeMode
-              ? "rsrender.bld037.text-occurrence-style-probe.v1"
-              : multiBoringProbeMode
-                ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-                : lifecycleProbeMode
-                  ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                  : pdfProbeMode
-                    ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                    : studioEditingMode
-                      ? "rsrender.bld026.boring-log-editor-probe.v1"
-                      : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? authoringSurfaceProbeMode
+            ? "rsrender.bld040.authoring-surface-probe.v1"
+            : directManipulationProbeMode
+              ? "rsrender.bld038.direct-manipulation-probe.v1"
+              : textStyleProbeMode
+                ? "rsrender.bld037.text-occurrence-style-probe.v1"
+                : multiBoringProbeMode
+                  ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                  : lifecycleProbeMode
+                    ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                    : pdfProbeMode
+                      ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                      : studioEditingMode
+                        ? "rsrender.bld026.boring-log-editor-probe.v1"
+                        : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -4082,7 +4317,7 @@ async function main(): Promise<void> {
       }
       let target = forceSaveAs ? null : projectBinding.authoritativePath;
       if (target === null) {
-        if (lifecycleProbeMode) {
+        if (lifecycleProbeMode || authoringSurfaceProbeMode) {
           if (typeof lifecycleProbeOutput !== "string" || lifecycleProbeOutput.length === 0) {
             return lifecycleResponse(false, "PROJECT_PATH_INVALID", await projectState());
           }
@@ -5783,7 +6018,7 @@ async function main(): Promise<void> {
           expectedWorkingRevision,
           expectedSceneInputDigest,
           chooseDestination: async () => {
-            if (pdfProbeMode) {
+            if (pdfProbeMode || authoringSurfaceProbeMode) {
               return typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0
                 ? path.resolve(pdfProbeOutput)
                 : null;
