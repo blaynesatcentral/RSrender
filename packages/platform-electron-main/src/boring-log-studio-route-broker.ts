@@ -192,6 +192,7 @@ export interface BoringLogStudioMutateTextOccurrencesInput {
         readonly offsetXMpt: number;
         readonly offsetYMpt: number;
       }>
+    | Readonly<{ readonly kind: "group" | "ungroup" }>
     | Readonly<{
         readonly kind: "reorder";
         readonly placement: "front" | "forward" | "backward" | "back";
@@ -1401,9 +1402,11 @@ export class BoringLogStudioRouteBroker {
           ? exactRecord(mutationRecord, ["kind", "locked"])
           : kind === "duplicate"
             ? exactRecord(mutationRecord, ["kind", "offsetXMpt", "offsetYMpt"])
-            : kind === "reorder"
-              ? exactRecord(mutationRecord, ["kind", "placement"])
-              : null;
+            : kind === "group" || kind === "ungroup"
+              ? exactRecord(mutationRecord, ["kind"])
+              : kind === "reorder"
+                ? exactRecord(mutationRecord, ["kind", "placement"])
+                : null;
     const nodeIds = args?.["occurrenceNodeIds"];
     if (
       args === null ||

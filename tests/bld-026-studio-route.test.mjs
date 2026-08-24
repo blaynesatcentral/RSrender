@@ -634,6 +634,18 @@ test("BLD-040 Studio route admits exact bounded visibility, lock, duplicate, and
     true,
   );
   assert.deepEqual(received, duplicateArgs);
+  const groupArgs = { ...args, mutation: { kind: "group" } };
+  assert.equal(
+    (await route.mutateTextOccurrences(routeContext, envelope(3, groupArgs))).accepted,
+    true,
+  );
+  assert.deepEqual(received, groupArgs);
+  const ungroupArgs = { ...args, mutation: { kind: "ungroup" } };
+  assert.equal(
+    (await route.mutateTextOccurrences(routeContext, envelope(4, ungroupArgs))).accepted,
+    true,
+  );
+  assert.deepEqual(received, ungroupArgs);
   for (const invalidArgs of [
     { ...args, occurrenceNodeIds: [] },
     { ...args, occurrenceNodeIds: ["node:first", "node:first"] },
@@ -644,7 +656,7 @@ test("BLD-040 Studio route admits exact bounded visibility, lock, duplicate, and
     { ...args, mutation: { kind: "reorder", placement: "above-all" } },
     { ...args, extra: true },
   ]) {
-    assert.deepEqual(await route.mutateTextOccurrences(routeContext, envelope(3, invalidArgs)), {
+    assert.deepEqual(await route.mutateTextOccurrences(routeContext, envelope(5, invalidArgs)), {
       accepted: false,
       code: "STUDIO_ROUTE_ARGUMENT_INVALID",
     });

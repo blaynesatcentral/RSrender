@@ -23,6 +23,7 @@ import {
   validateBoringLogLayoutJobInput,
   type BoringLogLayoutJobInput,
   type BoringLogTextOccurrenceCloneInput,
+  type BoringLogTextOccurrenceGroupInput,
   type BoringLogTextMeasurementRequest,
   type BoringLogTextMeasurementResult,
   type Mpt,
@@ -5343,6 +5344,143 @@ async function main(): Promise<void> {
           createdOccurrenceNodeIds: Object.freeze(
             createdClones.map(({ cloneNodeId }) => cloneNodeId),
           ),
+        });
+      }
+      const hierarchyMutation = input.mutation;
+      if (hierarchyMutation.kind === "group" || hierarchyMutation.kind === "ungroup") {
+        if (selectedEntries.some(({ node }) => node.presentation?.locked === true)) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_LOCKED" });
+        }
+        const selectedPage = selectedEntries[0]!.page;
+        const existingGroups = currentJob.template.textOccurrenceGroups ?? [];
+        let nextGroups: readonly BoringLogTextOccurrenceGroupInput[];
+        let createdGroupNodeId: string | undefined;
+        let affectedOccurrenceNodeIds: readonly string[];
+        if (hierarchyMutation.kind === "group") {
+          if (selectedEntries.length < 2 || existingGroups.length >= 64) {
+            return Object.freeze({
+              accepted: false,
+              code:
+                selectedEntries.length < 2
+                  ? "AUTHORING_GROUP_INSUFFICIENT"
+                  : "AUTHORING_GROUP_LIMIT",
+            });
+          }
+          const parentNodeIds = new Set(selectedEntries.map(({ node }) => node.parentId));
+          const parentNodeId = selectedEntries[0]!.node.parentId;
+          const parentNode = selectedPage.nodes.find(({ id }) => id === parentNodeId);
+          if (
+            parentNodeId === null ||
+            parentNodeIds.size !== 1 ||
+            parentNode?.kind !== "group" ||
+            parentNode.role === "user-text-group"
+          ) {
+            return Object.freeze({ accepted: false, code: "AUTHORING_GROUP_REQUIRES_SIBLINGS" });
+          }
+          const digest = sha256CanonicalJson({
+            boringLogIdentity: document.boringLogIdentity,
+            expectedWorkingRevision: input.expectedWorkingRevision,
+            parentNodeId,
+            occurrenceNodeIds: input.occurrenceNodeIds,
+          }).slice("sha256:".length);
+          createdGroupNodeId = `node:user-group:${digest.slice(0, 24)}`;
+          const createdGroup: BoringLogTextOccurrenceGroupInput = Object.freeze({
+            groupNodeId: createdGroupNodeId,
+            semanticId: `user-group:${digest.slice(0, 16)}`,
+            parentNodeId,
+            childOccurrenceNodeIds: Object.freeze([...input.occurrenceNodeIds]),
+          });
+          nextGroups = Object.freeze([...existingGroups, createdGroup]);
+          affectedOccurrenceNodeIds = createdGroup.childOccurrenceNodeIds;
+        } else {
+          const selectedGroupNodeIds = new Set(
+            selectedEntries.map(({ node }) => {
+              const parent = selectedPage.nodes.find(({ id }) => id === node.parentId);
+              return parent?.kind === "group" && parent.role === "user-text-group"
+                ? parent.id
+                : null;
+            }),
+          );
+          if (selectedGroupNodeIds.has(null)) {
+            return Object.freeze({ accepted: false, code: "AUTHORING_UNGROUP_REQUIRES_GROUP" });
+          }
+          const groupNodeIds = new Set([...selectedGroupNodeIds] as string[]);
+          const removedGroups = existingGroups.filter(({ groupNodeId }) =>
+            groupNodeIds.has(groupNodeId),
+          );
+          if (removedGroups.length !== groupNodeIds.size) {
+            return Object.freeze({ accepted: false, code: "AUTHORING_UNGROUP_REQUIRES_GROUP" });
+          }
+          nextGroups = Object.freeze(
+            existingGroups.filter(({ groupNodeId }) => !groupNodeIds.has(groupNodeId)),
+          );
+          affectedOccurrenceNodeIds = Object.freeze(
+            removedGroups.flatMap(({ childOccurrenceNodeIds }) => childOccurrenceNodeIds),
+          );
+        }
+        const template: Record<string, unknown> = {
+          ...currentJob.template,
+          textOccurrenceGroups: nextGroups,
+        };
+        if (nextGroups.length === 0) Reflect.deleteProperty(template, "textOccurrenceGroups");
+        const authored = validateBoringLogLayoutJobInput({
+          ...currentJob,
+          templateDigest: sha256CanonicalJson(template),
+          template,
+        });
+        if (!authored.accepted) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_GROUP_INVALID" });
+        }
+        const membership = captured.project.aggregate.logSet.memberships.find(
+          ({ sourceExplorationIdentity }) =>
+            sourceExplorationIdentity === document.explorationIdentity,
+        );
+        const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+          ({ scope }) =>
+            membership !== undefined &&
+            scope.kind === "exploration" &&
+            scope.targetIdentity === membership.membershipIdentity,
+        );
+        const representation =
+          captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+            ({ embeddedTemplateRepresentationIdentity }) =>
+              embeddedTemplateRepresentationIdentity ===
+              assignment?.embeddedTemplateRepresentationIdentity,
+          );
+        if (representation === undefined) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_UNAVAILABLE" });
+        }
+        textAuthoringCommandSequence += 1;
+        const committed = await commitEmbeddedTemplateReplacement(source.service, {
+          requestId: `urn:rsrender:bld-040:request:text-authoring:${textAuthoringCommandSequence}`,
+          documentId: documentIdentity,
+          ownerGeneration: hosted.ownerGeneration,
+          expectedWorkingRevision: input.expectedWorkingRevision,
+          explorationIdentity: document.explorationIdentity,
+          expectedEffectiveContentDigest: representation.effectiveContentDigest,
+          replacementEffectiveContentDigest: authored.value.templateDigest,
+          reason: `${hierarchyMutation.kind === "group" ? "Group" : "Ungroup"} ${affectedOccurrenceNodeIds.length} text occurrence(s) in Boring Log Studio`,
+          operation: "text-occurrence-authoring",
+        });
+        if (!committed.accepted) return committed;
+        retainedLayoutJobs.set(
+          `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+          authored.value,
+        );
+        projectionCache.clear();
+        return Object.freeze({
+          accepted: true,
+          code:
+            hierarchyMutation.kind === "group"
+              ? "TEXT_OCCURRENCES_GROUPED"
+              : "TEXT_OCCURRENCES_UNGROUPED",
+          workingRevision: committed.workingRevision,
+          dirty: committed.dirty,
+          canUndo: committed.canUndo,
+          canRedo: committed.canRedo,
+          targetCount: affectedOccurrenceNodeIds.length,
+          affectedOccurrenceNodeIds,
+          ...(createdGroupNodeId === undefined ? {} : { createdGroupNodeId }),
         });
       }
       const page = selectedEntries[0]!.page;

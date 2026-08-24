@@ -154,6 +154,8 @@ type CommandResult = Readonly<{
   readonly workingRevision?: number;
   readonly pageCount?: number;
   readonly createdOccurrenceNodeIds?: readonly string[];
+  readonly createdGroupNodeId?: string;
+  readonly affectedOccurrenceNodeIds?: readonly string[];
 }>;
 
 type TextArrangementOperation =
@@ -181,6 +183,7 @@ type TextAuthoringMutation =
       readonly offsetXMpt: number;
       readonly offsetYMpt: number;
     }>
+  | Readonly<{ readonly kind: "group" | "ungroup" }>
   | Readonly<{
       readonly kind: "reorder";
       readonly placement: "front" | "forward" | "backward" | "back";
@@ -577,6 +580,14 @@ async function main(): Promise<void> {
   const pasteButtons = Object.freeze([
     element<HTMLButtonElement>("paste-selection"),
     element<HTMLButtonElement>("context-paste-selection"),
+  ]);
+  const groupButtons = Object.freeze([
+    element<HTMLButtonElement>("group-selection"),
+    element<HTMLButtonElement>("context-group-selection"),
+  ]);
+  const ungroupButtons = Object.freeze([
+    element<HTMLButtonElement>("ungroup-selection"),
+    element<HTMLButtonElement>("context-ungroup-selection"),
   ]);
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
@@ -2306,6 +2317,17 @@ async function main(): Promise<void> {
         .filter(({ id }) => selectedTextNodeIds.has(id))
         .map(({ semanticId }) => semanticId),
     );
+    for (const groupNode of page.nodes.filter(
+      (node): node is Extract<BoringLogSceneNode, { readonly kind: "group" }> =>
+        node.kind === "group" && node.role === "user-text-group",
+    )) {
+      if (
+        groupNode.childIds.length > 0 &&
+        groupNode.childIds.every((childId) => selectedTextNodeIds.has(childId))
+      ) {
+        selectedSemanticIds.add(groupNode.semanticId);
+      }
+    }
     if (selectedSemanticId !== null) selectedSemanticIds.add(selectedSemanticId);
     if (contentsMode === "source") {
       const byId = new Map(items.map((item) => [item.semanticId, item]));
@@ -2366,7 +2388,51 @@ async function main(): Promise<void> {
         (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
           node.semanticId === item.semanticId && node.kind === "text",
       );
+      const exactGroupNode = page.nodes.find(
+        (node): node is Extract<BoringLogSceneNode, { readonly kind: "group" }> =>
+          node.kind === "group" &&
+          node.role === "user-text-group" &&
+          node.semanticId === item.semanticId,
+      );
+      const groupedTextNodes = (exactGroupNode?.childIds ?? [])
+        .map((childId) => page.nodes.find(({ id }) => id === childId))
+        .filter(
+          (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+            node?.kind === "text",
+        );
       selectButton.addEventListener("click", (event) => {
+        if (exactGroupNode !== undefined && groupedTextNodes.length > 0) {
+          const additive = event.shiftKey || event.ctrlKey || event.metaKey;
+          const nextIds = new Set(additive ? selectedTextNodeIds : []);
+          const remove = additive && groupedTextNodes.every(({ id }) => nextIds.has(id));
+          for (const { id } of groupedTextNodes) {
+            if (remove) nextIds.delete(id);
+            else nextIds.add(id);
+          }
+          const keyNodeId = [...nextIds].at(-1);
+          const keyNode = page.nodes.find(
+            (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+              node.kind === "text" && node.id === keyNodeId,
+          );
+          if (keyNode === undefined) {
+            clearSelection();
+            return;
+          }
+          select(keyNode.semanticId, keyNode.id);
+          selectedTextNodeIds.clear();
+          for (const nodeId of nextIds) selectedTextNodeIds.add(nodeId);
+          selectedSemanticId = keyNode.semanticId;
+          selectedSceneNodeId = keyNode.id;
+          installSvg();
+          renderTree();
+          updateArrangementControls();
+          selectionName.textContent = `${nextIds.size} text elements`;
+          propertySemanticId.textContent =
+            nextIds.size > 1 ? "Mixed selection" : keyNode.semanticId;
+          selectionStatus.textContent = `${nextIds.size} grouped text occurrence${nextIds.size === 1 ? "" : "s"}; Key Element ${keyNode.id}`;
+          status.textContent = `${humanize(exactGroupNode.semanticId)} selected from Contents.`;
+          return;
+        }
         select(
           item.semanticId,
           exactTextNodes.length === 1 ? exactTextNodes[0]!.id : null,
@@ -2638,6 +2704,48 @@ async function main(): Promise<void> {
               ? "The Log Project is read-only"
               : `Paste ${textClipboardNodeIds.length} copied text occurrence${textClipboardNodeIds.length === 1 ? "" : "s"}`;
       button.setAttribute("aria-disabled", String(pasteUnavailable));
+    }
+    const selectedNodes = page.nodes.filter(
+      (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        node.kind === "text" && selectedTextNodeIds.has(node.id),
+    );
+    const selectedParentIds = new Set(selectedNodes.map(({ parentId }) => parentId));
+    const selectedParent = page.nodes.find(({ id }) => id === selectedNodes[0]?.parentId);
+    const groupUnavailable =
+      authoringUnavailable ||
+      selectionCount < 2 ||
+      selectedParentIds.size !== 1 ||
+      selectedParent?.role === "user-text-group";
+    const groupReason =
+      selectionCount < 2
+        ? "Select at least two text elements to group"
+        : selectedParentIds.size !== 1
+          ? "Grouping requires sibling text elements under the same Contents parent"
+          : selectedParent?.role === "user-text-group"
+            ? "The selected text is already grouped"
+            : authoringReason;
+    for (const button of groupButtons) {
+      button.disabled = groupUnavailable;
+      button.title = groupReason;
+      button.setAttribute("aria-disabled", String(groupUnavailable));
+    }
+    const ungroupable =
+      selectedNodes.length > 0 &&
+      selectedNodes.every(({ parentId }) =>
+        page.nodes.some(
+          (candidate) =>
+            candidate.kind === "group" &&
+            candidate.id === parentId &&
+            candidate.role === "user-text-group",
+        ),
+      );
+    const ungroupUnavailable = authoringUnavailable || !ungroupable;
+    for (const button of ungroupButtons) {
+      button.disabled = ungroupUnavailable;
+      button.title = ungroupable
+        ? authoringReason
+        : "Select text belonging to one or more authored groups";
+      button.setAttribute("aria-disabled", String(ungroupUnavailable));
     }
   }
 
@@ -4257,6 +4365,8 @@ async function main(): Promise<void> {
       ),
     "delete-selection": () =>
       void mutateSelectedText({ kind: "set-visible", visible: false }, "ribbon"),
+    "group-selection": () => void mutateSelectedText({ kind: "group" }, "ribbon"),
+    "ungroup-selection": () => void mutateSelectedText({ kind: "ungroup" }, "ribbon"),
     undo: () => void navigateHistory("undo"),
     redo: () => void navigateHistory("redo"),
     "fit-page": fitPage,
@@ -4324,6 +4434,8 @@ async function main(): Promise<void> {
       ),
     "context-delete-selection": () =>
       void mutateSelectedText({ kind: "set-visible", visible: false }, "context-menu"),
+    "context-group-selection": () => void mutateSelectedText({ kind: "group" }, "context-menu"),
+    "context-ungroup-selection": () => void mutateSelectedText({ kind: "ungroup" }, "context-menu"),
     "context-align-left": () => {
       hideCanvasContextMenu();
       void arrangeSelectedText({ kind: "align", alignment: "left" }, "context-menu");
@@ -4563,6 +4675,11 @@ async function main(): Promise<void> {
         { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
         "keyboard",
       );
+      return;
+    }
+    if (key === "g" && !editableTarget) {
+      event.preventDefault();
+      void mutateSelectedText({ kind: event.shiftKey ? "ungroup" : "group" }, "keyboard");
       return;
     }
     if (key === "z" || key === "y") {

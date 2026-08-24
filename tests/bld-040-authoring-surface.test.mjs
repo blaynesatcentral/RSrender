@@ -154,6 +154,9 @@ test("BLD-040 exposes shared visibility, lock, and drawing-order commands", asyn
   );
   assert.match(main, /TEXT_OCCURRENCES_DUPLICATED/u);
   assert.match(main, /textOccurrenceClones: \[\.\.\.existingClones, \.\.\.createdClones\]/u);
+  assert.match(main, /TEXT_OCCURRENCES_GROUPED/u);
+  assert.match(main, /TEXT_OCCURRENCES_UNGROUPED/u);
+  assert.match(main, /textOccurrenceGroups: nextGroups/u);
   assert.match(main, /operation: "text-occurrence-authoring"/u);
   assert.match(stylesheet, /\.tree-row\.is-hidden-element/u);
   assert.match(stylesheet, /\.tree-row\.is-locked-element/u);
@@ -171,11 +174,15 @@ test("BLD-040 exposes a shared persisted layout clipboard command surface", asyn
     "paste-selection",
     "duplicate-selection",
     "delete-selection",
+    "group-selection",
+    "ungroup-selection",
     "context-copy-selection",
     "context-cut-selection",
     "context-paste-selection",
     "context-duplicate-selection",
     "context-delete-selection",
+    "context-group-selection",
+    "context-ungroup-selection",
   ]) {
     assert.match(html, new RegExp(`id="${id}"`, "u"));
   }
@@ -186,6 +193,8 @@ test("BLD-040 exposes a shared persisted layout clipboard command surface", asyn
   assert.match(entry, /createdOccurrenceNodeIds/u);
   assert.match(entry, /offsetXMpt: 10_000, offsetYMpt: 10_000/u);
   assert.match(entry, /event\.key === "Delete"/u);
+  assert.match(entry, /kind: event\.shiftKey \? "ungroup" : "group"/u);
+  assert.match(entry, /Grouping requires sibling text elements under the same Contents parent/u);
   for (const key of ["c", "x", "v", "d"]) {
     assert.match(entry, new RegExp(`key === "${key}"`, "u"));
   }

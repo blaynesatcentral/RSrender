@@ -16,9 +16,10 @@ import {
 } from "../packages/renderer-ui/dist/boring-log-studio-tree.js";
 import { deterministicTextResults } from "./helpers/bld-024-deterministic-text-authority.mjs";
 
-function resolvedScene(textOccurrenceClones = undefined) {
+function resolvedScene(textOccurrenceClones = undefined, textOccurrenceGroups = undefined) {
   const template = structuredClone(boringLogMvpTemplate);
   if (textOccurrenceClones !== undefined) template.textOccurrenceClones = textOccurrenceClones;
+  if (textOccurrenceGroups !== undefined) template.textOccurrenceGroups = textOccurrenceGroups;
   const preparation = prepareBoringLogLayout({
     contractVersion: 1,
     schemaVersion: "rsrender.boring-log-layout-job.v1",
@@ -58,6 +59,38 @@ test("BLD-040 places structured duplicate occurrences under their semantic Conte
         semanticId === cloneSemanticId &&
         parentSemanticId === "region-header" &&
         label === "Company Name (Copy)",
+    ),
+  );
+});
+
+test("BLD-040 nests authored groups and their text children in Contents", () => {
+  const groupSemanticId = "user-group:header-titles";
+  const items = buildBoringLogStudioTree(
+    resolvedScene(undefined, [
+      {
+        groupNodeId: "node:user-group:header-titles",
+        semanticId: groupSemanticId,
+        parentNodeId: "node:region-header",
+        childOccurrenceNodeIds: ["node:header-title", "node:header-sheet"],
+      },
+    ]),
+  );
+  assert.ok(
+    items.some(
+      ({ semanticId, parentSemanticId, level }) =>
+        semanticId === groupSemanticId && parentSemanticId === "region-header" && level === 3,
+    ),
+  );
+  assert.ok(
+    items.some(
+      ({ semanticId, parentSemanticId, level }) =>
+        semanticId === "header-title" && parentSemanticId === groupSemanticId && level === 4,
+    ),
+  );
+  assert.ok(
+    items.some(
+      ({ semanticId, parentSemanticId, level }) =>
+        semanticId === "header-sheet" && parentSemanticId === groupSemanticId && level === 4,
     ),
   );
 });

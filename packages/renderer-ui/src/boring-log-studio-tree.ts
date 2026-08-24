@@ -37,11 +37,14 @@ export function buildBoringLogStudioTree(
   for (const semanticId of page.semanticOrder) {
     if (represented.has(semanticId)) continue;
     const node = page.nodes.find((candidate) => candidate.semanticId === semanticId);
-    const sceneParent =
-      node?.id.startsWith("node:clone:") === true
-        ? page.nodes.find(({ id }) => id === node.parentId)?.semanticId
-        : undefined;
-    const parent = extraParent(semanticId) ?? sceneParent ?? null;
+    const sceneParentNode = page.nodes.find(({ id }) => id === node?.parentId);
+    const authoredParent =
+      node?.role === "user-text-group" || sceneParentNode?.role === "user-text-group"
+        ? sceneParentNode?.semanticId
+        : node?.id.startsWith("node:clone:") === true
+          ? sceneParentNode?.semanticId
+          : undefined;
+    const parent = authoredParent ?? extraParent(semanticId) ?? null;
     if (node === undefined || parent === null) continue;
     const children = extras.get(parent) ?? [];
     children.push({
@@ -71,9 +74,13 @@ export function buildBoringLogStudioTree(
       icon: "▤",
     },
   ];
-  for (const child of extras.get("region-header") ?? []) {
-    mutable.push({ ...child, parentSemanticId: "region-header", level: 3 });
-  }
+  const appendExtraChildren = (parentSemanticId: string, level: number): void => {
+    for (const child of extras.get(parentSemanticId) ?? []) {
+      mutable.push({ ...child, parentSemanticId, level });
+      appendExtraChildren(child.semanticId, level + 1);
+    }
+  };
+  appendExtraChildren("region-header", 3);
   mutable.push({
     semanticId: "region-depth-body",
     parentSemanticId: "page-root",
@@ -89,9 +96,7 @@ export function buildBoringLogStudioTree(
       level: 3,
       icon: column.role === "lithology-pattern" ? "▨" : "│",
     });
-    for (const child of extras.get(column.id) ?? []) {
-      mutable.push({ ...child, parentSemanticId: column.id, level: 4 });
-    }
+    appendExtraChildren(column.id, 4);
   }
   mutable.push({
     semanticId: "region-footer",
@@ -100,9 +105,7 @@ export function buildBoringLogStudioTree(
     level: 2,
     icon: "▧",
   });
-  for (const child of extras.get("region-footer") ?? []) {
-    mutable.push({ ...child, parentSemanticId: "region-footer", level: 3 });
-  }
+  appendExtraChildren("region-footer", 3);
   const parentIds = new Set(
     mutable.flatMap(({ parentSemanticId }) =>
       parentSemanticId === null ? [] : [parentSemanticId],
