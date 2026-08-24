@@ -111,6 +111,33 @@ export {
 } from "./sha256.js";
 export type { Sha256Digest } from "./sha256.js";
 export {
+  evaluateFontPublicationEligibility,
+  fontAvailabilityDiagnosticCodes,
+  fontCatalogSchemaVersion,
+  fontFaceStyles,
+  fontRightsDispositions,
+  fontSourceClasses,
+  resolveExactFontFace,
+  validateFontCatalog,
+} from "./font-catalog-contract.js";
+export type {
+  ExactFontFaceResolution,
+  FontAvailability,
+  FontAvailabilityDiagnostic,
+  FontAvailabilityDiagnosticCode,
+  FontCatalog,
+  FontCatalogRejectionCode,
+  FontCatalogResult,
+  FontFaceCatalogEntry,
+  FontFaceStyle,
+  FontFamilyCatalogEntry,
+  FontPublicationEligibility,
+  FontPublicationEligibilityCode,
+  FontRightsDisposition,
+  FontRightsDispositionSet,
+  FontSourceClass,
+} from "./font-catalog-contract.js";
+export {
   assertContractSchemaParity,
   contractManifestsAgree,
   contractTypeManifest,
