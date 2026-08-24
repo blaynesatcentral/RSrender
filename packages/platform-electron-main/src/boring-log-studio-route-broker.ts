@@ -146,6 +146,12 @@ export interface BoringLogStudioPageGuidesInput {
     | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 }
 
+export interface BoringLogStudioColumnDividerInput {
+  readonly expectedWorkingRevision: number;
+  readonly dividerAfterColumnId: string;
+  readonly requestedDividerXMpt: number;
+}
+
 export interface BoringLogStudioProjectionPreviewInput {
   readonly expectedWorkingRevision: number;
   readonly occurrenceNodeId: string;
@@ -255,6 +261,7 @@ export class BoringLogStudioRouteBroker {
     input: BoringLogStudioTextOccurrencePresentationResetInput,
   ) => Promise<unknown>;
   readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
+  readonly #setColumnDivider: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -279,6 +286,7 @@ export class BoringLogStudioRouteBroker {
       input: BoringLogStudioTextOccurrencePresentationResetInput,
     ) => Promise<unknown>;
     readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
+    readonly setColumnDivider?: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -310,6 +318,10 @@ export class BoringLogStudioRouteBroker {
     this.#setPageGuides =
       input.setPageGuides ??
       (() => Promise.resolve(Object.freeze({ accepted: false, code: "PAGE_GUIDES_UNAVAILABLE" })));
+    this.#setColumnDivider =
+      input.setColumnDivider ??
+      (() =>
+        Promise.resolve(Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" })));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -972,6 +984,86 @@ export class BoringLogStudioRouteBroker {
     binding.nextSequence += 1;
     try {
       const result = await this.#setPageGuides(args as unknown as BoringLogStudioPageGuidesInput);
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setColumnDivider(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "dividerAfterColumnId",
+      "requestedDividerXMpt",
+    ]);
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      typeof args["dividerAfterColumnId"] !== "string" ||
+      args["dividerAfterColumnId"].length < 1 ||
+      args["dividerAfterColumnId"].length > 128 ||
+      !Number.isSafeInteger(args["requestedDividerXMpt"]) ||
+      (args["requestedDividerXMpt"] as number) < 0
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setColumnDivider(
+        args as unknown as BoringLogStudioColumnDividerInput,
+      );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
       }

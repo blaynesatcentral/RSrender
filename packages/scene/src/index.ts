@@ -24,6 +24,7 @@ export {
   prepareBoringLogLayoutWithTextOccurrenceStyles,
 } from "./boring-log-text-occurrence-authoring.js";
 export {
+  boringLogDefaultColumnMinimumWidthMpt,
   boringLogColumnResizeRevision,
   resizeAdjacentBoringLogColumns,
 } from "./boring-log-column-resize.js";

@@ -5,6 +5,7 @@ import {
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
@@ -87,6 +88,7 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "canRedo",
     "editableValues",
     "guides",
+    "columnResizeConstraints",
     "textTemplateScopeSummary",
     "textOccurrencePresentationStates",
     "scene",
@@ -107,6 +109,8 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     projection["editableValues"].length > 256 ||
     !Array.isArray(projection["guides"]) ||
     projection["guides"].length > 128 ||
+    !Array.isArray(projection["columnResizeConstraints"]) ||
+    projection["columnResizeConstraints"].length > 64 ||
     typeof projection["textTemplateScopeSummary"] !== "object" ||
     projection["textTemplateScopeSummary"] === null ||
     !Array.isArray(projection["textOccurrencePresentationStates"]) ||
@@ -116,7 +120,11 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
   }
   const scene = validateResolvedBoringLogPageScene(projection["scene"]);
   const scenePage = scene.accepted ? scene.value.pages[0] : undefined;
-  if (scenePage === undefined) return null;
+  const plannedPage =
+    scene.accepted && scenePage !== undefined
+      ? scene.value.pagePlan.pages.find(({ pageId }) => pageId === scenePage.pageId)
+      : undefined;
+  if (scenePage === undefined || plannedPage === undefined) return null;
   const guideIds = new Set<string>();
   const guideCoordinates = new Set<string>();
   for (const inputGuide of projection["guides"]) {
@@ -138,6 +146,28 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     if (guideIds.has(guide["id"]) || guideCoordinates.has(coordinate)) return null;
     guideIds.add(guide["id"]);
     guideCoordinates.add(coordinate);
+  }
+  const constrainedColumnIds = new Set<string>();
+  for (const inputConstraint of projection["columnResizeConstraints"]) {
+    const constraint = exactRecord(inputConstraint, ["columnId", "minimumWidthMpt", "widthPinned"]);
+    if (
+      constraint === null ||
+      typeof constraint["columnId"] !== "string" ||
+      constraint["columnId"].length < 1 ||
+      constraint["columnId"].length > 128 ||
+      !isPositiveSafeInteger(constraint["minimumWidthMpt"]) ||
+      typeof constraint["widthPinned"] !== "boolean" ||
+      constrainedColumnIds.has(constraint["columnId"])
+    ) {
+      return null;
+    }
+    constrainedColumnIds.add(constraint["columnId"]);
+  }
+  if (
+    constrainedColumnIds.size !== plannedPage.columns.length ||
+    plannedPage.columns.some(({ id }) => !constrainedColumnIds.has(id))
+  ) {
+    return null;
   }
   const textTemplateScopeSummary = exactRecord(projection["textTemplateScopeSummary"], [
     "authoredStyleCount",
@@ -701,6 +731,58 @@ const setPageGuides = Object.freeze(async function setPageGuides(input: unknown)
   }
 });
 
+const setColumnDivider = Object.freeze(async function setColumnDivider(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, [
+    "expectedWorkingRevision",
+    "dividerAfterColumnId",
+    "requestedDividerXMpt",
+  ]);
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    typeof args["dividerAfterColumnId"] !== "string" ||
+    args["dividerAfterColumnId"].length < 1 ||
+    args["dividerAfterColumnId"].length > 128 ||
+    !isNonnegativeSafeInteger(args["requestedDividerXMpt"])
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
   Object.freeze({
@@ -709,6 +791,7 @@ contextBridge.exposeInMainWorld(
     setTextOccurrenceStyle,
     resetTextOccurrencePresentation,
     setPageGuides,
+    setColumnDivider,
   }),
 );
 
@@ -983,6 +1066,11 @@ export interface BoringLogStudioPreloadApi {
           readonly guideId: string;
           readonly locked: boolean;
         }>;
+  }) => Promise<unknown>;
+  readonly setColumnDivider: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly dividerAfterColumnId: string;
+    readonly requestedDividerXMpt: number;
   }) => Promise<unknown>;
 }
 

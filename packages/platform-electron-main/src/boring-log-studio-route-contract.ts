@@ -11,3 +11,5 @@ export const BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL =
   "rsrender:boring-log-studio:reset-text-occurrence-presentation:v1" as const;
 export const BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL =
   "rsrender:boring-log-studio:set-page-guides:v1" as const;
+export const BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL =
+  "rsrender:boring-log-studio:set-column-divider:v1" as const;

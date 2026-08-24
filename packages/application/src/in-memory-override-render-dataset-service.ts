@@ -841,6 +841,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
             "page-guide-move",
             "page-guide-delete",
             "page-guide-lock",
+            "column-divider-adjacent-resize",
           ].includes(String(command["operation"])))
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
@@ -961,7 +962,9 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
               ? "Delete page guide"
               : operation === "page-guide-lock"
                 ? "Set page guide lock"
-                : "Set text occurrence style";
+                : operation === "column-divider-adjacent-resize"
+                  ? "Resize adjacent Log Columns"
+                  : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
         kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],

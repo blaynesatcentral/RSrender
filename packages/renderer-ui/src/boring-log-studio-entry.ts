@@ -122,6 +122,11 @@ type StudioProjection = Readonly<{
   readonly canRedo: boolean;
   readonly editableValues: readonly EditableValue[];
   readonly guides: readonly PageGuide[];
+  readonly columnResizeConstraints: readonly Readonly<{
+    readonly columnId: string;
+    readonly minimumWidthMpt: number;
+    readonly widthPinned: boolean;
+  }>[];
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -244,6 +249,11 @@ type StudioApis = Readonly<{
     readonly setPageGuides: (input: {
       readonly expectedWorkingRevision: number;
       readonly mutation: PageGuideMutation;
+    }) => Promise<CommandResult>;
+    readonly setColumnDivider: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly dividerAfterColumnId: string;
+      readonly requestedDividerXMpt: number;
     }) => Promise<CommandResult>;
   };
   readonly document: {
@@ -509,6 +519,19 @@ async function main(): Promise<void> {
         readonly locked: boolean;
       }
     | undefined;
+  let columnDividerGesture:
+    | {
+        readonly pointerId: number;
+        readonly leftColumnId: string;
+        readonly rightColumnId: string;
+        readonly leftXMpt: number;
+        readonly pairEndMpt: number;
+        readonly originalDividerXMpt: number;
+        readonly minimumDividerXMpt: number;
+        readonly maximumDividerXMpt: number;
+        previewDividerXMpt: number;
+      }
+    | undefined;
   let suppressCanvasClick = false;
   let smartSnapEnabled = true;
   let gridSnapEnabled = false;
@@ -747,6 +770,7 @@ async function main(): Promise<void> {
         occurrence?.classList.add("is-selected");
       }
     }
+    installColumnDividerControls();
     installDirectManipulationOverlay();
     renderPageRulers();
     renderPageGuides();
@@ -855,6 +879,184 @@ async function main(): Promise<void> {
     );
     group.append(moveControl);
     svg.append(group);
+  }
+
+  function installColumnDividerControls(): void {
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const depthBody = plannedPage?.regions.find(({ role }) => role === "depth-body");
+    if (svg === null || plannedPage === undefined || depthBody === undefined) return;
+    const namespace = "http://www.w3.org/2000/svg";
+    const group = document.createElementNS(namespace, "g");
+    group.id = "column-divider-controls";
+    group.setAttribute("aria-label", "Log Column divider controls");
+    plannedPage.columns.slice(0, -1).forEach((column, index) => {
+      const right = plannedPage.columns[index + 1]!;
+      const xMpt = column.xMpt + column.widthMpt;
+      const line = document.createElementNS(namespace, "line");
+      line.classList.add("column-divider-line");
+      line.setAttribute("x1", String(xMpt));
+      line.setAttribute("x2", String(xMpt));
+      line.setAttribute("y1", String(depthBody.yMpt));
+      line.setAttribute("y2", String(depthBody.yMpt + depthBody.heightMpt));
+      const control = document.createElementNS(namespace, "rect");
+      control.classList.add("column-divider-control");
+      control.dataset["dividerAfterColumnId"] = column.id;
+      control.dataset["rightColumnId"] = right.id;
+      control.setAttribute("x", String(xMpt - 4_000));
+      control.setAttribute("y", String(depthBody.yMpt));
+      control.setAttribute("width", "8000");
+      control.setAttribute("height", String(depthBody.heightMpt));
+      control.setAttribute("role", "separator");
+      control.setAttribute("aria-orientation", "vertical");
+      control.setAttribute("aria-label", `Resize ${column.id} and ${right.id}`);
+      control.setAttribute("aria-valuenow", String(xMpt));
+      control.setAttribute("tabindex", "0");
+      group.append(line, control);
+    });
+    svg.append(group);
+  }
+
+  function previewColumnDivider(): void {
+    const gesture = columnDividerGesture;
+    const group = pageHost.querySelector<SVGGElement>("#column-divider-controls");
+    if (gesture === undefined || group === null) return;
+    group.querySelectorAll(".column-divider-preview").forEach((element) => element.remove());
+    const namespace = "http://www.w3.org/2000/svg";
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const depthBody = plannedPage?.regions.find(({ role }) => role === "depth-body");
+    if (depthBody === undefined) return;
+    for (const [xMpt, widthMpt] of [
+      [gesture.leftXMpt, gesture.previewDividerXMpt - gesture.leftXMpt],
+      [gesture.previewDividerXMpt, gesture.pairEndMpt - gesture.previewDividerXMpt],
+    ] as const) {
+      const preview = document.createElementNS(namespace, "rect");
+      preview.classList.add("column-divider-preview");
+      preview.setAttribute("x", String(xMpt));
+      preview.setAttribute("y", String(depthBody.yMpt));
+      preview.setAttribute("width", String(widthMpt));
+      preview.setAttribute("height", String(depthBody.heightMpt));
+      group.prepend(preview);
+    }
+    const control = group.querySelector<SVGRectElement>(
+      `[data-divider-after-column-id="${CSS.escape(gesture.leftColumnId)}"]`,
+    );
+    const line = control?.previousElementSibling;
+    control?.setAttribute("x", String(gesture.previewDividerXMpt - 4_000));
+    control?.setAttribute("aria-valuenow", String(gesture.previewDividerXMpt));
+    line?.setAttribute("x1", String(gesture.previewDividerXMpt));
+    line?.setAttribute("x2", String(gesture.previewDividerXMpt));
+    status.textContent = `Column preview: ${gesture.leftColumnId} ${(gesture.previewDividerXMpt - gesture.leftXMpt) / 1_000} pt · ${gesture.rightColumnId} ${(gesture.pairEndMpt - gesture.previewDividerXMpt) / 1_000} pt. Adjacent-pair width is conserved; release commits one Undo item and Esc cancels.`;
+  }
+
+  function beginColumnDividerGesture(event: PointerEvent, leftColumnId: string): void {
+    if (
+      event.button !== 0 ||
+      interactionMode !== "select" ||
+      columnDividerGesture !== undefined ||
+      lifecycleState?.readOnly === true ||
+      studioProjection === null
+    ) {
+      return;
+    }
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const leftIndex = plannedPage?.columns.findIndex(({ id }) => id === leftColumnId) ?? -1;
+    if (plannedPage === undefined || leftIndex < 0 || leftIndex >= plannedPage.columns.length - 1)
+      return;
+    const left = plannedPage.columns[leftIndex]!;
+    const right = plannedPage.columns[leftIndex + 1]!;
+    const leftConstraint = studioProjection.columnResizeConstraints.find(
+      ({ columnId }) => columnId === left.id,
+    );
+    const rightConstraint = studioProjection.columnResizeConstraints.find(
+      ({ columnId }) => columnId === right.id,
+    );
+    if (
+      leftConstraint === undefined ||
+      rightConstraint === undefined ||
+      leftConstraint.widthPinned ||
+      rightConstraint.widthPinned
+    ) {
+      status.textContent = "This column divider is pinned and cannot be dragged.";
+      return;
+    }
+    const originalDividerXMpt = left.xMpt + left.widthMpt;
+    columnDividerGesture = {
+      pointerId: event.pointerId,
+      leftColumnId: left.id,
+      rightColumnId: right.id,
+      leftXMpt: left.xMpt,
+      pairEndMpt: right.xMpt + right.widthMpt,
+      originalDividerXMpt,
+      minimumDividerXMpt: left.xMpt + leftConstraint.minimumWidthMpt,
+      maximumDividerXMpt: right.xMpt + right.widthMpt - rightConstraint.minimumWidthMpt,
+      previewDividerXMpt: originalDividerXMpt,
+    };
+    pageHost.setPointerCapture(event.pointerId);
+    canvasStage.dataset["columnDividerAfter"] = left.id;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function updateColumnDividerGesture(event: PointerEvent): void {
+    const gesture = columnDividerGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const point = pointerPagePoint(event);
+    if (point === null) return;
+    gesture.previewDividerXMpt = Math.min(
+      gesture.maximumDividerXMpt,
+      Math.max(gesture.minimumDividerXMpt, point.xMpt),
+    );
+    previewColumnDivider();
+    event.preventDefault();
+  }
+
+  function cancelColumnDividerGesture(): void {
+    const gesture = columnDividerGesture;
+    if (gesture === undefined) return;
+    if (pageHost.hasPointerCapture(gesture.pointerId))
+      pageHost.releasePointerCapture(gesture.pointerId);
+    columnDividerGesture = undefined;
+    Reflect.deleteProperty(canvasStage.dataset, "columnDividerAfter");
+    installSvg();
+    status.textContent = `Column divider gesture canceled for ${gesture.leftColumnId}; history and template geometry were unchanged.`;
+  }
+
+  async function commitColumnDivider(leftColumnId: string, dividerXMpt: number): Promise<void> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null) return;
+    const result = await apis.studio.setColumnDivider({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      dividerAfterColumnId: leftColumnId,
+      requestedDividerXMpt: dividerXMpt,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Column divider command failed: ${result.code ?? "COLUMN_DIVIDER_UNAVAILABLE"}`;
+      installSvg();
+      return;
+    }
+    await refreshStudioProjection(
+      result.workingRevision,
+      `Column divider committed at revision ${result.workingRevision}; adjacent widths were conserved through shared history.`,
+    );
+  }
+
+  async function finishColumnDividerGesture(event: PointerEvent): Promise<void> {
+    const gesture = columnDividerGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    if (pageHost.hasPointerCapture(event.pointerId))
+      pageHost.releasePointerCapture(event.pointerId);
+    columnDividerGesture = undefined;
+    Reflect.deleteProperty(canvasStage.dataset, "columnDividerAfter");
+    event.preventDefault();
+    event.stopPropagation();
+    if (gesture.previewDividerXMpt === gesture.originalDividerXMpt) {
+      installSvg();
+      status.textContent =
+        "Column divider ended without a geometry change; no history item was created.";
+      return;
+    }
+    await commitColumnDivider(gesture.leftColumnId, gesture.previewDividerXMpt);
   }
 
   function pointerPagePoint(event: PointerEvent): Readonly<{ xMpt: number; yMpt: number }> | null {
@@ -2518,7 +2720,37 @@ async function main(): Promise<void> {
   pageHost.addEventListener("pointermove", updateDirectManipulation);
   pageHost.addEventListener("pointerup", (event) => void finishDirectManipulation(event));
   pageHost.addEventListener("pointercancel", () => cancelDirectManipulation());
+  pageHost.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const leftColumnId = target.closest<SVGElement>("[data-divider-after-column-id]")?.dataset[
+      "dividerAfterColumnId"
+    ];
+    if (leftColumnId !== undefined) beginColumnDividerGesture(event, leftColumnId);
+  });
+  pageHost.addEventListener("pointermove", updateColumnDividerGesture);
+  pageHost.addEventListener("pointerup", (event) => void finishColumnDividerGesture(event));
+  pageHost.addEventListener("pointercancel", cancelColumnDividerGesture);
   pageHost.addEventListener("keydown", (event) => {
+    const divider =
+      event.target instanceof Element
+        ? event.target.closest<SVGElement>("[data-divider-after-column-id]")
+        : null;
+    const leftColumnId = divider?.dataset["dividerAfterColumnId"];
+    if (
+      leftColumnId !== undefined &&
+      divider !== null &&
+      (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
+      studioProjection !== null
+    ) {
+      const stepMpt = event.shiftKey ? 10_000 : 1_000;
+      const requested =
+        Number(divider.getAttribute("aria-valuenow")) +
+        (event.key === "ArrowLeft" ? -stepMpt : stepMpt);
+      event.preventDefault();
+      void commitColumnDivider(leftColumnId, requested);
+      return;
+    }
     if (!event.key.startsWith("Arrow") || directManipulationGesture !== undefined) return;
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -2821,6 +3053,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && columnDividerGesture !== undefined) {
+      event.preventDefault();
+      cancelColumnDividerGesture();
+      return;
+    }
     if (event.key === "Escape" && pageGuideGesture !== undefined) {
       event.preventDefault();
       cancelPageGuideGesture();

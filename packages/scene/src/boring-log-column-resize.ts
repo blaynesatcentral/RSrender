@@ -2,6 +2,22 @@ import type { BoringLogColumnInput } from "@rsrender/contracts";
 
 export const boringLogColumnResizeRevision = "bld-039-column-resize-v1" as const;
 
+export function boringLogDefaultColumnMinimumWidthMpt(role: string): number {
+  const minimums: Readonly<Record<string, number>> = Object.freeze({
+    elevation: 18_000,
+    depth: 18_000,
+    lithology: 18_000,
+    "material-description": 80_000,
+    sample: 20_000,
+    recovery: 18_000,
+    blows: 24_000,
+    "n-value": 16_000,
+    "penetration-moisture-plasticity": 60_000,
+    remarks: 50_000,
+  });
+  return typeof role === "string" && role.length > 0 ? (minimums[role] ?? 12_000) : 12_000;
+}
+
 export interface BoringLogColumnResizeConstraint {
   readonly columnId: string;
   readonly minimumWidthMpt: number;

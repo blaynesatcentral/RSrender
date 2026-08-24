@@ -15,6 +15,7 @@ import type {
 } from "@rsrender/application";
 import {
   applyBoringLogTextMeasurements,
+  boringLogDefaultColumnMinimumWidthMpt,
   prepareBoringLogLayout,
   resolveBoringLogPageScene,
   type BoringLogLayoutPreparation,
@@ -51,6 +52,11 @@ export interface BoringLogStudioProjection {
   readonly canRedo: boolean;
   readonly editableValues: readonly BoringLogStudioEditableValue[];
   readonly guides: NonNullable<BoringLogLayoutJobInput["template"]["guides"]>;
+  readonly columnResizeConstraints: readonly Readonly<{
+    readonly columnId: string;
+    readonly minimumWidthMpt: number;
+    readonly widthPinned: boolean;
+  }>[];
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -329,6 +335,15 @@ export function prepareBoringLogStudioProjection(
           canRedo: input.dataset.canRedo,
           editableValues: Object.freeze(editableValues),
           guides: Object.freeze([...(effectiveJob.value.template.guides ?? [])]),
+          columnResizeConstraints: Object.freeze(
+            effectiveJob.value.template.columns.map((column) =>
+              Object.freeze({
+                columnId: column.id,
+                minimumWidthMpt: boringLogDefaultColumnMinimumWidthMpt(column.role),
+                widthPinned: false,
+              }),
+            ),
+          ),
           textTemplateScopeSummary: Object.freeze({
             authoredStyleCount: effectiveJob.value.template.styles.filter(
               ({ id }) => !excludedOverrideStyleIds.has(id),

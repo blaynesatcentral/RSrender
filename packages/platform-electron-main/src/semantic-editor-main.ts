@@ -29,7 +29,9 @@ import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 import {
   applyBoringLogTemplateTextStyleProperties,
   applyBoringLogTextOccurrenceStyles,
+  boringLogDefaultColumnMinimumWidthMpt,
   clearBoringLogTextOccurrencePresentation,
+  resizeAdjacentBoringLogColumns,
 } from "@rsrender/scene";
 
 import {
@@ -59,6 +61,7 @@ import {
 } from "./boring-log-publication-route-contract.js";
 import {
   BoringLogStudioRouteBroker,
+  type BoringLogStudioColumnDividerInput,
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioPageGuidesInput,
   type BoringLogStudioProjectionPreviewInput,
@@ -70,6 +73,7 @@ import {
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
@@ -372,6 +376,7 @@ const handlers = [
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
@@ -1842,7 +1847,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -3052,6 +3057,102 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           guideDeleteUndo["locked"] === "true",
         `PAGE_GUIDE_HISTORY_INVALID:${JSON.stringify({ guideAdded, guideUndo, guideRedo, guideLocked, guideDeleted, guideDeleteUndo })}`,
       );
+      const columnSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const columns = value.accepted ? value.projection.scene.pagePlan.pages[0]?.columns : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, columns, dividerCount: document.querySelectorAll(".column-divider-control").length, activeDivider: document.getElementById("canvas-stage")?.dataset.columnDividerAfter ?? null, status: document.getElementById("editor-status")?.textContent }; })()`;
+      const columnBefore = record(await pageValue(window, columnSnapshotExpression));
+      const columnDividerStart = record(
+        await pageValue(
+          window,
+          `(() => { const node = document.querySelector('[data-divider-after-column-id="column-data-track"]'); if (!(node instanceof SVGElement)) return {}; node.scrollIntoView({ block: "center", inline: "center" }); const bounds = node.getBoundingClientRect(); return { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) }; })()`,
+        ),
+      );
+      requireProbe(
+        typeof columnDividerStart["x"] === "number" &&
+          typeof columnDividerStart["y"] === "number" &&
+          columnBefore["dividerCount"] === 9,
+        "COLUMN_DIVIDER_CONTROL_INVALID",
+      );
+      await dragMouse(
+        window,
+        { x: columnDividerStart["x"], y: columnDividerStart["y"] },
+        { x: columnDividerStart["x"] + 16, y: columnDividerStart["y"] },
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Column divider committed at revision ") === true`,
+        "WAIT_COLUMN_DIVIDER_COMMIT",
+      );
+      const columnCommitted = record(await pageValue(window, columnSnapshotExpression));
+      const beforeColumns = columnBefore["columns"] as readonly DataRecord[];
+      const committedColumns = columnCommitted["columns"] as readonly DataRecord[];
+      const beforeLeft = beforeColumns.find(({ id }) => id === "column-data-track")!;
+      const beforeRight = beforeColumns.find(({ id }) => id === "column-remarks")!;
+      const committedLeft = committedColumns.find(({ id }) => id === "column-data-track")!;
+      const committedRight = committedColumns.find(({ id }) => id === "column-remarks")!;
+      requireProbe(
+        columnCommitted["workingRevision"] === (columnBefore["workingRevision"] as number) + 1 &&
+          committedLeft["widthMpt"] !== beforeLeft["widthMpt"] &&
+          committedRight["xMpt"] ===
+            (committedLeft["xMpt"] as number) + (committedLeft["widthMpt"] as number) &&
+          (committedLeft["widthMpt"] as number) + (committedRight["widthMpt"] as number) ===
+            (beforeLeft["widthMpt"] as number) + (beforeRight["widthMpt"] as number),
+        `COLUMN_DIVIDER_COMMIT_INVALID:${JSON.stringify({ columnBefore, columnCommitted })}`,
+      );
+      await press(window, "#undo", "Space", "FOCUS_COLUMN_DIVIDER_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true`,
+        "WAIT_COLUMN_DIVIDER_UNDO",
+      );
+      const columnUndo = record(await pageValue(window, columnSnapshotExpression));
+      await press(window, "#redo", "Space", "FOCUS_COLUMN_DIVIDER_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Redo completed at revision ") === true`,
+        "WAIT_COLUMN_DIVIDER_REDO",
+      );
+      const columnRedo = record(await pageValue(window, columnSnapshotExpression));
+      requireProbe(
+        JSON.stringify(columnUndo["columns"]) === JSON.stringify(columnBefore["columns"]) &&
+          JSON.stringify(columnRedo["columns"]) === JSON.stringify(columnCommitted["columns"]),
+        `COLUMN_DIVIDER_HISTORY_INVALID:${JSON.stringify({ columnUndo, columnRedo })}`,
+      );
+      const cancelStart = record(
+        await pageValue(
+          window,
+          `(() => { const node = document.querySelector('[data-divider-after-column-id="column-data-track"]'); if (!(node instanceof SVGElement)) return {}; const bounds = node.getBoundingClientRect(); return { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) }; })()`,
+        ),
+      );
+      await dragMouse(
+        window,
+        { x: cancelStart["x"] as number, y: cancelStart["y"] as number },
+        { x: (cancelStart["x"] as number) - 8, y: cancelStart["y"] as number },
+        false,
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Column preview:") === true && document.getElementById("canvas-stage")?.dataset.columnDividerAfter === "column-data-track"`,
+        "WAIT_COLUMN_DIVIDER_CANCEL_PREVIEW",
+      );
+      window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+      window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+      window.webContents.sendInputEvent({
+        type: "mouseUp",
+        x: (cancelStart["x"] as number) - 8,
+        y: cancelStart["y"] as number,
+        button: "left",
+        clickCount: 1,
+      });
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Column divider gesture canceled for column-data-track") === true`,
+        "WAIT_COLUMN_DIVIDER_CANCEL",
+      );
+      const columnCanceled = record(await pageValue(window, columnSnapshotExpression));
+      requireProbe(
+        columnCanceled["workingRevision"] === columnRedo["workingRevision"] &&
+          JSON.stringify(columnCanceled["columns"]) === JSON.stringify(columnRedo["columns"]),
+        `COLUMN_DIVIDER_CANCEL_INVALID:${JSON.stringify({ columnRedo, columnCanceled })}`,
+      );
       directManipulation = Object.freeze({
         before: directBefore,
         moved: directMoved,
@@ -3067,6 +3168,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           locked: guideLocked,
           deleted: guideDeleted,
           deleteUndo: guideDeleteUndo,
+        }),
+        columnDivider: Object.freeze({
+          before: columnBefore,
+          committed: columnCommitted,
+          undo: columnUndo,
+          redo: columnRedo,
+          canceled: columnCanceled,
         }),
       });
       emitStudioProbePhase("direct-manipulation-observed");
@@ -3903,6 +4011,7 @@ async function main(): Promise<void> {
     let textStyleCommandSequence = 0;
     let textPresentationResetCommandSequence = 0;
     let pageGuidesCommandSequence = 0;
+    let columnDividerCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -4476,6 +4585,96 @@ async function main(): Promise<void> {
         guideId,
       });
     };
+    const handleColumnDivider = async (input: BoringLogStudioColumnDividerInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null) {
+        return Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" });
+      }
+      const resized = resizeAdjacentBoringLogColumns({
+        columns: currentJob.template.columns,
+        constraints: currentJob.template.columns.map((column) => ({
+          columnId: column.id,
+          minimumWidthMpt: boringLogDefaultColumnMinimumWidthMpt(column.role),
+          widthPinned: false,
+        })),
+        dividerAfterColumnId: input.dividerAfterColumnId,
+        requestedDividerXMpt: input.requestedDividerXMpt,
+      });
+      if (!resized.accepted || !resized.changed) {
+        return Object.freeze({
+          accepted: false,
+          code: resized.accepted ? "COLUMN_DIVIDER_NO_CHANGE" : resized.code,
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" });
+      }
+      const template = Object.freeze({
+        ...currentJob.template,
+        columns: resized.columns,
+      });
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_LAYOUT_INVALID" });
+      }
+      columnDividerCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-039:request:column-divider:${columnDividerCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Resize divider between ${resized.leftColumnId} and ${resized.rightColumnId} in Boring Log Studio`,
+        operation: "column-divider-adjacent-resize",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "COLUMN_DIVIDER_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        leftColumnId: resized.leftColumnId,
+        rightColumnId: resized.rightColumnId,
+        effectiveDividerXMpt: resized.effectiveDividerXMpt,
+        clamped: resized.clamped,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -4487,6 +4686,7 @@ async function main(): Promise<void> {
       setTextOccurrenceStyle: handleTextOccurrenceStyle,
       resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
       setPageGuides: handlePageGuides,
+      setColumnDivider: handleColumnDivider,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -4503,6 +4703,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL, (event, input: unknown) =>
       route.setPageGuides(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL, (event, input: unknown) =>
+      route.setColumnDivider(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,

@@ -681,6 +681,28 @@ textarea {
 .direct-manipulation-handle[data-direct-manipulation-handle="south-west"] {
   cursor: nesw-resize;
 }
+.column-divider-line {
+  stroke: #007ac2;
+  stroke-width: 700;
+  stroke-dasharray: 3500 2500;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.column-divider-control {
+  fill: transparent;
+  cursor: ew-resize;
+  pointer-events: all;
+}
+.column-divider-control:focus {
+  fill: rgb(0 122 194 / 12%);
+  outline: none;
+}
+.column-divider-preview {
+  fill: rgb(0 122 194 / 8%);
+  stroke: #007ac2;
+  stroke-width: 900;
+  pointer-events: none;
+}
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-handle,
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-control,
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-target {

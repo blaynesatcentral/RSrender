@@ -8,6 +8,7 @@ import { createSyntheticBoringLogOverrideSession } from "../packages/application
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   DOCUMENT_BOOTSTRAP_CHANNEL,
@@ -433,6 +434,55 @@ test("BLD-038 Studio route admits only exact atomic page-guide mutations", async
   );
 });
 
+test("BLD-039 Studio route admits only one exact adjacent column-divider command", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "9".repeat(64),
+    getProjection: source.getProjection,
+    setColumnDivider: async (input) => {
+      received = input;
+      return { accepted: true, code: "COLUMN_DIVIDER_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  assert.equal(binding.accepted, true, binding.code);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    dividerAfterColumnId: "column-description",
+    requestedDividerXMpt: 300_000,
+  };
+  assert.equal((await route.setColumnDivider(routeContext, envelope(1, args))).accepted, true);
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, dividerAfterColumnId: "" },
+    { ...args, requestedDividerXMpt: -1 },
+    { ...args, mode: "free-scale" },
+  ]) {
+    assert.deepEqual(await route.setColumnDivider(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -630,6 +680,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setColumnDivider(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -656,6 +714,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "setTextOccurrenceStyle",
     "resetTextOccurrencePresentation",
     "setPageGuides",
+    "setColumnDivider",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
@@ -667,6 +726,19 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.projection.textTemplateScopeSummary.authoredStyleCount, 5);
   assert.equal(result.projection.textTemplateScopeSummary.excludedOverrideStyleCount, 0);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
+  assert.equal(result.projection.columnResizeConstraints.length, 10);
+  const columnResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.setColumnDivider(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      dividerAfterColumnId: "column-description",
+      requestedDividerXMpt: 300_000,
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(columnResult)), {
+    accepted: false,
+    code: "COLUMN_DIVIDER_UNAVAILABLE",
+  });
   const previewResult = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection(${JSON.stringify({
       minimumWorkingRevision: result.projection.workingRevision,
