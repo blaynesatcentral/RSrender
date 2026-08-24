@@ -155,6 +155,23 @@ type CommandResult = Readonly<{
   readonly pageCount?: number;
 }>;
 
+type TextArrangementOperation =
+  | Readonly<{ readonly kind: "nudge"; readonly deltaXMpt: number; readonly deltaYMpt: number }>
+  | Readonly<{
+      readonly kind: "align";
+      readonly alignment:
+        "left" | "horizontal-center" | "right" | "top" | "vertical-center" | "bottom";
+    }>
+  | Readonly<{
+      readonly kind: "match-size";
+      readonly dimension: "width" | "height" | "both";
+    }>
+  | Readonly<{
+      readonly kind: "distribute";
+      readonly distribution:
+        "horizontal-gaps" | "vertical-gaps" | "horizontal-centers" | "vertical-centers";
+    }>;
+
 type PublicationResult =
   | Readonly<{ accepted: false; code: string }>
   | Readonly<{
@@ -269,6 +286,12 @@ type StudioApis = Readonly<{
       readonly expectedWorkingRevision: number;
       readonly boundary: RegionBoundary;
       readonly requestedBoundaryYMpt: number;
+    }) => Promise<CommandResult>;
+    readonly arrangeTextOccurrences: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly keyElementId: string;
+      readonly occurrenceNodeIds: readonly string[];
+      readonly operation: TextArrangementOperation;
     }) => Promise<CommandResult>;
   };
   readonly document: {
@@ -462,6 +485,32 @@ async function main(): Promise<void> {
   const propertiesOptions = element<HTMLButtonElement>("properties-options");
   const canvasContextMenu = element<HTMLDivElement>("canvas-context-menu");
   const contextProperties = element<HTMLButtonElement>("context-properties");
+  const arrangementButtons = Object.freeze({
+    alignLeft: [
+      element<HTMLButtonElement>("align-left"),
+      element<HTMLButtonElement>("context-align-left"),
+    ],
+    alignCenter: [
+      element<HTMLButtonElement>("align-center"),
+      element<HTMLButtonElement>("context-align-center"),
+    ],
+    alignRight: [
+      element<HTMLButtonElement>("align-right"),
+      element<HTMLButtonElement>("context-align-right"),
+    ],
+    matchWidth: [
+      element<HTMLButtonElement>("match-width"),
+      element<HTMLButtonElement>("context-match-width"),
+    ],
+    matchHeight: [
+      element<HTMLButtonElement>("match-height"),
+      element<HTMLButtonElement>("context-match-height"),
+    ],
+    distributeHorizontal: [
+      element<HTMLButtonElement>("distribute-horizontal"),
+      element<HTMLButtonElement>("context-distribute-horizontal"),
+    ],
+  });
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
   const documentState = element<HTMLElement>("document-state");
@@ -711,6 +760,7 @@ async function main(): Promise<void> {
     previousBoringButton.disabled = active.ordinal === 1;
     nextBoringButton.disabled = active.ordinal === next.boringLogs.length;
     lastBoringButton.disabled = active.ordinal === next.boringLogs.length;
+    updateArrangementControls();
     element<HTMLElement>("canvas-title").textContent = `${active.displayName} — Page 1`;
     element<HTMLElement>("page-status").textContent =
       `Boring ${active.ordinal} of ${next.boringLogs.length} · Page 1 of 1`;
@@ -822,6 +872,9 @@ async function main(): Promise<void> {
       for (const occurrence of pageHost.querySelectorAll<SVGElement>("[data-node-id]")) {
         if (selectedTextNodeIds.has(occurrence.dataset["nodeId"] ?? "")) {
           occurrence.classList.add("is-selected");
+        }
+        if (occurrence.dataset["nodeId"] === selectedSceneNodeId) {
+          occurrence.classList.add("is-key-element");
         }
       }
       if (selectedTextNodeIds.size === 0) {
@@ -2188,6 +2241,85 @@ async function main(): Promise<void> {
         : `Properties opened for exact occurrence ${selectedSceneNodeId}.`;
   }
 
+  function updateArrangementControls(): void {
+    const selectionCount = selectedTextNodeIds.size;
+    const unavailable =
+      studioProjection === null || lifecycleState?.readOnly === true || selectionCount < 2;
+    const pairReason =
+      lifecycleState?.readOnly === true
+        ? "The Log Project is read-only"
+        : studioProjection === null
+          ? "The document projection is unavailable"
+          : selectionCount < 2
+            ? "Select at least two text elements; the last selected is the Key Element"
+            : "Arrange selected text elements relative to the Key Element";
+    for (const buttons of [
+      arrangementButtons.alignLeft,
+      arrangementButtons.alignCenter,
+      arrangementButtons.alignRight,
+      arrangementButtons.matchWidth,
+      arrangementButtons.matchHeight,
+    ]) {
+      for (const button of buttons) {
+        button.disabled = unavailable;
+        button.title = pairReason;
+        button.setAttribute("aria-disabled", String(unavailable));
+      }
+    }
+    const distributeUnavailable = unavailable || selectionCount < 3;
+    const distributeReason =
+      selectionCount < 3
+        ? "Select at least three text elements to distribute equal gaps"
+        : pairReason;
+    for (const button of arrangementButtons.distributeHorizontal) {
+      button.disabled = distributeUnavailable;
+      button.title = distributeReason;
+      button.setAttribute("aria-disabled", String(distributeUnavailable));
+    }
+  }
+
+  async function arrangeSelectedText(
+    operation: TextArrangementOperation,
+    commandSource: "keyboard" | "ribbon" | "context-menu",
+  ): Promise<void> {
+    const apis = studioApis();
+    const keyElementId = selectedSceneNodeId;
+    const occurrenceNodeIds = [...selectedTextNodeIds];
+    if (
+      apis === null ||
+      studioProjection === null ||
+      keyElementId === null ||
+      !selectedTextNodeIds.has(keyElementId)
+    ) {
+      status.textContent = "Arrangement is unavailable until an exact text selection is active.";
+      return;
+    }
+    if (lifecycleState?.readOnly === true) {
+      status.textContent = "This Log Project is read-only; arrangement commands are unavailable.";
+      return;
+    }
+    status.textContent = `${humanize(operation.kind)} from ${commandSource}…`;
+    const response = await apis.studio.arrangeTextOccurrences({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      keyElementId,
+      occurrenceNodeIds,
+      operation,
+    });
+    if (!response.accepted || response.workingRevision === undefined) {
+      status.textContent = `Arrangement rejected: ${humanize(response.code ?? "unknown")}.`;
+      return;
+    }
+    const unchanged = response.code === "ARRANGEMENT_UNCHANGED";
+    if (unchanged) {
+      status.textContent = "Arrangement produced no geometry change; history was not modified.";
+      return;
+    }
+    await refreshStudioProjection(
+      response.workingRevision,
+      `${occurrenceNodeIds.length} selected text element${occurrenceNodeIds.length === 1 ? "" : "s"} arranged from ${commandSource}; Undo restores the prior geometry.`,
+    );
+  }
+
   function activateRibbonTab(tabId: string): void {
     const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")];
     const panels = [...document.querySelectorAll<HTMLElement>("[data-ribbon-panel]")];
@@ -2210,43 +2342,75 @@ async function main(): Promise<void> {
     nodeId: string | null = null,
     additiveTextSelection = false,
   ): void {
-    selectedSemanticId = semanticId;
-    selectedSceneNodeId = nodeId;
     showPropertyPanel("element");
     columnResizeProperties.hidden = true;
     regionResizeProperties.hidden = true;
-    const nodes = page.nodes.filter((node) => node.semanticId === semanticId);
-    const representative =
-      (nodeId === null ? undefined : nodes.find((node) => node.id === nodeId)) ??
-      nodes.find((node) => node.kind === "text") ??
-      nodes[0];
+    const requestedNodes = page.nodes.filter((node) => node.semanticId === semanticId);
+    const requestedRepresentative =
+      (nodeId === null ? undefined : requestedNodes.find((node) => node.id === nodeId)) ??
+      requestedNodes.find((node) => node.kind === "text") ??
+      requestedNodes[0];
     const exactTextNode =
-      representative?.kind === "text" && representative.id === nodeId ? representative : undefined;
+      requestedRepresentative?.kind === "text" && requestedRepresentative.id === nodeId
+        ? requestedRepresentative
+        : undefined;
     if (additiveTextSelection && exactTextNode !== undefined) {
-      selectedTextNodeIds.add(exactTextNode.id);
+      if (selectedTextNodeIds.has(exactTextNode.id)) selectedTextNodeIds.delete(exactTextNode.id);
+      else selectedTextNodeIds.add(exactTextNode.id);
+      selectedSceneNodeId = [...selectedTextNodeIds].at(-1) ?? null;
+      selectedSemanticId =
+        page.nodes.find(({ id }) => id === selectedSceneNodeId)?.semanticId ?? semanticId;
     } else {
       selectedTextNodeIds.clear();
-      if (exactTextNode !== undefined) selectedTextNodeIds.add(exactTextNode.id);
+      if (exactTextNode !== undefined) {
+        selectedTextNodeIds.add(exactTextNode.id);
+        selectedSceneNodeId = exactTextNode.id;
+      } else selectedSceneNodeId = nodeId;
+      selectedSemanticId = semanticId;
+    }
+    if (additiveTextSelection && exactTextNode !== undefined && selectedTextNodeIds.size === 0) {
+      selectedSemanticId = null;
+      selectedSceneNodeId = null;
+      installSvg();
+      renderTree();
+      updateArrangementControls();
+      emptySelection.hidden = false;
+      selectionProperties.hidden = true;
+      selectionStatus.textContent = "No selection";
+      status.textContent = "Selection cleared.";
+      return;
     }
     if (
       nodeId === null &&
-      representative?.kind === "text" &&
-      nodes.filter((node) => node.kind === "text").length === 1
+      requestedRepresentative?.kind === "text" &&
+      requestedNodes.filter((node) => node.kind === "text").length === 1
     ) {
-      selectedSceneNodeId = representative.id;
-      selectedTextNodeIds.add(representative.id);
+      selectedSceneNodeId = requestedRepresentative.id;
+      selectedTextNodeIds.add(requestedRepresentative.id);
     }
+    const effectiveSemanticId = selectedSemanticId ?? semanticId;
+    const nodes = page.nodes.filter((node) => node.semanticId === effectiveSemanticId);
+    const representative =
+      (selectedSceneNodeId === null
+        ? undefined
+        : nodes.find((node) => node.id === selectedSceneNodeId)) ??
+      nodes.find((node) => node.kind === "text") ??
+      nodes[0];
     installSvg();
     renderTree();
+    updateArrangementControls();
     if (representative === undefined) {
       emptySelection.hidden = false;
       selectionProperties.hidden = true;
-      selectionStatus.textContent = semanticId;
+      selectionStatus.textContent = effectiveSemanticId;
       return;
     }
     emptySelection.hidden = true;
     selectionProperties.hidden = false;
-    selectionName.textContent = humanize(semanticId);
+    selectionName.textContent =
+      selectedTextNodeIds.size > 1
+        ? `${selectedTextNodeIds.size} text elements`
+        : humanize(effectiveSemanticId);
     selectionRole.textContent = humanize(representative.role);
     selectionProvenance.textContent =
       representative.provenance?.provenanceClass === "effective-override"
@@ -2254,13 +2418,14 @@ async function main(): Promise<void> {
         : representative.provenance?.provenanceClass === "source"
           ? "Source original"
           : "Computed layout";
-    propertySemanticId.textContent = semanticId;
+    propertySemanticId.textContent =
+      selectedTextNodeIds.size > 1 ? "Mixed selection" : effectiveSemanticId;
     propertyNodeId.textContent = representative.id;
     propertyRole.textContent = representative.role;
     propertyNodeCount.textContent = String(nodes.length);
     const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
-    const selectedColumn = plannedPage?.columns.find(({ id }) => id === semanticId);
-    const selectedRegion = plannedPage?.regions.find(({ id }) => id === semanticId);
+    const selectedColumn = plannedPage?.columns.find(({ id }) => id === effectiveSemanticId);
+    const selectedRegion = plannedPage?.regions.find(({ id }) => id === effectiveSemanticId);
     const columnConstraint = studioProjection?.columnResizeConstraints.find(
       ({ columnId }) => columnId === selectedColumn?.id,
     );
@@ -2399,7 +2564,7 @@ async function main(): Promise<void> {
       textStyleHelp.textContent = `${textStyleHelp.textContent} This occurrence · inherited values resolve into a project-owned template override · edits use document history.`;
       if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
     }
-    const editable = editableFor(semanticId);
+    const editable = editableFor(effectiveSemanticId);
     const legacyColumnWidth = editable?.property === "description-column-width-mpt";
     const effective = legacyColumnWidth
       ? (selectedColumn?.widthMpt ?? null)
@@ -2430,14 +2595,48 @@ async function main(): Promise<void> {
     propertySourceOriginal.textContent =
       sourceOriginal === null ? "Computed" : String(sourceOriginal);
     propertyEffectiveValue.textContent = effective === null ? "Computed" : String(effective);
-    selectionStatus.textContent = `${humanize(semanticId)} · ${representative.id}`;
+    selectionStatus.textContent = `${humanize(effectiveSemanticId)} · ${representative.id}`;
     if (selectedTextNodeIds.size > 1) {
       selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; primary ${representative.id}`;
     }
     status.textContent =
       selectedTextNodeIds.size > 1
-        ? `${selectedTextNodeIds.size} exact text occurrences selected. Ctrl-click adds another; Properties shows the primary occurrence.`
+        ? `${selectedTextNodeIds.size} exact text occurrences selected. Shift-click toggles membership; the orange occurrence is the Key Element.`
         : `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
+  }
+
+  function clearSelection(): void {
+    selectedSemanticId = null;
+    selectedSceneNodeId = null;
+    selectedTextNodeIds.clear();
+    installSvg();
+    renderTree();
+    updateArrangementControls();
+    emptySelection.hidden = false;
+    selectionProperties.hidden = true;
+    selectionStatus.textContent = "No selection";
+    status.textContent = "Selection cleared.";
+  }
+
+  function selectAllTextOccurrences(): void {
+    const textNodes = page.nodes.filter(
+      (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        node.kind === "text",
+    );
+    const key = textNodes.at(-1);
+    if (key === undefined) return;
+    select(key.semanticId, key.id);
+    selectedTextNodeIds.clear();
+    for (const node of textNodes) selectedTextNodeIds.add(node.id);
+    selectedSemanticId = key.semanticId;
+    selectedSceneNodeId = key.id;
+    installSvg();
+    renderTree();
+    updateArrangementControls();
+    selectionName.textContent = `${textNodes.length} text elements`;
+    propertySemanticId.textContent = "Mixed selection";
+    selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${key.id}`;
+    status.textContent = `${textNodes.length} text occurrences selected on the active page; the orange occurrence is the Key Element.`;
   }
 
   async function refreshStudioProjection(
@@ -2467,6 +2666,7 @@ async function main(): Promise<void> {
         }
       }
       textAllSelectedScope.disabled = selectedTextNodeIds.size < 2;
+      updateArrangementControls();
       installSvg();
       renderTree();
     }
@@ -3276,7 +3476,11 @@ async function main(): Promise<void> {
     const occurrence = target.closest<SVGElement>("[data-semantic-id][data-node-id]");
     const semantic = occurrence?.dataset["semanticId"];
     if (semantic !== undefined) {
-      select(semantic, occurrence?.dataset["nodeId"] ?? null, event.ctrlKey || event.metaKey);
+      select(
+        semantic,
+        occurrence?.dataset["nodeId"] ?? null,
+        event.shiftKey || event.ctrlKey || event.metaKey,
+      );
     }
   });
   pageHost.addEventListener("contextmenu", (event) => {
@@ -3288,7 +3492,7 @@ async function main(): Promise<void> {
     const nodeId = occurrence?.dataset["nodeId"];
     if (semantic === undefined || nodeId === undefined) return;
     event.preventDefault();
-    select(semantic, nodeId, selectedTextNodeIds.has(nodeId));
+    if (!selectedTextNodeIds.has(nodeId)) select(semantic, nodeId);
     openCanvasContextMenu();
   });
   document.addEventListener("pointerdown", (event) => {
@@ -3434,6 +3638,16 @@ async function main(): Promise<void> {
     "toggle-grid-snap": () => toggleSnapping("grid"),
     "add-vertical-guide": () => addPageGuide("vertical"),
     "add-horizontal-guide": () => addPageGuide("horizontal"),
+    "align-left": () => void arrangeSelectedText({ kind: "align", alignment: "left" }, "ribbon"),
+    "align-center": () =>
+      void arrangeSelectedText({ kind: "align", alignment: "horizontal-center" }, "ribbon"),
+    "align-right": () => void arrangeSelectedText({ kind: "align", alignment: "right" }, "ribbon"),
+    "match-width": () =>
+      void arrangeSelectedText({ kind: "match-size", dimension: "width" }, "ribbon"),
+    "match-height": () =>
+      void arrangeSelectedText({ kind: "match-size", dimension: "height" }, "ribbon"),
+    "distribute-horizontal": () =>
+      void arrangeSelectedText({ kind: "distribute", distribution: "horizontal-gaps" }, "ribbon"),
     "inspect-samples": () => select("column-sample"),
     "inspect-track": () => select("column-data-track"),
     "validate-document": () => void validateDocument(),
@@ -3448,6 +3662,33 @@ async function main(): Promise<void> {
     "property-tab-element": () => showPropertyPanel("element"),
     "property-tab-diagnostics": showDiagnostics,
     "context-properties": focusSelectedProperties,
+    "context-align-left": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "left" }, "context-menu");
+    },
+    "context-align-center": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "horizontal-center" }, "context-menu");
+    },
+    "context-align-right": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "right" }, "context-menu");
+    },
+    "context-match-width": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "match-size", dimension: "width" }, "context-menu");
+    },
+    "context-match-height": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "match-size", dimension: "height" }, "context-menu");
+    },
+    "context-distribute-horizontal": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText(
+        { kind: "distribute", distribution: "horizontal-gaps" },
+        "context-menu",
+      );
+    },
     "apply-property": () => void applySelectedProperty(),
     "apply-column-width": () => {
       const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
@@ -3554,8 +3795,50 @@ async function main(): Promise<void> {
       hideCanvasContextMenu();
       return;
     }
+    const editableTarget =
+      event.target instanceof HTMLElement &&
+      (event.target.isContentEditable ||
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement);
+    if (
+      event.key === "Escape" &&
+      !editableTarget &&
+      (selectedSceneNodeId !== null || selectedTextNodeIds.size > 0)
+    ) {
+      event.preventDefault();
+      clearSelection();
+      return;
+    }
+    if (
+      !event.defaultPrevented &&
+      !editableTarget &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      event.key.startsWith("Arrow") &&
+      selectedTextNodeIds.size > 0
+    ) {
+      const stepMpt = event.altKey ? 100 : event.shiftKey ? 10_000 : 1_000;
+      const deltaXMpt =
+        event.key === "ArrowLeft" ? -stepMpt : event.key === "ArrowRight" ? stepMpt : 0;
+      const deltaYMpt =
+        event.key === "ArrowUp" ? -stepMpt : event.key === "ArrowDown" ? stepMpt : 0;
+      event.preventDefault();
+      void arrangeSelectedText({ kind: "nudge", deltaXMpt, deltaYMpt }, "keyboard");
+      return;
+    }
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
+    if (key === "a" && !editableTarget) {
+      event.preventDefault();
+      selectAllTextOccurrences();
+      return;
+    }
+    if (key === "z" || key === "y") {
+      event.preventDefault();
+      void navigateHistory(key === "y" || event.shiftKey ? "redo" : "undo");
+      return;
+    }
     if (key === "pageup" || key === "pagedown") {
       event.preventDefault();
       void invokeLifecycle(

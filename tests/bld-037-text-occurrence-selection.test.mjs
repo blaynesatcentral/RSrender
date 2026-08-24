@@ -118,7 +118,7 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /addEventListener\("contextmenu"/u);
   assert.match(
     entry,
-    /event\.preventDefault\(\);[\s\S]+select\(semantic, nodeId, selectedTextNodeIds\.has\(nodeId\)\);/u,
+    /event\.preventDefault\(\);[\s\S]+if \(!selectedTextNodeIds\.has\(nodeId\)\) select\(semantic, nodeId\);/u,
   );
   assert.match(entry, /propertyNodeId\.textContent = representative\.id/u);
   assert.match(entry, /propertiesScroll\.focus\(\)/u);
@@ -126,6 +126,7 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   assert.match(entry, /setTextOccurrenceStyle/u);
   assert.match(entry, /const applyScope = textStyleScope\.value/u);
   assert.match(entry, /event\.ctrlKey \|\| event\.metaKey/u);
+  assert.match(entry, /event\.shiftKey \|\| event\.ctrlKey \|\| event\.metaKey/u);
   assert.match(entry, /All selected applies typography/u);
   assert.match(entry, /boringLogTextColumnSemanticId/u);
   assert.match(entry, /Log Column default updates inherited text/u);

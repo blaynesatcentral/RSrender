@@ -626,6 +626,11 @@ textarea {
   stroke: #168ac0 !important;
   stroke-width: 1800 !important;
 }
+.svg-page .scene-node.is-key-element:not(g) {
+  filter: drop-shadow(0 0 1800px #d97706);
+  stroke: #d97706 !important;
+  stroke-width: 2200 !important;
+}
 .direct-manipulation-move-target {
   fill: transparent;
   pointer-events: all;
@@ -758,6 +763,14 @@ textarea {
 .canvas-context-menu button:focus-visible {
   background: #dcecf5;
   outline: 1px solid #7eb2cc;
+}
+.canvas-context-menu button:disabled {
+  opacity: 0.45;
+}
+.canvas-context-menu hr {
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid #d9dfe3;
 }
 .text-style-grid {
   display: grid;
