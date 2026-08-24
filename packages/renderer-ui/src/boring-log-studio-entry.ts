@@ -99,6 +99,12 @@ import {
   type BoringLogSnapTargetKind,
 } from "./boring-log-direct-manipulation.js";
 import { findCollisionFreeTextDuplicateOffset } from "./boring-log-authoring-placement.js";
+import {
+  resolveStudioContextMenuPosition,
+  resolveStudioPaneWidths,
+  studioPaneLimits,
+  type StudioPaneResizeTarget,
+} from "./boring-log-studio-viewport.js";
 
 type EditableValue = Readonly<{
   readonly semanticId: string;
@@ -451,6 +457,20 @@ async function main(): Promise<void> {
   const horizontalRuler = element<SVGSVGElement>("horizontal-ruler");
   const verticalRuler = element<SVGSVGElement>("vertical-ruler");
   const canvasStage = element<HTMLDivElement>("canvas-stage");
+  const ribbonQuery = document.querySelector<HTMLElement>(".ribbon");
+  if (ribbonQuery === null) throw new Error("Studio ribbon is unavailable");
+  const ribbon: HTMLElement = ribbonQuery;
+  const workspaceQuery = document.querySelector<HTMLElement>(".workspace");
+  if (workspaceQuery === null) throw new Error("Studio workspace is unavailable");
+  const workspace: HTMLElement = workspaceQuery;
+  const contentsPaneQuery = document.querySelector<HTMLElement>(".contents-pane");
+  if (contentsPaneQuery === null) throw new Error("Contents pane is unavailable");
+  const contentsPane: HTMLElement = contentsPaneQuery;
+  const propertiesPaneQuery = document.querySelector<HTMLElement>(".properties-pane");
+  if (propertiesPaneQuery === null) throw new Error("Properties pane is unavailable");
+  const propertiesPane: HTMLElement = propertiesPaneQuery;
+  const contentsSplitter = element<HTMLElement>("contents-splitter");
+  const propertiesSplitter = element<HTMLElement>("properties-splitter");
   const tree = element<HTMLDivElement>("contents-tree");
   const filter = element<HTMLInputElement>("contents-filter");
   const contentsOptions = element<HTMLButtonElement>("contents-options");
@@ -701,6 +721,18 @@ async function main(): Promise<void> {
         scrollTop: number;
       }>
     | undefined;
+  let paneResizeGesture:
+    | Readonly<{
+        pointerId: number;
+        resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">;
+        startClientX: number;
+        contentsWidth: number;
+        propertiesWidth: number;
+      }>
+    | undefined;
+  let contentsPaneWidth: number = studioPaneLimits.contents.default;
+  let propertiesPaneWidth: number = studioPaneLimits.properties.default;
+  let pinchZoomAccumulator = 0;
   let directManipulationGesture:
     | {
         readonly pointerId: number;
@@ -2767,8 +2799,21 @@ async function main(): Promise<void> {
     canvasContextMenu.hidden = true;
   }
 
-  function openCanvasContextMenu(): void {
+  function openCanvasContextMenu(clientX: number, clientY: number): void {
     canvasContextMenu.hidden = false;
+    canvasContextMenu.style.left = "0px";
+    canvasContextMenu.style.top = "0px";
+    const bounds = canvasContextMenu.getBoundingClientRect();
+    const position = resolveStudioContextMenuPosition({
+      clientX,
+      clientY,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      menuWidth: bounds.width,
+      menuHeight: bounds.height,
+    });
+    canvasContextMenu.style.left = `${position.left}px`;
+    canvasContextMenu.style.top = `${position.top}px`;
     contextProperties.focus();
   }
 
@@ -4185,6 +4230,88 @@ async function main(): Promise<void> {
     }
   }
 
+  function applyPaneWidths(
+    requestedContentsWidth: number,
+    requestedPropertiesWidth: number,
+    resizeTarget: StudioPaneResizeTarget,
+  ): void {
+    const resolved = resolveStudioPaneWidths({
+      workspaceWidth: workspace.clientWidth,
+      requestedContentsWidth,
+      requestedPropertiesWidth,
+      resizeTarget,
+    });
+    contentsPaneWidth = resolved.contentsWidth;
+    propertiesPaneWidth = resolved.propertiesWidth;
+    workspace.style.setProperty("--contents-pane-width", `${resolved.contentsWidth}px`);
+    workspace.style.setProperty("--properties-pane-width", `${resolved.propertiesWidth}px`);
+    contentsSplitter.setAttribute("aria-valuenow", String(resolved.contentsWidth));
+    propertiesSplitter.setAttribute("aria-valuenow", String(resolved.propertiesWidth));
+    canvasStage.dataset["viewportWidth"] = String(resolved.canvasWidth);
+    if (zoomMode === "fit") requestAnimationFrame(fitPage);
+  }
+
+  function beginPaneResize(
+    event: PointerEvent,
+    resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">,
+  ): void {
+    if (event.button !== 0 || paneResizeGesture !== undefined) return;
+    const splitter = resizeTarget === "contents" ? contentsSplitter : propertiesSplitter;
+    paneResizeGesture = Object.freeze({
+      pointerId: event.pointerId,
+      resizeTarget,
+      startClientX: event.clientX,
+      contentsWidth: contentsPane.getBoundingClientRect().width,
+      propertiesWidth: propertiesPane.getBoundingClientRect().width,
+    });
+    splitter.setPointerCapture(event.pointerId);
+    splitter.classList.add("is-resizing");
+    workspace.classList.add("is-resizing-panes");
+    event.preventDefault();
+  }
+
+  function updatePaneResize(event: PointerEvent): void {
+    const gesture = paneResizeGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const delta = event.clientX - gesture.startClientX;
+    applyPaneWidths(
+      gesture.resizeTarget === "contents" ? gesture.contentsWidth + delta : gesture.contentsWidth,
+      gesture.resizeTarget === "properties"
+        ? gesture.propertiesWidth - delta
+        : gesture.propertiesWidth,
+      gesture.resizeTarget,
+    );
+    event.preventDefault();
+  }
+
+  function finishPaneResize(event: PointerEvent): void {
+    const gesture = paneResizeGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const splitter = gesture.resizeTarget === "contents" ? contentsSplitter : propertiesSplitter;
+    if (splitter.hasPointerCapture(event.pointerId))
+      splitter.releasePointerCapture(event.pointerId);
+    splitter.classList.remove("is-resizing");
+    workspace.classList.remove("is-resizing-panes");
+    paneResizeGesture = undefined;
+    status.textContent = `Studio panes resized: Contents ${contentsPaneWidth}px, Properties ${propertiesPaneWidth}px.`;
+  }
+
+  function resizePaneFromKeyboard(
+    event: KeyboardEvent,
+    resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">,
+  ): void {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const step = event.shiftKey ? 40 : 10;
+    applyPaneWidths(
+      resizeTarget === "contents" ? contentsPaneWidth + direction * step : contentsPaneWidth,
+      resizeTarget === "properties" ? propertiesPaneWidth - direction * step : propertiesPaneWidth,
+      resizeTarget,
+    );
+    event.preventDefault();
+    status.textContent = `Studio panes resized: Contents ${contentsPaneWidth}px, Properties ${propertiesPaneWidth}px.`;
+  }
+
   function applyZoom(value: number, mode: "fit" | "manual" = "manual"): void {
     const bounded = Math.min(160, Math.max(40, Math.round(value / 10) * 10));
     zoomMode = mode;
@@ -4195,6 +4322,36 @@ async function main(): Promise<void> {
     canvasScale.textContent = `${bounded}%`;
     pageShadow.className = `page-shadow zoom-${bounded}`;
     pageShadow.dataset["zoomMode"] = mode;
+  }
+
+  function applyTouchpadPinchZoom(event: WheelEvent): void {
+    if (!event.ctrlKey) {
+      if (event.shiftKey && event.deltaX === 0 && event.deltaY !== 0) {
+        canvasStage.scrollLeft += event.deltaY;
+        event.preventDefault();
+      }
+      return;
+    }
+    if (event.deltaY === 0) return;
+    event.preventDefault();
+    pinchZoomAccumulator -= event.deltaY;
+    if (Math.abs(pinchZoomAccumulator) < 12) return;
+    const direction = pinchZoomAccumulator > 0 ? 1 : -1;
+    pinchZoomAccumulator = 0;
+    const current = Number(zoom.value);
+    const next = Math.min(160, Math.max(40, current + direction * 10));
+    if (next === current) return;
+    const stageBounds = canvasStage.getBoundingClientRect();
+    const localX = event.clientX - stageBounds.left;
+    const localY = event.clientY - stageBounds.top;
+    const focusX = (canvasStage.scrollLeft + localX) / Math.max(1, canvasStage.scrollWidth);
+    const focusY = (canvasStage.scrollTop + localY) / Math.max(1, canvasStage.scrollHeight);
+    applyZoom(next);
+    requestAnimationFrame(() => {
+      canvasStage.scrollLeft = focusX * canvasStage.scrollWidth - localX;
+      canvasStage.scrollTop = focusY * canvasStage.scrollHeight - localY;
+    });
+    status.textContent = `Canvas zoomed to ${next}% with precision-touchpad pinch.`;
   }
 
   function fitPage(): void {
@@ -4530,7 +4687,7 @@ async function main(): Promise<void> {
     if (semantic === undefined || nodeId === undefined) return;
     event.preventDefault();
     if (!selectedTextNodeIds.has(nodeId)) select(semantic, nodeId);
-    openCanvasContextMenu();
+    openCanvasContextMenu(event.clientX, event.clientY);
   });
   document.addEventListener("pointerdown", (event) => {
     if (!canvasContextMenu.hidden && !canvasContextMenu.contains(event.target as Node)) {
@@ -4610,6 +4767,43 @@ async function main(): Promise<void> {
   };
   canvasStage.addEventListener("pointerup", finishPan);
   canvasStage.addEventListener("pointercancel", finishPan);
+  canvasStage.addEventListener("wheel", applyTouchpadPinchZoom, { passive: false });
+  canvasStage.addEventListener("scroll", hideCanvasContextMenu, { passive: true });
+  ribbon.addEventListener(
+    "wheel",
+    (event) => {
+      if (
+        event.ctrlKey ||
+        event.deltaX !== 0 ||
+        event.deltaY === 0 ||
+        ribbon.scrollWidth <= ribbon.clientWidth
+      )
+        return;
+      ribbon.scrollLeft += event.deltaY;
+      event.preventDefault();
+    },
+    { passive: false },
+  );
+  const installPaneSplitter = (
+    splitter: HTMLElement,
+    resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">,
+  ): void => {
+    splitter.addEventListener("pointerdown", (event) => beginPaneResize(event, resizeTarget));
+    splitter.addEventListener("pointermove", updatePaneResize);
+    splitter.addEventListener("pointerup", finishPaneResize);
+    splitter.addEventListener("pointercancel", finishPaneResize);
+    splitter.addEventListener("keydown", (event) => resizePaneFromKeyboard(event, resizeTarget));
+    splitter.addEventListener("dblclick", () => {
+      applyPaneWidths(
+        resizeTarget === "contents" ? studioPaneLimits.contents.default : contentsPaneWidth,
+        resizeTarget === "properties" ? studioPaneLimits.properties.default : propertiesPaneWidth,
+        resizeTarget,
+      );
+      status.textContent = `${resizeTarget === "contents" ? "Contents" : "Properties"} pane reset to its default width.`;
+    });
+  };
+  installPaneSplitter(contentsSplitter, "contents");
+  installPaneSplitter(propertiesSplitter, "properties");
   filter.addEventListener("input", renderTree);
   zoom.addEventListener("input", () => applyZoom(Number(zoom.value)));
 
@@ -4898,7 +5092,8 @@ async function main(): Promise<void> {
     textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
   });
   window.addEventListener("resize", () => {
-    if (zoomMode === "fit") requestAnimationFrame(fitPage);
+    hideCanvasContextMenu();
+    applyPaneWidths(contentsPaneWidth, propertiesPaneWidth, "viewport");
   });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && pendingKeyboardNudge !== undefined) {
@@ -5046,6 +5241,7 @@ async function main(): Promise<void> {
   });
 
   installSvg();
+  applyPaneWidths(contentsPaneWidth, propertiesPaneWidth, "viewport");
   renderTree();
   renderDiagnostics();
   updateContentsOptions();

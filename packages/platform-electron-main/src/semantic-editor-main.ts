@@ -1162,7 +1162,12 @@ function emitStudioProbePhase(phase: string): void {
 }
 
 async function pageValue(window: BrowserWindow, expression: string): Promise<unknown> {
-  return window.webContents.executeJavaScript(expression, true);
+  return Promise.race([
+    window.webContents.executeJavaScript(expression, true),
+    new Promise<never>((_resolve, reject) =>
+      setTimeout(() => reject(new Error("PACKAGED_PAGE_EVALUATION_TIMEOUT")), 10_000),
+    ),
+  ]);
 }
 
 async function waitFor(
@@ -1717,9 +1722,12 @@ async function runPublicationPackageProbe(
 
 async function runStudioProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
   emitStudioProbePhase("started");
+  const expectedReadyStatus = studioEditingMode
+    ? "Untitled Log Project ready."
+    : "Structured boring log scene rendered as semantic SVG.";
   await waitFor(
     window,
-    `document.querySelectorAll("#svg-page > svg").length === 1 && document.body.dataset.authoritativeFileBound === "false" && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."`,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === ${JSON.stringify(expectedReadyStatus)}`,
     "WAIT_STUDIO",
     60_000,
   );
@@ -1868,11 +1876,24 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       window,
       `(() => {
         const tabStates = {};
+        let layoutContained = false;
+        let layoutRibbonPanned = false;
         for (const tab of document.querySelectorAll("[data-ribbon-tab]")) {
           if (!(tab instanceof HTMLButtonElement)) continue;
           tab.click();
           const id = tab.dataset.ribbonTab ?? "";
           tabStates[id] = tab.getAttribute("aria-selected") === "true" && document.querySelectorAll('[data-ribbon-panel]:not([hidden])').length >= 1 && [...document.querySelectorAll('[data-ribbon-panel]:not([hidden])')].every((panel) => panel.dataset.ribbonPanel === id);
+          if (id === "layout") {
+            const propertiesBounds = document.querySelector(".properties-pane")?.getBoundingClientRect();
+            layoutContained =
+              propertiesBounds !== undefined && propertiesBounds.right <= window.innerWidth + 1;
+            const ribbon = document.querySelector(".ribbon");
+            if (ribbon instanceof HTMLElement && ribbon.scrollWidth > ribbon.clientWidth) {
+              ribbon.scrollLeft = 0;
+              ribbon.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 120 }));
+              layoutRibbonPanned = ribbon.scrollLeft > 0;
+            } else layoutRibbonPanned = true;
+          }
         }
         document.querySelector('[data-ribbon-tab="home"]')?.click();
         const rowsBefore = document.querySelectorAll("#contents-tree .tree-row").length;
@@ -1906,6 +1927,28 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         const diagnosticsShown = document.getElementById("property-diagnostics-panel")?.hidden === false;
         document.getElementById("property-tab-element")?.click();
         const elementShown = document.getElementById("property-element-panel")?.hidden === false;
+        const propertiesSplitter = document.getElementById("properties-splitter");
+        const propertiesPane = document.querySelector(".properties-pane");
+        if (!(propertiesSplitter instanceof HTMLElement) || !(propertiesPane instanceof HTMLElement)) return { invalid: "missing-pane-resize" };
+        const propertiesWidthBefore = Math.round(propertiesPane.getBoundingClientRect().width);
+        propertiesSplitter.focus();
+        propertiesSplitter.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowLeft" }));
+        const propertiesWidthAfter = Math.round(propertiesPane.getBoundingClientRect().width);
+        const selectedNode = document.querySelector('#svg-page [data-semantic-id^="lithology:"][data-node-id]');
+        if (!(selectedNode instanceof SVGElement)) return { invalid: "missing-context-target" };
+        selectedNode.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: window.innerWidth - 2, clientY: window.innerHeight - 2 }));
+        const contextMenu = document.getElementById("canvas-context-menu");
+        if (!(contextMenu instanceof HTMLElement)) return { invalid: "missing-context-menu" };
+        const contextBounds = contextMenu.getBoundingClientRect();
+        const contextContained = !contextMenu.hidden && contextBounds.right <= window.innerWidth && contextBounds.bottom <= window.innerHeight && contextBounds.width <= 220 && contextBounds.height <= 420;
+        document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+        const zoomControl = document.getElementById("zoom");
+        const stage = document.getElementById("canvas-stage");
+        if (!(zoomControl instanceof HTMLInputElement) || !(stage instanceof HTMLElement)) return { invalid: "missing-canvas-stage" };
+        document.getElementById("actual-size")?.click();
+        const pinchEvent = new WheelEvent("wheel", { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -120, clientX: stage.getBoundingClientRect().left + 20, clientY: stage.getBoundingClientRect().top + 20 });
+        const pinchDispatch = stage.dispatchEvent(pinchEvent);
+        const pinchZoom = Number(zoomControl.value);
         const scroll = document.getElementById("properties-scroll");
         if (!(scroll instanceof HTMLElement)) return { invalid: "missing-properties-scroll" };
         scroll.scrollTop = scroll.scrollHeight;
@@ -1916,11 +1959,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         const panSelectionGated = document.getElementById("property-semantic-id")?.textContent === selectedBeforePan;
         const ownedCommands = [...document.querySelectorAll("button[id]")].every((button) => button instanceof HTMLButtonElement && typeof button.dataset.commandOwned === "string");
         const ownedCommandCount = Number(document.body.dataset.ownedCommandCount);
-        const stage = document.getElementById("canvas-stage");
-        if (!(stage instanceof HTMLElement)) return { invalid: "missing-canvas-stage" };
         stage.scrollTop = 0;
         return {
           tabStates,
+          layoutContained,
+          layoutRibbonPanned,
+          propertiesRight: Math.round(document.querySelector(".properties-pane")?.getBoundingClientRect().right ?? -1),
+          viewportWidth: window.innerWidth,
+          workspaceWidth: Math.round(document.querySelector(".workspace")?.getBoundingClientRect().width ?? -1),
           rowsBefore,
           rowsCollapsed,
           rowsExpanded,
@@ -1935,6 +1981,12 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           allPropertiesExpanded,
           diagnosticsShown,
           elementShown,
+          propertiesWidthBefore,
+          propertiesWidthAfter,
+          contextContained,
+          contextMenuHidden: contextMenu.hidden,
+          pinchDispatch,
+          pinchZoom,
           overflowY: getComputedStyle(scroll).overflowY,
           scrollable: scroll.scrollHeight > scroll.clientHeight,
           scrollTop: scroll.scrollTop,
@@ -1964,6 +2016,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       interactions["allPropertiesExpanded"] === true &&
       interactions["diagnosticsShown"] === true &&
       interactions["elementShown"] === true &&
+      interactions["layoutContained"] === true &&
+      interactions["layoutRibbonPanned"] === true &&
+      (interactions["propertiesWidthAfter"] as number) >
+        (interactions["propertiesWidthBefore"] as number) &&
+      interactions["contextContained"] === true &&
+      interactions["contextMenuHidden"] === true &&
+      interactions["pinchDispatch"] === false &&
+      interactions["pinchZoom"] === 110 &&
       interactions["overflowY"] === "auto" &&
       interactions["scrollable"] === true &&
       (interactions["scrollTop"] as number) > 0 &&
@@ -1971,7 +2031,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       interactions["panSelectionGated"] === true &&
       interactions["ownedCommands"] === true &&
       (interactions["ownedCommandCount"] as number) >= 25,
-    "STUDIO_INTERACTIONS_INVALID",
+    `STUDIO_INTERACTIONS_INVALID:${JSON.stringify(interactions)}`,
   );
   const stageBounds = record(
     await pageValue(
@@ -4342,6 +4402,11 @@ async function main(): Promise<void> {
     },
   });
   editorWindow = window;
+  window.webContents.on("console-message", (details, level, message) => {
+    if (!probeMode || level < 3) return;
+    const currentMessage = details.message.length > 0 ? details.message : message;
+    probeFailure = `RENDERER_CONSOLE:${currentMessage}`.slice(0, 256);
+  });
   const brokerResult = createDocumentRouteBroker({
     expectedWindow: window,
     expectedWebContents: window.webContents,

@@ -20,7 +20,8 @@ body {
 }
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 .app-shell {
@@ -28,7 +29,7 @@ textarea {
   display: grid;
   grid-template-rows: 40px 34px 82px 42px minmax(0, 1fr) 28px;
   height: 100vh;
-  min-width: 980px;
+  min-width: 752px;
 }
 .titlebar {
   display: flex;
@@ -109,7 +110,12 @@ textarea {
 .ribbon {
   display: flex;
   align-items: stretch;
+  min-width: 0;
   padding: 6px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
   background: #fff;
   border-bottom: 1px solid #b8c2c9;
   box-shadow: 0 1px 2px #23313c18;
@@ -117,6 +123,7 @@ textarea {
 .ribbon-group {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   gap: 3px;
   padding: 0 13px 15px;
@@ -326,11 +333,51 @@ textarea {
   border: 0;
 }
 .workspace {
+  --contents-pane-width: 244px;
+  --properties-pane-width: 292px;
+
   display: grid;
-  grid-template-columns: 244px minmax(480px, 1fr) 292px;
+  grid-template-columns:
+    var(--contents-pane-width) 6px minmax(320px, 1fr) 6px
+    var(--properties-pane-width);
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
   background: #cbd2d7;
+}
+.workspace-splitter {
+  position: relative;
+  z-index: 10;
+  min-width: 6px;
+  min-height: 0;
+  cursor: col-resize;
+  touch-action: none;
+  background: #d5dce0;
+  border-left: 1px solid #aeb8bf;
+  border-right: 1px solid #aeb8bf;
+}
+.workspace-splitter::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 2px;
+  height: 38px;
+  transform: translateY(-50%);
+  border-left: 1px solid #8999a3;
+  border-right: 1px solid #8999a3;
+}
+.workspace-splitter:hover,
+.workspace-splitter:focus-visible,
+.workspace-splitter.is-resizing {
+  outline: 0;
+  background: #90c5dd;
+  border-color: #347fa3;
+}
+.workspace.is-resizing-panes,
+.workspace.is-resizing-panes * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 .pane {
   min-width: 0;
@@ -346,6 +393,7 @@ textarea {
 }
 .properties-pane {
   display: grid;
+  container: properties-pane / inline-size;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
@@ -581,6 +629,8 @@ textarea {
   place-items: start center;
   padding: 28px;
   background-color: #c9ced2;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
 }
 .canvas-stage.is-pan-mode {
   cursor: grab;
@@ -874,11 +924,16 @@ textarea {
 }
 .canvas-context-menu {
   position: fixed;
-  top: 124px;
-  right: 292px;
+  top: 8px;
+  left: 8px;
   z-index: 40;
-  min-width: 168px;
-  padding: 5px;
+  width: min(220px, calc(100vw - 16px));
+  max-height: min(420px, calc(100vh - 16px));
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border: 1px solid #8998a2;
   border-radius: 3px;
   background: #fff;
@@ -886,12 +941,17 @@ textarea {
 }
 .canvas-context-menu button {
   width: 100%;
-  padding: 7px 10px;
+  min-height: 27px;
+  padding: 5px 8px;
   border: 0;
   border-radius: 2px;
   background: transparent;
   color: #263944;
+  font-size: 11px;
   text-align: left;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .canvas-context-menu button:hover,
 .canvas-context-menu button:focus-visible {
@@ -927,6 +987,14 @@ textarea {
   border-radius: 2px;
   background: #fff;
   color: #263944;
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-style-grid option,
+.property-group option {
+  font-size: 11px;
 }
 .text-style-grid input[type="color"] {
   min-height: 32px;
@@ -1003,7 +1071,8 @@ textarea {
 }
 .selection-card strong {
   margin: 3px 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .selection-card small {
   color: #6d7c85;
@@ -1040,7 +1109,9 @@ textarea {
 }
 .property-group dd {
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
   color: #344650;
 }
 .property-group label {
@@ -1049,6 +1120,8 @@ textarea {
   color: #75828a;
 }
 .property-group textarea {
+  width: 100%;
+  min-width: 0;
   resize: none;
   padding: 7px;
   border: 1px solid #c9d1d6;
@@ -1092,7 +1165,8 @@ textarea {
 }
 .property-group p {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   line-height: 1.45;
   color: #4e606b;
 }
@@ -1158,10 +1232,21 @@ textarea {
   overflow: hidden;
   clip-path: inset(50%);
 }
-@media (max-width: 1180px) {
-  .workspace {
-    grid-template-columns: 210px minmax(440px, 1fr) 255px;
+@container properties-pane (max-width: 340px) {
+  .text-style-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+@container properties-pane (max-width: 290px) {
+  .property-group dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .property-group dt {
+    margin-top: 4px;
+    font-weight: 600;
+  }
+}
+@media (max-width: 1180px) {
   .ribbon-message {
     display: none;
   }

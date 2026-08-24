@@ -51,3 +51,11 @@ export {
   type BoringLogDirectManipulationResult,
   type BoringLogSnapResult,
 } from "./boring-log-direct-manipulation.js";
+export {
+  resolveStudioContextMenuPosition,
+  resolveStudioPaneWidths,
+  studioPaneLimits,
+  type StudioContextMenuPosition,
+  type StudioPaneResizeTarget,
+  type StudioPaneWidths,
+} from "./boring-log-studio-viewport.js";
