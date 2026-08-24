@@ -144,3 +144,35 @@ test("BLD-040 exposes shared visibility, lock, and drawing-order commands", asyn
   assert.match(stylesheet, /\.tree-row\.is-hidden-element/u);
   assert.match(stylesheet, /\.tree-row\.is-locked-element/u);
 });
+
+test("BLD-040 exposes a shared persisted layout clipboard command surface", async () => {
+  const html = createBoringLogStudioHtml(null);
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  for (const id of [
+    "copy-selection",
+    "cut-selection",
+    "paste-selection",
+    "duplicate-selection",
+    "delete-selection",
+    "context-copy-selection",
+    "context-cut-selection",
+    "context-paste-selection",
+    "context-duplicate-selection",
+    "context-delete-selection",
+  ]) {
+    assert.match(html, new RegExp(`id="${id}"`, "u"));
+  }
+  assert.match(entry, /textClipboardNodeIds/u);
+  assert.match(entry, /function copySelectedText\(/u);
+  assert.match(entry, /async function cutSelectedText\(/u);
+  assert.match(entry, /function pasteCopiedText\(/u);
+  assert.match(entry, /createdOccurrenceNodeIds/u);
+  assert.match(entry, /offsetXMpt: 10_000, offsetYMpt: 10_000/u);
+  assert.match(entry, /event\.key === "Delete"/u);
+  for (const key of ["c", "x", "v", "d"]) {
+    assert.match(entry, new RegExp(`key === "${key}"`, "u"));
+  }
+});

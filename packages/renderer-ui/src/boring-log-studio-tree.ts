@@ -37,10 +37,20 @@ export function buildBoringLogStudioTree(
   for (const semanticId of page.semanticOrder) {
     if (represented.has(semanticId)) continue;
     const node = page.nodes.find((candidate) => candidate.semanticId === semanticId);
-    const parent = extraParent(semanticId);
+    const sceneParent =
+      node?.id.startsWith("node:clone:") === true
+        ? page.nodes.find(({ id }) => id === node.parentId)?.semanticId
+        : undefined;
+    const parent = extraParent(semanticId) ?? sceneParent ?? null;
     if (node === undefined || parent === null) continue;
     const children = extras.get(parent) ?? [];
-    children.push({ semanticId, label: humanize(semanticId), icon: "·" });
+    children.push({
+      semanticId,
+      label: node.id.startsWith("node:clone:")
+        ? `${humanize(node.role)} (Copy)`
+        : humanize(semanticId),
+      icon: "·",
+    });
     extras.set(parent, children);
     represented.add(semanticId);
   }
@@ -60,14 +70,17 @@ export function buildBoringLogStudioTree(
       level: 2,
       icon: "▤",
     },
-    {
-      semanticId: "region-depth-body",
-      parentSemanticId: "page-root",
-      label: "Depth log body",
-      level: 2,
-      icon: "▥",
-    },
   ];
+  for (const child of extras.get("region-header") ?? []) {
+    mutable.push({ ...child, parentSemanticId: "region-header", level: 3 });
+  }
+  mutable.push({
+    semanticId: "region-depth-body",
+    parentSemanticId: "page-root",
+    label: "Depth log body",
+    level: 2,
+    icon: "▥",
+  });
   for (const column of pagePlan.columns) {
     mutable.push({
       semanticId: column.id,
@@ -87,6 +100,9 @@ export function buildBoringLogStudioTree(
     level: 2,
     icon: "▧",
   });
+  for (const child of extras.get("region-footer") ?? []) {
+    mutable.push({ ...child, parentSemanticId: "region-footer", level: 3 });
+  }
   const parentIds = new Set(
     mutable.flatMap(({ parentSemanticId }) =>
       parentSemanticId === null ? [] : [parentSemanticId],

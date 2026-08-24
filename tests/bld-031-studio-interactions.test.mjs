@@ -16,7 +16,9 @@ import {
 } from "../packages/renderer-ui/dist/boring-log-studio-tree.js";
 import { deterministicTextResults } from "./helpers/bld-024-deterministic-text-authority.mjs";
 
-function resolvedScene() {
+function resolvedScene(textOccurrenceClones = undefined) {
+  const template = structuredClone(boringLogMvpTemplate);
+  if (textOccurrenceClones !== undefined) template.textOccurrenceClones = textOccurrenceClones;
   const preparation = prepareBoringLogLayout({
     contractVersion: 1,
     schemaVersion: "rsrender.boring-log-layout-job.v1",
@@ -26,7 +28,7 @@ function resolvedScene() {
     fixtureDigest: BORING_LOG_MVP_FIXTURE_DIGEST,
     templateDigest: BORING_LOG_MVP_TEMPLATE_DIGEST,
     document: structuredClone(boringLogMvpFixture),
-    template: structuredClone(boringLogMvpTemplate),
+    template,
   });
   assert.equal(preparation.accepted, true);
   const result = resolveBoringLogPageScene(
@@ -36,6 +38,29 @@ function resolvedScene() {
   assert.equal(result.accepted, true);
   return result.value;
 }
+
+test("BLD-040 places structured duplicate occurrences under their semantic Contents parent", () => {
+  const cloneSemanticId = "header-company:clone:tree-copy";
+  const items = buildBoringLogStudioTree(
+    resolvedScene([
+      {
+        cloneNodeId: "node:clone:tree-copy",
+        sourceOccurrenceNodeId: "node:header-company",
+        semanticId: cloneSemanticId,
+        offsetXMpt: 10_000,
+        offsetYMpt: 10_000,
+      },
+    ]),
+  );
+  assert.ok(
+    items.some(
+      ({ semanticId, parentSemanticId, label }) =>
+        semanticId === cloneSemanticId &&
+        parentSemanticId === "region-header" &&
+        label === "Company Name (Copy)",
+    ),
+  );
+});
 
 test("BLD-031 builds a collapsible semantic tree and preserves filtered ancestry", () => {
   const items = buildBoringLogStudioTree(resolvedScene());

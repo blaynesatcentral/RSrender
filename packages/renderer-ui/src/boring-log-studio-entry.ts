@@ -153,6 +153,7 @@ type CommandResult = Readonly<{
   readonly code?: string;
   readonly workingRevision?: number;
   readonly pageCount?: number;
+  readonly createdOccurrenceNodeIds?: readonly string[];
 }>;
 
 type TextArrangementOperation =
@@ -530,6 +531,12 @@ async function main(): Promise<void> {
     ],
   });
   const authoringButtons = Object.freeze([
+    element<HTMLButtonElement>("duplicate-selection"),
+    element<HTMLButtonElement>("cut-selection"),
+    element<HTMLButtonElement>("delete-selection"),
+    element<HTMLButtonElement>("context-duplicate-selection"),
+    element<HTMLButtonElement>("context-cut-selection"),
+    element<HTMLButtonElement>("context-delete-selection"),
     element<HTMLButtonElement>("show-selection"),
     element<HTMLButtonElement>("hide-selection"),
     element<HTMLButtonElement>("lock-selection"),
@@ -542,6 +549,14 @@ async function main(): Promise<void> {
     element<HTMLButtonElement>("context-lock-selection"),
     element<HTMLButtonElement>("context-bring-front"),
     element<HTMLButtonElement>("context-send-back"),
+  ]);
+  const copyButtons = Object.freeze([
+    element<HTMLButtonElement>("copy-selection"),
+    element<HTMLButtonElement>("context-copy-selection"),
+  ]);
+  const pasteButtons = Object.freeze([
+    element<HTMLButtonElement>("paste-selection"),
+    element<HTMLButtonElement>("context-paste-selection"),
   ]);
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
@@ -571,6 +586,8 @@ async function main(): Promise<void> {
   let selectedSemanticId: string | null = null;
   let selectedSceneNodeId: string | null = null;
   const selectedTextNodeIds = new Set<string>();
+  let textClipboardNodeIds: readonly string[] = Object.freeze([]);
+  let textClipboardBoringLogIdentity: string | null = null;
   const templateTextPropertyMask = new Set<TextTemplateProperty>();
   let currentTextFrameAnchor: BoringLogTextFrameAnchor = "top-left";
   let studioProjection: StudioProjection | null = bootstrapProjection;
@@ -2549,6 +2566,31 @@ async function main(): Promise<void> {
       button.title = authoringReason;
       button.setAttribute("aria-disabled", String(authoringUnavailable));
     }
+    const copyUnavailable = studioProjection === null || selectionCount < 1;
+    for (const button of copyButtons) {
+      button.disabled = copyUnavailable;
+      button.title = copyUnavailable
+        ? "Select one or more exact text elements"
+        : `Copy ${selectionCount} text occurrence${selectionCount === 1 ? "" : "s"} to the layout clipboard`;
+      button.setAttribute("aria-disabled", String(copyUnavailable));
+    }
+    const pasteUnavailable =
+      studioProjection === null ||
+      lifecycleState?.readOnly === true ||
+      textClipboardNodeIds.length === 0 ||
+      textClipboardBoringLogIdentity !== lifecycleState?.activeBoringLogIdentity;
+    for (const button of pasteButtons) {
+      button.disabled = pasteUnavailable;
+      button.title =
+        textClipboardNodeIds.length === 0
+          ? "Copy or cut text elements before pasting"
+          : textClipboardBoringLogIdentity !== lifecycleState?.activeBoringLogIdentity
+            ? "The layout clipboard belongs to another Boring Log"
+            : lifecycleState?.readOnly === true
+              ? "The Log Project is read-only"
+              : `Paste ${textClipboardNodeIds.length} copied text occurrence${textClipboardNodeIds.length === 1 ? "" : "s"}`;
+      button.setAttribute("aria-disabled", String(pasteUnavailable));
+    }
   }
 
   async function mutateSelectedText(
@@ -2583,9 +2625,77 @@ async function main(): Promise<void> {
         "The requested authoring state was already effective; history was unchanged.";
       return;
     }
-    await refreshStudioProjection(
-      response.workingRevision,
-      `${humanize(mutation.kind)} applied to ${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"} from ${commandSource}; Undo restores the prior state.`,
+    const successStatus = `${humanize(mutation.kind)} applied to ${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"} from ${commandSource}; Undo restores the prior state.`;
+    const refreshed = await refreshStudioProjection(response.workingRevision, successStatus);
+    if (
+      refreshed &&
+      mutation.kind === "duplicate" &&
+      response.createdOccurrenceNodeIds !== undefined &&
+      response.createdOccurrenceNodeIds.length > 0
+    ) {
+      const createdNodes = response.createdOccurrenceNodeIds
+        .map((nodeId) => page.nodes.find((node) => node.kind === "text" && node.id === nodeId))
+        .filter(
+          (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+            node?.kind === "text",
+        );
+      const keyElement = createdNodes.at(-1);
+      if (keyElement !== undefined) {
+        select(keyElement.semanticId, keyElement.id);
+        selectedTextNodeIds.clear();
+        for (const node of createdNodes) selectedTextNodeIds.add(node.id);
+        selectedSemanticId = keyElement.semanticId;
+        selectedSceneNodeId = keyElement.id;
+        installSvg();
+        renderTree();
+        updateArrangementControls();
+        status.textContent = `${createdNodes.length} duplicated text occurrence${createdNodes.length === 1 ? "" : "s"} selected; drag, resize, format, or Undo.`;
+      }
+    }
+  }
+
+  function copySelectedText(commandSource: "keyboard" | "ribbon" | "context-menu"): void {
+    const copied = [...selectedTextNodeIds].filter((nodeId) =>
+      page.nodes.some((node) => node.kind === "text" && node.id === nodeId),
+    );
+    if (copied.length === 0) {
+      status.textContent = "Select one or more exact text elements before copying.";
+      return;
+    }
+    textClipboardNodeIds = Object.freeze(copied);
+    textClipboardBoringLogIdentity = lifecycleState?.activeBoringLogIdentity ?? null;
+    hideCanvasContextMenu();
+    updateArrangementControls();
+    status.textContent = `${copied.length} text occurrence${copied.length === 1 ? "" : "s"} copied to the layout clipboard from ${commandSource}.`;
+  }
+
+  async function cutSelectedText(
+    commandSource: "keyboard" | "ribbon" | "context-menu",
+  ): Promise<void> {
+    copySelectedText(commandSource);
+    if (textClipboardNodeIds.length === 0) return;
+    await mutateSelectedText(
+      { kind: "set-visible", visible: false },
+      commandSource,
+      textClipboardNodeIds,
+    );
+  }
+
+  function pasteCopiedText(commandSource: "keyboard" | "ribbon" | "context-menu"): void {
+    if (
+      textClipboardNodeIds.length === 0 ||
+      textClipboardBoringLogIdentity !== lifecycleState?.activeBoringLogIdentity
+    ) {
+      status.textContent =
+        textClipboardNodeIds.length === 0
+          ? "The layout clipboard is empty."
+          : "The layout clipboard belongs to another Boring Log; switch back or copy here.";
+      return;
+    }
+    void mutateSelectedText(
+      { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
+      commandSource,
+      textClipboardNodeIds,
     );
   }
 
@@ -4089,6 +4199,16 @@ async function main(): Promise<void> {
     "next-boring": () => void invokeLifecycle("next-boring"),
     "last-boring": () => void invokeLifecycle("last-boring"),
     "select-body": () => select("region-depth-body"),
+    "copy-selection": () => copySelectedText("ribbon"),
+    "cut-selection": () => void cutSelectedText("ribbon"),
+    "paste-selection": () => pasteCopiedText("ribbon"),
+    "duplicate-selection": () =>
+      void mutateSelectedText(
+        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
+        "ribbon",
+      ),
+    "delete-selection": () =>
+      void mutateSelectedText({ kind: "set-visible", visible: false }, "ribbon"),
     undo: () => void navigateHistory("undo"),
     redo: () => void navigateHistory("redo"),
     "fit-page": fitPage,
@@ -4137,6 +4257,16 @@ async function main(): Promise<void> {
     "property-tab-element": () => showPropertyPanel("element"),
     "property-tab-diagnostics": showDiagnostics,
     "context-properties": focusSelectedProperties,
+    "context-copy-selection": () => copySelectedText("context-menu"),
+    "context-cut-selection": () => void cutSelectedText("context-menu"),
+    "context-paste-selection": () => pasteCopiedText("context-menu"),
+    "context-duplicate-selection": () =>
+      void mutateSelectedText(
+        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
+        "context-menu",
+      ),
+    "context-delete-selection": () =>
+      void mutateSelectedText({ kind: "set-visible", visible: false }, "context-menu"),
     "context-align-left": () => {
       hideCanvasContextMenu();
       void arrangeSelectedText({ kind: "align", alignment: "left" }, "context-menu");
@@ -4320,11 +4450,39 @@ async function main(): Promise<void> {
       queueKeyboardNudge(deltaXMpt, deltaYMpt);
       return;
     }
+    if (!event.defaultPrevented && !editableTarget && event.key === "Delete") {
+      event.preventDefault();
+      void mutateSelectedText({ kind: "set-visible", visible: false }, "keyboard");
+      return;
+    }
     if (!event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
     if (key === "a" && !editableTarget) {
       event.preventDefault();
       selectAllTextOccurrences();
+      return;
+    }
+    if (key === "c" && !editableTarget) {
+      event.preventDefault();
+      copySelectedText("keyboard");
+      return;
+    }
+    if (key === "x" && !editableTarget) {
+      event.preventDefault();
+      void cutSelectedText("keyboard");
+      return;
+    }
+    if (key === "v" && !editableTarget) {
+      event.preventDefault();
+      pasteCopiedText("keyboard");
+      return;
+    }
+    if (key === "d" && !editableTarget) {
+      event.preventDefault();
+      void mutateSelectedText(
+        { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
+        "keyboard",
+      );
       return;
     }
     if (key === "z" || key === "y") {
