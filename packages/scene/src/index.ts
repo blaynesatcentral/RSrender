@@ -50,6 +50,16 @@ export type {
   BoringLogContinuationPage,
   BoringLogContinuationPagesResult,
 } from "./boring-log-continuation-pages.js";
+export {
+  arrangeBoringLogTextOccurrences,
+  boringLogArrangementRevision,
+} from "./boring-log-arrangement.js";
+export type {
+  BoringLogArrangementFrame,
+  BoringLogArrangementItem,
+  BoringLogArrangementOperation,
+  BoringLogArrangementResult,
+} from "./boring-log-arrangement.js";
 export type {
   BoringLogTemplateTextProperty,
   BoringLogTemplateTextStyleResult,
