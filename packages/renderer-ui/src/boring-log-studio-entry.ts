@@ -517,6 +517,18 @@ async function main(): Promise<void> {
       element<HTMLButtonElement>("align-right"),
       element<HTMLButtonElement>("context-align-right"),
     ],
+    alignTop: [
+      element<HTMLButtonElement>("align-top"),
+      element<HTMLButtonElement>("context-align-top"),
+    ],
+    alignMiddle: [
+      element<HTMLButtonElement>("align-middle"),
+      element<HTMLButtonElement>("context-align-middle"),
+    ],
+    alignBottom: [
+      element<HTMLButtonElement>("align-bottom"),
+      element<HTMLButtonElement>("context-align-bottom"),
+    ],
     matchWidth: [
       element<HTMLButtonElement>("match-width"),
       element<HTMLButtonElement>("context-match-width"),
@@ -525,9 +537,17 @@ async function main(): Promise<void> {
       element<HTMLButtonElement>("match-height"),
       element<HTMLButtonElement>("context-match-height"),
     ],
+    matchBoth: [
+      element<HTMLButtonElement>("match-both"),
+      element<HTMLButtonElement>("context-match-both"),
+    ],
     distributeHorizontal: [
       element<HTMLButtonElement>("distribute-horizontal"),
       element<HTMLButtonElement>("context-distribute-horizontal"),
+    ],
+    distributeVertical: [
+      element<HTMLButtonElement>("distribute-vertical"),
+      element<HTMLButtonElement>("context-distribute-vertical"),
     ],
   });
   const authoringButtons = Object.freeze([
@@ -2534,11 +2554,33 @@ async function main(): Promise<void> {
       arrangementButtons.alignRight,
       arrangementButtons.matchWidth,
       arrangementButtons.matchHeight,
+      arrangementButtons.matchBoth,
     ]) {
       for (const button of buttons) {
         button.disabled = unavailable;
         button.title = pairReason;
         button.setAttribute("aria-disabled", String(unavailable));
+      }
+    }
+    const depthBoundSelection = page.nodes.some(
+      (node) =>
+        node.kind === "text" &&
+        selectedTextNodeIds.has(node.id) &&
+        (node.presentation?.positionMode ?? "depth-bound") === "depth-bound",
+    );
+    const verticalUnavailable = unavailable || depthBoundSelection;
+    const verticalReason = depthBoundSelection
+      ? "Detach all selected depth-bound text as free annotations before changing vertical position"
+      : pairReason;
+    for (const buttons of [
+      arrangementButtons.alignTop,
+      arrangementButtons.alignMiddle,
+      arrangementButtons.alignBottom,
+    ]) {
+      for (const button of buttons) {
+        button.disabled = verticalUnavailable;
+        button.title = verticalReason;
+        button.setAttribute("aria-disabled", String(verticalUnavailable));
       }
     }
     const distributeUnavailable = unavailable || selectionCount < 3;
@@ -2550,6 +2592,12 @@ async function main(): Promise<void> {
       button.disabled = distributeUnavailable;
       button.title = distributeReason;
       button.setAttribute("aria-disabled", String(distributeUnavailable));
+    }
+    const verticalDistributeUnavailable = distributeUnavailable || depthBoundSelection;
+    for (const button of arrangementButtons.distributeVertical) {
+      button.disabled = verticalDistributeUnavailable;
+      button.title = depthBoundSelection ? verticalReason : distributeReason;
+      button.setAttribute("aria-disabled", String(verticalDistributeUnavailable));
     }
     const authoringUnavailable =
       studioProjection === null || lifecycleState?.readOnly === true || selectionCount < 1;
@@ -4224,12 +4272,21 @@ async function main(): Promise<void> {
     "align-center": () =>
       void arrangeSelectedText({ kind: "align", alignment: "horizontal-center" }, "ribbon"),
     "align-right": () => void arrangeSelectedText({ kind: "align", alignment: "right" }, "ribbon"),
+    "align-top": () => void arrangeSelectedText({ kind: "align", alignment: "top" }, "ribbon"),
+    "align-middle": () =>
+      void arrangeSelectedText({ kind: "align", alignment: "vertical-center" }, "ribbon"),
+    "align-bottom": () =>
+      void arrangeSelectedText({ kind: "align", alignment: "bottom" }, "ribbon"),
     "match-width": () =>
       void arrangeSelectedText({ kind: "match-size", dimension: "width" }, "ribbon"),
     "match-height": () =>
       void arrangeSelectedText({ kind: "match-size", dimension: "height" }, "ribbon"),
+    "match-both": () =>
+      void arrangeSelectedText({ kind: "match-size", dimension: "both" }, "ribbon"),
     "distribute-horizontal": () =>
       void arrangeSelectedText({ kind: "distribute", distribution: "horizontal-gaps" }, "ribbon"),
+    "distribute-vertical": () =>
+      void arrangeSelectedText({ kind: "distribute", distribution: "vertical-gaps" }, "ribbon"),
     "show-selection": () =>
       void mutateSelectedText({ kind: "set-visible", visible: true }, "ribbon"),
     "hide-selection": () =>
@@ -4279,6 +4336,18 @@ async function main(): Promise<void> {
       hideCanvasContextMenu();
       void arrangeSelectedText({ kind: "align", alignment: "right" }, "context-menu");
     },
+    "context-align-top": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "top" }, "context-menu");
+    },
+    "context-align-middle": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "vertical-center" }, "context-menu");
+    },
+    "context-align-bottom": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "align", alignment: "bottom" }, "context-menu");
+    },
     "context-match-width": () => {
       hideCanvasContextMenu();
       void arrangeSelectedText({ kind: "match-size", dimension: "width" }, "context-menu");
@@ -4287,10 +4356,21 @@ async function main(): Promise<void> {
       hideCanvasContextMenu();
       void arrangeSelectedText({ kind: "match-size", dimension: "height" }, "context-menu");
     },
+    "context-match-both": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText({ kind: "match-size", dimension: "both" }, "context-menu");
+    },
     "context-distribute-horizontal": () => {
       hideCanvasContextMenu();
       void arrangeSelectedText(
         { kind: "distribute", distribution: "horizontal-gaps" },
+        "context-menu",
+      );
+    },
+    "context-distribute-vertical": () => {
+      hideCanvasContextMenu();
+      void arrangeSelectedText(
+        { kind: "distribute", distribution: "vertical-gaps" },
         "context-menu",
       );
     },

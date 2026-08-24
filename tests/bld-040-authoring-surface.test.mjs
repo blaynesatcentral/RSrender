@@ -10,15 +10,25 @@ test("BLD-040 exposes arrangement commands in the ribbon and exact Canvas contex
     "align-left",
     "align-center",
     "align-right",
+    "align-top",
+    "align-middle",
+    "align-bottom",
     "match-width",
     "match-height",
+    "match-both",
     "distribute-horizontal",
+    "distribute-vertical",
     "context-align-left",
     "context-align-center",
     "context-align-right",
+    "context-align-top",
+    "context-align-middle",
+    "context-align-bottom",
     "context-match-width",
     "context-match-height",
+    "context-match-both",
     "context-distribute-horizontal",
+    "context-distribute-vertical",
   ]) {
     assert.match(html, new RegExp(`id="${id}"`, "u"));
   }
@@ -42,6 +52,10 @@ test("BLD-040 routes ribbon, context, and keyboard arrangement through one comma
   assert.match(entry, /clearSelection\(\)/u);
   assert.match(entry, /key === "z" \|\| key === "y"/u);
   assert.match(entry, /ARRANGEMENT_UNCHANGED/u);
+  assert.match(entry, /alignment: "vertical-center"/u);
+  assert.match(entry, /dimension: "both"/u);
+  assert.match(entry, /distribution: "vertical-gaps"/u);
+  assert.match(entry, /Detach all selected depth-bound text as free annotations/u);
 });
 
 test("BLD-040 makes the Key Element visually distinct from the rest of the selection", async () => {
