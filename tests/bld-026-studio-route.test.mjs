@@ -7,6 +7,7 @@ import { TextEncoder } from "node:util";
 import { createSyntheticBoringLogOverrideSession } from "../packages/application/dist/index.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
@@ -533,6 +534,60 @@ test("BLD-039 Studio route admits only one exact Page Region boundary command", 
   }
 });
 
+test("BLD-040 Studio route admits only an exact ordered text arrangement command", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "7".repeat(64),
+    getProjection: source.getProjection,
+    arrangeTextOccurrences: async (input) => {
+      received = input;
+      return { accepted: true, code: "TEXT_OCCURRENCES_ARRANGED", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    keyElementId: "node:key",
+    occurrenceNodeIds: ["node:first", "node:key"],
+    operation: { kind: "align", alignment: "left" },
+  };
+  assert.equal(
+    (await route.arrangeTextOccurrences(routeContext, envelope(1, args))).accepted,
+    true,
+  );
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, keyElementId: "node:missing" },
+    { ...args, occurrenceNodeIds: ["node:key", "node:key"] },
+    { ...args, operation: { kind: "align", alignment: "baseline" } },
+    { ...args, operation: { kind: "nudge", deltaXMpt: 1.5, deltaYMpt: 0 } },
+    { ...args, extra: true },
+  ]) {
+    assert.deepEqual(await route.arrangeTextOccurrences(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -746,6 +801,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.arrangeTextOccurrences(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -774,6 +837,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "setPageGuides",
     "setColumnDivider",
     "setRegionBoundary",
+    "arrangeTextOccurrences",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
@@ -815,6 +879,19 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.deepEqual(JSON.parse(JSON.stringify(regionResult)), {
     accepted: false,
     code: "REGION_BOUNDARY_UNAVAILABLE",
+  });
+  const arrangementResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.arrangeTextOccurrences(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      keyElementId: "node:key",
+      occurrenceNodeIds: ["node:key"],
+      operation: { kind: "nudge", deltaXMpt: 1_000, deltaYMpt: 0 },
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(arrangementResult)), {
+    accepted: false,
+    code: "ARRANGEMENT_UNAVAILABLE",
   });
   const previewResult = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection(${JSON.stringify({

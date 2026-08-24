@@ -2,6 +2,7 @@ import { validateResolvedBoringLogPageScene } from "@rsrender/contracts";
 
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
@@ -848,6 +849,96 @@ const setRegionBoundary = Object.freeze(async function setRegionBoundary(input: 
   }
 });
 
+const arrangeTextOccurrences = Object.freeze(async function arrangeTextOccurrences(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, [
+    "expectedWorkingRevision",
+    "keyElementId",
+    "occurrenceNodeIds",
+    "operation",
+  ]);
+  const operationRecord =
+    args !== null && typeof args["operation"] === "object" && args["operation"] !== null
+      ? (args["operation"] as DataRecord)
+      : null;
+  const kind = operationRecord?.["kind"];
+  const operation =
+    kind === "nudge"
+      ? exactRecord(operationRecord, ["kind", "deltaXMpt", "deltaYMpt"])
+      : kind === "align"
+        ? exactRecord(operationRecord, ["kind", "alignment"])
+        : kind === "match-size"
+          ? exactRecord(operationRecord, ["kind", "dimension"])
+          : kind === "distribute"
+            ? exactRecord(operationRecord, ["kind", "distribution"])
+            : null;
+  const nodeIds = args?.["occurrenceNodeIds"];
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    typeof args["keyElementId"] !== "string" ||
+    args["keyElementId"].length < 1 ||
+    args["keyElementId"].length > 512 ||
+    !Array.isArray(nodeIds) ||
+    nodeIds.length < 1 ||
+    nodeIds.length > 256 ||
+    nodeIds.some(
+      (nodeId) => typeof nodeId !== "string" || nodeId.length < 1 || nodeId.length > 512,
+    ) ||
+    new Set(nodeIds).size !== nodeIds.length ||
+    !nodeIds.includes(args["keyElementId"]) ||
+    operation === null ||
+    (kind === "nudge" &&
+      (!Number.isSafeInteger(operation["deltaXMpt"]) ||
+        !Number.isSafeInteger(operation["deltaYMpt"]))) ||
+    (kind === "align" &&
+      !["left", "horizontal-center", "right", "top", "vertical-center", "bottom"].includes(
+        String(operation["alignment"]),
+      )) ||
+    (kind === "match-size" &&
+      !["width", "height", "both"].includes(String(operation["dimension"]))) ||
+    (kind === "distribute" &&
+      !["horizontal-gaps", "vertical-gaps", "horizontal-centers", "vertical-centers"].includes(
+        String(operation["distribution"]),
+      ))
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
   Object.freeze({
@@ -858,6 +949,7 @@ contextBridge.exposeInMainWorld(
     setPageGuides,
     setColumnDivider,
     setRegionBoundary,
+    arrangeTextOccurrences,
   }),
 );
 
@@ -1147,6 +1239,31 @@ export interface BoringLogStudioPreloadApi {
     readonly expectedWorkingRevision: number;
     readonly boundary: "header-depth" | "depth-footer";
     readonly requestedBoundaryYMpt: number;
+  }) => Promise<unknown>;
+  readonly arrangeTextOccurrences: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly keyElementId: string;
+    readonly occurrenceNodeIds: readonly string[];
+    readonly operation:
+      | Readonly<{
+          readonly kind: "nudge";
+          readonly deltaXMpt: number;
+          readonly deltaYMpt: number;
+        }>
+      | Readonly<{
+          readonly kind: "align";
+          readonly alignment:
+            "left" | "horizontal-center" | "right" | "top" | "vertical-center" | "bottom";
+        }>
+      | Readonly<{
+          readonly kind: "match-size";
+          readonly dimension: "width" | "height" | "both";
+        }>
+      | Readonly<{
+          readonly kind: "distribute";
+          readonly distribution:
+            "horizontal-gaps" | "vertical-gaps" | "horizontal-centers" | "vertical-centers";
+        }>;
   }) => Promise<unknown>;
 }
 

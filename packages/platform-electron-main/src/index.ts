@@ -124,6 +124,7 @@ export {
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
+  BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   boringLogStudioRouteRevision,
 } from "./boring-log-studio-route-contract.js";
 export { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
@@ -138,6 +139,7 @@ export type {
   BoringLogStudioProjectionPreviewInput,
   BoringLogStudioTextOccurrencePresentationResetInput,
   BoringLogStudioTextOccurrenceStyleInput,
+  BoringLogStudioArrangeTextOccurrencesInput,
   BoringLogStudioLifecycleResult,
 } from "./boring-log-studio-route-broker.js";
 export {

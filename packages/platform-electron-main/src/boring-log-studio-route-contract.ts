@@ -15,3 +15,5 @@ export const BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL =
   "rsrender:boring-log-studio:set-column-divider:v1" as const;
 export const BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL =
   "rsrender:boring-log-studio:set-region-boundary:v1" as const;
+export const BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL =
+  "rsrender:boring-log-studio:arrange-text-occurrences:v1" as const;

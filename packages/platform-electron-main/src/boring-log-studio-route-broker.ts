@@ -159,6 +159,28 @@ export interface BoringLogStudioRegionBoundaryInput {
   readonly requestedBoundaryYMpt: number;
 }
 
+export interface BoringLogStudioArrangeTextOccurrencesInput {
+  readonly expectedWorkingRevision: number;
+  readonly keyElementId: string;
+  readonly occurrenceNodeIds: readonly string[];
+  readonly operation:
+    | Readonly<{ readonly kind: "nudge"; readonly deltaXMpt: number; readonly deltaYMpt: number }>
+    | Readonly<{
+        readonly kind: "align";
+        readonly alignment:
+          "left" | "horizontal-center" | "right" | "top" | "vertical-center" | "bottom";
+      }>
+    | Readonly<{
+        readonly kind: "match-size";
+        readonly dimension: "width" | "height" | "both";
+      }>
+    | Readonly<{
+        readonly kind: "distribute";
+        readonly distribution:
+          "horizontal-gaps" | "vertical-gaps" | "horizontal-centers" | "vertical-centers";
+      }>;
+}
+
 export interface BoringLogStudioProjectionPreviewInput {
   readonly expectedWorkingRevision: number;
   readonly occurrenceNodeId: string;
@@ -270,6 +292,9 @@ export class BoringLogStudioRouteBroker {
   readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
   readonly #setColumnDivider: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
   readonly #setRegionBoundary: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+  readonly #arrangeTextOccurrences: (
+    input: BoringLogStudioArrangeTextOccurrencesInput,
+  ) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -296,6 +321,9 @@ export class BoringLogStudioRouteBroker {
     readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
     readonly setColumnDivider?: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
     readonly setRegionBoundary?: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+    readonly arrangeTextOccurrences?: (
+      input: BoringLogStudioArrangeTextOccurrencesInput,
+    ) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -335,6 +363,9 @@ export class BoringLogStudioRouteBroker {
       input.setRegionBoundary ??
       (() =>
         Promise.resolve(Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" })));
+    this.#arrangeTextOccurrences =
+      input.arrangeTextOccurrences ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "ARRANGEMENT_UNAVAILABLE" })));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -1156,6 +1187,121 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setRegionBoundary(
         args as unknown as BoringLogStudioRegionBoundaryInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async arrangeTextOccurrences(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "keyElementId",
+      "occurrenceNodeIds",
+      "operation",
+    ]);
+    const operationRecord =
+      args !== null && typeof args["operation"] === "object" && args["operation"] !== null
+        ? (args["operation"] as DataRecord)
+        : null;
+    const operationKind = operationRecord?.["kind"];
+    const operation =
+      operationKind === "nudge"
+        ? exactRecord(operationRecord, ["kind", "deltaXMpt", "deltaYMpt"])
+        : operationKind === "align"
+          ? exactRecord(operationRecord, ["kind", "alignment"])
+          : operationKind === "match-size"
+            ? exactRecord(operationRecord, ["kind", "dimension"])
+            : operationKind === "distribute"
+              ? exactRecord(operationRecord, ["kind", "distribution"])
+              : null;
+    const nodeIds = args?.["occurrenceNodeIds"];
+    const boundedIdentity = (value: unknown): value is string =>
+      typeof value === "string" && value.length >= 1 && value.length <= 512;
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !boundedIdentity(args["keyElementId"]) ||
+      !Array.isArray(nodeIds) ||
+      nodeIds.length < 1 ||
+      nodeIds.length > 256 ||
+      nodeIds.some((nodeId) => !boundedIdentity(nodeId)) ||
+      new Set(nodeIds).size !== nodeIds.length ||
+      !nodeIds.includes(args["keyElementId"]) ||
+      operation === null ||
+      (operationKind === "nudge" &&
+        (!Number.isSafeInteger(operation["deltaXMpt"]) ||
+          !Number.isSafeInteger(operation["deltaYMpt"]))) ||
+      (operationKind === "align" &&
+        !["left", "horizontal-center", "right", "top", "vertical-center", "bottom"].includes(
+          String(operation["alignment"]),
+        )) ||
+      (operationKind === "match-size" &&
+        !["width", "height", "both"].includes(String(operation["dimension"]))) ||
+      (operationKind === "distribute" &&
+        !["horizontal-gaps", "vertical-gaps", "horizontal-centers", "vertical-centers"].includes(
+          String(operation["distribution"]),
+        ))
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#arrangeTextOccurrences(
+        args as unknown as BoringLogStudioArrangeTextOccurrencesInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");

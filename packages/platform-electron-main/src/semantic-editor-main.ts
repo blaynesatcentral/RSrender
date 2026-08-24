@@ -29,6 +29,7 @@ import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 import {
   applyBoringLogTemplateTextStyleProperties,
   applyBoringLogTextOccurrenceStyles,
+  arrangeBoringLogTextOccurrences,
   boringLogDefaultColumnMinimumWidthMpt,
   clearBoringLogTextOccurrencePresentation,
   resizeBoringLogColumns,
@@ -63,6 +64,7 @@ import {
 import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioColumnDividerInput,
+  type BoringLogStudioArrangeTextOccurrencesInput,
   type BoringLogStudioRegionBoundaryInput,
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioPageGuidesInput,
@@ -72,6 +74,7 @@ import {
 } from "./boring-log-studio-route-broker.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
@@ -4226,6 +4229,7 @@ async function main(): Promise<void> {
     let pageGuidesCommandSequence = 0;
     let columnDividerCommandSequence = 0;
     let regionBoundaryCommandSequence = 0;
+    let arrangementCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -5019,6 +5023,169 @@ async function main(): Promise<void> {
         clamped: resized.clamped,
       });
     };
+    const handleArrangeTextOccurrences = async (
+      input: BoringLogStudioArrangeTextOccurrencesInput,
+    ) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const projected = await getStudioProjection(input.expectedWorkingRevision);
+      if (currentJob === null || !projected.accepted) {
+        return Object.freeze({ accepted: false, code: "ARRANGEMENT_UNAVAILABLE" });
+      }
+      const selected = input.occurrenceNodeIds.map((occurrenceNodeId) => {
+        for (const page of projected.projection.scene.pages) {
+          const node = page.nodes.find(
+            (candidate) => candidate.kind === "text" && candidate.id === occurrenceNodeId,
+          );
+          if (node?.kind === "text") return Object.freeze({ page, node });
+        }
+        return null;
+      });
+      if (
+        selected.some((entry) => entry === null) ||
+        selected.some((entry) => entry!.page.pageId !== selected[0]!.page.pageId)
+      ) {
+        return Object.freeze({ accepted: false, code: "ARRANGEMENT_SELECTION_INVALID" });
+      }
+      const selectedEntries = selected as readonly Exclude<(typeof selected)[number], null>[];
+      const page = selectedEntries[0]!.page;
+      const arranged = arrangeBoringLogTextOccurrences({
+        pageWidthMpt: page.widthMpt,
+        pageHeightMpt: page.heightMpt,
+        keyElementId: input.keyElementId,
+        items: selectedEntries.map(({ node }) => ({
+          occurrenceNodeId: node.id,
+          semanticId: node.semanticId,
+          frame: node.frame,
+          locked: node.presentation?.locked ?? false,
+          positionMode: node.presentation?.positionMode ?? "depth-bound",
+        })),
+        operation: input.operation,
+      });
+      if (!arranged.accepted) return Object.freeze({ accepted: false, code: arranged.code });
+      if (!arranged.changed) {
+        return Object.freeze({
+          accepted: true,
+          code: "ARRANGEMENT_UNCHANGED",
+          workingRevision: captured.project.workingRevision,
+          dirty: projected.projection.dirty,
+          canUndo: projected.projection.canUndo,
+          canRedo: projected.projection.canRedo,
+          affectedOccurrenceNodeIds: arranged.affectedOccurrenceNodeIds,
+          excludedLockedOccurrenceNodeIds: arranged.excludedLockedOccurrenceNodeIds,
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "ARRANGEMENT_UNAVAILABLE" });
+      }
+      const affectedIds = new Set(arranged.affectedOccurrenceNodeIds);
+      const layoutOverrides = arranged.items
+        .filter(({ occurrenceNodeId }) => affectedIds.has(occurrenceNodeId))
+        .map((item) => {
+          const selectedNode = selectedEntries.find(
+            (entry) => entry.node.id === item.occurrenceNodeId,
+          )!.node;
+          const request = projected.projection.scene.textRequests.find(
+            ({ measurementId }) => measurementId === selectedNode.measurementId,
+          );
+          if (request === undefined) throw new Error("ARRANGEMENT_TEXT_REQUEST_MISSING");
+          const overflowPolicy =
+            selectedNode.presentation?.overflowPolicy ?? request.overflowPolicy;
+          const identityDigest = sha256CanonicalJson({
+            boringLogIdentity: document.boringLogIdentity,
+            occurrenceNodeId: selectedNode.id,
+          }).slice("sha256:".length);
+          return Object.freeze({
+            contractVersion: 1,
+            schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+            kind: "boring-log.text-occurrence-layout-override",
+            ownerDocumentIdentity: documentIdentity,
+            boringLogIdentity: document.boringLogIdentity,
+            overrideIdentity: `urn:rsrender:text-layout-override:${identityDigest}`,
+            overrideRevision: input.expectedWorkingRevision + 1,
+            scope: "occurrence",
+            occurrenceNodeId: selectedNode.id,
+            semanticId: selectedNode.semanticId,
+            layout: Object.freeze({
+              frame: item.frame,
+              frameAnchor: selectedNode.presentation?.frameAnchor ?? "top-left",
+              paddingMpt: selectedNode.presentation?.paddingMpt ?? {
+                topMpt: 0,
+                rightMpt: 0,
+                bottomMpt: 0,
+                leftMpt: 0,
+              },
+              horizontalAlignment: selectedNode.presentation?.horizontalAlignment ?? "start",
+              verticalAlignment: selectedNode.presentation?.verticalAlignment ?? "top",
+              wrapPolicy: selectedNode.presentation?.wrapPolicy ?? request.wrapPolicy,
+              overflowPolicy,
+              ...(overflowPolicy === "shrink-to-minimum"
+                ? {
+                    minimumFontSizeMpt:
+                      selectedNode.presentation?.minimumFontSizeMpt ?? request.minimumFontSizeMpt,
+                  }
+                : {}),
+              frameFillColor: selectedNode.presentation?.frameFillColor ?? null,
+              frameStrokeColor: selectedNode.presentation?.frameStrokeColor ?? null,
+              frameStrokeWidthMpt: selectedNode.presentation?.frameStrokeWidthMpt ?? 0,
+              rotationMilliDegrees: selectedNode.presentation?.rotationMilliDegrees ?? 0,
+              positionMode: selectedNode.presentation?.positionMode ?? "depth-bound",
+              locked: selectedNode.presentation?.locked ?? false,
+            }),
+          } as const);
+        });
+      const authored = applyBoringLogTextOccurrenceStyles(currentJob, [], layoutOverrides);
+      if (!authored.accepted) return Object.freeze({ accepted: false, code: authored.code });
+      arrangementCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-040:request:arrangement:${arrangementCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.job.templateDigest,
+        reason: `Arrange ${arranged.affectedOccurrenceNodeIds.length} text occurrence(s) in Boring Log Studio`,
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.job.templateDigest}`,
+        authored.job,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "TEXT_OCCURRENCES_ARRANGED",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        affectedOccurrenceNodeIds: arranged.affectedOccurrenceNodeIds,
+        excludedLockedOccurrenceNodeIds: arranged.excludedLockedOccurrenceNodeIds,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -5032,6 +5199,7 @@ async function main(): Promise<void> {
       setPageGuides: handlePageGuides,
       setColumnDivider: handleColumnDivider,
       setRegionBoundary: handleRegionBoundary,
+      arrangeTextOccurrences: handleArrangeTextOccurrences,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -5054,6 +5222,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL, (event, input: unknown) =>
       route.setRegionBoundary(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL, (event, input: unknown) =>
+      route.arrangeTextOccurrences(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
