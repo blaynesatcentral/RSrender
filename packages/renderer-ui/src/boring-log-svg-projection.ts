@@ -120,6 +120,7 @@ function renderNode(
   const style = scene.resources.textStyles.find(({ id }) => id === node.styleId);
   if (measurement === undefined || style === undefined) return "";
   const presentation = node.presentation;
+  if (presentation?.visible === false) return "";
   const padding = presentation?.paddingMpt ?? {
     topMpt: 0,
     rightMpt: 0,

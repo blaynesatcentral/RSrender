@@ -3949,6 +3949,12 @@ async function main(): Promise<void> {
               rotationMilliDegrees: node.presentation?.rotationMilliDegrees ?? 0,
               positionMode: node.presentation?.positionMode ?? "depth-bound",
               locked: node.presentation?.locked ?? false,
+              ...(node.presentation?.visible === undefined
+                ? {}
+                : { visible: node.presentation.visible }),
+              ...(node.presentation?.drawingOrderOffset === undefined
+                ? {}
+                : { drawingOrderOffset: node.presentation.drawingOrderOffset }),
             },
           },
         ],
@@ -4507,7 +4513,16 @@ async function main(): Promise<void> {
               scope: "occurrence",
               occurrenceNodeId: input.occurrenceNodeId,
               semanticId: input.semanticId,
-              layout: { ...input.layout, locked: input.locked },
+              layout: {
+                ...input.layout,
+                locked: input.locked,
+                ...(node.presentation?.visible === undefined
+                  ? {}
+                  : { visible: node.presentation.visible }),
+                ...(node.presentation?.drawingOrderOffset === undefined
+                  ? {}
+                  : { drawingOrderOffset: node.presentation.drawingOrderOffset }),
+              },
             },
           ],
         );
@@ -5153,6 +5168,12 @@ async function main(): Promise<void> {
               rotationMilliDegrees: selectedNode.presentation?.rotationMilliDegrees ?? 0,
               positionMode: selectedNode.presentation?.positionMode ?? "depth-bound",
               locked: selectedNode.presentation?.locked ?? false,
+              ...(selectedNode.presentation?.visible === undefined
+                ? {}
+                : { visible: selectedNode.presentation.visible }),
+              ...(selectedNode.presentation?.drawingOrderOffset === undefined
+                ? {}
+                : { drawingOrderOffset: selectedNode.presentation.drawingOrderOffset }),
             }),
           } as const);
         });

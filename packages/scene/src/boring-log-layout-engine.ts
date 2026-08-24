@@ -402,6 +402,12 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
               rotationMilliDegrees: occurrenceLayout.rotationMilliDegrees,
               positionMode: occurrenceLayout.positionMode,
               locked: occurrenceLayout.locked,
+              ...(occurrenceLayout.visible === undefined
+                ? {}
+                : { visible: occurrenceLayout.visible }),
+              ...(occurrenceLayout.drawingOrderOffset === undefined
+                ? {}
+                : { drawingOrderOffset: occurrenceLayout.drawingOrderOffset }),
             },
           }),
     });
@@ -1431,6 +1437,19 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     2,
   );
 
+  for (const group of groups.values()) {
+    const originalIndex = new Map(
+      group.childIds.map((childId, index) => [childId, index] as const),
+    );
+    group.childIds.sort((leftId, rightId) => {
+      const left = nodes.find(({ id }) => id === leftId);
+      const right = nodes.find(({ id }) => id === rightId);
+      const leftOffset = left?.kind === "text" ? (left.presentation?.drawingOrderOffset ?? 0) : 0;
+      const rightOffset =
+        right?.kind === "text" ? (right.presentation?.drawingOrderOffset ?? 0) : 0;
+      return leftOffset - rightOffset || originalIndex.get(leftId)! - originalIndex.get(rightId)!;
+    });
+  }
   const semanticOrder = nodes
     .map(({ semanticId }) => semanticId)
     .filter((semanticId, index, all) => all.indexOf(semanticId) === index);

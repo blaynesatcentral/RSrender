@@ -135,6 +135,10 @@ export interface BoringLogTextOccurrenceLayoutInput {
   readonly rotationMilliDegrees: number;
   readonly positionMode: "depth-bound" | "free";
   readonly locked: boolean;
+  /** Absent in legacy projects and equivalent to visible. */
+  readonly visible?: boolean;
+  /** Signed stable sibling-order bias; absent in legacy projects and equivalent to zero. */
+  readonly drawingOrderOffset?: number;
 }
 
 export interface BoringLogTemplateRegionInput extends MptRect {
@@ -929,6 +933,8 @@ function validateTemplate(input: unknown): void {
     const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
       (key) => Object.hasOwn(layoutInput as object, key),
     );
+    const hasVisible = Object.hasOwn(layoutInput as object, "visible");
+    const hasDrawingOrderOffset = Object.hasOwn(layoutInput as object, "drawingOrderOffset");
     const layout = record(layoutInput, [
       "id",
       "frame",
@@ -943,6 +949,8 @@ function validateTemplate(input: unknown): void {
       "rotationMilliDegrees",
       "positionMode",
       "locked",
+      ...(hasVisible ? ["visible"] : []),
+      ...(hasDrawingOrderOffset ? ["drawingOrderOffset"] : []),
     ]);
     occurrenceLayoutIds.push(textValue(layout["id"]));
     validateRect(layout["frame"]);
@@ -998,6 +1006,14 @@ function validateTemplate(input: unknown): void {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
     if (typeof layout["locked"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    if (hasVisible && typeof layout["visible"] !== "boolean")
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    if (
+      hasDrawingOrderOffset &&
+      (!Number.isSafeInteger(layout["drawingOrderOffset"]) ||
+        Math.abs(layout["drawingOrderOffset"] as number) > 1_000_000)
+    )
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     const frame = layout["frame"] as Readonly<Record<string, number>>;
     if (
       (padding["leftMpt"] as number) + (padding["rightMpt"] as number) >= frame["widthMpt"]! ||
@@ -1613,6 +1629,11 @@ function validateSceneNode(input: unknown): {
       const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
         (key) => Object.hasOwn(value["presentation"] as object, key),
       );
+      const hasVisible = Object.hasOwn(value["presentation"] as object, "visible");
+      const hasDrawingOrderOffset = Object.hasOwn(
+        value["presentation"] as object,
+        "drawingOrderOffset",
+      );
       const presentation = record(value["presentation"], [
         "paddingMpt",
         ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -1625,6 +1646,8 @@ function validateSceneNode(input: unknown): {
         "rotationMilliDegrees",
         "positionMode",
         "locked",
+        ...(hasVisible ? ["visible"] : []),
+        ...(hasDrawingOrderOffset ? ["drawingOrderOffset"] : []),
       ]);
       const padding = record(presentation["paddingMpt"], [
         "topMpt",
@@ -1677,6 +1700,14 @@ function validateSceneNode(input: unknown): {
       if (!["depth-bound", "free"].includes(textValue(presentation["positionMode"])))
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
       if (typeof presentation["locked"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (hasVisible && typeof presentation["visible"] !== "boolean")
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      if (
+        hasDrawingOrderOffset &&
+        (!Number.isSafeInteger(presentation["drawingOrderOffset"]) ||
+          Math.abs(presentation["drawingOrderOffset"] as number) > 1_000_000)
+      )
+        fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
     return { id, semanticId, parentId, measurementId, styleId, content };
   }

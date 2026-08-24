@@ -129,6 +129,14 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some((key) =>
         Object.hasOwn(value["layout"] as object, key),
       );
+    const hasVisible =
+      typeof value["layout"] === "object" &&
+      value["layout"] !== null &&
+      Object.hasOwn(value["layout"], "visible");
+    const hasDrawingOrderOffset =
+      typeof value["layout"] === "object" &&
+      value["layout"] !== null &&
+      Object.hasOwn(value["layout"], "drawingOrderOffset");
     const layout = record(value["layout"], [
       "frame",
       ...(hasFrameAnchor ? ["frameAnchor"] : []),
@@ -142,6 +150,8 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       "rotationMilliDegrees",
       "positionMode",
       "locked",
+      ...(hasVisible ? ["visible"] : []),
+      ...(hasDrawingOrderOffset ? ["drawingOrderOffset"] : []),
     ]);
     const frame = record(layout["frame"], ["xMpt", "yMpt", "widthMpt", "heightMpt"]);
     const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
@@ -204,7 +214,11 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       (rotationMilliDegrees as number) < -180_000 ||
       (rotationMilliDegrees as number) > 180_000 ||
       !(positionMode === "depth-bound" || positionMode === "free") ||
-      typeof layout["locked"] !== "boolean"
+      typeof layout["locked"] !== "boolean" ||
+      (hasVisible && typeof layout["visible"] !== "boolean") ||
+      (hasDrawingOrderOffset &&
+        (!Number.isSafeInteger(layout["drawingOrderOffset"]) ||
+          Math.abs(layout["drawingOrderOffset"] as number) > 1_000_000))
     ) {
       return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
     }
@@ -238,6 +252,10 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
           rotationMilliDegrees: rotationMilliDegrees as number,
           positionMode,
           locked: layout["locked"],
+          ...(hasVisible ? { visible: layout["visible"] as boolean } : {}),
+          ...(hasDrawingOrderOffset
+            ? { drawingOrderOffset: layout["drawingOrderOffset"] as number }
+            : {}),
         }),
       }),
     });
