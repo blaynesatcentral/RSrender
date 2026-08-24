@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   boringLogLayoutJobSchemaVersion,
   boringLogPagePlanSchemaVersion,
+  sha256CanonicalJson,
   resolvedBoringLogPageSceneSchemaVersion,
   validateBoringLogLayoutJobInput,
   validateBoringLogPagePlan,
@@ -36,6 +37,44 @@ function layoutJob() {
     template: clone(boringLogMvpTemplate),
   };
 }
+
+test("BLD-038 admits bounded unique nonprinting page guides without changing legacy fixtures", () => {
+  const legacy = layoutJob();
+  assert.equal(Object.hasOwn(legacy.template, "guides"), false);
+  assert.equal(validateBoringLogLayoutJobInput(legacy).accepted, true);
+  const withGuides = layoutJob();
+  withGuides.template.guides = [
+    { id: "guide-v-1", orientation: "vertical", positionMpt: 120_000, locked: false },
+    { id: "guide-h-1", orientation: "horizontal", positionMpt: 300_000, locked: true },
+  ];
+  withGuides.templateDigest = sha256CanonicalJson(withGuides.template);
+  assert.equal(validateBoringLogLayoutJobInput(withGuides).accepted, true);
+  for (const guides of [
+    [
+      { id: "duplicate", orientation: "vertical", positionMpt: 120_000, locked: false },
+      { id: "duplicate", orientation: "horizontal", positionMpt: 300_000, locked: false },
+    ],
+    [
+      { id: "guide-a", orientation: "vertical", positionMpt: 120_000, locked: false },
+      { id: "guide-b", orientation: "vertical", positionMpt: 120_000, locked: false },
+    ],
+    [{ id: "outside", orientation: "horizontal", positionMpt: 792_001, locked: false }],
+  ]) {
+    const invalid = layoutJob();
+    invalid.template.guides = guides;
+    invalid.templateDigest = sha256CanonicalJson(invalid.template);
+    assert.equal(validateBoringLogLayoutJobInput(invalid).accepted, false);
+  }
+  const excessive = layoutJob();
+  excessive.template.guides = Array.from({ length: 129 }, (_, index) => ({
+    id: `guide-${index}`,
+    orientation: "vertical",
+    positionMpt: index,
+    locked: false,
+  }));
+  excessive.templateDigest = sha256CanonicalJson(excessive.template);
+  assert.equal(validateBoringLogLayoutJobInput(excessive).accepted, false);
+});
 
 function pagePlan() {
   return {

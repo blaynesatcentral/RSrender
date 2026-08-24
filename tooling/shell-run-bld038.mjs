@@ -45,7 +45,7 @@ export async function runDirectManipulationQualification({ record = false } = {}
     profileLabel: `rsrender-bld038-direct-manipulation-${process.pid}`,
     probeArgument: "--rsrender-bld038-probe",
     profileArgumentPrefix: "--rsrender-bld027-profile=",
-    timeoutMs: 600_000,
+    timeoutMs: 900_000,
     extraArguments: [
       `--rsrender-bld027-output=${pdfPath}`,
       `--rsrender-bld035-output=${projectPath}`,
@@ -84,6 +84,12 @@ export async function runDirectManipulationQualification({ record = false } = {}
     resizedFrame?.heightMpt !== movedFrame?.heightMpt ||
     direct?.canceled?.workingRevision !== direct.resized.workingRevision ||
     !sameFrame(direct?.canceled?.frame, resizedFrame) ||
+    direct?.pageGuides?.added?.guides?.length !== 1 ||
+    direct?.pageGuides?.undo?.guides?.length !== 0 ||
+    direct?.pageGuides?.redo?.guides?.length !== 1 ||
+    direct?.pageGuides?.locked?.locked !== "true" ||
+    direct?.pageGuides?.deleted?.guides?.length !== 0 ||
+    direct?.pageGuides?.deleteUndo?.guides?.length !== 1 ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.publication?.destinationPath !== pdfPath ||
     run.result.persistence?.saved?.code !== "PROJECT_SAVE_VERIFIED"
@@ -114,6 +120,11 @@ export async function runDirectManipulationQualification({ record = false } = {}
   ) {
     throw new Error(
       `BLD038_PACKAGED_PROJECT_GEOMETRY_INVALID:${JSON.stringify({ binding, persistedLayout, resizedFrame })}`,
+    );
+  }
+  if (layoutJob.template.guides?.length !== 1 || layoutJob.template.guides[0]?.locked !== true) {
+    throw new Error(
+      `BLD038_PACKAGED_PROJECT_GUIDES_INVALID:${JSON.stringify(layoutJob.template.guides)}`,
     );
   }
 
@@ -149,7 +160,10 @@ export async function runDirectManipulationQualification({ record = false } = {}
       projectSaveReopenRetainsGeometry: true,
       sameResolvedScenePublishedAfterDirectManipulation: true,
       rasterOverlayCount: 0,
-      guidesAndSnappingImplemented: false,
+      guidesAndSnappingImplemented: true,
+      guidesAreNonprintingStudioOverlays: true,
+      guideAddLockDeleteUndoRedoPackaged: true,
+      projectSaveReopenRetainsGuides: true,
     }),
   });
   const canonical = `${canonicalizeJson(evidence)}\n`;

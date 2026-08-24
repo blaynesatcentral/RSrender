@@ -50,6 +50,7 @@ export interface BoringLogStudioProjection {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly BoringLogStudioEditableValue[];
+  readonly guides: NonNullable<BoringLogLayoutJobInput["template"]["guides"]>;
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -327,6 +328,7 @@ export function prepareBoringLogStudioProjection(
           canUndo: input.dataset.canUndo,
           canRedo: input.dataset.canRedo,
           editableValues: Object.freeze(editableValues),
+          guides: Object.freeze([...(effectiveJob.value.template.guides ?? [])]),
           textTemplateScopeSummary: Object.freeze({
             authoredStyleCount: effectiveJob.value.template.styles.filter(
               ({ id }) => !excludedOverrideStyleIds.has(id),

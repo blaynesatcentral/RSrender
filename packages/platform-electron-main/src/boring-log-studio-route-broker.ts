@@ -133,6 +133,19 @@ export interface BoringLogStudioTextOccurrencePresentationResetInput {
   readonly semanticId: string;
 }
 
+export interface BoringLogStudioPageGuidesInput {
+  readonly expectedWorkingRevision: number;
+  readonly mutation:
+    | Readonly<{
+        readonly kind: "add";
+        readonly orientation: "horizontal" | "vertical";
+        readonly positionMpt: number;
+      }>
+    | Readonly<{ readonly kind: "move"; readonly guideId: string; readonly positionMpt: number }>
+    | Readonly<{ readonly kind: "delete"; readonly guideId: string }>
+    | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
+}
+
 type DataRecord = Readonly<Record<string, unknown>>;
 type Binding = {
   readonly capability: string;
@@ -228,6 +241,7 @@ export class BoringLogStudioRouteBroker {
   readonly #resetTextOccurrencePresentation: (
     input: BoringLogStudioTextOccurrencePresentationResetInput,
   ) => Promise<unknown>;
+  readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -250,6 +264,7 @@ export class BoringLogStudioRouteBroker {
     readonly resetTextOccurrencePresentation?: (
       input: BoringLogStudioTextOccurrencePresentationResetInput,
     ) => Promise<unknown>;
+    readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -278,6 +293,9 @@ export class BoringLogStudioRouteBroker {
         Promise.resolve(
           Object.freeze({ accepted: false, code: "TEXT_OCCURRENCE_RESET_UNAVAILABLE" }),
         ));
+    this.#setPageGuides =
+      input.setPageGuides ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "PAGE_GUIDES_UNAVAILABLE" })));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -793,6 +811,106 @@ export class BoringLogStudioRouteBroker {
       const result = await this.#resetTextOccurrencePresentation(
         args as unknown as BoringLogStudioTextOccurrencePresentationResetInput,
       );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setPageGuides(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], ["expectedWorkingRevision", "mutation"]);
+    const mutationRecord =
+      args === null || typeof args["mutation"] !== "object" || args["mutation"] === null
+        ? null
+        : (args["mutation"] as DataRecord);
+    const mutationKind = mutationRecord?.["kind"];
+    const mutation =
+      mutationKind === "add"
+        ? exactRecord(mutationRecord, ["kind", "orientation", "positionMpt"])
+        : mutationKind === "move"
+          ? exactRecord(mutationRecord, ["kind", "guideId", "positionMpt"])
+          : mutationKind === "delete"
+            ? exactRecord(mutationRecord, ["kind", "guideId"])
+            : mutationKind === "set-locked"
+              ? exactRecord(mutationRecord, ["kind", "guideId", "locked"])
+              : null;
+    const boundedGuideId =
+      mutation !== null &&
+      typeof mutation["guideId"] === "string" &&
+      mutation["guideId"].length >= 1 &&
+      mutation["guideId"].length <= 128;
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      mutation === null ||
+      (mutationKind === "add" &&
+        (!["horizontal", "vertical"].includes(String(mutation["orientation"])) ||
+          !Number.isSafeInteger(mutation["positionMpt"]) ||
+          (mutation["positionMpt"] as number) < 0)) ||
+      (mutationKind === "move" &&
+        (!boundedGuideId ||
+          !Number.isSafeInteger(mutation["positionMpt"]) ||
+          (mutation["positionMpt"] as number) < 0)) ||
+      ((mutationKind === "delete" || mutationKind === "set-locked") && !boundedGuideId) ||
+      (mutationKind === "set-locked" && typeof mutation["locked"] !== "boolean")
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setPageGuides(args as unknown as BoringLogStudioPageGuidesInput);
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
       }

@@ -149,6 +149,13 @@ export interface BoringLogColumnInput {
   readonly widthMpt: Mpt;
 }
 
+export interface BoringLogPageGuideInput {
+  readonly id: string;
+  readonly orientation: "horizontal" | "vertical";
+  readonly positionMpt: Mpt;
+  readonly locked: boolean;
+}
+
 export interface BoringLogDepthTransformInput {
   readonly regionId: string;
   readonly depthStartFt: number;
@@ -185,6 +192,8 @@ export interface BoringLogTemplateInput {
   readonly columns: readonly BoringLogColumnInput[];
   readonly styles: readonly BoringLogTextStyleInput[];
   readonly occurrenceLayouts?: readonly BoringLogTextOccurrenceLayoutInput[];
+  /** Nonprinting layout guides. Absent in legacy v1 templates. */
+  readonly guides?: readonly BoringLogPageGuideInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
   readonly bindings: readonly BoringLogTemplateBindingInput[];
   readonly visualTokens: Readonly<Record<string, string>>;
@@ -740,6 +749,11 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "occurrenceLayouts");
+  const hasGuides =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "guides");
   const value = record(input, [
     "schemaVersion",
     "templateId",
@@ -751,6 +765,7 @@ function validateTemplate(input: unknown): void {
     "columns",
     "styles",
     ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
+    ...(hasGuides ? ["guides"] : []),
     "hierarchy",
     "bindings",
     "visualTokens",
@@ -823,6 +838,25 @@ function validateTemplate(input: unknown): void {
     priorEdge = x + width;
   }
   unique(columnIds);
+  const guideIds: string[] = [];
+  const guideCoordinates: string[] = [];
+  const guides = hasGuides ? array(value["guides"]) : [];
+  if (guides.length > 128) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  for (const guideInput of guides) {
+    const guide = record(guideInput, ["id", "orientation", "positionMpt", "locked"]);
+    guideIds.push(textValue(guide["id"]));
+    const orientation = textValue(guide["orientation"]);
+    if (!["horizontal", "vertical"].includes(orientation)) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    const position = mpt(guide["positionMpt"]);
+    guideCoordinates.push(`${orientation}\u0000${position}`);
+    const maximum = orientation === "vertical" ? pageWidth : pageHeight;
+    if (position < 0 || position > maximum) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    if (typeof guide["locked"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  unique(guideIds);
+  unique(guideCoordinates);
   const styleIds: string[] = [];
   for (const styleInput of array(value["styles"])) {
     const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");

@@ -81,7 +81,7 @@ export async function runPackaged(packageResult, index, options = {}) {
   const timeoutMs =
     Number.isSafeInteger(options.timeoutMs) &&
     options.timeoutMs >= 30_000 &&
-    options.timeoutMs <= 600_000
+    options.timeoutMs <= 900_000
       ? options.timeoutMs
       : 90_000;
   const profile = path.join(

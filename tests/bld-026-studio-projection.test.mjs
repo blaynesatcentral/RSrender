@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createSyntheticBoringLogOverrideSession } from "../packages/application/dist/index.js";
+import { sha256CanonicalJson } from "../packages/contracts/dist/index.js";
 import {
   boringLogStudioProjectionRevision,
   completeBoringLogStudioProjection,
@@ -105,6 +106,7 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
     authoredStyleCount: 5,
     excludedOverrideStyleCount: 0,
   });
+  assert.deepEqual(initial.projection.guides, []);
   assert.equal(initial.projection.scene.pages[0].nodes.length, 328);
   assert.equal(initial.projection.scene.pages[0].semanticOrder.length, 90);
   assert.equal(
@@ -169,6 +171,30 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
   );
   assert.equal(editedValue.sourceOriginal.digest, editable.sourceOriginal.digest);
   assert.equal(editedValue.effectiveDisplay.content.value, replacement);
+});
+
+test("BLD-038 Studio projection exposes guides without painting them into the shared scene", async () => {
+  const job = layoutJob();
+  job.template.guides = [
+    { id: "guide-v-1", orientation: "vertical", positionMpt: 144_000, locked: false },
+  ];
+  job.templateDigest = sha256CanonicalJson(job.template);
+  const created = createSyntheticBoringLogOverrideSession({
+    documentIdentity,
+    ownerGeneration: 1,
+    layoutJob: job,
+  });
+  assert.equal(created.accepted, true, created.code);
+  const projection = resolve(
+    created.session,
+    await dataset(created.session, "urn:test:bld-038:query:guide-scene"),
+  );
+  assert.equal(projection.accepted, true, projection.code);
+  assert.deepEqual(projection.projection.guides, job.template.guides);
+  assert.equal(
+    projection.projection.scene.pages[0].nodes.some(({ id }) => id.includes("guide")),
+    false,
+  );
 });
 
 test("BLD-026 Studio projection fails closed on mismatched structured bindings", async () => {

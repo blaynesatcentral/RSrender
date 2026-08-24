@@ -5,6 +5,7 @@ import {
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
@@ -85,6 +86,7 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "canUndo",
     "canRedo",
     "editableValues",
+    "guides",
     "textTemplateScopeSummary",
     "textOccurrencePresentationStates",
     "scene",
@@ -103,12 +105,39 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     typeof projection["canRedo"] !== "boolean" ||
     !Array.isArray(projection["editableValues"]) ||
     projection["editableValues"].length > 256 ||
+    !Array.isArray(projection["guides"]) ||
+    projection["guides"].length > 128 ||
     typeof projection["textTemplateScopeSummary"] !== "object" ||
     projection["textTemplateScopeSummary"] === null ||
     !Array.isArray(projection["textOccurrencePresentationStates"]) ||
     projection["textOccurrencePresentationStates"].length > 512
   ) {
     return null;
+  }
+  const scene = validateResolvedBoringLogPageScene(projection["scene"]);
+  const scenePage = scene.accepted ? scene.value.pages[0] : undefined;
+  if (scenePage === undefined) return null;
+  const guideIds = new Set<string>();
+  const guideCoordinates = new Set<string>();
+  for (const inputGuide of projection["guides"]) {
+    const guide = exactRecord(inputGuide, ["id", "orientation", "positionMpt", "locked"]);
+    if (
+      guide === null ||
+      typeof guide["id"] !== "string" ||
+      guide["id"].length < 1 ||
+      guide["id"].length > 128 ||
+      !["horizontal", "vertical"].includes(String(guide["orientation"])) ||
+      !isNonnegativeSafeInteger(guide["positionMpt"]) ||
+      guide["positionMpt"] >
+        (guide["orientation"] === "vertical" ? scenePage.widthMpt : scenePage.heightMpt) ||
+      typeof guide["locked"] !== "boolean"
+    ) {
+      return null;
+    }
+    const coordinate = `${String(guide["orientation"])}\u0000${String(guide["positionMpt"])}`;
+    if (guideIds.has(guide["id"]) || guideCoordinates.has(coordinate)) return null;
+    guideIds.add(guide["id"]);
+    guideCoordinates.add(coordinate);
   }
   const textTemplateScopeSummary = exactRecord(projection["textTemplateScopeSummary"], [
     "authoredStyleCount",
@@ -174,8 +203,7 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
       return null;
     }
   }
-  const scene = validateResolvedBoringLogPageScene(projection["scene"]);
-  return scene.accepted ? projection : null;
+  return projection;
 }
 
 const bootstrap = ipcRenderer
@@ -571,6 +599,78 @@ const resetTextOccurrencePresentation = Object.freeze(
   },
 );
 
+const setPageGuides = Object.freeze(async function setPageGuides(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, ["expectedWorkingRevision", "mutation"]);
+  const mutationRecord =
+    args === null || typeof args["mutation"] !== "object" || args["mutation"] === null
+      ? null
+      : (args["mutation"] as DataRecord);
+  const mutationKind = mutationRecord?.["kind"];
+  const mutation =
+    mutationKind === "add"
+      ? exactRecord(mutationRecord, ["kind", "orientation", "positionMpt"])
+      : mutationKind === "move"
+        ? exactRecord(mutationRecord, ["kind", "guideId", "positionMpt"])
+        : mutationKind === "delete"
+          ? exactRecord(mutationRecord, ["kind", "guideId"])
+          : mutationKind === "set-locked"
+            ? exactRecord(mutationRecord, ["kind", "guideId", "locked"])
+            : null;
+  const boundedGuideId =
+    mutation !== null &&
+    typeof mutation["guideId"] === "string" &&
+    mutation["guideId"].length >= 1 &&
+    mutation["guideId"].length <= 128;
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    mutation === null ||
+    (mutationKind === "add" &&
+      (!["horizontal", "vertical"].includes(String(mutation["orientation"])) ||
+        !isNonnegativeSafeInteger(mutation["positionMpt"]))) ||
+    (mutationKind === "move" &&
+      (!boundedGuideId || !isNonnegativeSafeInteger(mutation["positionMpt"]))) ||
+    ((mutationKind === "delete" || mutationKind === "set-locked") && !boundedGuideId) ||
+    (mutationKind === "set-locked" && typeof mutation["locked"] !== "boolean")
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
   Object.freeze({
@@ -578,6 +678,7 @@ contextBridge.exposeInMainWorld(
     lifecycle,
     setTextOccurrenceStyle,
     resetTextOccurrencePresentation,
+    setPageGuides,
   }),
 );
 
@@ -819,6 +920,26 @@ export interface BoringLogStudioPreloadApi {
     readonly expectedWorkingRevision: number;
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
+  }) => Promise<unknown>;
+  readonly setPageGuides: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly mutation:
+      | Readonly<{
+          readonly kind: "add";
+          readonly orientation: "horizontal" | "vertical";
+          readonly positionMpt: number;
+        }>
+      | Readonly<{
+          readonly kind: "move";
+          readonly guideId: string;
+          readonly positionMpt: number;
+        }>
+      | Readonly<{ readonly kind: "delete"; readonly guideId: string }>
+      | Readonly<{
+          readonly kind: "set-locked";
+          readonly guideId: string;
+          readonly locked: boolean;
+        }>;
   }) => Promise<unknown>;
 }
 

@@ -60,6 +60,7 @@ import {
 import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioLifecycleOperation,
+  type BoringLogStudioPageGuidesInput,
   type BoringLogStudioTextOccurrencePresentationResetInput,
   type BoringLogStudioTextOccurrenceStyleInput,
 } from "./boring-log-studio-route-broker.js";
@@ -68,6 +69,7 @@ import {
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
@@ -369,6 +371,7 @@ const handlers = [
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
@@ -1838,7 +1841,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -2971,6 +2974,80 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
             JSON.stringify(directResized["overlayFrame"]),
         `DIRECT_MANIPULATION_CANCEL_INVALID:${JSON.stringify({ directResized, directCanceled })}`,
       );
+      const guideSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, guides: value.accepted ? value.projection.guides : null, domGuideCount: Number(document.getElementById("page-guides")?.dataset.guideCount), locked: document.querySelector(".page-guide")?.getAttribute("data-locked") ?? null, status: document.getElementById("editor-status")?.textContent }; })()`;
+      await pageValue(
+        window,
+        `(() => { document.getElementById("ribbon-tab-layout")?.click(); document.getElementById("add-vertical-guide")?.click(); return true; })()`,
+      );
+      await waitFor(
+        window,
+        `document.getElementById("page-guides")?.dataset.guideCount === "1" && document.getElementById("editor-status")?.textContent?.startsWith("Add committed for this boring at revision ") === true`,
+        "WAIT_PAGE_GUIDE_ADD",
+      );
+      const guideAdded = record(await pageValue(window, guideSnapshotExpression));
+      await pageValue(window, `document.getElementById("ribbon-tab-home")?.click(); true`);
+      await press(window, "#undo", "Space", "FOCUS_PAGE_GUIDE_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("page-guides")?.dataset.guideCount === "0"`,
+        "WAIT_PAGE_GUIDE_UNDO",
+      );
+      const guideUndo = record(await pageValue(window, guideSnapshotExpression));
+      await press(window, "#redo", "Space", "FOCUS_PAGE_GUIDE_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("page-guides")?.dataset.guideCount === "1"`,
+        "WAIT_PAGE_GUIDE_REDO",
+      );
+      const guideRedo = record(await pageValue(window, guideSnapshotExpression));
+      await pageValue(
+        window,
+        `(() => { const guide = document.querySelector(".page-guide"); if (!(guide instanceof Element)) return false; guide.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true })); return true; })()`,
+      );
+      await waitFor(
+        window,
+        `document.querySelector(".page-guide")?.getAttribute("data-locked") === "true"`,
+        "WAIT_PAGE_GUIDE_LOCK",
+      );
+      const guideLocked = record(await pageValue(window, guideSnapshotExpression));
+      await pageValue(
+        window,
+        `(() => { const guide = document.querySelector(".page-guide"); if (!(guide instanceof Element)) return false; guide.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true })); return true; })()`,
+      );
+      await waitFor(
+        window,
+        `document.getElementById("page-guides")?.dataset.guideCount === "0"`,
+        "WAIT_PAGE_GUIDE_DELETE",
+      );
+      const guideDeleted = record(await pageValue(window, guideSnapshotExpression));
+      await press(window, "#undo", "Space", "FOCUS_PAGE_GUIDE_DELETE_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("page-guides")?.dataset.guideCount === "1" && document.querySelector(".page-guide")?.getAttribute("data-locked") === "true"`,
+        "WAIT_PAGE_GUIDE_DELETE_UNDO",
+      );
+      const guideDeleteUndo = record(await pageValue(window, guideSnapshotExpression));
+      requireProbe(
+        Array.isArray(guideAdded["guides"]) &&
+          guideAdded["guides"].length === 1 &&
+          guideAdded["domGuideCount"] === 1 &&
+          guideUndo["workingRevision"] === (guideAdded["workingRevision"] as number) + 1 &&
+          Array.isArray(guideUndo["guides"]) &&
+          guideUndo["guides"].length === 0 &&
+          guideRedo["workingRevision"] === (guideAdded["workingRevision"] as number) + 2 &&
+          Array.isArray(guideRedo["guides"]) &&
+          guideRedo["guides"].length === 1 &&
+          guideLocked["workingRevision"] === guideRedo["workingRevision"] + 1 &&
+          guideLocked["locked"] === "true" &&
+          guideDeleted["workingRevision"] === guideLocked["workingRevision"] + 1 &&
+          Array.isArray(guideDeleted["guides"]) &&
+          guideDeleted["guides"].length === 0 &&
+          guideDeleteUndo["workingRevision"] === guideDeleted["workingRevision"] + 1 &&
+          Array.isArray(guideDeleteUndo["guides"]) &&
+          guideDeleteUndo["guides"].length === 1 &&
+          guideDeleteUndo["locked"] === "true",
+        `PAGE_GUIDE_HISTORY_INVALID:${JSON.stringify({ guideAdded, guideUndo, guideRedo, guideLocked, guideDeleted, guideDeleteUndo })}`,
+      );
       directManipulation = Object.freeze({
         before: directBefore,
         moved: directMoved,
@@ -2978,6 +3055,14 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         redo: directRedo,
         resized: directResized,
         canceled: directCanceled,
+        pageGuides: Object.freeze({
+          added: guideAdded,
+          undo: guideUndo,
+          redo: guideRedo,
+          locked: guideLocked,
+          deleted: guideDeleted,
+          deleteUndo: guideDeleteUndo,
+        }),
       });
       emitStudioProbePhase("direct-manipulation-observed");
     }
@@ -3706,6 +3791,7 @@ async function main(): Promise<void> {
     };
     let textStyleCommandSequence = 0;
     let textPresentationResetCommandSequence = 0;
+    let pageGuidesCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -4123,6 +4209,162 @@ async function main(): Promise<void> {
         removedLayout: reset.removedLayout,
       });
     };
+    const handlePageGuides = async (input: BoringLogStudioPageGuidesInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null) {
+        return Object.freeze({ accepted: false, code: "PAGE_GUIDES_UNAVAILABLE" });
+      }
+      const currentGuides = [...(currentJob.template.guides ?? [])];
+      const mutation = input.mutation;
+      const existing =
+        mutation.kind === "add"
+          ? undefined
+          : currentGuides.find(({ id }) => id === mutation.guideId);
+      if (
+        (mutation.kind !== "add" && existing === undefined) ||
+        (mutation.kind === "move" && existing?.locked === true) ||
+        (mutation.kind === "add" && currentGuides.length >= 128)
+      ) {
+        return Object.freeze({ accepted: false, code: "PAGE_GUIDES_INVALID" });
+      }
+      const orientation = mutation.kind === "add" ? mutation.orientation : existing?.orientation;
+      const positionMpt =
+        mutation.kind === "add" || mutation.kind === "move" ? mutation.positionMpt : null;
+      if (
+        positionMpt !== null &&
+        (orientation === undefined ||
+          positionMpt < 0 ||
+          positionMpt >
+            (orientation === "vertical"
+              ? currentJob.template.page.widthMpt
+              : currentJob.template.page.heightMpt) ||
+          currentGuides.some(
+            (guide) =>
+              guide.id !== existing?.id &&
+              guide.orientation === orientation &&
+              guide.positionMpt === positionMpt,
+          ))
+      ) {
+        return Object.freeze({ accepted: false, code: "PAGE_GUIDES_INVALID" });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "PAGE_GUIDES_UNAVAILABLE" });
+      }
+      pageGuidesCommandSequence += 1;
+      const guideId =
+        mutation.kind === "add"
+          ? `guide-${sha256CanonicalJson({
+              boringLogIdentity: document.boringLogIdentity,
+              workingRevision: input.expectedWorkingRevision,
+              sequence: pageGuidesCommandSequence,
+              orientation: mutation.orientation,
+              positionMpt: mutation.positionMpt,
+            }).slice("sha256:".length, "sha256:".length + 24)}`
+          : mutation.guideId;
+      const guides =
+        mutation.kind === "add"
+          ? [
+              ...currentGuides,
+              Object.freeze({
+                id: guideId,
+                orientation: mutation.orientation,
+                positionMpt: mutation.positionMpt,
+                locked: false,
+              }),
+            ]
+          : mutation.kind === "delete"
+            ? currentGuides.filter(({ id }) => id !== mutation.guideId)
+            : currentGuides.map((guide) =>
+                guide.id !== mutation.guideId
+                  ? guide
+                  : mutation.kind === "move"
+                    ? Object.freeze({ ...guide, positionMpt: mutation.positionMpt })
+                    : Object.freeze({ ...guide, locked: mutation.locked }),
+              );
+      const template = {
+        ...currentJob.template,
+        guides: Object.freeze(
+          guides
+            .map((guide) => Object.freeze({ ...guide }))
+            .sort((left, right) => left.id.localeCompare(right.id)),
+        ),
+      };
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (
+        !authored.accepted ||
+        authored.value.templateDigest === representation.effectiveContentDigest
+      ) {
+        return Object.freeze({ accepted: false, code: "PAGE_GUIDES_INVALID" });
+      }
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-038:request:page-guide-${mutation.kind}:${pageGuidesCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason:
+          mutation.kind === "add"
+            ? "Add nonprinting page guide in Boring Log Studio"
+            : mutation.kind === "move"
+              ? "Move nonprinting page guide in Boring Log Studio"
+              : mutation.kind === "delete"
+                ? "Delete nonprinting page guide in Boring Log Studio"
+                : "Set nonprinting page guide lock in Boring Log Studio",
+        operation: `page-guide-${mutation.kind === "set-locked" ? "lock" : mutation.kind}`,
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code:
+          mutation.kind === "add"
+            ? "PAGE_GUIDE_ADDED"
+            : mutation.kind === "move"
+              ? "PAGE_GUIDE_MOVED"
+              : mutation.kind === "delete"
+                ? "PAGE_GUIDE_DELETED"
+                : "PAGE_GUIDE_LOCK_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        guideCount: authored.value.template.guides?.length ?? 0,
+        guideId,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -4133,6 +4375,7 @@ async function main(): Promise<void> {
       lifecycle: handleLifecycle,
       setTextOccurrenceStyle: handleTextOccurrenceStyle,
       resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
+      setPageGuides: handlePageGuides,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -4146,6 +4389,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL, (event, input: unknown) =>
       route.setTextOccurrenceStyle(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL, (event, input: unknown) =>
+      route.setPageGuides(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,

@@ -49,6 +49,7 @@ export type {
   BoringLogNumericPolylineLayerInput,
   BoringLogNumericRangeLayerInput,
   BoringLogPagePlan,
+  BoringLogPageGuideInput,
   BoringLogPlannedColumn,
   BoringLogPlannedPage,
   BoringLogPlannedRegion,

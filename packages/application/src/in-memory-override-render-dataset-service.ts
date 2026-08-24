@@ -809,6 +809,8 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
   ): Promise<EmbeddedTemplateReplacementCommitResult> {
     return this.#serialize(async () => {
       await Promise.resolve();
+      const hasOperation =
+        typeof input === "object" && input !== null && Object.hasOwn(input, "operation");
       const command = ownDataRecord(input, [
         "requestId",
         "documentId",
@@ -818,6 +820,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
         "expectedEffectiveContentDigest",
         "replacementEffectiveContentDigest",
         "reason",
+        ...(hasOperation ? ["operation"] : []),
       ]);
       if (
         command === null ||
@@ -830,7 +833,15 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
         !isSha256Digest(command["expectedEffectiveContentDigest"]) ||
         !isSha256Digest(command["replacementEffectiveContentDigest"]) ||
         typeof command["reason"] !== "string" ||
-        command["reason"].trim().length < 1
+        command["reason"].trim().length < 1 ||
+        (hasOperation &&
+          ![
+            "text-occurrence-style",
+            "page-guide-add",
+            "page-guide-move",
+            "page-guide-delete",
+            "page-guide-lock",
+          ].includes(String(command["operation"])))
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
       }
@@ -936,8 +947,23 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
       if (replay.kind !== "miss") {
         return Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID", detail: "replay" });
       }
+      const operation = hasOperation ? String(command["operation"]) : "text-occurrence-style";
+      const commandIdentity =
+        operation === "text-occurrence-style"
+          ? "embedded-template.text-occurrence-style-set"
+          : `embedded-template.${operation}`;
+      const commandLabel =
+        operation === "page-guide-add"
+          ? "Add page guide"
+          : operation === "page-guide-move"
+            ? "Move page guide"
+            : operation === "page-guide-delete"
+              ? "Delete page guide"
+              : operation === "page-guide-lock"
+                ? "Set page guide lock"
+                : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
-        kind: "embedded-template.text-occurrence-style-set",
+        kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],
         priorEmbeddedTemplateRepresentationIdentity: prior.embeddedTemplateRepresentationIdentity,
         embeddedTemplateRepresentationIdentity: replacementIdentity,
@@ -946,8 +972,8 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
       const effect = createProjectDomainEffect({
         sourceRequestId: command["requestId"],
         sourceCommandCanonicalJson: canonicalCommand,
-        sourceCommandIdentity: "embedded-template.text-occurrence-style-set",
-        commandLabel: "Set text occurrence style",
+        sourceCommandIdentity: commandIdentity,
+        commandLabel,
         documentId: snapshot.documentId,
         ownerGeneration: snapshot.ownerGeneration,
         expectedWorkingRevision: snapshot.workingRevision,
@@ -963,7 +989,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
           "urn:rsrender:projection:effective-template",
         ],
         eventResult: {
-          resultCode: "embedded-template.text-occurrence-style-set",
+          resultCode: commandIdentity,
           canonicalPayload: eventPayload,
         },
       });

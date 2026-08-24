@@ -8,6 +8,7 @@ import { createSyntheticBoringLogOverrideSession } from "../packages/application
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_ROUTE_URL,
@@ -335,6 +336,103 @@ test("BLD-037 Studio route admits only bounded exact-occurrence typography comma
   }
 });
 
+test("BLD-038 Studio route admits only exact atomic page-guide mutations", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  const received = [];
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "f".repeat(64),
+    getProjection: source.getProjection,
+    setPageGuides: async (input) => {
+      received.push(input);
+      return { accepted: true, code: "PAGE_GUIDE_MUTATED", workingRevision: received.length };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  assert.equal(binding.accepted, true, binding.code);
+  const envelopeFor = (sequence, mutation) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args: { expectedWorkingRevision: sequence - 1, mutation },
+  });
+  assert.equal(
+    (
+      await route.setPageGuides(
+        routeContext,
+        envelopeFor(1, {
+          kind: "add",
+          orientation: "vertical",
+          positionMpt: 144_000,
+        }),
+      )
+    ).accepted,
+    true,
+  );
+  assert.equal(
+    (
+      await route.setPageGuides(
+        routeContext,
+        envelopeFor(2, {
+          kind: "move",
+          guideId: "guide-1",
+          positionMpt: 145_000,
+        }),
+      )
+    ).accepted,
+    true,
+  );
+  assert.equal(
+    (
+      await route.setPageGuides(
+        routeContext,
+        envelopeFor(3, {
+          kind: "set-locked",
+          guideId: "guide-1",
+          locked: true,
+        }),
+      )
+    ).accepted,
+    true,
+  );
+  assert.equal(
+    (
+      await route.setPageGuides(
+        routeContext,
+        envelopeFor(4, {
+          kind: "delete",
+          guideId: "guide-1",
+        }),
+      )
+    ).accepted,
+    true,
+  );
+  assert.equal(received.length, 4);
+  assert.equal(
+    (
+      await route.setPageGuides(
+        routeContext,
+        envelopeFor(5, {
+          kind: "move",
+          guideId: "guide-1",
+          positionMpt: -1,
+        }),
+      )
+    ).code,
+    "STUDIO_ROUTE_ARGUMENT_INVALID",
+  );
+});
+
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -479,6 +577,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setPageGuides(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -504,6 +610,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "lifecycle",
     "setTextOccurrenceStyle",
     "resetTextOccurrencePresentation",
+    "setPageGuides",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,

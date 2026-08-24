@@ -479,9 +479,91 @@ textarea {
   user-select: none;
 }
 .page-shadow {
+  position: relative;
   width: min(660px, 88%);
   transform-origin: top center;
   filter: drop-shadow(0 5px 12px #24333e55);
+}
+.page-ruler,
+.ruler-corner {
+  position: absolute;
+  z-index: 4;
+  background-color: #edf1f3;
+  color: #53646f;
+  font-size: 8px;
+  filter: none;
+  user-select: none;
+}
+.ruler-corner {
+  left: -22px;
+  top: -22px;
+  width: 21px;
+  height: 21px;
+  border-right: 1px solid #9ba8b0;
+  border-bottom: 1px solid #9ba8b0;
+}
+.page-ruler.horizontal {
+  left: 0;
+  top: -22px;
+  width: 100%;
+  height: 21px;
+  cursor: ns-resize;
+  border-bottom: 1px solid #9ba8b0;
+}
+.page-ruler.vertical {
+  left: -22px;
+  top: 0;
+  width: 21px;
+  height: 100%;
+  cursor: ew-resize;
+  border-right: 1px solid #9ba8b0;
+}
+.ruler-label {
+  fill: #53646f;
+  font-size: 8000px;
+  pointer-events: none;
+}
+.ruler-tick {
+  stroke: #8b99a2;
+  stroke-width: 1000px;
+  pointer-events: none;
+}
+.page-guides {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page-guide {
+  pointer-events: auto;
+}
+.page-guide-line {
+  stroke: #e6007e;
+  stroke-width: 1200px;
+  opacity: 0.8;
+  pointer-events: none;
+}
+.page-guide-hit {
+  stroke: transparent;
+  stroke-width: 8000px;
+  pointer-events: stroke;
+}
+.page-guide.vertical,
+.page-guide.vertical .page-guide-hit {
+  cursor: ew-resize;
+}
+.page-guide.horizontal,
+.page-guide.horizontal .page-guide-hit {
+  cursor: ns-resize;
+}
+.page-guide.is-preview .page-guide-line {
+  stroke-width: 1800px;
+  opacity: 1;
+}
+.page-guide[data-locked="true"],
+.page-guide[data-locked="true"] .page-guide-hit {
+  cursor: not-allowed;
 }
 .page-shadow.zoom-40 {
   transform: scale(0.4);

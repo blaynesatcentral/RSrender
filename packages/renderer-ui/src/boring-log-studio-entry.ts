@@ -16,6 +16,23 @@ type TextFrame = Readonly<{
   heightMpt: number;
 }>;
 
+type PageGuide = Readonly<{
+  readonly id: string;
+  readonly orientation: "horizontal" | "vertical";
+  readonly positionMpt: number;
+  readonly locked: boolean;
+}>;
+
+type PageGuideMutation =
+  | Readonly<{
+      readonly kind: "add";
+      readonly orientation: "horizontal" | "vertical";
+      readonly positionMpt: number;
+    }>
+  | Readonly<{ readonly kind: "move"; readonly guideId: string; readonly positionMpt: number }>
+  | Readonly<{ readonly kind: "delete"; readonly guideId: string }>
+  | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
+
 type TextTemplateProperty =
   | "fontFamilyId"
   | "fontSizeMpt"
@@ -101,6 +118,7 @@ type StudioProjection = Readonly<{
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly editableValues: readonly EditableValue[];
+  readonly guides: readonly PageGuide[];
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -214,6 +232,10 @@ type StudioApis = Readonly<{
       readonly occurrenceNodeId: string;
       readonly semanticId: string;
     }) => Promise<unknown>;
+    readonly setPageGuides: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly mutation: PageGuideMutation;
+    }) => Promise<CommandResult>;
   };
   readonly document: {
     readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
@@ -252,10 +274,10 @@ type PublicationApi = Readonly<{
   }) => Promise<PublicationResult>;
 }>;
 
-function element<ElementType extends HTMLElement>(id: string): ElementType {
+function element<ElementType extends Element>(id: string): ElementType {
   const value = document.getElementById(id);
   if (value === null) throw new Error(`Missing Boring Log Studio element: ${id}`);
-  return value as ElementType;
+  return value as unknown as ElementType;
 }
 
 function humanize(value: string): string {
@@ -313,6 +335,9 @@ async function main(): Promise<void> {
   let page = scene.pages[0]!;
   const pageHost = element<HTMLDivElement>("svg-page");
   const pageShadow = element<HTMLDivElement>("page-shadow");
+  const pageGuidesHost = element<SVGSVGElement>("page-guides");
+  const horizontalRuler = element<SVGSVGElement>("horizontal-ruler");
+  const verticalRuler = element<SVGSVGElement>("vertical-ruler");
   const canvasStage = element<HTMLDivElement>("canvas-stage");
   const tree = element<HTMLDivElement>("contents-tree");
   const filter = element<HTMLInputElement>("contents-filter");
@@ -462,6 +487,16 @@ async function main(): Promise<void> {
         }>;
         readonly originalTransform: string | null;
         readonly originalFrameTransform: string | null;
+      }
+    | undefined;
+  let pageGuideGesture:
+    | {
+        readonly pointerId: number;
+        readonly guideId: string | null;
+        readonly orientation: "horizontal" | "vertical";
+        readonly originalPositionMpt: number;
+        previewPositionMpt: number;
+        readonly locked: boolean;
       }
     | undefined;
   let suppressCanvasClick = false;
@@ -700,6 +735,8 @@ async function main(): Promise<void> {
       }
     }
     installDirectManipulationOverlay();
+    renderPageRulers();
+    renderPageGuides();
     pageHost.setAttribute("aria-busy", "false");
   }
 
@@ -819,6 +856,219 @@ async function main(): Promise<void> {
     return Object.freeze({ xMpt: Math.round(pagePoint.x), yMpt: Math.round(pagePoint.y) });
   }
 
+  function renderPageRulers(): void {
+    const render = (host: SVGSVGElement, extentMpt: number): void => {
+      host.replaceChildren();
+      const horizontal = host === horizontalRuler;
+      host.setAttribute(
+        "viewBox",
+        horizontal ? `0 0 ${extentMpt} 21000` : `0 0 21000 ${extentMpt}`,
+      );
+      for (let positionMpt = 0; positionMpt <= extentMpt; positionMpt += 72_000) {
+        const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        tick.setAttribute("class", "ruler-tick");
+        tick.setAttribute("x1", String(horizontal ? positionMpt : 11_000));
+        tick.setAttribute("x2", String(horizontal ? positionMpt : 21_000));
+        tick.setAttribute("y1", String(horizontal ? 11_000 : positionMpt));
+        tick.setAttribute("y2", String(horizontal ? 21_000 : positionMpt));
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("class", "ruler-label");
+        label.setAttribute("x", String(horizontal ? positionMpt + 2_000 : 2_000));
+        label.setAttribute("y", String(horizontal ? 9_000 : positionMpt + 9_000));
+        label.textContent = String(positionMpt / 72_000);
+        host.append(tick, label);
+      }
+    };
+    render(horizontalRuler, page.widthMpt);
+    render(verticalRuler, page.heightMpt);
+  }
+
+  function renderPageGuides(): void {
+    const projectedGuides = studioProjection?.guides ?? [];
+    const gesture = pageGuideGesture;
+    const guides = projectedGuides.map((guide) =>
+      guide.id === gesture?.guideId
+        ? Object.freeze({ ...guide, positionMpt: gesture.previewPositionMpt })
+        : guide,
+    );
+    if (gesture?.guideId === null) {
+      guides.push(
+        Object.freeze({
+          id: "preview-guide",
+          orientation: gesture.orientation,
+          positionMpt: gesture.previewPositionMpt,
+          locked: false,
+        }),
+      );
+    }
+    pageGuidesHost.replaceChildren();
+    pageGuidesHost.setAttribute("viewBox", `0 0 ${page.widthMpt} ${page.heightMpt}`);
+    for (const guide of guides) {
+      const control = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      control.setAttribute(
+        "class",
+        `page-guide ${guide.orientation}${guide.id === "preview-guide" ? " is-preview" : ""}`,
+      );
+      control.dataset["guideId"] = guide.id;
+      control.dataset["locked"] = String(guide.locked);
+      control.setAttribute("role", "button");
+      control.setAttribute("tabindex", "0");
+      control.setAttribute(
+        "aria-label",
+        `${humanize(guide.orientation)} guide at ${(guide.positionMpt / 1_000).toFixed(1)} points${guide.locked ? ", locked" : ""}`,
+      );
+      const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = `${guide.locked ? "Locked · right-click to unlock" : "Drag to move · right-click to lock"} · double-click to delete`;
+      const visible = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      visible.setAttribute("class", "page-guide-line");
+      const hit = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      hit.setAttribute("class", "page-guide-hit");
+      for (const line of [visible, hit]) {
+        line.setAttribute("x1", String(guide.orientation === "vertical" ? guide.positionMpt : 0));
+        line.setAttribute(
+          "x2",
+          String(guide.orientation === "vertical" ? guide.positionMpt : page.widthMpt),
+        );
+        line.setAttribute("y1", String(guide.orientation === "horizontal" ? guide.positionMpt : 0));
+        line.setAttribute(
+          "y2",
+          String(guide.orientation === "horizontal" ? guide.positionMpt : page.heightMpt),
+        );
+      }
+      control.append(title, visible, hit);
+      pageGuidesHost.append(control);
+    }
+    pageGuidesHost.dataset["guideCount"] = String(projectedGuides.length);
+  }
+
+  async function mutatePageGuide(mutation: PageGuideMutation): Promise<boolean> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null || lifecycleState?.readOnly === true) {
+      status.textContent = "Page guide editing is unavailable for this Log Project.";
+      return false;
+    }
+    const result = await apis.studio.setPageGuides({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      mutation,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Page guide command failed: ${result.code ?? "PAGE_GUIDES_UNAVAILABLE"}`;
+      renderPageGuides();
+      return false;
+    }
+    return refreshStudioProjection(
+      result.workingRevision,
+      `${mutation.kind === "set-locked" ? "Guide lock" : humanize(mutation.kind)} committed for this boring at revision ${result.workingRevision}.`,
+    );
+  }
+
+  function guidePosition(
+    event: PointerEvent,
+    orientation: "horizontal" | "vertical",
+  ): number | null {
+    const point = pointerPagePoint(event);
+    if (point === null) return null;
+    const maximum = orientation === "vertical" ? page.widthMpt : page.heightMpt;
+    return Math.max(0, Math.min(maximum, orientation === "vertical" ? point.xMpt : point.yMpt));
+  }
+
+  function beginPageGuideGesture(
+    event: PointerEvent,
+    orientation: "horizontal" | "vertical",
+    guide: PageGuide | null,
+  ): void {
+    if (
+      event.button !== 0 ||
+      pageGuideGesture !== undefined ||
+      lifecycleState?.readOnly === true ||
+      guide?.locked === true
+    ) {
+      if (guide?.locked === true) {
+        status.textContent = "This guide is locked. Right-click it to unlock before dragging.";
+      }
+      return;
+    }
+    const positionMpt = guidePosition(event, orientation);
+    if (positionMpt === null) return;
+    pageGuideGesture = {
+      pointerId: event.pointerId,
+      guideId: guide?.id ?? null,
+      orientation,
+      originalPositionMpt: guide?.positionMpt ?? positionMpt,
+      previewPositionMpt: positionMpt,
+      locked: guide?.locked ?? false,
+    };
+    pageShadow.setPointerCapture(event.pointerId);
+    renderPageGuides();
+    event.preventDefault();
+    event.stopPropagation();
+    status.textContent = `${humanize(orientation)} guide gesture active. Release commits one Undo/Redo step; Alt bypasses snapping; Esc cancels.`;
+  }
+
+  function updatePageGuideGesture(event: PointerEvent): void {
+    const gesture = pageGuideGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const unsnapped = guidePosition(event, gesture.orientation);
+    if (unsnapped === null) return;
+    let positionMpt = unsnapped;
+    if (!event.altKey && (smartSnapEnabled || gridSnapEnabled)) {
+      const svg = pageHost.querySelector<SVGSVGElement>("svg");
+      const transform = svg?.getScreenCTM();
+      const thresholdMpt =
+        transform === null || transform === undefined
+          ? 6_000
+          : Math.max(1, Math.round(6 / Math.max(Math.abs(transform.a), Math.abs(transform.d))));
+      const targets = currentSnapTargets(gesture.guideId);
+      const axisTargets = gesture.orientation === "vertical" ? targets.xMpt : targets.yMpt;
+      const nearest = axisTargets
+        .map((targetMpt) => ({ targetMpt, distanceMpt: Math.abs(targetMpt - unsnapped) }))
+        .filter(({ distanceMpt }) => distanceMpt <= thresholdMpt)
+        .sort(
+          (left, right) => left.distanceMpt - right.distanceMpt || left.targetMpt - right.targetMpt,
+        )[0];
+      if (nearest !== undefined) positionMpt = nearest.targetMpt;
+    }
+    gesture.previewPositionMpt = positionMpt;
+    renderPageGuides();
+    status.textContent = `${humanize(gesture.orientation)} guide preview ${(positionMpt / 1_000).toFixed(1)} pt${event.altKey ? " · snapping bypassed" : ""}. Release to commit.`;
+    event.preventDefault();
+  }
+
+  function cancelPageGuideGesture(): void {
+    const gesture = pageGuideGesture;
+    if (gesture === undefined) return;
+    if (pageShadow.hasPointerCapture(gesture.pointerId)) {
+      pageShadow.releasePointerCapture(gesture.pointerId);
+    }
+    pageGuideGesture = undefined;
+    renderPageGuides();
+    status.textContent = "Guide gesture canceled; document history was unchanged.";
+  }
+
+  async function finishPageGuideGesture(event: PointerEvent): Promise<void> {
+    const gesture = pageGuideGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    if (pageShadow.hasPointerCapture(event.pointerId))
+      pageShadow.releasePointerCapture(event.pointerId);
+    pageGuideGesture = undefined;
+    event.preventDefault();
+    if (gesture.guideId !== null && gesture.previewPositionMpt === gesture.originalPositionMpt) {
+      renderPageGuides();
+      status.textContent =
+        "Guide gesture ended without a position change; no history item was created.";
+      return;
+    }
+    await mutatePageGuide(
+      gesture.guideId === null
+        ? {
+            kind: "add",
+            orientation: gesture.orientation,
+            positionMpt: gesture.previewPositionMpt,
+          }
+        : { kind: "move", guideId: gesture.guideId, positionMpt: gesture.previewPositionMpt },
+    );
+  }
+
   function syncTextFrameInputs(frame: TextFrame): void {
     const anchorPoint = frameAnchorPoint(frame, currentTextFrameAnchor);
     textFrameX.value = String(anchorPoint.xMpt / 1_000);
@@ -828,10 +1078,17 @@ async function main(): Promise<void> {
     propertyBounds.textContent = `${(frame.xMpt / 1_000).toFixed(1)}, ${(frame.yMpt / 1_000).toFixed(1)} Â· ${(frame.widthMpt / 1_000).toFixed(1)} Ã— ${(frame.heightMpt / 1_000).toFixed(1)} pt`;
   }
 
-  function currentSnapTargets(): Readonly<{ xMpt: readonly number[]; yMpt: readonly number[] }> {
+  function currentSnapTargets(
+    excludedGuideId: string | null = null,
+  ): Readonly<{ xMpt: readonly number[]; yMpt: readonly number[] }> {
     const xMpt = new Set<number>([0, Math.round(page.widthMpt / 2), page.widthMpt]);
     const yMpt = new Set<number>([0, Math.round(page.heightMpt / 2), page.heightMpt]);
     if (smartSnapEnabled) {
+      for (const guide of studioProjection?.guides ?? []) {
+        if (guide.id === excludedGuideId) continue;
+        if (guide.orientation === "vertical") xMpt.add(guide.positionMpt);
+        else yMpt.add(guide.positionMpt);
+      }
       for (const candidate of pageHost.querySelectorAll<SVGGraphicsElement>(".scene-node")) {
         if (candidate.dataset["nodeId"] === selectedSceneNodeId) continue;
         try {
@@ -1090,6 +1347,23 @@ async function main(): Promise<void> {
     smartSnapButton.setAttribute("aria-pressed", String(smartSnapEnabled));
     gridSnapButton.setAttribute("aria-pressed", String(gridSnapEnabled));
     status.textContent = `Snapping: smart ${smartSnapEnabled ? "on" : "off"}, 1 pt grid ${gridSnapEnabled ? "on" : "off"}. Hold Alt during a gesture to bypass all snapping.`;
+  }
+
+  function addPageGuide(orientation: "horizontal" | "vertical"): void {
+    const maximum = orientation === "vertical" ? page.widthMpt : page.heightMpt;
+    const occupied = new Set(
+      (studioProjection?.guides ?? [])
+        .filter((guide) => guide.orientation === orientation)
+        .map(({ positionMpt }) => positionMpt),
+    );
+    const preferred = [1 / 2, 1 / 3, 2 / 3, 1 / 4, 3 / 4]
+      .map((ratio) => Math.round(maximum * ratio))
+      .find((positionMpt) => !occupied.has(positionMpt));
+    if (preferred === undefined) {
+      status.textContent = `No unused default ${orientation} guide position is available; drag from the ruler.`;
+      return;
+    }
+    void mutatePageGuide({ kind: "add", orientation, positionMpt: preferred });
   }
 
   function showPropertyPanel(panel: "element" | "diagnostics"): void {
@@ -2095,6 +2369,51 @@ async function main(): Promise<void> {
       hideCanvasContextMenu();
     }
   });
+  horizontalRuler.addEventListener("pointerdown", (event) =>
+    beginPageGuideGesture(event, "vertical", null),
+  );
+  verticalRuler.addEventListener("pointerdown", (event) =>
+    beginPageGuideGesture(event, "horizontal", null),
+  );
+  horizontalRuler.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      addPageGuide("vertical");
+    }
+  });
+  verticalRuler.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      addPageGuide("horizontal");
+    }
+  });
+  pageGuidesHost.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const control = target.closest<SVGElement>(".page-guide[data-guide-id]");
+    const guide = studioProjection?.guides.find(({ id }) => id === control?.dataset["guideId"]);
+    if (guide !== undefined) beginPageGuideGesture(event, guide.orientation, guide);
+  });
+  pageGuidesHost.addEventListener("dblclick", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const guideId = target.closest<SVGElement>(".page-guide[data-guide-id]")?.dataset["guideId"];
+    if (guideId === undefined) return;
+    event.preventDefault();
+    void mutatePageGuide({ kind: "delete", guideId });
+  });
+  pageGuidesHost.addEventListener("contextmenu", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const guideId = target.closest<SVGElement>(".page-guide[data-guide-id]")?.dataset["guideId"];
+    const guide = studioProjection?.guides.find(({ id }) => id === guideId);
+    if (guide === undefined) return;
+    event.preventDefault();
+    void mutatePageGuide({ kind: "set-locked", guideId: guide.id, locked: !guide.locked });
+  });
+  pageShadow.addEventListener("pointermove", updatePageGuideGesture);
+  pageShadow.addEventListener("pointerup", (event) => void finishPageGuideGesture(event));
+  pageShadow.addEventListener("pointercancel", cancelPageGuideGesture);
   canvasStage.addEventListener("pointerdown", (event) => {
     if (interactionMode !== "pan" || event.button !== 0) return;
     panGesture = Object.freeze({
@@ -2186,6 +2505,8 @@ async function main(): Promise<void> {
     },
     "toggle-smart-snap": () => toggleSnapping("smart"),
     "toggle-grid-snap": () => toggleSnapping("grid"),
+    "add-vertical-guide": () => addPageGuide("vertical"),
+    "add-horizontal-guide": () => addPageGuide("horizontal"),
     "inspect-samples": () => select("column-sample"),
     "inspect-track": () => select("column-data-track"),
     "validate-document": () => void validateDocument(),
@@ -2270,6 +2591,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && pageGuideGesture !== undefined) {
+      event.preventDefault();
+      cancelPageGuideGesture();
+      return;
+    }
     if (event.key === "Escape" && directManipulationGesture !== undefined) {
       event.preventDefault();
       cancelDirectManipulation();
