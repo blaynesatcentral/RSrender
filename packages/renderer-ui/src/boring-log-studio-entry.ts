@@ -218,9 +218,11 @@ type PublicationResult =
       result: Readonly<{
         code: "EXPORT_VERIFIED_SUCCESS";
         workingRevision: number;
-        sceneInputDigest: string;
-        sceneDigest: string;
-        projectionDigest: string;
+        packageCandidateDigest: string;
+        selectionDigest: string;
+        orderedBoringLogIdentities: readonly string[];
+        aggregateSceneDigest: string;
+        aggregateProjectionDigest: string;
         pdfDigest: string;
         pdfBytes: number;
         pageCount: number;
@@ -379,7 +381,7 @@ type LifecycleState = Readonly<{
 type PublicationApi = Readonly<{
   exportPdf: (input: {
     readonly expectedWorkingRevision: number;
-    readonly expectedSceneInputDigest: string;
+    readonly orderedBoringLogIdentities: readonly string[];
   }) => Promise<PublicationResult>;
 }>;
 
@@ -643,6 +645,11 @@ async function main(): Promise<void> {
   const undoButton = element<HTMLButtonElement>("undo");
   const redoButton = element<HTMLButtonElement>("redo");
   const exportPdfButton = element<HTMLButtonElement>("export-pdf");
+  const publicationPackagePanel = element<HTMLElement>("publication-package-panel");
+  const publicationSelectionSummary = element<HTMLOutputElement>("publication-selection-summary");
+  const publicationLogList = element<HTMLOListElement>("publication-log-list");
+  const publicationMoveUp = element<HTMLButtonElement>("publication-move-up");
+  const publicationMoveDown = element<HTMLButtonElement>("publication-move-down");
   const validateButton = element<HTMLButtonElement>("validate-document");
   const selectToolButton = element<HTMLButtonElement>("select-tool");
   const panToolButton = element<HTMLButtonElement>("pan-tool");
@@ -667,6 +674,10 @@ async function main(): Promise<void> {
   let selectedLithologyInitialPatternId: string | null = null;
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
+  let publicationDocumentIdentity: string | null = null;
+  let publicationOrder: string[] = [];
+  const publicationIncluded = new Set<string>();
+  let publicationKeyIdentity: string | null = null;
   const selectionByBoring = new Map<
     string,
     Readonly<{
@@ -808,10 +819,117 @@ async function main(): Promise<void> {
     );
   }
 
+  function orderedPublicationSelection(): readonly string[] {
+    return Object.freeze(
+      publicationOrder.filter((boringLogIdentity) => publicationIncluded.has(boringLogIdentity)),
+    );
+  }
+
+  function renderPublicationInventory(): void {
+    const state = lifecycleState;
+    if (state === null) {
+      publicationLogList.replaceChildren();
+      publicationSelectionSummary.value = "0 of 0 logs selected";
+      publicationSelectionSummary.textContent = publicationSelectionSummary.value;
+      publicationMoveUp.disabled = true;
+      publicationMoveDown.disabled = true;
+      return;
+    }
+    const boringByIdentity = new Map(
+      state.boringLogs.map((boring) => [boring.boringLogIdentity, boring]),
+    );
+    publicationLogList.replaceChildren(
+      ...publicationOrder.map((boringLogIdentity, packageIndex) => {
+        const boring = boringByIdentity.get(boringLogIdentity)!;
+        const item = document.createElement("li");
+        item.dataset["publicationBoringLogIdentity"] = boringLogIdentity;
+        item.dataset["packageIndex"] = String(packageIndex);
+        item.classList.toggle("is-package-key", publicationKeyIdentity === boringLogIdentity);
+        const included = document.createElement("input");
+        included.type = "checkbox";
+        included.checked = publicationIncluded.has(boringLogIdentity);
+        included.setAttribute("aria-label", `Include ${boring.displayName} in PDF package`);
+        included.addEventListener("change", () => {
+          if (included.checked) publicationIncluded.add(boringLogIdentity);
+          else publicationIncluded.delete(boringLogIdentity);
+          publicationKeyIdentity = boringLogIdentity;
+          renderPublicationInventory();
+          updateHistoryControls();
+          status.textContent = `${orderedPublicationSelection().length} Boring Log${orderedPublicationSelection().length === 1 ? "" : "s"} selected for one PDF package.`;
+        });
+        const choose = document.createElement("button");
+        choose.type = "button";
+        choose.dataset["publicationSelectIdentity"] = boringLogIdentity;
+        choose.setAttribute("aria-label", `Select ${boring.displayName} for package ordering`);
+        const name = document.createElement("strong");
+        name.textContent = `${packageIndex + 1}. ${boring.displayName}`;
+        const identity = document.createElement("small");
+        identity.textContent = boring.explorationIdentity;
+        choose.append(name, identity);
+        choose.addEventListener("click", () => {
+          publicationKeyIdentity = boringLogIdentity;
+          renderPublicationInventory();
+        });
+        const stateLabel = document.createElement("span");
+        stateLabel.className = "publication-log-state";
+        stateLabel.textContent = `${boring.warningCount === 0 ? "Ready" : `${boring.warningCount} warning${boring.warningCount === 1 ? "" : "s"}`} · ${boring.hasOverrides ? "Edited" : "Source"}`;
+        item.append(included, choose, stateLabel);
+        return item;
+      }),
+    );
+    const selected = orderedPublicationSelection();
+    publicationSelectionSummary.value = `${selected.length} of ${publicationOrder.length} logs selected`;
+    publicationSelectionSummary.textContent = publicationSelectionSummary.value;
+    publicationSelectionSummary.dataset["orderedBoringLogIdentities"] = JSON.stringify(selected);
+    const keyIndex =
+      publicationKeyIdentity === null ? -1 : publicationOrder.indexOf(publicationKeyIdentity);
+    publicationMoveUp.disabled = keyIndex <= 0;
+    publicationMoveDown.disabled = keyIndex < 0 || keyIndex >= publicationOrder.length - 1;
+  }
+
+  function installPublicationInventory(next: LifecycleState): void {
+    const canonicalOrder = next.boringLogs.map(({ boringLogIdentity }) => boringLogIdentity);
+    if (publicationDocumentIdentity !== next.documentIdentity) {
+      publicationDocumentIdentity = next.documentIdentity;
+      publicationOrder = [...canonicalOrder];
+      publicationIncluded.clear();
+      for (const identity of canonicalOrder) publicationIncluded.add(identity);
+      publicationKeyIdentity = canonicalOrder[0] ?? null;
+    } else {
+      const allowed = new Set(canonicalOrder);
+      publicationOrder = publicationOrder.filter((identity) => allowed.has(identity));
+      for (const identity of canonicalOrder) {
+        if (!publicationOrder.includes(identity)) {
+          publicationOrder.push(identity);
+          publicationIncluded.add(identity);
+        }
+      }
+      for (const identity of [...publicationIncluded]) {
+        if (!allowed.has(identity)) publicationIncluded.delete(identity);
+      }
+      if (publicationKeyIdentity === null || !allowed.has(publicationKeyIdentity)) {
+        publicationKeyIdentity = publicationOrder[0] ?? null;
+      }
+    }
+    renderPublicationInventory();
+  }
+
+  function movePublicationKey(delta: -1 | 1): void {
+    if (publicationKeyIdentity === null) return;
+    const from = publicationOrder.indexOf(publicationKeyIdentity);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= publicationOrder.length) return;
+    const [moved] = publicationOrder.splice(from, 1);
+    publicationOrder.splice(to, 0, moved!);
+    renderPublicationInventory();
+    status.textContent = `PDF package order updated; ${lifecycleState?.activeBoringLogIdentity === publicationKeyIdentity ? "the active Canvas stayed on this Boring Log" : "the active Canvas was unchanged"}.`;
+  }
+
   function updateHistoryControls(): void {
     undoButton.disabled = studioProjection?.canUndo !== true;
     redoButton.disabled = studioProjection?.canRedo !== true;
-    exportPdfButton.disabled = studioProjection === null || publicationApi() === null;
+    exportPdfButton.disabled =
+      studioProjection === null || publicationApi() === null || publicationIncluded.size === 0;
     validateButton.disabled = studioProjection === null;
     const dirty = studioProjection?.dirty === true;
     documentState.textContent = dirty ? "Unsaved changes" : "Clean";
@@ -879,6 +997,7 @@ async function main(): Promise<void> {
 
   function installLifecycleState(next: LifecycleState): void {
     lifecycleState = next;
+    installPublicationInventory(next);
     documentName.textContent = next.displayName;
     documentName.title = next.displayPath ?? "This project has not been saved yet.";
     document.body.dataset["authoritativeFileBound"] = String(next.authoritativeFileBound);
@@ -907,6 +1026,7 @@ async function main(): Promise<void> {
     element<HTMLElement>("canvas-title").textContent = `${active.displayName} — Page 1`;
     element<HTMLElement>("page-status").textContent =
       `Boring ${active.ordinal} of ${next.boringLogs.length} · Page 1 of 1`;
+    updateHistoryControls();
   }
 
   async function refreshLifecycleStateSilently(): Promise<boolean> {
@@ -3119,6 +3239,8 @@ async function main(): Promise<void> {
     const ribbon = element<HTMLElement>("ribbon");
     ribbon.setAttribute("aria-labelledby", activeTab.id);
     ribbon.setAttribute("aria-label", `${activeTab.textContent?.trim() ?? tabId} commands`);
+    publicationPackagePanel.hidden = tabId !== "publish";
+    if (tabId === "publish") renderPublicationInventory();
     status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
   }
 
@@ -3988,12 +4110,18 @@ async function main(): Promise<void> {
     if (pendingKeyboardNudge !== undefined) await flushKeyboardNudge();
     const api = publicationApi();
     if (api === null || studioProjection === null || exportPdfButton.disabled) return;
+    const orderedBoringLogIdentities = orderedPublicationSelection();
+    if (orderedBoringLogIdentities.length === 0) {
+      status.textContent = "Select at least one Boring Log before exporting a PDF package.";
+      renderPublicationInventory();
+      return;
+    }
     exportPdfButton.disabled = true;
     exportPdfButton.removeAttribute("data-result");
-    status.textContent = "Exporting fixed structured scene to PDFâ€¦";
+    status.textContent = `Freezing ${orderedBoringLogIdentities.length} structured Boring Log scene${orderedBoringLogIdentities.length === 1 ? "" : "s"} for one PDF package…`;
     const result = await api.exportPdf({
       expectedWorkingRevision: studioProjection.workingRevision,
-      expectedSceneInputDigest: studioProjection.scene.inputDigest,
+      orderedBoringLogIdentities,
     });
     if (!result.accepted) {
       status.textContent =
@@ -4008,11 +4136,18 @@ async function main(): Promise<void> {
     exportPdfButton.dataset["result"] = result.result.code;
     exportPdfButton.dataset["destinationPath"] = result.result.destinationPath;
     exportPdfButton.dataset["pdfDigest"] = result.result.pdfDigest;
-    exportPdfButton.dataset["sceneDigest"] = result.result.sceneDigest;
-    exportPdfButton.dataset["projectionDigest"] = result.result.projectionDigest;
+    exportPdfButton.dataset["sceneDigest"] = result.result.aggregateSceneDigest;
+    exportPdfButton.dataset["projectionDigest"] = result.result.aggregateProjectionDigest;
+    exportPdfButton.dataset["packageCandidateDigest"] = result.result.packageCandidateDigest;
+    exportPdfButton.dataset["selectionDigest"] = result.result.selectionDigest;
+    exportPdfButton.dataset["orderedBoringLogIdentities"] = JSON.stringify(
+      result.result.orderedBoringLogIdentities,
+    );
     exportPdfButton.dataset["pdfBytes"] = String(result.result.pdfBytes);
     exportPdfButton.dataset["pageCount"] = String(result.result.pageCount);
-    status.textContent = `PDF exported and reopened successfully: ${result.result.destinationPath}`;
+    publicationSelectionSummary.value = `${result.result.orderedBoringLogIdentities.length} logs · ${result.result.pageCount} PDF pages`;
+    publicationSelectionSummary.textContent = publicationSelectionSummary.value;
+    status.textContent = `PDF exported and reopened successfully: ${result.result.destinationPath} · one package, ${result.result.orderedBoringLogIdentities.length} Boring Log${result.result.orderedBoringLogIdentities.length === 1 ? "" : "s"}, ${result.result.pageCount} page${result.result.pageCount === 1 ? "" : "s"}`;
     exportPdfButton.disabled = false;
     exportPdfButton.focus();
   }
@@ -4568,6 +4703,28 @@ async function main(): Promise<void> {
     "inspect-track": () => select("column-data-track"),
     "validate-document": () => void validateDocument(),
     "show-diagnostics": showDiagnostics,
+    "publication-select-all": () => {
+      for (const identity of publicationOrder) publicationIncluded.add(identity);
+      renderPublicationInventory();
+      updateHistoryControls();
+      status.textContent = `All ${publicationOrder.length} Boring Logs selected for one PDF package.`;
+    },
+    "publication-clear": () => {
+      publicationIncluded.clear();
+      renderPublicationInventory();
+      updateHistoryControls();
+      status.textContent =
+        "PDF package selection cleared; choose at least one Boring Log to export.";
+    },
+    "publication-project-order": () => {
+      publicationOrder =
+        lifecycleState?.boringLogs.map(({ boringLogIdentity }) => boringLogIdentity) ?? [];
+      publicationKeyIdentity = publicationOrder[0] ?? null;
+      renderPublicationInventory();
+      status.textContent = "PDF package restored to project Boring Log order.";
+    },
+    "publication-move-up": () => movePublicationKey(-1),
+    "publication-move-down": () => movePublicationKey(1),
     "export-pdf": () => void exportPdf(),
     "contents-options": toggleAllContentsGroups,
     "contents-mode-drawing": () => setContentsMode("drawing"),

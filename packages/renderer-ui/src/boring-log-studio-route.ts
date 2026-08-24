@@ -47,7 +47,9 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
       <div class="ribbon-group" data-ribbon-panel="layout" hidden><button type="button" id="bring-front" disabled title="Select text elements"><span>⇧</span>Front</button><button type="button" id="bring-forward" disabled title="Select text elements"><span>↑</span>Forward</button><button type="button" id="send-backward" disabled title="Select text elements"><span>↓</span>Backward</button><button type="button" id="send-back" disabled title="Select text elements"><span>⇩</span>Back</button><small>Drawing order</small></div>
       <div class="ribbon-group" data-ribbon-panel="data" hidden><button type="button" id="inspect-samples"><span>│</span>Samples</button><button type="button" id="inspect-track"><span>⌁</span>Data Track</button><small>Structured data</small></div>
       <div class="ribbon-group" data-ribbon-panel="review" hidden><button type="button" id="validate-document"><span>✓</span>Validate</button><button type="button" id="show-diagnostics"><span>!</span>Diagnostics</button><small>Review</small></div>
-      <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="export-pdf" disabled><span>⇩</span>Export PDF</button><small>Output</small></div>
+      <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="publication-select-all"><span>☑</span>Select All</button><button type="button" id="publication-clear"><span>☐</span>Clear</button><button type="button" id="publication-project-order"><span>↕</span>Project Order</button><small>Log set</small></div>
+      <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="publication-move-up" disabled><span>↑</span>Move Up</button><button type="button" id="publication-move-down" disabled><span>↓</span>Move Down</button><small>Package order</small></div>
+      <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="export-pdf" disabled><span>⇩</span>Export PDF Package</button><small>One PDF</small></div>
       <div class="ribbon-message"><strong>Resolved Page Scene</strong><span id="scene-summary">Loading structured page…</span></div>
     </section>
     <section class="boring-navigation" aria-label="Boring Log navigation">
@@ -61,6 +63,11 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
       <button type="button" id="last-boring" aria-label="Last boring" title="Last boring">▶|</button>
       <output id="boring-position">Boring 1 of 1</output>
       <span id="boring-indicators" class="boring-indicators">No warnings · Source original</span>
+    </section>
+    <section id="publication-package-panel" class="publication-package-panel" aria-labelledby="publication-package-title" hidden>
+      <header><div><span class="eyebrow">PUBLISH</span><h2 id="publication-package-title">PDF Log Package</h2></div><output id="publication-selection-summary">0 of 0 logs selected</output></header>
+      <p id="publication-package-help">Choose every log that belongs in the PDF. Drag-free Up/Down controls set package order without changing project order or the active Canvas.</p>
+      <ol id="publication-log-list" class="publication-log-list" aria-label="Boring Logs included in PDF order"></ol>
     </section>
     <main class="workspace">
       <aside class="pane contents-pane" aria-labelledby="contents-title">

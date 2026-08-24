@@ -24,6 +24,7 @@ textarea {
   font: inherit;
 }
 .app-shell {
+  position: relative;
   display: grid;
   grid-template-rows: 40px 34px 82px 42px minmax(0, 1fr) 28px;
   height: 100vh;
@@ -223,6 +224,95 @@ textarea {
   margin-left: auto;
   color: #64757f;
   font-size: 11px;
+}
+.publication-package-panel {
+  position: absolute;
+  z-index: 30;
+  top: 198px;
+  right: 12px;
+  display: grid;
+  width: min(460px, calc(100vw - 24px));
+  max-height: min(460px, calc(100vh - 240px));
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid #93aab7;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 30px #1c34454d;
+}
+.publication-package-panel header {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d6dfe4;
+}
+.publication-package-panel h2 {
+  margin: 1px 0 0;
+  color: #234c62;
+  font-size: 16px;
+}
+.publication-package-panel output {
+  margin-left: auto;
+  color: #17688f;
+  font-size: 12px;
+  font-weight: 700;
+}
+#publication-package-help {
+  margin: 8px 0;
+  color: #63747e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.publication-log-list {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.publication-log-list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 5px 8px;
+  border: 1px solid #d4dde2;
+  border-radius: 3px;
+  background: #f8fafb;
+}
+.publication-log-list li.is-package-key {
+  border-color: #4a91b4;
+  background: #eaf4f8;
+  box-shadow: inset 3px 0 #197aa6;
+}
+.publication-log-list input {
+  width: 16px;
+  height: 16px;
+  accent-color: #197aa6;
+}
+.publication-log-list button {
+  display: grid;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: #2e4654;
+  text-align: left;
+}
+.publication-log-list button strong,
+.publication-log-list button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.publication-log-list button small,
+.publication-log-list .publication-log-state {
+  color: #73828a;
+  font-size: 10px;
 }
 .sr-only {
   position: absolute;

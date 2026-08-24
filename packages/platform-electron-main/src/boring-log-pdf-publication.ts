@@ -2,19 +2,32 @@ import { createHash, randomBytes } from "node:crypto";
 import { link, open, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 
-import type { ResolvedBoringLogPageScene } from "@rsrender/contracts";
+import { sha256CanonicalJson, type ResolvedBoringLogPageScene } from "@rsrender/contracts";
 import {
   projectBoringLogSceneForPublication,
+  projectBoringLogSceneSetForPublication,
+  type BoringLogPublicationPackageProjection,
   type BoringLogPublicationProjection,
+  type BoringLogPublicationSceneSet,
 } from "@rsrender/layout-host";
 
 import type { BoringLogPublicationOutcome } from "./boring-log-publication-route-contract.js";
 
 export const boringLogPdfPublicationRevision = "bld-027-pdf-publication-v1" as const;
+export const boringLogPdfPackagePublicationRevision = "bld-044-pdf-package-publication-v1" as const;
 export const maximumBoringLogPdfBytes = 52_428_800 as const;
 
 export interface BoringLogPdfRenderRequest {
-  readonly projection: BoringLogPublicationProjection;
+  readonly projection: BoringLogPublicationProjection | BoringLogPublicationPackageProjection;
+}
+
+export interface BoringLogPdfPackagePublicationInput {
+  readonly sceneSet: BoringLogPublicationSceneSet;
+  readonly workingRevision: number;
+  readonly expectedWorkingRevision: number;
+  readonly orderedBoringLogIdentities: readonly string[];
+  readonly chooseDestination: () => Promise<string | null>;
+  readonly renderPdf: (request: BoringLogPdfRenderRequest) => Promise<Uint8Array>;
 }
 
 export interface BoringLogPdfPublicationInput {
@@ -28,7 +41,7 @@ export interface BoringLogPdfPublicationInput {
 
 function rejected(
   code: Exclude<BoringLogPublicationOutcome, { readonly accepted: true }>["code"],
-): BoringLogPublicationOutcome {
+): Extract<BoringLogPublicationOutcome, { readonly accepted: false }> {
   return Object.freeze({ accepted: false, code });
 }
 
@@ -132,9 +145,24 @@ async function stagedCreateNew(
   }
 }
 
-export async function publishBoringLogPdf(
-  input: BoringLogPdfPublicationInput,
-): Promise<BoringLogPublicationOutcome> {
+export async function publishBoringLogPdf(input: BoringLogPdfPublicationInput): Promise<
+  | Readonly<{
+      accepted: true;
+      code: "EXPORT_VERIFIED_SUCCESS";
+      workingRevision: number;
+      sceneInputDigest: string;
+      sceneDigest: string;
+      projectionDigest: string;
+      pdfDigest: string;
+      pdfBytes: number;
+      pageCount: number;
+      pageSizes: readonly Readonly<{ widthMpt: number; heightMpt: number }>[];
+      destinationPath: string;
+      taggedPdfTarget: true;
+      vectorTextTarget: true;
+    }>
+  | Exclude<BoringLogPublicationOutcome, { readonly accepted: true }>
+> {
   if (
     !Number.isSafeInteger(input.workingRevision) ||
     input.workingRevision < 0 ||
@@ -182,6 +210,103 @@ export async function publishBoringLogPdf(
     pdfBytes: committed.reopened.byteLength,
     pageCount: input.scene.pages.length,
     pageSizes,
+    destinationPath,
+    taggedPdfTarget: true,
+    vectorTextTarget: true,
+  });
+}
+
+export async function publishBoringLogPdfPackage(
+  input: BoringLogPdfPackagePublicationInput,
+): Promise<BoringLogPublicationOutcome> {
+  if (
+    !Number.isSafeInteger(input.workingRevision) ||
+    input.workingRevision < 0 ||
+    input.workingRevision !== input.expectedWorkingRevision ||
+    input.orderedBoringLogIdentities.length < 1 ||
+    input.orderedBoringLogIdentities.length > 64 ||
+    new Set(input.orderedBoringLogIdentities).size !== input.orderedBoringLogIdentities.length ||
+    input.sceneSet.entries.length !== input.orderedBoringLogIdentities.length ||
+    input.sceneSet.entries.some(
+      ({ boringLogIdentity, scene }, index) =>
+        boringLogIdentity !== input.orderedBoringLogIdentities[index] ||
+        scene.diagnostics.some(({ severity }) => severity === "error"),
+    )
+  ) {
+    return rejected(
+      input.sceneSet.entries.some(({ scene }) =>
+        scene.diagnostics.some(({ severity }) => severity === "error"),
+      )
+        ? "EXPORT_PREFLIGHT_BLOCKED"
+        : "EXPORT_STALE_SCENE",
+    );
+  }
+  const projected = projectBoringLogSceneSetForPublication(input.sceneSet);
+  if (!projected.accepted) return rejected("EXPORT_PROJECTION_REJECTED");
+  const selectionDigest = sha256CanonicalJson({
+    schema: "rsrender.boring-log-publication-selection.v1",
+    workingRevision: input.workingRevision,
+    orderedBoringLogIdentities: input.orderedBoringLogIdentities,
+  });
+  const aggregateSceneDigest = sha256CanonicalJson({
+    schema: "rsrender.boring-log-publication-scene-aggregate.v1",
+    entries: projected.projection.manifest.entries,
+  });
+  const packageCandidateDigest = sha256CanonicalJson({
+    schema: "rsrender.boring-log-publication-candidate.v1",
+    workingRevision: input.workingRevision,
+    selectionDigest,
+    aggregateSceneDigest,
+    aggregateProjectionDigest: projected.projection.projectionDigest,
+    pageManifest: projected.projection.manifest.pages,
+  });
+  let destinationPath: string | null;
+  try {
+    destinationPath = await input.chooseDestination();
+  } catch {
+    return rejected("EXPORT_DESTINATION_FAILED");
+  }
+  if (destinationPath === null) return rejected("EXPORT_CANCELLED");
+  if (!validCreateNewDestination(destinationPath)) {
+    return rejected("EXPORT_DESTINATION_FAILED");
+  }
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await input.renderPdf({ projection: projected.projection });
+  } catch {
+    return rejected("EXPORT_LAYOUT_HOST_FAILED");
+  }
+  if (!validBoringLogPdfEnvelope(pdfBytes)) return rejected("EXPORT_PDF_ENVELOPE_INVALID");
+  const committed = await stagedCreateNew(destinationPath, pdfBytes);
+  if (!committed.accepted) return rejected(committed.code);
+  const pageManifest = Object.freeze(
+    projected.projection.manifest.pages.map((page) =>
+      Object.freeze({
+        packagePageIndex: page.publicationPageIndex,
+        boringLogIdentity: page.boringLogIdentity,
+        explorationIdentity: page.explorationIdentity,
+        sourceOrdinal: page.sourceOrdinal,
+        boringPageIndex: page.sourcePageIndex,
+        pageId: page.pageId,
+        widthMpt: page.widthMpt,
+        heightMpt: page.heightMpt,
+        sceneInputDigest: page.sceneInputDigest,
+      }),
+    ),
+  );
+  return Object.freeze({
+    accepted: true,
+    code: "EXPORT_VERIFIED_SUCCESS",
+    workingRevision: input.workingRevision,
+    packageCandidateDigest,
+    selectionDigest,
+    orderedBoringLogIdentities: Object.freeze([...input.orderedBoringLogIdentities]),
+    pageManifest,
+    aggregateSceneDigest,
+    aggregateProjectionDigest: projected.projection.projectionDigest,
+    pdfDigest: pdfDigest(committed.reopened),
+    pdfBytes: committed.reopened.byteLength,
+    pageCount: pageManifest.length,
     destinationPath,
     taggedPdfTarget: true,
     vectorTextTarget: true,

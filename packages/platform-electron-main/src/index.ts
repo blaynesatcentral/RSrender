@@ -164,7 +164,11 @@ export {
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
   boringLogPublicationRouteRevision,
 } from "./boring-log-publication-route-contract.js";
-export type { BoringLogPublicationOutcome } from "./boring-log-publication-route-contract.js";
+export type {
+  BoringLogPublicationIntent,
+  BoringLogPublicationOutcome,
+  BoringLogPublicationPageManifestEntry,
+} from "./boring-log-publication-route-contract.js";
 export { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
 export type {
   BoringLogPublicationBootstrapResult,
@@ -172,12 +176,15 @@ export type {
   BoringLogPublicationRouteResult,
 } from "./boring-log-publication-route-broker.js";
 export {
+  boringLogPdfPackagePublicationRevision,
   boringLogPdfPublicationRevision,
   maximumBoringLogPdfBytes,
   publishBoringLogPdf,
+  publishBoringLogPdfPackage,
   validBoringLogPdfEnvelope,
 } from "./boring-log-pdf-publication.js";
 export type {
+  BoringLogPdfPackagePublicationInput,
   BoringLogPdfPublicationInput,
   BoringLogPdfRenderRequest,
 } from "./boring-log-pdf-publication.js";

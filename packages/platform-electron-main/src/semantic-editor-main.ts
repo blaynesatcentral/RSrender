@@ -29,7 +29,11 @@ import {
   type BoringLogTextMeasurementResult,
   type Mpt,
 } from "@rsrender/contracts";
-import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
+import type {
+  BoringLogPublicationPackageProjection,
+  BoringLogPublicationProjection,
+  BoringLogPublicationSceneSet,
+} from "@rsrender/layout-host";
 import {
   applyBoringLogTemplateTextStyleProperties,
   applyBoringLogTextOccurrenceStyles,
@@ -59,7 +63,7 @@ import {
   decodeBoringLogDocumentBundle,
   maximumBoringLogDocumentBundleBytes,
 } from "./boring-log-document-ingress.js";
-import { publishBoringLogPdf } from "./boring-log-pdf-publication.js";
+import { publishBoringLogPdfPackage } from "./boring-log-pdf-publication.js";
 import { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
 import {
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
@@ -137,6 +141,7 @@ const TEXT_STYLE_PROBE_ARGUMENT = "--rsrender-bld037-probe";
 const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
 const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
 const LITHOLOGY_APPEARANCE_PROBE_ARGUMENT = "--rsrender-bld043-probe";
+const PUBLICATION_PACKAGE_PROBE_ARGUMENT = "--rsrender-bld044-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -253,13 +258,15 @@ const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_ARGUMENT);
 const lithologyAppearanceProbeMode = process.argv.includes(LITHOLOGY_APPEARANCE_PROBE_ARGUMENT);
+const publicationPackageProbeMode = process.argv.includes(PUBLICATION_PACKAGE_PROBE_ARGUMENT);
 const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
 const textStyleProbeMode =
   process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
 const multiBoringProbeMode =
   process.argv.includes(MULTI_BORING_PROBE_ARGUMENT) ||
   textStyleProbeMode ||
-  lithologyAppearanceProbeMode;
+  lithologyAppearanceProbeMode ||
+  publicationPackageProbeMode;
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
 const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
 const studioProbeMode =
@@ -978,7 +985,7 @@ async function measureBoringLogTextInChromium(
 }
 
 async function renderPublicationPdf(
-  projection: BoringLogPublicationProjection,
+  projection: BoringLogPublicationProjection | BoringLogPublicationPackageProjection,
 ): Promise<Uint8Array> {
   const partition = `rsrender-layout-host-${randomBytes(16).toString("hex")}`;
   const layoutSession = session.fromPartition(partition, { cache: false });
@@ -1064,13 +1071,20 @@ async function renderPublicationPdf(
     );
     if (fontReady !== true) throw new Error("LAYOUT_HOST_FONT_UNAVAILABLE");
     const state = (await layoutWindow.webContents.executeJavaScript(
-      `(() => ({ sceneDigest: document.querySelector("svg")?.getAttribute("data-scene-digest"), projectionDigest: document.querySelector("svg")?.getAttribute("data-projection-digest"), nodeCount: document.querySelectorAll(".scene-node").length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, title: document.title }))()`,
+      `(() => ({ sceneDigest: document.querySelector("svg")?.getAttribute("data-scene-digest"), projectionDigest: document.querySelector('meta[name="rsrender-projection-digest"]')?.getAttribute("content") ?? document.querySelector("svg")?.getAttribute("data-projection-digest"), aggregateDigest: document.querySelector('meta[name="rsrender-aggregate-digest"]')?.getAttribute("content"), nodeCount: document.querySelectorAll(".scene-node").length, pageCount: document.querySelectorAll(".publication-page").length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, title: document.title }))()`,
       true,
     )) as Readonly<Record<string, unknown>>;
+    const projectionMatches =
+      projection.schema === "rsrender.boring-log-publication-projection.v1"
+        ? state["sceneDigest"] === projection.manifest.sceneDigest &&
+          state["nodeCount"] === projection.manifest.sceneNodeCount
+        : state["aggregateDigest"] === projection.manifest.aggregateDigest &&
+          state["pageCount"] === projection.manifest.pageCount &&
+          typeof state["nodeCount"] === "number" &&
+          state["nodeCount"] > 0;
     if (
-      state["sceneDigest"] !== projection.manifest.sceneDigest ||
+      !projectionMatches ||
       state["projectionDigest"] !== projection.projectionDigest ||
-      state["nodeCount"] !== projection.manifest.sceneNodeCount ||
       state["rasterCount"] !== 0 ||
       state["title"] !== projection.documentTitle
     ) {
@@ -1513,6 +1527,106 @@ async function runProbe(window: BrowserWindow, counters: Counters): Promise<Data
       .digest("hex"),
     projectionDigest: finalProjection["projectionDigest"],
     datasetLogicalDigest: finalProjection["datasetLogicalDigest"],
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+    securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
+  });
+}
+
+async function runPublicationPackageProbe(
+  window: BrowserWindow,
+  counters: Counters,
+): Promise<DataRecord> {
+  emitStudioProbePhase("publication-package-started");
+  await waitFor(
+    window,
+    `document.querySelectorAll("#svg-page > svg").length === 1 && document.querySelectorAll("#boring-options option").length === 2 && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."`,
+    "WAIT_PUBLICATION_PACKAGE_STUDIO",
+    60_000,
+  );
+  const initial = record(
+    await pageValue(
+      window,
+      `(() => ({ activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, defaultChecked: document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length, defaultOrder: JSON.parse(document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities ?? "null"), exportDisabled: document.getElementById("export-pdf")?.disabled }))()`,
+    ),
+  );
+  requireProbe(
+    initial["activeBoringLogIdentity"] === "urn:rsrender:boring-log:test-01" &&
+      initial["defaultChecked"] === 2 &&
+      JSON.stringify(initial["defaultOrder"]) ===
+        '["urn:rsrender:boring-log:test-01","urn:rsrender:boring-log:test-02"]' &&
+      initial["exportDisabled"] === false,
+    `PUBLICATION_PACKAGE_DEFAULT_INVALID:${JSON.stringify(initial)}`,
+  );
+  await press(window, "#next-boring", "Space", "FOCUS_PUBLICATION_PACKAGE_NEXT_BORING");
+  await waitFor(
+    window,
+    `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02"`,
+    "WAIT_PUBLICATION_PACKAGE_NEXT_BORING",
+  );
+  requireProbe(
+    (await pageValue(
+      window,
+      `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.getElementById("publication-package-panel")?.hidden === false; })()`,
+    )) === true,
+    "PUBLICATION_PACKAGE_TAB_INVALID",
+  );
+  await press(window, "#publication-clear", "Space", "FOCUS_PUBLICATION_PACKAGE_CLEAR");
+  await waitFor(
+    window,
+    `document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length === 0 && document.getElementById("export-pdf")?.disabled === true`,
+    "WAIT_PUBLICATION_PACKAGE_CLEAR",
+  );
+  await press(window, "#publication-select-all", "Space", "FOCUS_PUBLICATION_PACKAGE_SELECT_ALL");
+  await waitFor(
+    window,
+    `document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length === 2 && document.getElementById("export-pdf")?.disabled === false`,
+    "WAIT_PUBLICATION_PACKAGE_SELECT_ALL",
+  );
+  await press(window, "#publication-move-down", "Space", "FOCUS_PUBLICATION_PACKAGE_REORDER");
+  await waitFor(
+    window,
+    `document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities === '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' && document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02"`,
+    "WAIT_PUBLICATION_PACKAGE_REORDER",
+  );
+  emitStudioProbePhase("publication-package-exporting");
+  await press(window, "#export-pdf", "Space", "FOCUS_PUBLICATION_PACKAGE_EXPORT");
+  await waitFor(
+    window,
+    `document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS" && document.getElementById("editor-status")?.textContent?.startsWith("PDF exported and reopened successfully:") === true`,
+    "WAIT_PUBLICATION_PACKAGE_EXPORT",
+    180_000,
+  );
+  const publication = record(
+    await pageValue(
+      window,
+      `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, packageCandidateDigest: button?.dataset.packageCandidateDigest, selectionDigest: button?.dataset.selectionDigest, orderedBoringLogIdentities: JSON.parse(button?.dataset.orderedBoringLogIdentities ?? "null"), pageCount: Number(button?.dataset.pageCount), pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, checked: document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length, activeId: document.activeElement?.id }; })()`,
+    ),
+  );
+  requireProbe(
+    publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+      publication["destinationPath"] === path.resolve(pdfProbeOutput ?? "") &&
+      publication["activeBoringLogIdentity"] === "urn:rsrender:boring-log:test-02" &&
+      publication["checked"] === 2 &&
+      JSON.stringify(publication["orderedBoringLogIdentities"]) ===
+        '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' &&
+      publication["pageCount"] === 2 &&
+      [
+        publication["pdfDigest"],
+        publication["sceneDigest"],
+        publication["projectionDigest"],
+        publication["packageCandidateDigest"],
+        publication["selectionDigest"],
+      ].every((digest) => typeof digest === "string" && /^sha256:[0-9a-f]{64}$/u.test(digest)) &&
+      typeof publication["pdfBytes"] === "number" &&
+      publication["pdfBytes"] > 1_024 &&
+      publication["activeId"] === "export-pdf",
+    `PUBLICATION_PACKAGE_RESULT_INVALID:${JSON.stringify(publication)}`,
+  );
+  return Object.freeze({
+    schema: "rsrender.bld044.pdf-package-probe.v1",
+    result: "PASS",
+    initial,
+    publication,
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
   });
@@ -2301,9 +2415,37 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       requireProbe(
         (await pageValue(
           window,
-          `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false; })()`,
+          `(() => { const tab = document.querySelector('[data-ribbon-tab="publish"]'); if (!(tab instanceof HTMLButtonElement)) return false; tab.click(); return document.querySelector('[data-ribbon-panel="publish"]')?.hidden === false && document.getElementById("publication-package-panel")?.hidden === false && document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length === 2; })()`,
         )) === true,
         "MULTI_BORING_PUBLICATION_TAB_INVALID",
+      );
+      await press(window, "#publication-clear", "Space", "FOCUS_MULTI_BORING_PUBLICATION_CLEAR");
+      await waitFor(
+        window,
+        `document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length === 0 && document.getElementById("export-pdf")?.disabled === true`,
+        "WAIT_MULTI_BORING_PUBLICATION_CLEAR",
+      );
+      await press(
+        window,
+        "#publication-select-all",
+        "Space",
+        "FOCUS_MULTI_BORING_PUBLICATION_SELECT_ALL",
+      );
+      await waitFor(
+        window,
+        `document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length === 2 && document.getElementById("export-pdf")?.disabled === false`,
+        "WAIT_MULTI_BORING_PUBLICATION_SELECT_ALL",
+      );
+      await press(
+        window,
+        "#publication-move-down",
+        "Space",
+        "FOCUS_MULTI_BORING_PUBLICATION_REORDER",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities === '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' && document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02"`,
+        "WAIT_MULTI_BORING_PUBLICATION_REORDER",
       );
       await press(window, "#export-pdf", "Space", "FOCUS_MULTI_BORING_EXPORT_PDF");
       await waitFor(
@@ -2314,7 +2456,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       publication = record(
         await pageValue(
           window,
-          `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
+          `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, packageCandidateDigest: button?.dataset.packageCandidateDigest, selectionDigest: button?.dataset.selectionDigest, orderedBoringLogIdentities: JSON.parse(button?.dataset.orderedBoringLogIdentities ?? "null"), pageCount: Number(button?.dataset.pageCount), pdfBytes: Number(button?.dataset.pdfBytes), activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, activeId: document.activeElement?.id }; })()`,
         ),
       );
       requireProbe(
@@ -2327,6 +2469,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           /^sha256:[0-9a-f]{64}$/u.test(publication["sceneDigest"]) &&
           typeof publication["projectionDigest"] === "string" &&
           /^sha256:[0-9a-f]{64}$/u.test(publication["projectionDigest"]) &&
+          typeof publication["packageCandidateDigest"] === "string" &&
+          /^sha256:[0-9a-f]{64}$/u.test(publication["packageCandidateDigest"]) &&
+          typeof publication["selectionDigest"] === "string" &&
+          /^sha256:[0-9a-f]{64}$/u.test(publication["selectionDigest"]) &&
+          JSON.stringify(publication["orderedBoringLogIdentities"]) ===
+            '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' &&
+          publication["pageCount"] === 2 &&
           typeof publication["pdfBytes"] === "number" &&
           publication["pdfBytes"] > 1_024 &&
           publication["activeId"] === "export-pdf",
@@ -3959,23 +4108,25 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? lithologyAppearanceProbeMode
-            ? "rsrender.bld043.lithology-appearance-probe.v1"
-            : authoringSurfaceProbeMode
-              ? "rsrender.bld040.authoring-surface-probe.v1"
-              : directManipulationProbeMode
-                ? "rsrender.bld038.direct-manipulation-probe.v1"
-                : textStyleProbeMode
-                  ? "rsrender.bld037.text-occurrence-style-probe.v1"
-                  : multiBoringProbeMode
-                    ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-                    : lifecycleProbeMode
-                      ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                      : pdfProbeMode
-                        ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                        : studioEditingMode
-                          ? "rsrender.bld026.boring-log-editor-probe.v1"
-                          : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? publicationPackageProbeMode
+            ? "rsrender.bld044.pdf-package-probe.v1"
+            : lithologyAppearanceProbeMode
+              ? "rsrender.bld043.lithology-appearance-probe.v1"
+              : authoringSurfaceProbeMode
+                ? "rsrender.bld040.authoring-surface-probe.v1"
+                : directManipulationProbeMode
+                  ? "rsrender.bld038.direct-manipulation-probe.v1"
+                  : textStyleProbeMode
+                    ? "rsrender.bld037.text-occurrence-style-probe.v1"
+                    : multiBoringProbeMode
+                      ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                      : lifecycleProbeMode
+                        ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                        : pdfProbeMode
+                          ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                          : studioEditingMode
+                            ? "rsrender.bld026.boring-log-editor-probe.v1"
+                            : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -4211,6 +4362,44 @@ async function main(): Promise<void> {
           };
     let studioQuerySequence = 0;
     const projectionCache = new Map<string, BoringLogStudioProjection>();
+    const completeProjectDocumentProjection = async (
+      document: (typeof projectDocuments)[number],
+      layoutJob: BoringLogLayoutJobInput,
+      dataset: Parameters<typeof prepareBoringLogStudioProjection>[0]["dataset"],
+    ) => {
+      const prepared = prepareBoringLogStudioProjection({
+        layoutJob,
+        bindings: document.bindings,
+        dataset,
+      });
+      if (!prepared.accepted) return prepared;
+      const cacheKey = `${document.boringLogIdentity}:${prepared.preparation.projection.workingRevision}:${sha256CanonicalJson(prepared.preparation.layout.textRequests)}`;
+      const cached = projectionCache.get(cacheKey);
+      if (cached !== undefined) {
+        return Object.freeze({ accepted: true as const, projection: cached });
+      }
+      const measured = await measureBoringLogTextInChromium(
+        prepared.preparation.layout.textRequests,
+      );
+      if (!measured.accepted) {
+        if (probeMode) probeFailure = `STUDIO_MEASUREMENT:${measured.reason}`.slice(0, 256);
+        return Object.freeze({
+          accepted: false as const,
+          code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
+        });
+      }
+      const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
+      if (!completed.accepted) {
+        if (probeMode) probeFailure = `STUDIO_COMPLETION:${completed.code}`.slice(0, 256);
+        return completed;
+      }
+      projectionCache.set(cacheKey, completed.projection);
+      if (projectionCache.size > 8) {
+        const oldest = projectionCache.keys().next().value;
+        if (oldest !== undefined) projectionCache.delete(oldest);
+      }
+      return completed;
+    };
     const getStudioProjection = async (
       minimumWorkingRevision: number | null,
       preview: BoringLogStudioProjectionPreviewInput | null = null,
@@ -4235,37 +4424,13 @@ async function main(): Promise<void> {
           code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID" as const,
         });
       }
-      const prepared = prepareBoringLogStudioProjection({
-        layoutJob: activeLayoutJob,
-        bindings: activeDocument().bindings,
-        dataset: queried.result.projection,
-      });
-      if (!prepared.accepted) return prepared;
-      const cacheKey = `${prepared.preparation.projection.workingRevision}:${sha256CanonicalJson(prepared.preparation.layout.textRequests)}`;
-      let baseProjection = projectionCache.get(cacheKey);
-      if (baseProjection === undefined) {
-        const measured = await measureBoringLogTextInChromium(
-          prepared.preparation.layout.textRequests,
-        );
-        if (!measured.accepted) {
-          if (probeMode) probeFailure = `STUDIO_MEASUREMENT:${measured.reason}`.slice(0, 256);
-          return Object.freeze({
-            accepted: false as const,
-            code: "BORING_LOG_STUDIO_TEXT_REJECTED" as const,
-          });
-        }
-        const completed = completeBoringLogStudioProjection(prepared.preparation, measured.results);
-        if (!completed.accepted) {
-          if (probeMode) probeFailure = `STUDIO_COMPLETION:${completed.code}`.slice(0, 256);
-          return completed;
-        }
-        baseProjection = completed.projection;
-        projectionCache.set(cacheKey, baseProjection);
-        if (projectionCache.size > 8) {
-          const oldest = projectionCache.keys().next().value;
-          if (oldest !== undefined) projectionCache.delete(oldest);
-        }
-      }
+      const completed = await completeProjectDocumentProjection(
+        activeDocument(),
+        activeLayoutJob,
+        queried.result.projection,
+      );
+      if (!completed.accepted) return completed;
+      const baseProjection = completed.projection;
       if (preview === null) {
         return Object.freeze({ accepted: true as const, projection: baseProjection });
       }
@@ -6414,20 +6579,68 @@ async function main(): Promise<void> {
       documentIdentity,
       ownerGeneration: hosted.ownerGeneration,
       createCapability: () => randomBytes(32).toString("hex"),
-      exportPdf: async ({ expectedWorkingRevision, expectedSceneInputDigest }) => {
-        const current = [...projectionCache.values()].find(
-          (projection) =>
-            projection.workingRevision === expectedWorkingRevision &&
-            projection.scene.inputDigest === expectedSceneInputDigest,
+      exportPdf: async ({ expectedWorkingRevision, orderedBoringLogIdentities }) => {
+        studioQuerySequence += 1;
+        const queried = await hosted.session.getProjection(
+          `urn:rsrender:bld-044:request:publication-package:${studioQuerySequence}`,
+          { minimumWorkingRevision: expectedWorkingRevision },
         );
-        if (current === undefined) {
+        const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+        if (
+          !queried.accepted ||
+          queried.result.kind !== "render-dataset.projection.result" ||
+          queried.result.workingRevision !== expectedWorkingRevision ||
+          captured === null ||
+          captured.project.workingRevision !== expectedWorkingRevision
+        ) {
           return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
         }
-        return publishBoringLogPdf({
-          scene: current.scene,
-          workingRevision: current.workingRevision,
+        const selectedDocuments = orderedBoringLogIdentities.map((boringLogIdentity) =>
+          projectDocuments.find((document) => document.boringLogIdentity === boringLogIdentity),
+        );
+        if (
+          selectedDocuments.some((document) => document === undefined) ||
+          new Set(orderedBoringLogIdentities).size !== orderedBoringLogIdentities.length
+        ) {
+          return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
+        }
+        const sceneEntries: BoringLogPublicationSceneSet["entries"][number][] = [];
+        for (const document of selectedDocuments) {
+          if (document === undefined) {
+            return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
+          }
+          const layoutJob = effectiveLayoutJob(document, captured.project.aggregate);
+          if (layoutJob === null) {
+            return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
+          }
+          const completed = await completeProjectDocumentProjection(
+            document,
+            layoutJob,
+            queried.result.projection,
+          );
+          if (!completed.accepted) {
+            return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
+          }
+          sceneEntries.push(
+            Object.freeze({
+              boringLogIdentity: document.boringLogIdentity,
+              explorationIdentity: document.explorationIdentity,
+              sourceOrdinal: document.ordinal,
+              scene: completed.projection.scene,
+            }),
+          );
+        }
+        const sceneSet: BoringLogPublicationSceneSet = Object.freeze({
+          contractVersion: 1,
+          schemaVersion: "rsrender.boring-log-publication-scene-set.v1",
+          kind: "boring-log.publication-scene-set",
+          entries: Object.freeze(sceneEntries),
+        });
+        return publishBoringLogPdfPackage({
+          sceneSet,
+          workingRevision: captured.project.workingRevision,
           expectedWorkingRevision,
-          expectedSceneInputDigest,
+          orderedBoringLogIdentities,
           chooseDestination: async () => {
             if (pdfProbeMode || authoringSurfaceProbeMode) {
               return typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0
@@ -6435,15 +6648,28 @@ async function main(): Promise<void> {
                 : null;
             }
             const selected = await dialog.showSaveDialog(window, {
-              title: "Export boring log PDF - Create New",
-              defaultPath: path.join(app.getPath("documents"), "RSrender-boring-log.pdf"),
-              buttonLabel: "Create PDF",
+              title: "Export selected boring logs as PDF package - Create New",
+              defaultPath: path.join(app.getPath("documents"), "RSrender-boring-log-package.pdf"),
+              buttonLabel: "Create PDF Package",
               filters: [{ name: "PDF document", extensions: ["pdf"] }],
               properties: ["createDirectory", "showOverwriteConfirmation"],
             });
             return selected.canceled || selected.filePath.length === 0 ? null : selected.filePath;
           },
-          renderPdf: ({ projection }) => renderPublicationPdf(projection),
+          renderPdf: async ({ projection }) => {
+            try {
+              return await renderPublicationPdf(projection);
+            } catch (error) {
+              if (probeMode) {
+                probeFailure =
+                  `LAYOUT_HOST:${error instanceof Error ? error.message : String(error)}`.slice(
+                    0,
+                    256,
+                  );
+              }
+              throw error;
+            }
+          },
         });
       },
     });
@@ -6506,7 +6732,9 @@ async function main(): Promise<void> {
   await window.loadURL(DOCUMENT_ROUTE_URL);
   if (probeMode) {
     const result = studioProbeMode
-      ? await runStudioProbe(window, counters)
+      ? publicationPackageProbeMode
+        ? await runPublicationPackageProbe(window, counters)
+        : await runStudioProbe(window, counters)
       : await runProbe(window, counters);
     emitResult(result);
     await teardown();

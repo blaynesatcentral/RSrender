@@ -4,50 +4,50 @@
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts",
-      "bytes": 4263,
-      "sha256": "39a7e8d8ed97e351e3cd92a623fecc340c5e97f5a7e4e883bbe660f6242abf89"
+      "bytes": 4455,
+      "sha256": "c1018401569708b87f06014519e0262a7835064e073911f762e9456581f09134"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.d.ts.map",
-      "bytes": 1765,
-      "sha256": "68c3352fd864bd797921967207cfaf09e22a7b22e3cce1b76632255b68e0f19b"
+      "bytes": 1818,
+      "sha256": "8142455fa1c3fe61a2a33593bb5875b9b84538caf8df3baf695f1e4411c84133"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js",
-      "bytes": 1798,
-      "sha256": "f00a0c2351f50730a2aab7b3f1a9f510ccded04301ada699736e07efd9ef3900"
+      "bytes": 1943,
+      "sha256": "412d76e19b5eda2dc18bc58b56e66f54b0d28befeb571d737a9005b7c4def103"
     },
     {
       "package": "application",
       "file": "packages/application/dist/index.js.map",
-      "bytes": 798,
-      "sha256": "ad7d6e82d660aec468f414c79aed27bd7be789d605e4be0349ce2f1cfedae754"
+      "bytes": 837,
+      "sha256": "5dd736c48048a646fba122a6e4f5657089d38556a449f100c2b5e496d6d2e3a7"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts",
-      "bytes": 9290,
-      "sha256": "eec3fc0095fca2a92968bd68179bb65cec29e4d223a6224600de8d4930ad8ed7"
+      "bytes": 10074,
+      "sha256": "4f92237e732ea4d30fe246b520d4ada28328e181c8c61913fd6effb36dcd3ead"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.d.ts.map",
-      "bytes": 4440,
-      "sha256": "b5f097ed8d6a898eb6d75f06370a0b591fea55b2691e37219dc0371b6a8d926e"
+      "bytes": 4833,
+      "sha256": "d3317a13006664ad7d852b330b83e7692344b3e4086abbb453c4ceff9d831da7"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js",
-      "bytes": 4200,
-      "sha256": "fd5533f021d0521f27e6299bcc0e348413b00aa05e4fd2406ffdca7bff964cc2"
+      "bytes": 4443,
+      "sha256": "bed2e85837dd8974cd3898a75e4813316a060b4552c0262cbb84c57bc1e706fe"
     },
     {
       "package": "contracts",
       "file": "packages/contracts/dist/index.js.map",
-      "bytes": 2049,
-      "sha256": "9f2aed352a862e7c54d542f74341bde2246c1d64ef1de0d08b74b8aeb0b72669"
+      "bytes": 2184,
+      "sha256": "13315adb2e25194d9ad50c012c34de470ae9afd064b989592cdfedb6e84a5212"
     },
     {
       "package": "domain",
@@ -76,26 +76,26 @@
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.d.ts",
-      "bytes": 670,
-      "sha256": "6486c8d67349b4aeba431d5c775b8d4ed9a98c84ccc95b7f990908cf9fd02615"
+      "bytes": 1173,
+      "sha256": "bea5a6fe68df9616c32cd08789e04866a9a0fca71141527019f7034fed61903d"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.d.ts.map",
-      "bytes": 388,
-      "sha256": "814a7eaaaa05d25b749af0bdf695e6bbd4119cf4d9dd6e640f4485e812ccd718"
+      "bytes": 571,
+      "sha256": "69a572c652b28a27849ee294e200bb095b794e8ee61890ada081a3829b15c962"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.js",
-      "bytes": 404,
-      "sha256": "92c9e204a64389feabb83c942fcc1fe284dca142d3a2f3242e3234c873adb7c9"
+      "bytes": 557,
+      "sha256": "2ff11a86ffc0ef4c6571692255e0e711fb7251f145e76aa11c9fa3ed59348644"
     },
     {
       "package": "layout-host",
       "file": "packages/layout-host/dist/index.js.map",
-      "bytes": 274,
-      "sha256": "01591dd6d7edfc078568c21439690d97e48ae962257e6c234acc2ebb3aaaefb7"
+      "bytes": 333,
+      "sha256": "0dc98f80d8fe4efd8dc5dab7456b68b303661e9658558dcc7d447f14e2906929"
     },
     {
       "package": "package-contract",
@@ -124,26 +124,26 @@
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts",
-      "bytes": 7303,
-      "sha256": "4127d1f74bb16e94c9c7b4ca9ee6d0babef7128e4f4c3406135c335b61fe34cd"
+      "bytes": 7569,
+      "sha256": "d98c1056fd8f44a03b88e6d5f5b15916fd3d6361ae941a99fca24c9fdcb040aa"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.d.ts.map",
-      "bytes": 3362,
-      "sha256": "a7f4cfff69045b7d71af0a34dc8547e45f4adf922a4d11abdea3af2bdc328ff1"
+      "bytes": 3454,
+      "sha256": "2e713bc0b7943c3fdc9ef7b343c130ee89474fc104238a1bb416328320d05b01"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js",
-      "bytes": 4237,
-      "sha256": "34ee3f942b07ae781842e90a52e0afbfc84b8682ee82a6fe206ff287532551a4"
+      "bytes": 4357,
+      "sha256": "27c47d33c4fea7612ef7d16f994419a4d464fa3676019fb14cd20a76eae72778"
     },
     {
       "package": "platform-electron-main",
       "file": "packages/platform-electron-main/dist/index.js.map",
-      "bytes": 1997,
-      "sha256": "d1deb85638402fbde8877559b131f8ddd889f43995604a6f9d33ccb3a87ab151"
+      "bytes": 2036,
+      "sha256": "acaf6f7eddc61d17b8465aee2bef6bd7fb677d6b52b97dfc3f7b6d9b7d91f65f"
     },
     {
       "package": "platform-zipjs",
@@ -196,26 +196,26 @@
     {
       "package": "scene",
       "file": "packages/scene/dist/index.d.ts",
-      "bytes": 2183,
-      "sha256": "16af016f3979a8158829be70507799c51499749fc43d24ef587bb73114c75bbc"
+      "bytes": 2535,
+      "sha256": "55cb77a70e3f6ed6332f09462e7c87260ed1a58daef987bf67db8e41b78455b5"
     },
     {
       "package": "scene",
       "file": "packages/scene/dist/index.d.ts.map",
-      "bytes": 1121,
-      "sha256": "03a74ddb83c1e837697a4728fa0caa0bad89a1b53c37f67a4535dcf710dd1a16"
+      "bytes": 1265,
+      "sha256": "49797f1f488a3cc9f153d3544e969c63d132609e44f6dde8859aca1d1db138c4"
     },
     {
       "package": "scene",
       "file": "packages/scene/dist/index.js",
-      "bytes": 1179,
-      "sha256": "2d80a2b652dca33f8b04f14cb2467f9135cdbdeba3c6ecc42a3a207a6f4ee2be"
+      "bytes": 1391,
+      "sha256": "658dc2d5a2d57246f4fa262f6d4be30cfab3634c8a7340cce477bdd9734a17f3"
     },
     {
       "package": "scene",
       "file": "packages/scene/dist/index.js.map",
-      "bytes": 647,
-      "sha256": "172cb4f20c02e2d8b382c161e29ef62db72ac1f7ba5b8027c4723bbb06a6fdb9"
+      "bytes": 732,
+      "sha256": "3a139ff36098d9c55aa53a3d85b234491d54be05fe819d56e62db254f1bbfba1"
     },
     {
       "package": "source-contract",
