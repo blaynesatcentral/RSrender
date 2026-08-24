@@ -8,6 +8,7 @@ import type { IpcMainInvokeEvent } from "electron";
 import {
   captureOverrideRenderDatasetWorkingState,
   commitEmbeddedTemplateReplacement,
+  commitEmbeddedTemplateReplacementBatch,
   markOverrideRenderDatasetDurable,
   createSyntheticBoringLogOverrideSession,
   createPersistedBoringLogOverrideSession,
@@ -71,6 +72,7 @@ import {
   type BoringLogStudioMutateTextOccurrencesInput,
   type BoringLogStudioRegionBoundaryInput,
   type BoringLogStudioLifecycleOperation,
+  type BoringLogStudioLithologyAppearanceInput,
   type BoringLogStudioPageGuidesInput,
   type BoringLogStudioProjectionPreviewInput,
   type BoringLogStudioTextOccurrencePresentationResetInput,
@@ -84,6 +86,7 @@ import {
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
@@ -4477,6 +4480,260 @@ async function main(): Promise<void> {
     let regionBoundaryCommandSequence = 0;
     let arrangementCommandSequence = 0;
     let textAuthoringCommandSequence = 0;
+    let lithologyAppearanceCommandSequence = 0;
+    const authorLithologyAppearance = (
+      job: BoringLogLayoutJobInput,
+      intervalId: string,
+      mappedClassificationKey: string,
+      input: BoringLogStudioLithologyAppearanceInput,
+    ): BoringLogLayoutJobInput | null => {
+      const interval = job.document.lithologyIntervals.find(({ id }) => id === intervalId);
+      if (
+        (input.applyScope === "interval" &&
+          (interval === undefined ||
+            interval.mappedClassificationKey !== mappedClassificationKey)) ||
+        (input.patternId !== null &&
+          !job.template.vectorPatterns.some(({ id }) => id === input.patternId))
+      ) {
+        return null;
+      }
+      const visualTokens = { ...job.template.visualTokens };
+      let authoredFillToken: string | null = null;
+      if (input.materialFillColor !== null) {
+        authoredFillToken = `lithology-fill-${input.materialFillColor.slice(1)}`;
+        const existing = visualTokens[authoredFillToken];
+        if (existing !== undefined && existing !== input.materialFillColor) return null;
+        visualTokens[authoredFillToken] = input.materialFillColor;
+      }
+      const identitySeed = {
+        boringLogIdentity:
+          input.applyScope === "interval" ? job.document.identity.boringLogId : null,
+        intervalId: input.applyScope === "interval" ? intervalId : null,
+        mappedClassificationKey,
+        applyScope: input.applyScope,
+      };
+      const overrideIdentity = `urn:rsrender:lithology-appearance:${sha256CanonicalJson(
+        identitySeed,
+      ).slice("sha256:".length, "sha256:".length + 32)}`;
+      const overrideRevision = input.expectedWorkingRevision + 1;
+      let template: BoringLogLayoutJobInput["template"];
+      if (input.applyScope === "interval") {
+        const prior = job.template.lithologyIntervalAppearanceOverrides?.find(
+          (candidate) =>
+            candidate.boringLogIdentity === job.document.identity.boringLogId &&
+            candidate.intervalId === intervalId,
+        );
+        const replacement = Object.freeze({
+          boringLogIdentity: job.document.identity.boringLogId,
+          intervalId,
+          mappedClassificationKey,
+          materialFillToken: authoredFillToken ?? prior?.materialFillToken ?? null,
+          patternId: input.patternId ?? prior?.patternId ?? null,
+          overrideIdentity,
+          overrideRevision,
+        });
+        const overrides = [
+          ...(job.template.lithologyIntervalAppearanceOverrides ?? []).filter(
+            (candidate) =>
+              candidate.boringLogIdentity !== job.document.identity.boringLogId ||
+              candidate.intervalId !== intervalId,
+          ),
+          replacement,
+        ].sort((left, right) =>
+          `${left.boringLogIdentity}\u0000${left.intervalId}`.localeCompare(
+            `${right.boringLogIdentity}\u0000${right.intervalId}`,
+          ),
+        );
+        template = Object.freeze({
+          ...job.template,
+          visualTokens: Object.freeze(visualTokens),
+          lithologyIntervalAppearanceOverrides: Object.freeze(overrides),
+        });
+      } else {
+        const prior = job.template.lithologyClassificationAppearanceDefaults?.find(
+          (candidate) => candidate.mappedClassificationKey === mappedClassificationKey,
+        );
+        const replacement = Object.freeze({
+          mappedClassificationKey,
+          materialFillToken: authoredFillToken ?? prior?.materialFillToken ?? null,
+          patternId: input.patternId ?? prior?.patternId ?? null,
+          overrideIdentity,
+          overrideRevision,
+        });
+        const defaults = [
+          ...(job.template.lithologyClassificationAppearanceDefaults ?? []).filter(
+            (candidate) => candidate.mappedClassificationKey !== mappedClassificationKey,
+          ),
+          replacement,
+        ].sort((left, right) =>
+          left.mappedClassificationKey.localeCompare(right.mappedClassificationKey),
+        );
+        template = Object.freeze({
+          ...job.template,
+          visualTokens: Object.freeze(visualTokens),
+          lithologyClassificationAppearanceDefaults: Object.freeze(defaults),
+        });
+      }
+      const authored = validateBoringLogLayoutJobInput({
+        ...job,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      return authored.accepted ? authored.value : null;
+    };
+    const handleLithologyAppearance = async (input: BoringLogStudioLithologyAppearanceInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      if (input.boringLogIdentity !== document.boringLogIdentity) {
+        return Object.freeze({ accepted: false, code: "LITHOLOGY_APPEARANCE_TARGET_INVALID" });
+      }
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const interval = currentJob?.document.lithologyIntervals.find(
+        ({ id }) => id === input.intervalId,
+      );
+      if (currentJob === null || interval === undefined) {
+        return Object.freeze({ accepted: false, code: "LITHOLOGY_APPEARANCE_UNAVAILABLE" });
+      }
+      lithologyAppearanceCommandSequence += 1;
+      if (input.applyScope === "interval") {
+        const authored = authorLithologyAppearance(
+          currentJob,
+          interval.id,
+          interval.mappedClassificationKey,
+          input,
+        );
+        const membership = captured.project.aggregate.logSet.memberships.find(
+          ({ sourceExplorationIdentity }) =>
+            sourceExplorationIdentity === document.explorationIdentity,
+        );
+        const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+          ({ scope }) =>
+            membership !== undefined &&
+            scope.kind === "exploration" &&
+            scope.targetIdentity === membership.membershipIdentity,
+        );
+        const representation =
+          captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+            ({ embeddedTemplateRepresentationIdentity }) =>
+              embeddedTemplateRepresentationIdentity ===
+              assignment?.embeddedTemplateRepresentationIdentity,
+          );
+        if (authored === null || representation === undefined) {
+          return Object.freeze({ accepted: false, code: "LITHOLOGY_APPEARANCE_INVALID" });
+        }
+        const committed = await commitEmbeddedTemplateReplacement(source.service, {
+          requestId: `urn:rsrender:bld-043:request:lithology-interval:${lithologyAppearanceCommandSequence}`,
+          documentId: documentIdentity,
+          ownerGeneration: hosted.ownerGeneration,
+          expectedWorkingRevision: input.expectedWorkingRevision,
+          explorationIdentity: document.explorationIdentity,
+          expectedEffectiveContentDigest: representation.effectiveContentDigest,
+          replacementEffectiveContentDigest: authored.templateDigest,
+          reason: `Set appearance for ${interval.mappedClassificationKey} interval ${interval.id} in Boring Log Studio`,
+          operation: "lithology-interval-appearance",
+        });
+        if (!committed.accepted) return committed;
+        retainedLayoutJobs.set(
+          `${document.boringLogIdentity}\u0000${authored.templateDigest}`,
+          authored,
+        );
+        projectionCache.clear();
+        return Object.freeze({
+          accepted: true,
+          code: "LITHOLOGY_INTERVAL_APPEARANCE_SET",
+          applyScope: input.applyScope,
+          mappedClassificationKey: interval.mappedClassificationKey,
+          affectedBoringLogCount: 1,
+          workingRevision: committed.workingRevision,
+          dirty: committed.dirty,
+          canUndo: committed.canUndo,
+          canRedo: committed.canRedo,
+        });
+      }
+      const authoredJobs: BoringLogLayoutJobInput[] = [];
+      const replacements: Array<{
+        explorationIdentity: string;
+        expectedTemplateAssignmentIdentity: string;
+        expectedEmbeddedTemplateRepresentationIdentity: string;
+        expectedEffectiveContentDigest: string;
+        replacementEffectiveContentDigest: string;
+      }> = [];
+      for (const candidateDocument of projectDocuments) {
+        const candidateJob = effectiveLayoutJob(candidateDocument, captured.project.aggregate);
+        const authored =
+          candidateJob === null
+            ? null
+            : authorLithologyAppearance(
+                candidateJob,
+                interval.id,
+                interval.mappedClassificationKey,
+                input,
+              );
+        const membership = captured.project.aggregate.logSet.memberships.find(
+          ({ sourceExplorationIdentity }) =>
+            sourceExplorationIdentity === candidateDocument.explorationIdentity,
+        );
+        const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+          ({ scope }) =>
+            membership !== undefined &&
+            scope.kind === "exploration" &&
+            scope.targetIdentity === membership.membershipIdentity,
+        );
+        const representation =
+          captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+            ({ embeddedTemplateRepresentationIdentity }) =>
+              embeddedTemplateRepresentationIdentity ===
+              assignment?.embeddedTemplateRepresentationIdentity,
+          );
+        if (authored === null || assignment === undefined || representation === undefined) {
+          return Object.freeze({ accepted: false, code: "LITHOLOGY_DEFAULT_UNAVAILABLE" });
+        }
+        authoredJobs.push(authored);
+        replacements.push({
+          explorationIdentity: candidateDocument.explorationIdentity,
+          expectedTemplateAssignmentIdentity: assignment.assignmentIdentity,
+          expectedEmbeddedTemplateRepresentationIdentity:
+            representation.embeddedTemplateRepresentationIdentity,
+          expectedEffectiveContentDigest: representation.effectiveContentDigest,
+          replacementEffectiveContentDigest: authored.templateDigest,
+        });
+      }
+      const committed = await commitEmbeddedTemplateReplacementBatch(source.service, {
+        requestId: `urn:rsrender:bld-043:request:lithology-default:${lithologyAppearanceCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        operation: "lithology-classification-default",
+        replacements,
+        reason: `Set ${interval.mappedClassificationKey} lithology appearance default across ${projectDocuments.length} boring logs`,
+      });
+      if (!committed.accepted) return committed;
+      authoredJobs.forEach((authored, index) => {
+        const candidateDocument = projectDocuments[index]!;
+        retainedLayoutJobs.set(
+          `${candidateDocument.boringLogIdentity}\u0000${authored.templateDigest}`,
+          authored,
+        );
+      });
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "LITHOLOGY_CLASSIFICATION_DEFAULT_SET",
+        applyScope: input.applyScope,
+        mappedClassificationKey: interval.mappedClassificationKey,
+        affectedBoringLogCount: authoredJobs.length,
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+      });
+    };
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -5918,6 +6175,7 @@ async function main(): Promise<void> {
       createCapability: () => randomBytes(32).toString("hex"),
       getProjection: getStudioProjection,
       lifecycle: handleLifecycle,
+      setLithologyAppearance: handleLithologyAppearance,
       setTextOccurrenceStyle: handleTextOccurrenceStyle,
       resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
       setPageGuides: handlePageGuides,
@@ -5938,6 +6196,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL, (event, input: unknown) =>
       route.setTextOccurrenceStyle(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL, (event, input: unknown) =>
+      route.setLithologyAppearance(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL, (event, input: unknown) =>
       route.setPageGuides(routeContext(window, event), input),

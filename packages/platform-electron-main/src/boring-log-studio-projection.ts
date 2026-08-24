@@ -17,6 +17,7 @@ import {
   applyBoringLogTextMeasurements,
   boringLogDefaultColumnMinimumWidthMpt,
   prepareBoringLogLayout,
+  resolveBoringLogLithologyAppearances,
   resolveBoringLogPageScene,
   type BoringLogLayoutPreparation,
 } from "@rsrender/scene";
@@ -66,8 +67,29 @@ export interface BoringLogStudioProjection {
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
   }>;
+  readonly lithologyAppearanceStates: readonly BoringLogStudioLithologyAppearanceState[];
+  readonly lithologyPatternOptions: readonly Readonly<{
+    readonly patternId: string;
+    readonly kind: "line-hatch" | "horizontal-dash" | "dot-ring";
+  }>[];
   readonly textOccurrencePresentationStates: readonly BoringLogStudioTextOccurrencePresentationState[];
   readonly scene: ResolvedBoringLogPageScene;
+}
+
+export interface BoringLogStudioLithologyAppearanceState {
+  readonly semanticId: string;
+  readonly boringLogIdentity: string;
+  readonly intervalId: string;
+  readonly classification: string;
+  readonly mappedClassificationKey: string;
+  readonly sourceMaterialFillToken: string;
+  readonly sourceMaterialFillColor: string;
+  readonly sourcePatternId: string;
+  readonly effectiveMaterialFillToken: string;
+  readonly effectiveMaterialFillColor: string;
+  readonly effectivePatternId: string;
+  readonly materialFillApplication: "source" | "classification-default" | "interval-override";
+  readonly patternApplication: "source" | "classification-default" | "interval-override";
 }
 
 export interface BoringLogStudioTextOccurrencePresentationState {
@@ -297,6 +319,30 @@ export function prepareBoringLogStudioProjection(
     if (!effectiveJob.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
     const prepared = prepareBoringLogLayout(effectiveJob.value);
     if (!prepared.accepted) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
+    const lithologyAppearanceStates = resolveBoringLogLithologyAppearances(effectiveJob.value).map(
+      (appearance) => {
+        const interval = effectiveJob.value.document.lithologyIntervals.find(
+          ({ id }) => id === appearance.intervalId,
+        )!;
+        return Object.freeze({
+          semanticId: `lithology:${appearance.intervalId}`,
+          boringLogIdentity: appearance.boringLogIdentity,
+          intervalId: appearance.intervalId,
+          classification: interval.classification,
+          mappedClassificationKey: appearance.mappedClassificationKey,
+          sourceMaterialFillToken: appearance.sourceMaterialFillToken,
+          sourceMaterialFillColor:
+            effectiveJob.value.template.visualTokens[appearance.sourceMaterialFillToken]!,
+          sourcePatternId: appearance.sourcePatternId,
+          effectiveMaterialFillToken: appearance.materialFillToken,
+          effectiveMaterialFillColor:
+            effectiveJob.value.template.visualTokens[appearance.materialFillToken]!,
+          effectivePatternId: appearance.patternId,
+          materialFillApplication: appearance.materialFillApplication.kind,
+          patternApplication: appearance.patternApplication.kind,
+        });
+      },
+    );
     const excludedOverrideStyleIds = new Set(
       effectiveJob.value.template.bindings
         .filter(
@@ -343,6 +389,12 @@ export function prepareBoringLogStudioProjection(
               excludedOverrideStyleIds.has(id),
             ).length,
           }),
+          lithologyAppearanceStates: Object.freeze(lithologyAppearanceStates),
+          lithologyPatternOptions: Object.freeze(
+            effectiveJob.value.template.vectorPatterns.map(({ id, kind }) =>
+              Object.freeze({ patternId: id, kind }),
+            ),
+          ),
         }),
         provenanceEntries: Object.freeze(
           [...provenanceByNode.entries()].map(([key, provenance]) =>

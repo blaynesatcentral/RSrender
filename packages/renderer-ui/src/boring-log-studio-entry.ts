@@ -140,6 +140,25 @@ type StudioProjection = Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
   }>;
+  readonly lithologyAppearanceStates: readonly Readonly<{
+    readonly semanticId: string;
+    readonly boringLogIdentity: string;
+    readonly intervalId: string;
+    readonly classification: string;
+    readonly mappedClassificationKey: string;
+    readonly sourceMaterialFillToken: string;
+    readonly sourceMaterialFillColor: string;
+    readonly sourcePatternId: string;
+    readonly effectiveMaterialFillToken: string;
+    readonly effectiveMaterialFillColor: string;
+    readonly effectivePatternId: string;
+    readonly materialFillApplication: "source" | "classification-default" | "interval-override";
+    readonly patternApplication: "source" | "classification-default" | "interval-override";
+  }>[];
+  readonly lithologyPatternOptions: readonly Readonly<{
+    readonly patternId: string;
+    readonly kind: "line-hatch" | "horizontal-dash" | "dot-ring";
+  }>[];
   readonly textOccurrencePresentationStates: readonly Readonly<{
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
@@ -157,6 +176,8 @@ type CommandResult = Readonly<{
   readonly createdOccurrenceNodeIds?: readonly string[];
   readonly createdGroupNodeId?: string;
   readonly affectedOccurrenceNodeIds?: readonly string[];
+  readonly affectedBoringLogCount?: number;
+  readonly mappedClassificationKey?: string;
 }>;
 
 type TextArrangementOperation =
@@ -236,6 +257,14 @@ type StudioApis = Readonly<{
       readonly operation: LifecycleOperation;
       readonly expectedWorkingRevision: number | null;
     }) => Promise<unknown>;
+    readonly setLithologyAppearance: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly boringLogIdentity: string;
+      readonly intervalId: string;
+      readonly applyScope: "interval" | "classification-default";
+      readonly materialFillColor: string | null;
+      readonly patternId: string | null;
+    }) => Promise<CommandResult>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
       readonly applyScope:
@@ -452,6 +481,18 @@ async function main(): Promise<void> {
   const applyColumnWidth = element<HTMLButtonElement>("apply-column-width");
   const columnMinimumWidth = element<HTMLElement>("column-minimum-width");
   const columnResizeAffected = element<HTMLElement>("column-resize-affected");
+  const lithologyAppearanceProperties = element<HTMLDetailsElement>(
+    "lithology-appearance-properties",
+  );
+  const lithologyClassification = element<HTMLElement>("lithology-classification");
+  const lithologyMappedKey = element<HTMLElement>("lithology-mapped-key");
+  const lithologyFillColor = element<HTMLInputElement>("lithology-fill-color");
+  const lithologyPattern = element<HTMLSelectElement>("lithology-pattern");
+  const applyLithologyInterval = element<HTMLButtonElement>("apply-lithology-interval");
+  const setLithologyDefault = element<HTMLButtonElement>("set-lithology-default");
+  const lithologyFillScope = element<HTMLElement>("lithology-fill-scope");
+  const lithologyPatternScope = element<HTMLElement>("lithology-pattern-scope");
+  const lithologyAppearanceHelp = element<HTMLElement>("lithology-appearance-help");
   const textStyleProperties = element<HTMLDetailsElement>("text-style-properties");
   const textLayoutProperties = element<HTMLDetailsElement>("text-layout-properties");
   const textFontFamily = element<HTMLSelectElement>("text-font-family");
@@ -622,6 +663,8 @@ async function main(): Promise<void> {
   let textClipboardBoringLogIdentity: string | null = null;
   const templateTextPropertyMask = new Set<TextTemplateProperty>();
   let currentTextFrameAnchor: BoringLogTextFrameAnchor = "top-left";
+  let selectedLithologyInitialColor: string | null = null;
+  let selectedLithologyInitialPatternId: string | null = null;
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
   const selectionByBoring = new Map<
@@ -3201,6 +3244,37 @@ async function main(): Promise<void> {
       regionPagination.textContent = `${plannedPage.depthRange.endFt - plannedPage.depthRange.startFt} ft · 1 page`;
       applyRegionHeight.disabled = lifecycleState?.readOnly === true;
     }
+    const lithologyMatch = /^lithology:([^:]+)/u.exec(effectiveSemanticId);
+    const lithologyState =
+      lithologyMatch === null
+        ? undefined
+        : studioProjection?.lithologyAppearanceStates.find(
+            ({ intervalId }) => intervalId === lithologyMatch[1],
+          );
+    lithologyAppearanceProperties.hidden = lithologyState === undefined;
+    selectedLithologyInitialColor = lithologyState?.effectiveMaterialFillColor ?? null;
+    selectedLithologyInitialPatternId = lithologyState?.effectivePatternId ?? null;
+    if (lithologyState !== undefined && studioProjection !== null) {
+      lithologyClassification.textContent = lithologyState.classification;
+      lithologyMappedKey.textContent = lithologyState.mappedClassificationKey;
+      lithologyFillColor.value = /^#[0-9a-f]{6}$/iu.test(lithologyState.effectiveMaterialFillColor)
+        ? lithologyState.effectiveMaterialFillColor
+        : "#ffffff";
+      lithologyPattern.replaceChildren(
+        ...studioProjection.lithologyPatternOptions.map(({ patternId, kind }) => {
+          const option = document.createElement("option");
+          option.value = patternId;
+          option.textContent = `${humanize(patternId)} · ${humanize(kind)}`;
+          return option;
+        }),
+      );
+      lithologyPattern.value = lithologyState.effectivePatternId;
+      lithologyFillScope.textContent = humanize(lithologyState.materialFillApplication);
+      lithologyPatternScope.textContent = humanize(lithologyState.patternApplication);
+      applyLithologyInterval.disabled = lifecycleState?.readOnly === true;
+      setLithologyDefault.disabled = lifecycleState?.readOnly === true;
+      lithologyAppearanceHelp.textContent = `${lithologyState.mappedClassificationKey}: interval changes affect only ${lithologyState.intervalId}. Set as default applies changed properties across all project borings. Explicit interval values remain higher precedence.`;
+    }
     const textStyle =
       representative.kind === "text"
         ? scene.resources.textStyles.find(({ id }) => id === representative.styleId)
@@ -3467,6 +3541,68 @@ async function main(): Promise<void> {
     return value === 0
       ? { kind: "zero", value: 0, originalRepresentation: raw }
       : { kind: "value", value, originalRepresentation: raw };
+  }
+
+  async function applySelectedLithologyAppearance(
+    applyScope: "interval" | "classification-default",
+  ): Promise<void> {
+    const apis = studioApis();
+    const intervalId =
+      selectedSemanticId === null ? null : /^lithology:([^:]+)/u.exec(selectedSemanticId)?.[1];
+    const appearance = studioProjection?.lithologyAppearanceStates.find(
+      (candidate) => candidate.intervalId === intervalId,
+    );
+    if (
+      apis === null ||
+      studioProjection === null ||
+      appearance === undefined ||
+      intervalId === null ||
+      intervalId === undefined
+    ) {
+      return;
+    }
+    const color = lithologyFillColor.value.toLowerCase();
+    const patternId = lithologyPattern.value;
+    const colorChanged = color !== selectedLithologyInitialColor;
+    const patternChanged = patternId !== selectedLithologyInitialPatternId;
+    if (applyScope === "interval" && !colorChanged && !patternChanged) {
+      status.textContent = "Choose a different lithology color or vector pattern first.";
+      lithologyFillColor.focus();
+      return;
+    }
+    const promoteEffective =
+      applyScope === "classification-default" && !colorChanged && !patternChanged;
+    const materialFillColor = colorChanged || promoteEffective ? color : null;
+    const authoredPatternId = patternChanged || promoteEffective ? patternId : null;
+    applyLithologyInterval.disabled = true;
+    setLithologyDefault.disabled = true;
+    status.textContent =
+      applyScope === "interval"
+        ? `Applying appearance to ${appearance.intervalId}…`
+        : `Setting ${appearance.mappedClassificationKey} default across all project borings…`;
+    const result = await apis.studio.setLithologyAppearance({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      boringLogIdentity: appearance.boringLogIdentity,
+      intervalId: appearance.intervalId,
+      applyScope,
+      materialFillColor,
+      patternId: authoredPatternId,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      applyLithologyInterval.disabled = lifecycleState?.readOnly === true;
+      setLithologyDefault.disabled = lifecycleState?.readOnly === true;
+      status.textContent = `Lithology appearance rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+      return;
+    }
+    const affected = result.affectedBoringLogCount ?? 1;
+    const refreshed = await refreshStudioProjection(
+      result.workingRevision,
+      applyScope === "interval"
+        ? `${appearance.intervalId} appearance applied at revision ${result.workingRevision}.`
+        : `${appearance.mappedClassificationKey} default applied to ${affected} boring log${affected === 1 ? "" : "s"} at revision ${result.workingRevision}.`,
+    );
+    if (refreshed) await refreshLifecycleStateSilently();
+    lithologyFillColor.focus();
   }
 
   async function applySelectedProperty(): Promise<void> {
@@ -4509,6 +4645,8 @@ async function main(): Promise<void> {
     "context-send-back": () =>
       void mutateSelectedText({ kind: "reorder", placement: "back" }, "context-menu"),
     "apply-property": () => void applySelectedProperty(),
+    "apply-lithology-interval": () => void applySelectedLithologyAppearance("interval"),
+    "set-lithology-default": () => void applySelectedLithologyAppearance("classification-default"),
     "apply-column-width": () => {
       const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
       void applySelectedColumnWidthMpt(requestedWidthMpt);

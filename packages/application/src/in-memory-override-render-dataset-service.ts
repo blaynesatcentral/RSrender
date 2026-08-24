@@ -880,6 +880,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
             "column-divider-push-following-resize",
             "region-boundary-resize",
             "text-occurrence-authoring",
+            "lithology-interval-appearance",
           ].includes(String(command["operation"])))
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
@@ -1008,7 +1009,9 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
                       ? "Resize Page Region boundary"
                       : operation === "text-occurrence-authoring"
                         ? "Author selected text occurrences"
-                        : "Set text occurrence style";
+                        : operation === "lithology-interval-appearance"
+                          ? "Set lithology interval appearance"
+                          : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
         kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],

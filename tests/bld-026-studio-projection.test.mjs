@@ -107,6 +107,38 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
     excludedOverrideStyleCount: 0,
   });
   assert.deepEqual(initial.projection.guides, []);
+  assert.equal(initial.projection.lithologyAppearanceStates.length, 3);
+  assert.deepEqual(
+    initial.projection.lithologyAppearanceStates.map(
+      ({ intervalId, mappedClassificationKey, materialFillApplication, patternApplication }) => ({
+        intervalId,
+        mappedClassificationKey,
+        materialFillApplication,
+        patternApplication,
+      }),
+    ),
+    [
+      {
+        intervalId: "stratum-01",
+        mappedClassificationKey: "ML",
+        materialFillApplication: "source",
+        patternApplication: "source",
+      },
+      {
+        intervalId: "stratum-02",
+        mappedClassificationKey: "GW",
+        materialFillApplication: "source",
+        patternApplication: "source",
+      },
+      {
+        intervalId: "stratum-03",
+        mappedClassificationKey: "ML",
+        materialFillApplication: "source",
+        patternApplication: "source",
+      },
+    ],
+  );
+  assert.ok(initial.projection.lithologyPatternOptions.length >= 3);
   assert.equal(initial.projection.scene.pages[0].nodes.length, 328);
   assert.equal(initial.projection.scene.pages[0].semanticOrder.length, 90);
   assert.equal(
