@@ -68,10 +68,16 @@ export {
   createInMemoryOverrideRenderDatasetService,
   captureOverrideRenderDatasetWorkingState,
   commitEmbeddedTemplateReplacement,
+  commitEmbeddedTemplateReplacementBatch,
   inMemoryOverrideRenderDatasetServiceRevision,
+  lithologyClassificationDefaultBatchOperationIdentity,
+  lithologyClassificationDefaultBatchOperationLabel,
   markOverrideRenderDatasetDurable,
 } from "./in-memory-override-render-dataset-service.js";
-export type { EmbeddedTemplateReplacementCommitResult } from "./in-memory-override-render-dataset-service.js";
+export type {
+  EmbeddedTemplateReplacementBatchCommitResult,
+  EmbeddedTemplateReplacementCommitResult,
+} from "./in-memory-override-render-dataset-service.js";
 
 export {
   advanceOverrideRenderDatasetProjectionReplica,

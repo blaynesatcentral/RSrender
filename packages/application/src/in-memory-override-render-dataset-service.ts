@@ -122,6 +122,41 @@ export type EmbeddedTemplateReplacementCommitResult =
         | "INTERNAL_STATE_INVALID";
     }>;
 
+export const lithologyClassificationDefaultBatchOperationIdentity =
+  "embedded-template.lithology-classification-default" as const;
+export const lithologyClassificationDefaultBatchOperationLabel =
+  "Set lithology classification default" as const;
+
+export type EmbeddedTemplateReplacementBatchCommitResult =
+  | Readonly<{
+      readonly accepted: true;
+      readonly previousWorkingRevision: number;
+      readonly workingRevision: number;
+      readonly durableRevision: number;
+      readonly dirty: boolean;
+      readonly canUndo: boolean;
+      readonly canRedo: boolean;
+      readonly operationIdentity: typeof lithologyClassificationDefaultBatchOperationIdentity;
+      readonly operationLabel: typeof lithologyClassificationDefaultBatchOperationLabel;
+      readonly embeddedTemplateRepresentationIdentities: readonly string[];
+    }>
+  | Readonly<{
+      readonly accepted: false;
+      readonly detail?: string;
+      readonly code:
+        | "AUTHORING_COMMAND_MALFORMED"
+        | "DOCUMENT_IDENTITY_MISMATCH"
+        | "OWNER_GENERATION_MISMATCH"
+        | "STALE_WORKING_REVISION"
+        | "EXPLORATION_ASSIGNMENT_MISSING"
+        | "TEMPLATE_BASELINE_MISMATCH"
+        | "TEMPLATE_REPLACEMENT_INVALID"
+        | "DUPLICATE_EXPLORATION_ASSIGNMENT"
+        | "CONFLICTING_TEMPLATE_REPLACEMENT"
+        | "CAPACITY_EXHAUSTED"
+        | "INTERNAL_STATE_INVALID";
+    }>;
+
 export type OverrideRenderDatasetServiceInitializationResult =
   | { readonly accepted: true; readonly service: InMemoryOverrideRenderDatasetService }
   | {
@@ -1052,6 +1087,379 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     });
   }
 
+  public replaceEmbeddedTemplateRepresentationsBatch(
+    input: unknown,
+  ): Promise<EmbeddedTemplateReplacementBatchCommitResult> {
+    return this.#serialize(async () => {
+      await Promise.resolve();
+      const command = ownDataRecord(input, [
+        "requestId",
+        "documentId",
+        "ownerGeneration",
+        "expectedWorkingRevision",
+        "operation",
+        "replacements",
+        "reason",
+      ]);
+      const suppliedReplacements = command === null ? null : ownArray(command["replacements"]);
+      if (
+        command === null ||
+        typeof command["requestId"] !== "string" ||
+        !separationOperationIdentityCodec.is(command["requestId"]) ||
+        typeof command["documentId"] !== "string" ||
+        !Number.isSafeInteger(command["ownerGeneration"]) ||
+        (command["ownerGeneration"] as number) < 0 ||
+        !Number.isSafeInteger(command["expectedWorkingRevision"]) ||
+        (command["expectedWorkingRevision"] as number) < 0 ||
+        command["operation"] !== "lithology-classification-default" ||
+        suppliedReplacements === null ||
+        suppliedReplacements.length < 1 ||
+        typeof command["reason"] !== "string" ||
+        command["reason"].trim().length < 1
+      ) {
+        return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
+      }
+      const replacements: Array<
+        Readonly<{
+          explorationIdentity: string;
+          expectedTemplateAssignmentIdentity: string;
+          expectedEmbeddedTemplateRepresentationIdentity: string;
+          expectedEffectiveContentDigest: Sha256Digest;
+          replacementEffectiveContentDigest: Sha256Digest;
+        }>
+      > = [];
+      for (const supplied of suppliedReplacements) {
+        const replacement = ownDataRecord(supplied, [
+          "explorationIdentity",
+          "expectedTemplateAssignmentIdentity",
+          "expectedEmbeddedTemplateRepresentationIdentity",
+          "expectedEffectiveContentDigest",
+          "replacementEffectiveContentDigest",
+        ]);
+        if (
+          replacement === null ||
+          typeof replacement["explorationIdentity"] !== "string" ||
+          replacement["explorationIdentity"].length < 1 ||
+          typeof replacement["expectedTemplateAssignmentIdentity"] !== "string" ||
+          replacement["expectedTemplateAssignmentIdentity"].length < 1 ||
+          typeof replacement["expectedEmbeddedTemplateRepresentationIdentity"] !== "string" ||
+          replacement["expectedEmbeddedTemplateRepresentationIdentity"].length < 1 ||
+          !isSha256Digest(replacement["expectedEffectiveContentDigest"]) ||
+          !isSha256Digest(replacement["replacementEffectiveContentDigest"])
+        ) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
+        }
+        if (
+          replacement["expectedEffectiveContentDigest"] ===
+          replacement["replacementEffectiveContentDigest"]
+        ) {
+          return Object.freeze({ accepted: false, code: "TEMPLATE_REPLACEMENT_INVALID" });
+        }
+        replacements.push(
+          Object.freeze({
+            explorationIdentity: replacement["explorationIdentity"],
+            expectedTemplateAssignmentIdentity: replacement["expectedTemplateAssignmentIdentity"],
+            expectedEmbeddedTemplateRepresentationIdentity:
+              replacement["expectedEmbeddedTemplateRepresentationIdentity"],
+            expectedEffectiveContentDigest: replacement["expectedEffectiveContentDigest"],
+            replacementEffectiveContentDigest: replacement["replacementEffectiveContentDigest"],
+          }),
+        );
+      }
+      replacements.sort((left, right) =>
+        left.explorationIdentity < right.explorationIdentity
+          ? -1
+          : left.explorationIdentity > right.explorationIdentity
+            ? 1
+            : 0,
+      );
+      if (
+        replacements.some(
+          (replacement, index) =>
+            index > 0 &&
+            replacement.explorationIdentity === replacements[index - 1]?.explorationIdentity,
+        )
+      ) {
+        return Object.freeze({
+          accepted: false,
+          code: "DUPLICATE_EXPLORATION_ASSIGNMENT",
+        });
+      }
+
+      const snapshot = this.#core.inspectProject();
+      if (command["documentId"] !== snapshot.documentId) {
+        return Object.freeze({ accepted: false, code: "DOCUMENT_IDENTITY_MISMATCH" });
+      }
+      if (command["ownerGeneration"] !== snapshot.ownerGeneration) {
+        return Object.freeze({ accepted: false, code: "OWNER_GENERATION_MISMATCH" });
+      }
+      if (command["expectedWorkingRevision"] !== snapshot.workingRevision) {
+        return Object.freeze({ accepted: false, code: "STALE_WORKING_REVISION" });
+      }
+      if (snapshot.workingRevision === Number.MAX_SAFE_INTEGER) {
+        return Object.freeze({ accepted: false, code: "CAPACITY_EXHAUSTED" });
+      }
+      if (replacements.length > snapshot.aggregate.logSet.templateAssignments.length) {
+        return Object.freeze({ accepted: false, code: "EXPLORATION_ASSIGNMENT_MISSING" });
+      }
+
+      const resolved: Array<
+        Readonly<{
+          explorationIdentity: string;
+          assignment: Phase1LogProjectAggregate["logSet"]["templateAssignments"][number];
+          prior: Phase1LogProjectAggregate["logSet"]["embeddedTemplateRepresentations"][number];
+          replacementEffectiveContentDigest: Sha256Digest;
+          replacementIdentity: ReturnType<typeof deriveEmbeddedTemplateRepresentationIdentity>;
+        }>
+      > = [];
+      const assignmentIdentities = new Set<string>();
+      const replacementDigestByPriorIdentity = new Map<string, Sha256Digest>();
+      for (const replacement of replacements) {
+        const membership = snapshot.aggregate.logSet.memberships.find(
+          ({ sourceExplorationIdentity }) =>
+            sourceExplorationIdentity === replacement.explorationIdentity,
+        );
+        const assignment = snapshot.aggregate.logSet.templateAssignments.find(
+          (candidate) =>
+            membership !== undefined &&
+            candidate.scope.kind === "exploration" &&
+            candidate.scope.targetIdentity === membership.membershipIdentity,
+        );
+        if (membership === undefined || assignment === undefined) {
+          return Object.freeze({ accepted: false, code: "EXPLORATION_ASSIGNMENT_MISSING" });
+        }
+        if (assignmentIdentities.has(assignment.assignmentIdentity)) {
+          return Object.freeze({
+            accepted: false,
+            code: "DUPLICATE_EXPLORATION_ASSIGNMENT",
+          });
+        }
+        assignmentIdentities.add(assignment.assignmentIdentity);
+        if (
+          assignment.assignmentIdentity !== replacement.expectedTemplateAssignmentIdentity ||
+          assignment.embeddedTemplateRepresentationIdentity !==
+            replacement.expectedEmbeddedTemplateRepresentationIdentity
+        ) {
+          return Object.freeze({ accepted: false, code: "TEMPLATE_BASELINE_MISMATCH" });
+        }
+        const prior = snapshot.aggregate.logSet.embeddedTemplateRepresentations.find(
+          ({ embeddedTemplateRepresentationIdentity }) =>
+            embeddedTemplateRepresentationIdentity ===
+            replacement.expectedEmbeddedTemplateRepresentationIdentity,
+        );
+        if (
+          prior === undefined ||
+          prior.effectiveContentDigest !== replacement.expectedEffectiveContentDigest
+        ) {
+          return Object.freeze({ accepted: false, code: "TEMPLATE_BASELINE_MISMATCH" });
+        }
+        const priorReplacementDigest = replacementDigestByPriorIdentity.get(
+          prior.embeddedTemplateRepresentationIdentity,
+        );
+        if (
+          priorReplacementDigest !== undefined &&
+          priorReplacementDigest !== replacement.replacementEffectiveContentDigest
+        ) {
+          return Object.freeze({
+            accepted: false,
+            code: "CONFLICTING_TEMPLATE_REPLACEMENT",
+          });
+        }
+        replacementDigestByPriorIdentity.set(
+          prior.embeddedTemplateRepresentationIdentity,
+          replacement.replacementEffectiveContentDigest,
+        );
+        resolved.push(
+          Object.freeze({
+            explorationIdentity: replacement.explorationIdentity,
+            assignment,
+            prior,
+            replacementEffectiveContentDigest: replacement.replacementEffectiveContentDigest,
+            replacementIdentity: deriveEmbeddedTemplateRepresentationIdentity(
+              snapshot.aggregate.documentIdentity,
+              prior.admittedTemplateIdentity,
+              replacement.replacementEffectiveContentDigest,
+            ),
+          }),
+        );
+      }
+
+      const replacementByAssignmentIdentity = new Map(
+        resolved.map((entry) => [entry.assignment.assignmentIdentity, entry.replacementIdentity]),
+      );
+      const assignments = snapshot.aggregate.logSet.templateAssignments.map((assignment) => {
+        const replacementIdentity = replacementByAssignmentIdentity.get(
+          assignment.assignmentIdentity,
+        );
+        return replacementIdentity === undefined
+          ? assignment
+          : Object.freeze({
+              ...assignment,
+              embeddedTemplateRepresentationIdentity: replacementIdentity,
+            });
+      });
+      const referencedIdentities = new Set(
+        assignments.map(({ embeddedTemplateRepresentationIdentity }) =>
+          String(embeddedTemplateRepresentationIdentity),
+        ),
+      );
+      const replacedPriorIdentities = new Set(
+        resolved.map(({ prior }) => String(prior.embeddedTemplateRepresentationIdentity)),
+      );
+      const embeddedTemplateRepresentations =
+        snapshot.aggregate.logSet.embeddedTemplateRepresentations.filter(
+          ({ embeddedTemplateRepresentationIdentity }) =>
+            !replacedPriorIdentities.has(embeddedTemplateRepresentationIdentity) ||
+            referencedIdentities.has(embeddedTemplateRepresentationIdentity),
+        );
+      const knownIdentities = new Set(
+        embeddedTemplateRepresentations.map(({ embeddedTemplateRepresentationIdentity }) =>
+          String(embeddedTemplateRepresentationIdentity),
+        ),
+      );
+      for (const entry of resolved) {
+        if (knownIdentities.has(entry.replacementIdentity)) continue;
+        embeddedTemplateRepresentations.push(
+          Object.freeze({
+            embeddedTemplateRepresentationIdentity: entry.replacementIdentity,
+            admittedTemplateIdentity: entry.prior.admittedTemplateIdentity,
+            effectiveContentDigest: entry.replacementEffectiveContentDigest,
+            origin:
+              entry.prior.origin.kind === "separate-template"
+                ? entry.prior.origin
+                : Object.freeze({
+                    kind: "separate-template" as const,
+                    separationOperationIdentity: separationOperationIdentityCodec.parse(
+                      command["requestId"],
+                    ),
+                  }),
+          }),
+        );
+        knownIdentities.add(entry.replacementIdentity);
+      }
+      const after = decodePhase1LogProjectAggregate({
+        ...snapshot.aggregate,
+        logSet: {
+          ...snapshot.aggregate.logSet,
+          embeddedTemplateRepresentations,
+          templateAssignments: assignments,
+        },
+      });
+      if (!after.accepted) {
+        return Object.freeze({ accepted: false, code: "TEMPLATE_REPLACEMENT_INVALID" });
+      }
+      const beforeEncoded = encodePhase1LogProjectAggregate(snapshot.aggregate);
+      const afterEncoded = encodePhase1LogProjectAggregate(after.value);
+      if (!beforeEncoded.accepted || !afterEncoded.accepted) {
+        return Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID", detail: "encode" });
+      }
+      const canonicalCommand = canonicalizeJson({
+        requestId: command["requestId"],
+        documentId: command["documentId"],
+        ownerGeneration: command["ownerGeneration"],
+        expectedWorkingRevision: command["expectedWorkingRevision"],
+        operation: command["operation"],
+        replacements,
+        reason: command["reason"],
+      });
+      const commandDigest = sha256Utf8(canonicalCommand);
+      const replay = this.#core.lookupProjectSourceCommandReplay({
+        requestId: command["requestId"],
+        sourceCommandDigest: commandDigest,
+      });
+      if (replay.kind !== "miss") {
+        return Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID", detail: "replay" });
+      }
+      const resultIdentities = Object.freeze(
+        [...new Set(resolved.map(({ replacementIdentity }) => replacementIdentity))].sort(),
+      );
+      const affectedIdentities = [
+        ...resolved.flatMap(({ assignment, prior, replacementIdentity }) => [
+          assignment.assignmentIdentity,
+          prior.embeddedTemplateRepresentationIdentity,
+          replacementIdentity,
+        ]),
+      ];
+      const eventPayload = canonicalizeJson({
+        kind: lithologyClassificationDefaultBatchOperationIdentity,
+        replacements: resolved.map((entry) => ({
+          explorationIdentity: entry.explorationIdentity,
+          templateAssignmentIdentity: entry.assignment.assignmentIdentity,
+          priorEmbeddedTemplateRepresentationIdentity:
+            entry.prior.embeddedTemplateRepresentationIdentity,
+          embeddedTemplateRepresentationIdentity: entry.replacementIdentity,
+          effectiveContentDigest: entry.replacementEffectiveContentDigest,
+        })),
+      });
+      const effect = createProjectDomainEffect({
+        sourceRequestId: command["requestId"],
+        sourceCommandCanonicalJson: canonicalCommand,
+        sourceCommandIdentity: lithologyClassificationDefaultBatchOperationIdentity,
+        commandLabel: lithologyClassificationDefaultBatchOperationLabel,
+        documentId: snapshot.documentId,
+        ownerGeneration: snapshot.ownerGeneration,
+        expectedWorkingRevision: snapshot.workingRevision,
+        beforeAggregateCanonicalJson: beforeEncoded.canonicalJson,
+        afterAggregateCanonicalJson: afterEncoded.canonicalJson,
+        affectedIdentities: [...new Set(affectedIdentities)].sort(),
+        invalidations: [
+          "urn:rsrender:projection:boring-log-scene",
+          "urn:rsrender:projection:effective-template",
+        ],
+        eventResult: {
+          resultCode: lithologyClassificationDefaultBatchOperationIdentity,
+          canonicalPayload: eventPayload,
+        },
+      });
+      if (!effect.accepted) {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `effect:${effect.code}`,
+        });
+      }
+      const preparation = this.#core.prepareProjectDomainEffect(effect.value);
+      if (preparation.kind !== "ready") {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `prepare:${preparation.result.kind === "project-domain-history.rejected" ? preparation.result.reason : preparation.kind}`,
+        });
+      }
+      const projected = projectionFor(
+        this.#state,
+        simulatedSnapshot(snapshot, after.value, preparation.result),
+      );
+      if (!projected.projected) {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `projection:${projected.code}`,
+        });
+      }
+      const committed = this.#core.commitPreparedProjectDomainEffect(preparation.prepared);
+      if (committed.kind === "project-domain-history.rejected") {
+        return Object.freeze({
+          accepted: false,
+          code: "INTERNAL_STATE_INVALID",
+          detail: `commit:${committed.reason}`,
+        });
+      }
+      return Object.freeze({
+        accepted: true,
+        previousWorkingRevision: committed.previousWorkingRevision,
+        workingRevision: committed.workingRevision,
+        durableRevision: committed.durableRevision,
+        dirty: committed.dirty,
+        canUndo: committed.historyCursor > 0,
+        canRedo: committed.historyCursor < committed.historyLength,
+        operationIdentity: lithologyClassificationDefaultBatchOperationIdentity,
+        operationLabel: lithologyClassificationDefaultBatchOperationLabel,
+        embeddedTemplateRepresentationIdentities: resultIdentities,
+      });
+    });
+  }
+
   public markDurable(capture: CapturedPhase1ProjectWorkingRevision): Promise<boolean> {
     return this.#serialize(() =>
       Promise.resolve(markInMemoryPhase1ProjectHistoryCoreDurableRevision(this.#core, capture)),
@@ -1579,6 +1987,18 @@ export async function commitEmbeddedTemplateReplacement(
 ): Promise<EmbeddedTemplateReplacementCommitResult> {
   return (
     (await persistenceAuthorities.get(service)?.replaceEmbeddedTemplateRepresentation(input)) ??
+    Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID" as const })
+  );
+}
+
+export async function commitEmbeddedTemplateReplacementBatch(
+  service: InMemoryOverrideRenderDatasetService,
+  input: unknown,
+): Promise<EmbeddedTemplateReplacementBatchCommitResult> {
+  return (
+    (await persistenceAuthorities
+      .get(service)
+      ?.replaceEmbeddedTemplateRepresentationsBatch(input)) ??
     Object.freeze({ accepted: false, code: "INTERNAL_STATE_INVALID" as const })
   );
 }
