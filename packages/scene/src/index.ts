@@ -34,6 +34,14 @@ export type {
   BoringLogColumnResizeConstraint,
   BoringLogColumnResizeMode,
 } from "./boring-log-column-resize.js";
+export {
+  boringLogRegionResizeRevision,
+  resizeBoringLogPageRegions,
+} from "./boring-log-region-resize.js";
+export type {
+  BoringLogRegionBoundary,
+  BoringLogRegionResizeResult,
+} from "./boring-log-region-resize.js";
 export type {
   BoringLogTemplateTextProperty,
   BoringLogTemplateTextStyleResult,
