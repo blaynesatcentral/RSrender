@@ -3241,6 +3241,106 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         JSON.stringify(pushExportSafeUndo["columns"]) === JSON.stringify(pushBefore["columns"]),
         `COLUMN_PUSH_EXPORT_SAFE_UNDO_INVALID:${JSON.stringify({ pushBefore, pushExportSafeUndo })}`,
       );
+      const regionSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const page = value.accepted ? value.projection.scene.pagePlan.pages[0] : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, regions: page?.regions ?? null, depthTransform: page?.depthTransform ?? null, controlCount: document.querySelectorAll(".region-boundary-control").length, previewPages: document.getElementById("canvas-stage")?.dataset.regionPreviewPages ?? null, status: document.getElementById("editor-status")?.textContent }; })()`;
+      const regionBefore = record(await pageValue(window, regionSnapshotExpression));
+      const regionStart = record(
+        await pageValue(
+          window,
+          `(() => { const node = document.querySelector('[data-region-boundary="header-depth"]'); if (!(node instanceof SVGElement)) return {}; node.scrollIntoView({ block: "center", inline: "center" }); const bounds = node.getBoundingClientRect(); return { x: Math.round(bounds.x + Math.min(20, bounds.width / 4)), y: Math.round(bounds.y + bounds.height / 2) }; })()`,
+        ),
+      );
+      requireProbe(
+        typeof regionStart["x"] === "number" &&
+          typeof regionStart["y"] === "number" &&
+          regionBefore["controlCount"] === 2,
+        "REGION_BOUNDARY_CONTROL_INVALID",
+      );
+      await dragMouse(
+        window,
+        { x: regionStart["x"], y: regionStart["y"] },
+        { x: regionStart["x"], y: regionStart["y"] + 8 },
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Page Region boundary committed at revision ") === true`,
+        "WAIT_REGION_BOUNDARY_COMMIT",
+      );
+      const regionCommitted = record(await pageValue(window, regionSnapshotExpression));
+      const regionBeforeRegions = regionBefore["regions"] as readonly DataRecord[];
+      const regionCommittedRegions = regionCommitted["regions"] as readonly DataRecord[];
+      const beforeHeader = regionBeforeRegions.find(({ role }) => role === "header")!;
+      const beforeDepth = regionBeforeRegions.find(({ role }) => role === "depth-body")!;
+      const beforeFooter = regionBeforeRegions.find(({ role }) => role === "footer")!;
+      const committedHeader = regionCommittedRegions.find(({ role }) => role === "header")!;
+      const committedDepth = regionCommittedRegions.find(({ role }) => role === "depth-body")!;
+      const committedFooter = regionCommittedRegions.find(({ role }) => role === "footer")!;
+      const regionDelta = (committedDepth["yMpt"] as number) - (beforeDepth["yMpt"] as number);
+      requireProbe(
+        regionCommitted["workingRevision"] === (regionBefore["workingRevision"] as number) + 1 &&
+          regionDelta > 0 &&
+          committedHeader["heightMpt"] === (beforeHeader["heightMpt"] as number) + regionDelta &&
+          committedDepth["heightMpt"] === (beforeDepth["heightMpt"] as number) - regionDelta &&
+          JSON.stringify(committedFooter) === JSON.stringify(beforeFooter) &&
+          (regionCommitted["depthTransform"] as DataRecord)["mptPerFoot"] ===
+            (regionBefore["depthTransform"] as DataRecord)["mptPerFoot"],
+        `REGION_BOUNDARY_COMMIT_INVALID:${JSON.stringify({ regionBefore, regionCommitted })}`,
+      );
+      await press(window, "#undo", "Space", "FOCUS_REGION_BOUNDARY_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true`,
+        "WAIT_REGION_BOUNDARY_UNDO",
+      );
+      const regionUndo = record(await pageValue(window, regionSnapshotExpression));
+      await press(window, "#redo", "Space", "FOCUS_REGION_BOUNDARY_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Redo completed at revision ") === true`,
+        "WAIT_REGION_BOUNDARY_REDO",
+      );
+      const regionRedo = record(await pageValue(window, regionSnapshotExpression));
+      requireProbe(
+        JSON.stringify(regionUndo["regions"]) === JSON.stringify(regionBefore["regions"]) &&
+          JSON.stringify(regionRedo["regions"]) === JSON.stringify(regionCommitted["regions"]),
+        `REGION_BOUNDARY_HISTORY_INVALID:${JSON.stringify({ regionUndo, regionRedo })}`,
+      );
+      const blockedStart = record(
+        await pageValue(
+          window,
+          `(() => { const node = document.querySelector('[data-region-boundary="header-depth"]'); if (!(node instanceof SVGElement)) return {}; const bounds = node.getBoundingClientRect(); return { x: Math.round(bounds.x + Math.min(20, bounds.width / 4)), y: Math.round(bounds.y + bounds.height / 2) }; })()`,
+        ),
+      );
+      await dragMouse(
+        window,
+        { x: blockedStart["x"] as number, y: blockedStart["y"] as number },
+        { x: blockedStart["x"] as number, y: (blockedStart["y"] as number) + 60 },
+        false,
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.includes("requires 2 pages at the fixed depth scale") === true && document.getElementById("canvas-stage")?.dataset.regionPreviewPages === "2"`,
+        "WAIT_REGION_REPAGINATION_PREVIEW",
+      );
+      window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+      window.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+      window.webContents.sendInputEvent({
+        type: "mouseUp",
+        x: blockedStart["x"] as number,
+        y: (blockedStart["y"] as number) + 60,
+        button: "left",
+        clickCount: 1,
+      });
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Page Region gesture canceled for header-depth") === true`,
+        "WAIT_REGION_REPAGINATION_CANCEL",
+      );
+      const regionCanceled = record(await pageValue(window, regionSnapshotExpression));
+      requireProbe(
+        regionCanceled["workingRevision"] === regionRedo["workingRevision"] &&
+          JSON.stringify(regionCanceled["regions"]) === JSON.stringify(regionRedo["regions"]),
+        `REGION_REPAGINATION_CANCEL_INVALID:${JSON.stringify({ regionRedo, regionCanceled })}`,
+      );
       directManipulation = Object.freeze({
         before: directBefore,
         moved: directMoved,
@@ -3270,6 +3370,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
             redo: pushRedo,
             exportSafeUndo: pushExportSafeUndo,
           }),
+        }),
+        pageRegion: Object.freeze({
+          before: regionBefore,
+          committed: regionCommitted,
+          undo: regionUndo,
+          redo: regionRedo,
+          repaginationCanceled: regionCanceled,
         }),
       });
       emitStudioProbePhase("direct-manipulation-observed");

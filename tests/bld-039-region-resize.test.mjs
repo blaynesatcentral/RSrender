@@ -108,8 +108,8 @@ test("BLD-039 region boundaries clamp to typed minima and fail closed on bad top
   });
 });
 
-test("BLD-039 region commands use exact route admission and embedded-template history", async () => {
-  const [broker, preload, main] = await Promise.all([
+test("BLD-039 region commands expose exact route, Canvas, Properties, and history paths", async () => {
+  const [broker, preload, main, entry, uiRoute, stylesheet] = await Promise.all([
     readFile(
       new URL(
         "../packages/platform-electron-main/src/boring-log-studio-route-broker.ts",
@@ -128,6 +128,15 @@ test("BLD-039 region commands use exact route admission and embedded-template hi
       new URL("../packages/platform-electron-main/src/semantic-editor-main.ts", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../packages/renderer-ui/src/boring-log-studio-route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url), "utf8"),
   ]);
   assert.match(broker, /setRegionBoundary[\s\S]*requestedBoundaryYMpt/u);
   assert.match(preload, /BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL/u);
@@ -135,4 +144,10 @@ test("BLD-039 region commands use exact route admission and embedded-template hi
   assert.match(main, /REGION_REPAGINATION_REQUIRED/u);
   assert.match(main, /commitEmbeddedTemplateReplacement/u);
   assert.match(main, /operation: "region-boundary-resize"/u);
+  assert.match(entry, /id = "region-boundary-controls"/u);
+  assert.match(entry, /Region preview:[\s\S]*requires \$\{outcome.pageCount\} pages/u);
+  assert.match(entry, /Page Region gesture canceled/u);
+  assert.match(entry, /ArrowUp[\s\S]*ArrowDown/u);
+  assert.match(uiRoute, /id="region-resize-properties"/u);
+  assert.match(stylesheet, /\.region-boundary-control/u);
 });

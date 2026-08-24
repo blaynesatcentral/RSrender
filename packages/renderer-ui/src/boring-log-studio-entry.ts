@@ -34,6 +34,7 @@ type PageGuideMutation =
   | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 
 type ColumnResizeMode = "adjacent-pair" | "push-following-columns";
+type RegionBoundary = "header-depth" | "depth-footer";
 
 type TextTemplateProperty =
   | "fontFamilyId"
@@ -129,6 +130,11 @@ type StudioProjection = Readonly<{
     readonly minimumWidthMpt: number;
     readonly widthPinned: boolean;
   }>[];
+  readonly regionResizeConstraints: Readonly<{
+    readonly minimumHeaderHeightMpt: number;
+    readonly minimumDepthBodyHeightMpt: number;
+    readonly minimumFooterHeightMpt: number;
+  }>;
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -258,6 +264,11 @@ type StudioApis = Readonly<{
       readonly requestedDividerXMpt: number;
       readonly resizeMode: ColumnResizeMode;
     }) => Promise<CommandResult>;
+    readonly setRegionBoundary: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly boundary: RegionBoundary;
+      readonly requestedBoundaryYMpt: number;
+    }) => Promise<CommandResult>;
   };
   readonly document: {
     readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
@@ -382,6 +393,12 @@ async function main(): Promise<void> {
   const propertyProvenance = element<HTMLElement>("property-provenance");
   const propertySourceOriginal = element<HTMLElement>("property-source-original");
   const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
+  const regionResizeProperties = element<HTMLDetailsElement>("region-resize-properties");
+  const regionHeight = element<HTMLInputElement>("region-height");
+  const applyRegionHeight = element<HTMLButtonElement>("apply-region-height");
+  const regionMinimumHeight = element<HTMLElement>("region-minimum-height");
+  const regionDepthScale = element<HTMLElement>("region-depth-scale");
+  const regionPagination = element<HTMLElement>("region-pagination");
   const columnResizeProperties = element<HTMLDetailsElement>("column-resize-properties");
   const columnWidth = element<HTMLInputElement>("column-width");
   const columnResizeMode = element<HTMLSelectElement>("column-resize-mode");
@@ -545,6 +562,16 @@ async function main(): Promise<void> {
         readonly minimumDividerXMpt: number;
         readonly maximumDividerXMpt: number;
         previewDividerXMpt: number;
+      }
+    | undefined;
+  let regionBoundaryGesture:
+    | {
+        readonly pointerId: number;
+        readonly boundary: RegionBoundary;
+        readonly originalBoundaryYMpt: number;
+        readonly minimumBoundaryYMpt: number;
+        readonly maximumBoundaryYMpt: number;
+        previewBoundaryYMpt: number;
       }
     | undefined;
   let suppressCanvasClick = false;
@@ -785,6 +812,7 @@ async function main(): Promise<void> {
         occurrence?.classList.add("is-selected");
       }
     }
+    installRegionBoundaryControls();
     installColumnDividerControls();
     installDirectManipulationOverlay();
     renderPageRulers();
@@ -929,6 +957,81 @@ async function main(): Promise<void> {
       control.setAttribute("tabindex", "0");
       group.append(line, control);
     });
+    svg.append(group);
+  }
+
+  function regionBoundaryOutcome(boundary: RegionBoundary, requestedYMpt: number) {
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId)!;
+    const header = plannedPage.regions.find(({ role }) => role === "header")!;
+    const depthBody = plannedPage.regions.find(({ role }) => role === "depth-body")!;
+    const footer = plannedPage.regions.find(({ role }) => role === "footer")!;
+    const constraints = studioProjection!.regionResizeConstraints;
+    const headerGapMpt = depthBody.yMpt - (header.yMpt + header.heightMpt);
+    const footerEndMpt = footer.yMpt + footer.heightMpt;
+    const minimumYMpt =
+      boundary === "header-depth"
+        ? header.yMpt + constraints.minimumHeaderHeightMpt + headerGapMpt
+        : depthBody.yMpt + constraints.minimumDepthBodyHeightMpt;
+    const maximumYMpt =
+      boundary === "header-depth"
+        ? footer.yMpt - constraints.minimumDepthBodyHeightMpt
+        : footerEndMpt - constraints.minimumFooterHeightMpt;
+    const effectiveYMpt = Math.min(maximumYMpt, Math.max(minimumYMpt, requestedYMpt));
+    const nextDepthY = boundary === "header-depth" ? effectiveYMpt : depthBody.yMpt;
+    const nextDepthEnd = boundary === "depth-footer" ? effectiveYMpt : footer.yMpt;
+    const yStartMpt = nextDepthY + (plannedPage.depthTransform.yStartMpt - depthBody.yMpt);
+    const availablePlotHeightMpt = Math.max(1, nextDepthEnd - yStartMpt);
+    const requiredPlotHeightMpt =
+      (plannedPage.depthTransform.depthEndFt - plannedPage.depthTransform.depthStartFt) *
+      plannedPage.depthTransform.mptPerFoot;
+    return Object.freeze({
+      effectiveYMpt,
+      minimumYMpt,
+      maximumYMpt,
+      pageCount: Math.max(1, Math.ceil(requiredPlotHeightMpt / availablePlotHeightMpt)),
+      repaginationRequired: availablePlotHeightMpt < requiredPlotHeightMpt,
+    });
+  }
+
+  function installRegionBoundaryControls(): void {
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const depthBody = plannedPage?.regions.find(({ role }) => role === "depth-body");
+    const footer = plannedPage?.regions.find(({ role }) => role === "footer");
+    if (
+      svg === null ||
+      plannedPage === undefined ||
+      depthBody === undefined ||
+      footer === undefined
+    )
+      return;
+    const namespace = "http://www.w3.org/2000/svg";
+    const group = document.createElementNS(namespace, "g");
+    group.id = "region-boundary-controls";
+    for (const [boundary, yMpt] of [
+      ["header-depth", depthBody.yMpt],
+      ["depth-footer", footer.yMpt],
+    ] as const) {
+      const line = document.createElementNS(namespace, "line");
+      line.classList.add("region-boundary-line");
+      line.setAttribute("x1", String(depthBody.xMpt));
+      line.setAttribute("x2", String(depthBody.xMpt + depthBody.widthMpt));
+      line.setAttribute("y1", String(yMpt));
+      line.setAttribute("y2", String(yMpt));
+      const control = document.createElementNS(namespace, "rect");
+      control.classList.add("region-boundary-control");
+      control.dataset["regionBoundary"] = boundary;
+      control.setAttribute("x", String(depthBody.xMpt));
+      control.setAttribute("y", String(yMpt - 4_000));
+      control.setAttribute("width", String(depthBody.widthMpt));
+      control.setAttribute("height", "8000");
+      control.setAttribute("role", "separator");
+      control.setAttribute("aria-orientation", "horizontal");
+      control.setAttribute("aria-label", `Resize ${boundary} Page Region boundary`);
+      control.setAttribute("aria-valuenow", String(yMpt));
+      control.setAttribute("tabindex", "0");
+      group.append(line, control);
+    }
     svg.append(group);
   }
 
@@ -1156,6 +1259,38 @@ async function main(): Promise<void> {
     return committed;
   }
 
+  async function applySelectedRegionHeightMpt(requestedHeightMpt: number): Promise<boolean> {
+    if (
+      selectedSemanticId === null ||
+      !Number.isSafeInteger(requestedHeightMpt) ||
+      requestedHeightMpt <= 0
+    )
+      return false;
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const header = plannedPage?.regions.find(({ role }) => role === "header");
+    const depthBody = plannedPage?.regions.find(({ role }) => role === "depth-body");
+    const footer = plannedPage?.regions.find(({ role }) => role === "footer");
+    if (
+      plannedPage === undefined ||
+      header === undefined ||
+      depthBody === undefined ||
+      footer === undefined
+    )
+      return false;
+    const headerGapMpt = depthBody.yMpt - (header.yMpt + header.heightMpt);
+    const boundary: RegionBoundary =
+      selectedSemanticId === header.id ? "header-depth" : "depth-footer";
+    if (selectedSemanticId !== header.id && selectedSemanticId !== footer.id) return false;
+    const requestedBoundaryYMpt =
+      boundary === "header-depth"
+        ? header.yMpt + requestedHeightMpt + headerGapMpt
+        : footer.yMpt + footer.heightMpt - requestedHeightMpt;
+    applyRegionHeight.disabled = true;
+    const committed = await commitRegionBoundary(boundary, requestedBoundaryYMpt);
+    applyRegionHeight.disabled = false;
+    return committed;
+  }
+
   async function finishColumnDividerGesture(event: PointerEvent): Promise<void> {
     const gesture = columnDividerGesture;
     if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
@@ -1172,6 +1307,115 @@ async function main(): Promise<void> {
       return;
     }
     await commitColumnDivider(gesture.leftColumnId, gesture.previewDividerXMpt, gesture.resizeMode);
+  }
+
+  function beginRegionBoundaryGesture(event: PointerEvent, boundary: RegionBoundary): void {
+    if (
+      event.button !== 0 ||
+      interactionMode !== "select" ||
+      regionBoundaryGesture !== undefined ||
+      lifecycleState?.readOnly === true ||
+      studioProjection === null
+    )
+      return;
+    const control =
+      event.target instanceof Element
+        ? event.target.closest<SVGElement>(".region-boundary-control")
+        : null;
+    const originalBoundaryYMpt = Number(control?.getAttribute("aria-valuenow"));
+    const outcome = regionBoundaryOutcome(boundary, originalBoundaryYMpt);
+    regionBoundaryGesture = {
+      pointerId: event.pointerId,
+      boundary,
+      originalBoundaryYMpt,
+      minimumBoundaryYMpt: outcome.minimumYMpt,
+      maximumBoundaryYMpt: outcome.maximumYMpt,
+      previewBoundaryYMpt: originalBoundaryYMpt,
+    };
+    pageHost.setPointerCapture(event.pointerId);
+    canvasStage.dataset["regionBoundary"] = boundary;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function updateRegionBoundaryGesture(event: PointerEvent): void {
+    const gesture = regionBoundaryGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const point = pointerPagePoint(event);
+    if (point === null) return;
+    gesture.previewBoundaryYMpt = Math.min(
+      gesture.maximumBoundaryYMpt,
+      Math.max(gesture.minimumBoundaryYMpt, point.yMpt),
+    );
+    const outcome = regionBoundaryOutcome(gesture.boundary, gesture.previewBoundaryYMpt);
+    const control = pageHost.querySelector<SVGRectElement>(
+      `[data-region-boundary="${gesture.boundary}"]`,
+    );
+    const line = control?.previousElementSibling;
+    control?.setAttribute("y", String(outcome.effectiveYMpt - 4_000));
+    control?.setAttribute("aria-valuenow", String(outcome.effectiveYMpt));
+    line?.setAttribute("y1", String(outcome.effectiveYMpt));
+    line?.setAttribute("y2", String(outcome.effectiveYMpt));
+    canvasStage.dataset["regionPreviewPages"] = String(outcome.pageCount);
+    status.textContent = outcome.repaginationRequired
+      ? `Region preview: ${gesture.boundary} at ${outcome.effectiveYMpt / 1_000} pt requires ${outcome.pageCount} pages at the fixed depth scale; release remains blocked and Esc cancels.`
+      : `Region preview: ${gesture.boundary} at ${outcome.effectiveYMpt / 1_000} pt fits 1 page at the fixed depth scale; release commits one Undo item and Esc cancels.`;
+    event.preventDefault();
+  }
+
+  function cancelRegionBoundaryGesture(): void {
+    const gesture = regionBoundaryGesture;
+    if (gesture === undefined) return;
+    if (pageHost.hasPointerCapture(gesture.pointerId))
+      pageHost.releasePointerCapture(gesture.pointerId);
+    regionBoundaryGesture = undefined;
+    Reflect.deleteProperty(canvasStage.dataset, "regionBoundary");
+    Reflect.deleteProperty(canvasStage.dataset, "regionPreviewPages");
+    installSvg();
+    status.textContent = `Page Region gesture canceled for ${gesture.boundary}; history and template geometry were unchanged.`;
+  }
+
+  async function commitRegionBoundary(
+    boundary: RegionBoundary,
+    requestedBoundaryYMpt: number,
+  ): Promise<boolean> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null) return false;
+    const result = await apis.studio.setRegionBoundary({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      boundary,
+      requestedBoundaryYMpt,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      const outcome = regionBoundaryOutcome(boundary, requestedBoundaryYMpt);
+      status.textContent = outcome.repaginationRequired
+        ? `Region change blocked: ${outcome.pageCount} pages are required at the fixed depth scale; no history item was created and publication remains blocked for this unresolved request.`
+        : `Page Region command failed: ${result.code ?? "REGION_BOUNDARY_UNAVAILABLE"}`;
+      installSvg();
+      return false;
+    }
+    return refreshStudioProjection(
+      result.workingRevision,
+      `Page Region boundary committed at revision ${result.workingRevision}; page size and depth scale were preserved.`,
+    );
+  }
+
+  async function finishRegionBoundaryGesture(event: PointerEvent): Promise<void> {
+    const gesture = regionBoundaryGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    if (pageHost.hasPointerCapture(event.pointerId))
+      pageHost.releasePointerCapture(event.pointerId);
+    regionBoundaryGesture = undefined;
+    Reflect.deleteProperty(canvasStage.dataset, "regionBoundary");
+    Reflect.deleteProperty(canvasStage.dataset, "regionPreviewPages");
+    event.preventDefault();
+    event.stopPropagation();
+    if (gesture.previewBoundaryYMpt === gesture.originalBoundaryYMpt) {
+      installSvg();
+      status.textContent = "Page Region boundary ended unchanged; no history item was created.";
+      return;
+    }
+    await commitRegionBoundary(gesture.boundary, gesture.previewBoundaryYMpt);
   }
 
   function pointerPagePoint(event: PointerEvent): Readonly<{ xMpt: number; yMpt: number }> | null {
@@ -1954,6 +2198,7 @@ async function main(): Promise<void> {
     selectedSceneNodeId = nodeId;
     showPropertyPanel("element");
     columnResizeProperties.hidden = true;
+    regionResizeProperties.hidden = true;
     const nodes = page.nodes.filter((node) => node.semanticId === semanticId);
     const representative =
       (nodeId === null ? undefined : nodes.find((node) => node.id === nodeId)) ??
@@ -1999,6 +2244,7 @@ async function main(): Promise<void> {
     propertyNodeCount.textContent = String(nodes.length);
     const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
     const selectedColumn = plannedPage?.columns.find(({ id }) => id === semanticId);
+    const selectedRegion = plannedPage?.regions.find(({ id }) => id === semanticId);
     const columnConstraint = studioProjection?.columnResizeConstraints.find(
       ({ columnId }) => columnId === selectedColumn?.id,
     );
@@ -2012,6 +2258,24 @@ async function main(): Promise<void> {
         studioProjection === null ||
         lifecycleState?.readOnly === true;
       updateColumnResizePropertySummary();
+    }
+    if (
+      plannedPage !== undefined &&
+      selectedRegion !== undefined &&
+      (selectedRegion.role === "header" || selectedRegion.role === "footer") &&
+      studioProjection !== null
+    ) {
+      const minimumHeightMpt =
+        selectedRegion.role === "header"
+          ? studioProjection.regionResizeConstraints.minimumHeaderHeightMpt
+          : studioProjection.regionResizeConstraints.minimumFooterHeightMpt;
+      regionResizeProperties.hidden = false;
+      regionHeight.value = String(selectedRegion.heightMpt / 1_000);
+      regionHeight.min = String(minimumHeightMpt / 1_000);
+      regionMinimumHeight.textContent = `${minimumHeightMpt / 1_000} pt`;
+      regionDepthScale.textContent = `${plannedPage.depthTransform.mptPerFoot} mpt/ft (fixed)`;
+      regionPagination.textContent = `${plannedPage.depthRange.endFt - plannedPage.depthRange.startFt} ft · 1 page`;
+      applyRegionHeight.disabled = lifecycleState?.readOnly === true;
     }
     const textStyle =
       representative.kind === "text"
@@ -2870,6 +3134,18 @@ async function main(): Promise<void> {
   pageHost.addEventListener("pointerdown", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const boundary =
+      target.closest<SVGElement>("[data-region-boundary]")?.dataset["regionBoundary"];
+    if (boundary === "header-depth" || boundary === "depth-footer") {
+      beginRegionBoundaryGesture(event, boundary);
+    }
+  });
+  pageHost.addEventListener("pointermove", updateRegionBoundaryGesture);
+  pageHost.addEventListener("pointerup", (event) => void finishRegionBoundaryGesture(event));
+  pageHost.addEventListener("pointercancel", cancelRegionBoundaryGesture);
+  pageHost.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
     const leftColumnId = target.closest<SVGElement>("[data-divider-after-column-id]")?.dataset[
       "dividerAfterColumnId"
     ];
@@ -2879,6 +3155,24 @@ async function main(): Promise<void> {
   pageHost.addEventListener("pointerup", (event) => void finishColumnDividerGesture(event));
   pageHost.addEventListener("pointercancel", cancelColumnDividerGesture);
   pageHost.addEventListener("keydown", (event) => {
+    const regionControl =
+      event.target instanceof Element
+        ? event.target.closest<SVGElement>("[data-region-boundary]")
+        : null;
+    const regionBoundary = regionControl?.dataset["regionBoundary"];
+    if (
+      (regionBoundary === "header-depth" || regionBoundary === "depth-footer") &&
+      regionControl !== null &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown")
+    ) {
+      const stepMpt = event.shiftKey ? 10_000 : 1_000;
+      const requested =
+        Number(regionControl.getAttribute("aria-valuenow")) +
+        (event.key === "ArrowUp" ? -stepMpt : stepMpt);
+      event.preventDefault();
+      void commitRegionBoundary(regionBoundary, requested);
+      return;
+    }
     const divider =
       event.target instanceof Element
         ? event.target.closest<SVGElement>("[data-divider-after-column-id]")
@@ -3141,6 +3435,9 @@ async function main(): Promise<void> {
       const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
       void applySelectedColumnWidthMpt(requestedWidthMpt);
     },
+    "apply-region-height": () => {
+      void applySelectedRegionHeightMpt(Math.round(Number(regionHeight.value) * 1_000));
+    },
     "apply-text-style": () => void applySelectedTextStyle(),
     "detach-text-annotation": () => void detachSelectedTextAsAnnotation(),
     "reset-text-presentation": () => void resetSelectedTextPresentation(),
@@ -3214,6 +3511,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && regionBoundaryGesture !== undefined) {
+      event.preventDefault();
+      cancelRegionBoundaryGesture();
+      return;
+    }
     if (event.key === "Escape" && columnDividerGesture !== undefined) {
       event.preventDefault();
       cancelColumnDividerGesture();

@@ -703,6 +703,22 @@ textarea {
   stroke-width: 900;
   pointer-events: none;
 }
+.region-boundary-line {
+  stroke: #7c3aed;
+  stroke-width: 900;
+  stroke-dasharray: 4500 2500;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.region-boundary-control {
+  fill: transparent;
+  cursor: ns-resize;
+  pointer-events: all;
+}
+.region-boundary-control:focus {
+  fill: rgb(124 58 237 / 12%);
+  outline: none;
+}
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-handle,
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-control,
 #direct-manipulation-overlay[data-locked="true"] .direct-manipulation-move-target {
