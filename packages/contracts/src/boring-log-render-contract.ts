@@ -168,6 +168,13 @@ export interface BoringLogTextOccurrenceCloneInput {
   readonly offsetYMpt: Mpt;
 }
 
+export interface BoringLogTextOccurrenceGroupInput {
+  readonly groupNodeId: string;
+  readonly semanticId: string;
+  readonly parentNodeId: string;
+  readonly childOccurrenceNodeIds: readonly string[];
+}
+
 export interface BoringLogDepthTransformInput {
   readonly regionId: string;
   readonly depthStartFt: number;
@@ -211,6 +218,8 @@ export interface BoringLogTemplateInput {
   readonly occurrenceLayouts?: readonly BoringLogTextOccurrenceLayoutInput[];
   /** Persisted structured duplicates; each clone receives its own measurement and scene identity. */
   readonly textOccurrenceClones?: readonly BoringLogTextOccurrenceCloneInput[];
+  /** Persisted sibling-only text groups; grouping changes hierarchy without changing geometry. */
+  readonly textOccurrenceGroups?: readonly BoringLogTextOccurrenceGroupInput[];
   /** Nonprinting layout guides. Absent in legacy v1 templates. */
   readonly guides?: readonly BoringLogPageGuideInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
@@ -778,6 +787,11 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "textOccurrenceClones");
+  const hasTextOccurrenceGroups =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "textOccurrenceGroups");
   const hasPagination =
     typeof input === "object" &&
     input !== null &&
@@ -796,6 +810,7 @@ function validateTemplate(input: unknown): void {
     "styles",
     ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
     ...(hasTextOccurrenceClones ? ["textOccurrenceClones"] : []),
+    ...(hasTextOccurrenceGroups ? ["textOccurrenceGroups"] : []),
     ...(hasGuides ? ["guides"] : []),
     "hierarchy",
     "bindings",
@@ -1065,6 +1080,42 @@ function validateTemplate(input: unknown): void {
   }
   if (cloneNodeIds.length > 128) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   unique(cloneNodeIds);
+  const groupNodeIds: string[] = [];
+  const groupedChildNodeIds: string[] = [];
+  for (const groupInput of hasTextOccurrenceGroups ? array(value["textOccurrenceGroups"]) : []) {
+    const group = record(groupInput, [
+      "groupNodeId",
+      "semanticId",
+      "parentNodeId",
+      "childOccurrenceNodeIds",
+    ]);
+    const groupNodeId = textValue(group["groupNodeId"]);
+    const parentNodeId = textValue(group["parentNodeId"]);
+    if (
+      !groupNodeId.startsWith("node:user-group:") ||
+      !parentNodeId.startsWith("node:") ||
+      groupNodeId === parentNodeId
+    ) {
+      fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    }
+    textValue(group["semanticId"]);
+    const childNodeIds = array(group["childOccurrenceNodeIds"]).map((child) => textValue(child));
+    if (
+      childNodeIds.length < 2 ||
+      childNodeIds.length > 256 ||
+      childNodeIds.some(
+        (childNodeId) => !childNodeId.startsWith("node:") || childNodeId === groupNodeId,
+      )
+    ) {
+      fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    }
+    unique(childNodeIds);
+    groupNodeIds.push(groupNodeId);
+    groupedChildNodeIds.push(...childNodeIds);
+  }
+  if (groupNodeIds.length > 64) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  unique(groupNodeIds);
+  unique(groupedChildNodeIds);
   const hierarchyIds: string[] = [];
   const leafIds: string[] = [];
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);

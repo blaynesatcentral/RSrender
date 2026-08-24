@@ -1573,6 +1573,60 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     });
   }
 
+  for (const authoredGroup of job.template.textOccurrenceGroups ?? []) {
+    if (nodes.some(({ id }) => id === authoredGroup.groupNodeId)) {
+      throw new Error(`duplicate-user-group:${authoredGroup.groupNodeId}`);
+    }
+    const parent = groups.get(authoredGroup.parentNodeId);
+    if (!parent) throw new Error(`missing-user-group-parent:${authoredGroup.parentNodeId}`);
+    const children = authoredGroup.childOccurrenceNodeIds.map((childId) =>
+      nodes.find(({ id }) => id === childId),
+    );
+    if (
+      children.some(
+        (child) => child?.kind !== "text" || child.parentId !== authoredGroup.parentNodeId,
+      )
+    ) {
+      throw new Error(`invalid-user-group-children:${authoredGroup.groupNodeId}`);
+    }
+    const textChildren = children as readonly Extract<
+      BoringLogSceneNode,
+      { readonly kind: "text" }
+    >[];
+    const orderedChildren = [...textChildren].sort(
+      (left, right) => parent.childIds.indexOf(left.id) - parent.childIds.indexOf(right.id),
+    );
+    const minimumChildIndex = Math.min(
+      ...orderedChildren.map(({ id }) => parent.childIds.indexOf(id)),
+    );
+    const left = Math.min(...orderedChildren.map(({ frame }) => frame.xMpt));
+    const top = Math.min(...orderedChildren.map(({ frame }) => frame.yMpt));
+    const right = Math.max(...orderedChildren.map(({ frame }) => frame.xMpt + frame.widthMpt));
+    const bottom = Math.max(...orderedChildren.map(({ frame }) => frame.yMpt + frame.heightMpt));
+    addGroup(
+      authoredGroup.groupNodeId,
+      authoredGroup.semanticId,
+      authoredGroup.parentNodeId,
+      "user-text-group",
+      rect(left, top, right - left, bottom - top),
+    );
+    const group = groups.get(authoredGroup.groupNodeId)!;
+    group.childIds.push(...orderedChildren.map(({ id }) => id));
+    const childIds = new Set(authoredGroup.childOccurrenceNodeIds);
+    parent.childIds.splice(
+      0,
+      parent.childIds.length,
+      ...parent.childIds.filter(
+        (childId) => childId !== authoredGroup.groupNodeId && !childIds.has(childId),
+      ),
+    );
+    parent.childIds.splice(minimumChildIndex, 0, authoredGroup.groupNodeId);
+    for (const child of orderedChildren) {
+      const index = nodes.findIndex(({ id }) => id === child.id);
+      nodes[index] = Object.freeze({ ...child, parentId: authoredGroup.groupNodeId });
+    }
+  }
+
   for (const group of groups.values()) {
     const originalIndex = new Map(
       group.childIds.map((childId, index) => [childId, index] as const),

@@ -76,6 +76,7 @@ export type {
   BoringLogTextMeasurementResult,
   BoringLogTextFrameAnchor,
   BoringLogTextOccurrenceCloneInput,
+  BoringLogTextOccurrenceGroupInput,
   BoringLogTextOccurrenceLayoutInput,
   BoringLogTextStyleInput,
   BoringLogValueProvenance,
