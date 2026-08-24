@@ -589,7 +589,7 @@ test("BLD-040 Studio route admits only an exact ordered text arrangement command
   }
 });
 
-test("BLD-040 Studio route admits exact bounded visibility, lock, and reorder mutations", async () => {
+test("BLD-040 Studio route admits exact bounded visibility, lock, duplicate, and reorder mutations", async () => {
   const source = await authority();
   const expectedWindow = {};
   const expectedWebContents = {};
@@ -625,15 +625,26 @@ test("BLD-040 Studio route admits exact bounded visibility, lock, and reorder mu
   };
   assert.equal((await route.mutateTextOccurrences(routeContext, envelope(1, args))).accepted, true);
   assert.deepEqual(received, args);
+  const duplicateArgs = {
+    ...args,
+    mutation: { kind: "duplicate", offsetXMpt: 10_000, offsetYMpt: 10_000 },
+  };
+  assert.equal(
+    (await route.mutateTextOccurrences(routeContext, envelope(2, duplicateArgs))).accepted,
+    true,
+  );
+  assert.deepEqual(received, duplicateArgs);
   for (const invalidArgs of [
     { ...args, occurrenceNodeIds: [] },
     { ...args, occurrenceNodeIds: ["node:first", "node:first"] },
     { ...args, mutation: { kind: "set-visible", visible: "false" } },
     { ...args, mutation: { kind: "set-locked", locked: 1 } },
+    { ...args, mutation: { kind: "duplicate", offsetXMpt: 1.5, offsetYMpt: 0 } },
+    { ...args, mutation: { kind: "duplicate", offsetXMpt: 0, offsetYMpt: 1_224_001 } },
     { ...args, mutation: { kind: "reorder", placement: "above-all" } },
     { ...args, extra: true },
   ]) {
-    assert.deepEqual(await route.mutateTextOccurrences(routeContext, envelope(2, invalidArgs)), {
+    assert.deepEqual(await route.mutateTextOccurrences(routeContext, envelope(3, invalidArgs)), {
       accepted: false,
       code: "STUDIO_ROUTE_ARGUMENT_INVALID",
     });

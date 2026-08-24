@@ -134,6 +134,13 @@ test("BLD-040 exposes shared visibility, lock, and drawing-order commands", asyn
   assert.match(entry, /tree-lock/u);
   assert.match(entry, /key === "\]" \|\| key === "\["/u);
   assert.match(entry, /node\.presentation\?\.visible !== false/u);
+  const main = await readFile(
+    new URL("../packages/platform-electron-main/src/semantic-editor-main.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(main, /TEXT_OCCURRENCES_DUPLICATED/u);
+  assert.match(main, /textOccurrenceClones: \[\.\.\.existingClones, \.\.\.createdClones\]/u);
+  assert.match(main, /operation: "text-occurrence-authoring"/u);
   assert.match(stylesheet, /\.tree-row\.is-hidden-element/u);
   assert.match(stylesheet, /\.tree-row\.is-locked-element/u);
 });

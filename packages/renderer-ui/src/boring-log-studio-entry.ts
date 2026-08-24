@@ -176,6 +176,11 @@ type TextAuthoringMutation =
   | Readonly<{ readonly kind: "set-visible"; readonly visible: boolean }>
   | Readonly<{ readonly kind: "set-locked"; readonly locked: boolean }>
   | Readonly<{
+      readonly kind: "duplicate";
+      readonly offsetXMpt: number;
+      readonly offsetYMpt: number;
+    }>
+  | Readonly<{
       readonly kind: "reorder";
       readonly placement: "front" | "forward" | "backward" | "back";
     }>;

@@ -188,6 +188,11 @@ export interface BoringLogStudioMutateTextOccurrencesInput {
     | Readonly<{ readonly kind: "set-visible"; readonly visible: boolean }>
     | Readonly<{ readonly kind: "set-locked"; readonly locked: boolean }>
     | Readonly<{
+        readonly kind: "duplicate";
+        readonly offsetXMpt: number;
+        readonly offsetYMpt: number;
+      }>
+    | Readonly<{
         readonly kind: "reorder";
         readonly placement: "front" | "forward" | "backward" | "back";
       }>;
@@ -1394,9 +1399,11 @@ export class BoringLogStudioRouteBroker {
         ? exactRecord(mutationRecord, ["kind", "visible"])
         : kind === "set-locked"
           ? exactRecord(mutationRecord, ["kind", "locked"])
-          : kind === "reorder"
-            ? exactRecord(mutationRecord, ["kind", "placement"])
-            : null;
+          : kind === "duplicate"
+            ? exactRecord(mutationRecord, ["kind", "offsetXMpt", "offsetYMpt"])
+            : kind === "reorder"
+              ? exactRecord(mutationRecord, ["kind", "placement"])
+              : null;
     const nodeIds = args?.["occurrenceNodeIds"];
     if (
       args === null ||
@@ -1412,6 +1419,11 @@ export class BoringLogStudioRouteBroker {
       mutation === null ||
       (kind === "set-visible" && typeof mutation["visible"] !== "boolean") ||
       (kind === "set-locked" && typeof mutation["locked"] !== "boolean") ||
+      (kind === "duplicate" &&
+        (!Number.isSafeInteger(mutation["offsetXMpt"]) ||
+          !Number.isSafeInteger(mutation["offsetYMpt"]) ||
+          Math.abs(mutation["offsetXMpt"] as number) > 792_000 ||
+          Math.abs(mutation["offsetYMpt"] as number) > 1_224_000)) ||
       (kind === "reorder" &&
         !["front", "forward", "backward", "back"].includes(String(mutation["placement"])))
     ) {

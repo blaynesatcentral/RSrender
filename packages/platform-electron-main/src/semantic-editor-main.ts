@@ -22,8 +22,10 @@ import {
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
   type BoringLogLayoutJobInput,
+  type BoringLogTextOccurrenceCloneInput,
   type BoringLogTextMeasurementRequest,
   type BoringLogTextMeasurementResult,
+  type Mpt,
 } from "@rsrender/contracts";
 import type { BoringLogPublicationProjection } from "@rsrender/layout-host";
 import {
@@ -5242,6 +5244,107 @@ async function main(): Promise<void> {
         return Object.freeze({ accepted: false, code: "AUTHORING_SELECTION_INVALID" });
       }
       const selectedEntries = selected as readonly Exclude<(typeof selected)[number], null>[];
+      const duplicateMutation = input.mutation;
+      if (duplicateMutation.kind === "duplicate") {
+        if (selectedEntries.some(({ node }) => node.presentation?.locked === true)) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_LOCKED" });
+        }
+        const existingClones = currentJob.template.textOccurrenceClones ?? [];
+        if (existingClones.length + selectedEntries.length > 128) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_CLONE_LIMIT" });
+        }
+        if (
+          selectedEntries.some(
+            ({ page: selectedPage, node }) =>
+              node.frame.xMpt + duplicateMutation.offsetXMpt < 0 ||
+              node.frame.yMpt + duplicateMutation.offsetYMpt < 0 ||
+              node.frame.xMpt + duplicateMutation.offsetXMpt + node.frame.widthMpt >
+                selectedPage.widthMpt ||
+              node.frame.yMpt + duplicateMutation.offsetYMpt + node.frame.heightMpt >
+                selectedPage.heightMpt,
+          )
+        ) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_GEOMETRY_INVALID" });
+        }
+        const createdClones: BoringLogTextOccurrenceCloneInput[] = selectedEntries.map(
+          ({ node }, index) => {
+            const digest = sha256CanonicalJson({
+              boringLogIdentity: document.boringLogIdentity,
+              expectedWorkingRevision: input.expectedWorkingRevision,
+              sourceOccurrenceNodeId: node.id,
+              cloneOrdinal: existingClones.length + index,
+            }).slice("sha256:".length);
+            return Object.freeze({
+              cloneNodeId: `node:clone:${digest.slice(0, 24)}`,
+              sourceOccurrenceNodeId: node.id,
+              semanticId: `${node.semanticId}:clone:${digest.slice(0, 12)}`,
+              offsetXMpt: duplicateMutation.offsetXMpt as Mpt,
+              offsetYMpt: duplicateMutation.offsetYMpt as Mpt,
+            });
+          },
+        );
+        const template = {
+          ...currentJob.template,
+          textOccurrenceClones: [...existingClones, ...createdClones],
+        };
+        const authored = validateBoringLogLayoutJobInput({
+          ...currentJob,
+          templateDigest: sha256CanonicalJson(template),
+          template,
+        });
+        if (!authored.accepted) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_CLONE_INVALID" });
+        }
+        const membership = captured.project.aggregate.logSet.memberships.find(
+          ({ sourceExplorationIdentity }) =>
+            sourceExplorationIdentity === document.explorationIdentity,
+        );
+        const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+          ({ scope }) =>
+            membership !== undefined &&
+            scope.kind === "exploration" &&
+            scope.targetIdentity === membership.membershipIdentity,
+        );
+        const representation =
+          captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+            ({ embeddedTemplateRepresentationIdentity }) =>
+              embeddedTemplateRepresentationIdentity ===
+              assignment?.embeddedTemplateRepresentationIdentity,
+          );
+        if (representation === undefined) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_UNAVAILABLE" });
+        }
+        textAuthoringCommandSequence += 1;
+        const committed = await commitEmbeddedTemplateReplacement(source.service, {
+          requestId: `urn:rsrender:bld-040:request:text-authoring:${textAuthoringCommandSequence}`,
+          documentId: documentIdentity,
+          ownerGeneration: hosted.ownerGeneration,
+          expectedWorkingRevision: input.expectedWorkingRevision,
+          explorationIdentity: document.explorationIdentity,
+          expectedEffectiveContentDigest: representation.effectiveContentDigest,
+          replacementEffectiveContentDigest: authored.value.templateDigest,
+          reason: `Duplicate ${createdClones.length} selected text occurrence(s) in Boring Log Studio`,
+          operation: "text-occurrence-authoring",
+        });
+        if (!committed.accepted) return committed;
+        retainedLayoutJobs.set(
+          `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+          authored.value,
+        );
+        projectionCache.clear();
+        return Object.freeze({
+          accepted: true,
+          code: "TEXT_OCCURRENCES_DUPLICATED",
+          workingRevision: committed.workingRevision,
+          dirty: committed.dirty,
+          canUndo: committed.canUndo,
+          canRedo: committed.canRedo,
+          targetCount: createdClones.length,
+          createdOccurrenceNodeIds: Object.freeze(
+            createdClones.map(({ cloneNodeId }) => cloneNodeId),
+          ),
+        });
+      }
       const page = selectedEntries[0]!.page;
       const selectedIds = new Set(input.occurrenceNodeIds);
       const drawingOffsets = new Map<string, number>();
@@ -5309,7 +5412,9 @@ async function main(): Promise<void> {
           const changed =
             input.mutation.kind === "set-visible"
               ? (node.presentation?.visible ?? true) !== input.mutation.visible
-              : (node.presentation?.locked ?? false) !== input.mutation.locked;
+              : input.mutation.kind === "set-locked"
+                ? (node.presentation?.locked ?? false) !== input.mutation.locked
+                : false;
           if (!changed) authoredNodes.delete(node.id);
         }
       }
