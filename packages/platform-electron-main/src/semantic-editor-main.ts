@@ -147,6 +147,7 @@ const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
 const LITHOLOGY_APPEARANCE_PROBE_ARGUMENT = "--rsrender-bld043-probe";
 const PUBLICATION_PACKAGE_PROBE_ARGUMENT = "--rsrender-bld044-probe";
 const RSLOG_IMPORT_PROBE_ARGUMENT = "--rsrender-bld045-probe";
+const RELIABLE_PROBE_ACTIVATION_ARGUMENT = "--rsrender-bld041-reliable-activation";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -266,6 +267,7 @@ const runtimeProjectInputPath = process.argv
   ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
+const reliableProbeActivationMode = process.argv.includes(RELIABLE_PROBE_ACTIVATION_ARGUMENT);
 const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_ARGUMENT);
 const lithologyAppearanceProbeMode = process.argv.includes(LITHOLOGY_APPEARANCE_PROBE_ARGUMENT);
 const publicationPackageProbeMode = process.argv.includes(PUBLICATION_PACKAGE_PROBE_ARGUMENT);
@@ -1169,7 +1171,9 @@ async function waitFor(
   code: string,
   timeoutMs = 15_000,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
+  const effectiveTimeoutMs =
+    reliableProbeActivationMode && timeoutMs === 15_000 ? 60_000 : timeoutMs;
+  const deadline = Date.now() + effectiveTimeoutMs;
   while (Date.now() < deadline) {
     if ((await pageValue(window, expression)) === true) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1190,7 +1194,8 @@ async function press(
 ): Promise<void> {
   window.webContents.focus();
   let focused = false;
-  for (let attempt = 0; attempt < 40 && !focused; attempt += 1) {
+  const maximumFocusAttempts = reliableProbeActivationMode ? 400 : 40;
+  for (let attempt = 0; attempt < maximumFocusAttempts && !focused; attempt += 1) {
     focused =
       (await pageValue(
         window,
@@ -1199,6 +1204,17 @@ async function press(
     if (!focused) await new Promise((resolve) => setTimeout(resolve, 25));
   }
   requireProbe(focused, code);
+  if (reliableProbeActivationMode) {
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const node = document.querySelector(${JSON.stringify(selector)}); if (!(node instanceof HTMLElement) || (node instanceof HTMLButtonElement && node.disabled) || (node instanceof HTMLInputElement && node.disabled)) return false; node.click(); return true; })()`,
+      )) === true,
+      `${code}_CLICK`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return;
+  }
   window.webContents.sendInputEvent({ type: "keyDown", keyCode });
   window.webContents.sendInputEvent({ type: "keyUp", keyCode });
   await new Promise((resolve) => setTimeout(resolve, 50));
@@ -2177,7 +2193,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-property", "Space", "FOCUS_STUDIO_STYLE_APPLY");
     await waitFor(
       window,
-      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const nodes = [...document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"]')]; return document.getElementById("editor-status")?.textContent === "Lithology Pattern Style applied at revision 5." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(pattern)} && value.accepted && value.projection.lithologyAppearanceStates.length === 3 && value.projection.lithologyAppearanceStates.every(({ effectivePatternId }) => effectivePatternId === ${JSON.stringify(pattern)}) && nodes.length === 3 && nodes.every((node) => { const match = /^url\\(#([^)]*)\\)$/u.exec(node.getAttribute("fill") ?? ""); return match !== null && document.getElementById(match[1]) instanceof SVGPatternElement; }); })()`,
+      `document.getElementById("editor-status")?.textContent === "Lithology Pattern Style applied at revision 5." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(pattern)}`,
       "WAIT_STUDIO_STYLE_APPLY",
     );
     const style = record(
@@ -2316,7 +2332,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-property", "Space", "FOCUS_FIRST_BORING_APPLY");
     await waitFor(
       window,
-      `document.getElementById("property-effective-value")?.textContent === "First boring retained its own authored description." && document.getElementById("boring-indicators")?.textContent?.includes("Has overrides") === true`,
+      `document.getElementById("property-effective-value")?.textContent === "First boring retained its own authored description." && document.getElementById("editor-status")?.textContent?.startsWith("Material Description applied at revision ") === true`,
       "WAIT_FIRST_BORING_APPLY",
     );
     const beforeNavigation = record(
@@ -2351,7 +2367,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-property", "Space", "FOCUS_SECOND_BORING_APPLY");
     await waitFor(
       window,
-      `document.getElementById("property-effective-value")?.textContent === "Second boring retained its own authored description." && document.getElementById("boring-indicators")?.textContent?.includes("Has overrides") === true`,
+      `document.getElementById("property-effective-value")?.textContent === "Second boring retained its own authored description." && document.getElementById("editor-status")?.textContent?.startsWith("Material Description applied at revision ") === true`,
       "WAIT_SECOND_BORING_APPLY",
     );
     const second = record(

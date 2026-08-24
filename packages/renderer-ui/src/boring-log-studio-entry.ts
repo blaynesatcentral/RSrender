@@ -675,6 +675,7 @@ async function main(): Promise<void> {
   let selectedLithologyInitialPatternId: string | null = null;
   let studioProjection: StudioProjection | null = bootstrapProjection;
   let lifecycleState: LifecycleState | null = null;
+  let lifecycleRefreshPromise: Promise<boolean> | null = null;
   let publicationDocumentIdentity: string | null = null;
   let publicationOrder: string[] = [];
   const publicationIncluded = new Set<string>();
@@ -927,8 +928,9 @@ async function main(): Promise<void> {
   }
 
   function updateHistoryControls(): void {
-    undoButton.disabled = studioProjection?.canUndo !== true;
-    redoButton.disabled = studioProjection?.canRedo !== true;
+    const lifecycleRefreshPending = lifecycleRefreshPromise !== null;
+    undoButton.disabled = lifecycleRefreshPending || studioProjection?.canUndo !== true;
+    redoButton.disabled = lifecycleRefreshPending || studioProjection?.canRedo !== true;
     exportPdfButton.disabled =
       studioProjection === null || publicationApi() === null || publicationIncluded.size === 0;
     validateButton.disabled = studioProjection === null;
@@ -1031,14 +1033,25 @@ async function main(): Promise<void> {
   }
 
   async function refreshLifecycleStateSilently(): Promise<boolean> {
-    const apis = studioApis();
-    if (apis === null) return false;
-    const result = decodedLifecycleResult(
-      await apis.studio.lifecycle({ operation: "get-state", expectedWorkingRevision: null }),
-    );
-    if (result === null || !result.accepted || result.state === null) return false;
-    installLifecycleState(result.state);
-    return true;
+    if (lifecycleRefreshPromise !== null) return lifecycleRefreshPromise;
+    const pending = (async (): Promise<boolean> => {
+      const apis = studioApis();
+      if (apis === null) return false;
+      const result = decodedLifecycleResult(
+        await apis.studio.lifecycle({ operation: "get-state", expectedWorkingRevision: null }),
+      );
+      if (result === null || !result.accepted || result.state === null) return false;
+      installLifecycleState(result.state);
+      return true;
+    })();
+    lifecycleRefreshPromise = pending;
+    updateHistoryControls();
+    try {
+      return await pending;
+    } finally {
+      if (lifecycleRefreshPromise === pending) lifecycleRefreshPromise = null;
+      updateHistoryControls();
+    }
   }
 
   async function invokeLifecycle(operation: LifecycleOperation): Promise<void> {
