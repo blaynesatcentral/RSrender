@@ -638,7 +638,11 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     job.template.depthTransform.yEndMpt,
     "ink",
   );
-  for (let depthFt = 0; depthFt <= job.document.referenceDepthRange.endFt; depthFt += 1) {
+  for (
+    let depthFt = Math.ceil(job.document.referenceDepthRange.startFt);
+    depthFt <= Math.floor(job.document.referenceDepthRange.endFt);
+    depthFt += 1
+  ) {
     const y = depthToYMpt(job, depthFt);
     const major = depthFt % 5 === 0;
     addLine(
@@ -1474,6 +1478,150 @@ function createPagePlan(job: BoringLogLayoutJobInput, draft: DraftScene): Boring
   };
 }
 
+function namespaceDraft(draft: DraftScene, pageIndex: number): DraftScene {
+  if (pageIndex === 0) return draft;
+  const suffix = `:page:${pageIndex + 1}`;
+  const nodeId = (id: string): string => `${id}${suffix}`;
+  const measurementId = (id: string): string => `${id}${suffix}`;
+  const nodes = draft.nodes.map((node) => {
+    const common = {
+      ...node,
+      id: nodeId(node.id),
+      parentId: node.parentId === null ? null : nodeId(node.parentId),
+    };
+    if (node.kind === "group") {
+      return Object.freeze({
+        ...common,
+        childIds: Object.freeze(node.childIds.map(nodeId)),
+      }) as BoringLogSceneNode;
+    }
+    if (node.kind === "text") {
+      return Object.freeze({
+        ...common,
+        measurementId: measurementId(node.measurementId),
+      }) as BoringLogSceneNode;
+    }
+    return Object.freeze(common) as BoringLogSceneNode;
+  });
+  return Object.freeze({
+    nodes: Object.freeze(nodes),
+    textRequests: Object.freeze(
+      draft.textRequests.map((request) =>
+        Object.freeze({ ...request, measurementId: measurementId(request.measurementId) }),
+      ),
+    ),
+    semanticOrder: draft.semanticOrder,
+  });
+}
+
+function createPageDrafts(
+  job: BoringLogLayoutJobInput,
+  pagePlan: BoringLogPagePlan,
+  originalDraft: DraftScene,
+): readonly DraftScene[] {
+  if (pagePlan.pages.length === 1) return Object.freeze([originalDraft]);
+  return Object.freeze(
+    pagePlan.pages.map((plannedPage) => {
+      const { startFt, endFt, terminalInclusive } = plannedPage.depthRange;
+      const samples = job.document.samples.filter(
+        ({ depthFt }) =>
+          depthFt >= startFt && (depthFt < endFt || (terminalInclusive && depthFt <= endFt)),
+      );
+      const sampleIds = new Set(samples.map(({ id }) => id));
+      const lithologyIntervals = job.document.lithologyIntervals
+        .filter(({ depthFromFt, depthToFt }) => depthToFt > startFt && depthFromFt < endFt)
+        .map((interval) => {
+          const depthFromFt = Math.max(startFt, interval.depthFromFt);
+          const depthToFt = Math.min(endFt, interval.depthToFt);
+          return Object.freeze({
+            ...interval,
+            depthFromFt,
+            depthToFt,
+            transitions: Object.freeze(
+              interval.transitions.filter(
+                ({ depthFt }) => depthFt >= depthFromFt && depthFt < depthToFt,
+              ),
+            ),
+          });
+        });
+      const remarks = job.document.remarks
+        .filter(({ depthFromFt, depthToFt }) => depthToFt > startFt && depthFromFt < endFt)
+        .map((remark) =>
+          Object.freeze({
+            ...remark,
+            depthFromFt: Math.max(startFt, remark.depthFromFt),
+            depthToFt: Math.min(endFt, remark.depthToFt),
+          }),
+        );
+      const document = Object.freeze({
+        ...job.document,
+        identity: Object.freeze({ ...job.document.identity, pageId: plannedPage.pageId }),
+        metadata: Object.freeze({
+          ...job.document.metadata,
+          sheetLabel: `SHEET ${plannedPage.pageIndex + 1} OF ${pagePlan.pages.length}`,
+        }),
+        referenceDepthRange: plannedPage.depthRange,
+        lithologyIntervals: Object.freeze(lithologyIntervals),
+        samples: Object.freeze(samples),
+        dataTrack: Object.freeze({
+          ...job.document.dataTrack,
+          depthRange: Object.freeze({ startFt, endFt }),
+          layers: Object.freeze(
+            job.document.dataTrack.layers.map((layer) =>
+              Object.freeze({
+                ...layer,
+                values: Object.freeze(layer.values.filter(([sampleId]) => sampleIds.has(sampleId))),
+              }),
+            ),
+          ),
+        }),
+        remarks: Object.freeze(remarks),
+      });
+      const pageJob = Object.freeze({
+        ...job,
+        document,
+        template: Object.freeze({
+          ...job.template,
+          depthTransform: plannedPage.depthTransform,
+        }),
+      }) as BoringLogLayoutJobInput;
+      const rawDraft = buildDraft(pageJob);
+      const retainedNodes = terminalInclusive
+        ? rawDraft.nodes
+        : rawDraft.nodes.filter(({ role }) => role !== "log-completion-note");
+      const retainedNodeIds = new Set(retainedNodes.map(({ id }) => id));
+      const normalizedNodes = retainedNodes.map((node, order) =>
+        node.kind === "group"
+          ? Object.freeze({
+              ...node,
+              order,
+              childIds: Object.freeze(node.childIds.filter((id) => retainedNodeIds.has(id))),
+            })
+          : Object.freeze({ ...node, order }),
+      );
+      const retainedMeasurementIds = new Set(
+        normalizedNodes.flatMap((node) => (node.kind === "text" ? [node.measurementId] : [])),
+      );
+      return namespaceDraft(
+        Object.freeze({
+          nodes: Object.freeze(normalizedNodes),
+          textRequests: Object.freeze(
+            rawDraft.textRequests.filter(({ measurementId }) =>
+              retainedMeasurementIds.has(measurementId),
+            ),
+          ),
+          semanticOrder: Object.freeze(
+            normalizedNodes
+              .map(({ semanticId }) => semanticId)
+              .filter((semanticId, index, all) => all.indexOf(semanticId) === index),
+          ),
+        }),
+        plannedPage.pageIndex,
+      );
+    }),
+  );
+}
+
 /** Pure phase one: validates inputs and freezes the exact Page Plan and text-measurement requests. */
 export function prepareBoringLogLayout(
   input: unknown,
@@ -1484,7 +1632,15 @@ export function prepareBoringLogLayout(
   }
   try {
     const draft = buildDraft(jobResult.value);
-    const planResult = validateBoringLogPagePlan(createPagePlan(jobResult.value, draft));
+    const preliminaryPlan = createPagePlan(jobResult.value, draft);
+    const pageDrafts = createPageDrafts(jobResult.value, preliminaryPlan, draft);
+    const planResult = validateBoringLogPagePlan({
+      ...preliminaryPlan,
+      pages: preliminaryPlan.pages.map((page, index) => ({
+        ...page,
+        semanticOrder: pageDrafts[index]!.semanticOrder,
+      })),
+    });
     if (!planResult.accepted) {
       return rejected("BORING_LOG_LAYOUT_PLAN_REJECTED", planResult.code);
     }
@@ -1493,7 +1649,9 @@ export function prepareBoringLogLayout(
         job: jobResult.value,
         pagePlan: planResult.value,
         textRequests: Object.freeze(
-          draft.textRequests.map((request) => Object.freeze({ ...request })),
+          pageDrafts.flatMap(({ textRequests }) =>
+            textRequests.map((request) => Object.freeze({ ...request })),
+          ),
         ),
       }),
     );
@@ -1546,7 +1704,8 @@ export function resolveBoringLogPageScene(
     ) {
       return rejected("BORING_LOG_LAYOUT_TEXT_RESULTS_MISMATCH", "PREPARATION_DRIFT");
     }
-    const draft = buildDraft(prepared.value.job);
+    const originalDraft = buildDraft(prepared.value.job);
+    const pageDrafts = createPageDrafts(prepared.value.job, prepared.value.pagePlan, originalDraft);
     const resources = {
       visualTokens: prepared.value.job.template.visualTokens,
       textStyles: prepared.value.job.template.styles,
@@ -1567,16 +1726,15 @@ export function resolveBoringLogPageScene(
         strokeWidthMpt: asMpt(500),
       })),
     };
-    const pages = [
-      {
-        pageId: prepared.value.job.document.identity.pageId,
-        widthMpt: prepared.value.job.template.page.widthMpt,
-        heightMpt: prepared.value.job.template.page.heightMpt,
-        rootNodeId: "node:page-root",
-        semanticOrder: draft.semanticOrder,
-        nodes: draft.nodes,
-      },
-    ];
+    const pages = prepared.value.pagePlan.pages.map((plannedPage, index) => ({
+      pageId: plannedPage.pageId,
+      widthMpt: plannedPage.widthMpt,
+      heightMpt: plannedPage.heightMpt,
+      rootNodeId:
+        index === 0 ? "node:page-root" : `node:page-root:page:${plannedPage.pageIndex + 1}`,
+      semanticOrder: pageDrafts[index]!.semanticOrder,
+      nodes: pageDrafts[index]!.nodes,
+    }));
     const provisionalScene = validateResolvedBoringLogPageScene({
       contractVersion: boringLogRenderContractVersion,
       schemaVersion: resolvedBoringLogPageSceneSchemaVersion,
@@ -1607,11 +1765,13 @@ export function resolveBoringLogPageScene(
     const pagePlan: BoringLogPagePlan = {
       ...prepared.value.pagePlan,
       overflow:
-        diagnostics.length === 0
-          ? "none"
-          : textResults.some(({ overflow }) => overflow === "continued")
-            ? "continued"
-            : "clipped-with-diagnostic",
+        prepared.value.pagePlan.pages.length > 1
+          ? "continued"
+          : diagnostics.length === 0
+            ? "none"
+            : textResults.some(({ overflow }) => overflow === "continued")
+              ? "continued"
+              : "clipped-with-diagnostic",
       diagnostics,
     };
     const scene: ResolvedBoringLogPageScene = {

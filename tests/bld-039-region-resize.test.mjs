@@ -6,8 +6,9 @@ import {
   boringLogContinuationPagesRevision,
   boringLogRegionResizeRevision,
   planBoringLogContinuationPages,
-  resizeBoringLogPageRegions,
   prepareBoringLogLayout,
+  resolveBoringLogPageScene,
+  resizeBoringLogPageRegions,
 } from "../packages/scene/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
@@ -15,6 +16,7 @@ import {
   boringLogMvpFixture,
   boringLogMvpTemplate,
 } from "../packages/test-support/dist/index.js";
+import { deterministicTextResults } from "./helpers/bld-024-deterministic-text-authority.mjs";
 
 const base = {
   pageHeightMpt: boringLogMvpTemplate.page.heightMpt,
@@ -226,6 +228,29 @@ test("BLD-039 renderer-neutral Page Plan materializes the authored continuation 
     prepared.value.pagePlan.pages.every(
       ({ depthTransform }) => depthTransform.mptPerFoot === 12_025,
     ),
+  );
+  const resolved = resolveBoringLogPageScene(
+    prepared.value,
+    deterministicTextResults(prepared.value.textRequests),
+  );
+  assert.equal(resolved.accepted, true, JSON.stringify(resolved));
+  assert.equal(resolved.value.pages.length, 2);
+  assert.equal(resolved.value.pagePlan.overflow, "continued");
+  assert.equal(
+    new Set(resolved.value.textRequests.map(({ measurementId }) => measurementId)).size,
+    resolved.value.textRequests.length,
+  );
+  assert.equal(
+    resolved.value.pages[0].nodes.some(({ id }) => id === "node:depth-label:40"),
+    false,
+  );
+  assert.equal(
+    resolved.value.pages[1].nodes.some(({ id }) => id === "node:depth-label:40:page:2"),
+    true,
+  );
+  assert.equal(
+    resolved.value.pages[1].nodes.every(({ id }) => id.endsWith(":page:2")),
+    true,
   );
 });
 
