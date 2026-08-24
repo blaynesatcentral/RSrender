@@ -7,8 +7,14 @@ import {
   boringLogRegionResizeRevision,
   planBoringLogContinuationPages,
   resizeBoringLogPageRegions,
+  prepareBoringLogLayout,
 } from "../packages/scene/dist/index.js";
-import { boringLogMvpTemplate } from "../packages/test-support/dist/index.js";
+import {
+  BORING_LOG_MVP_FIXTURE_DIGEST,
+  BORING_LOG_MVP_TEMPLATE_DIGEST,
+  boringLogMvpFixture,
+  boringLogMvpTemplate,
+} from "../packages/test-support/dist/index.js";
 
 const base = {
   pageHeightMpt: boringLogMvpTemplate.page.heightMpt,
@@ -166,6 +172,60 @@ test("BLD-039 continuation planner is bounded, total, and emits stable continuat
       mptPerFoot: 1,
     }),
     { accepted: false, code: "CONTINUATION_PAGES_CAPACITY_EXCEEDED" },
+  );
+});
+
+test("BLD-039 renderer-neutral Page Plan materializes the authored continuation policy", () => {
+  const headerBoundary = 184_000;
+  const depthBody = boringLogMvpTemplate.regions.find(({ role }) => role === "depth-body");
+  const footer = boringLogMvpTemplate.regions.find(({ role }) => role === "footer");
+  assert.ok(depthBody);
+  assert.ok(footer);
+  const regions = boringLogMvpTemplate.regions.map((region) =>
+    region.role === "header"
+      ? { ...region, heightMpt: 167_000 }
+      : region.role === "depth-body"
+        ? { ...region, yMpt: headerBoundary, heightMpt: footer.yMpt - headerBoundary }
+        : region,
+  );
+  const yStartMpt = headerBoundary + 26_000;
+  const template = {
+    ...boringLogMvpTemplate,
+    regions,
+    depthTransform: {
+      ...boringLogMvpTemplate.depthTransform,
+      yStartMpt,
+      yEndMpt: yStartMpt + 481_000,
+    },
+    pagination: {
+      policy: "fixed-scale-continuation-v1",
+      yEndLimitMpt: footer.yMpt,
+    },
+  };
+  const prepared = prepareBoringLogLayout({
+    contractVersion: 1,
+    schemaVersion: "rsrender.boring-log-layout-job.v1",
+    kind: "boring-log.layout-job",
+    jobId: "job:bld-039-pagination",
+    inputRevision: 1,
+    fixtureDigest: BORING_LOG_MVP_FIXTURE_DIGEST,
+    templateDigest: BORING_LOG_MVP_TEMPLATE_DIGEST,
+    document: boringLogMvpFixture,
+    template,
+  });
+  assert.equal(prepared.accepted, true);
+  assert.equal(prepared.value.pagePlan.pages.length, 2);
+  assert.equal(prepared.value.pagePlan.overflow, "continued");
+  assert.equal(
+    prepared.value.pagePlan.pages[0].depthRange.endFt,
+    prepared.value.pagePlan.pages[1].depthRange.startFt,
+  );
+  assert.equal(prepared.value.pagePlan.pages[0].depthRange.terminalInclusive, false);
+  assert.equal(prepared.value.pagePlan.pages[1].depthRange.terminalInclusive, true);
+  assert.ok(
+    prepared.value.pagePlan.pages.every(
+      ({ depthTransform }) => depthTransform.mptPerFoot === 12_025,
+    ),
   );
 });
 

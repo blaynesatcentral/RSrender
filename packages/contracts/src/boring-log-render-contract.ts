@@ -189,6 +189,11 @@ export interface BoringLogTemplateInput {
   };
   readonly regions: readonly BoringLogTemplateRegionInput[];
   readonly depthTransform: BoringLogDepthTransformInput;
+  /** Present only when the fixed-scale transform continues across physical pages. */
+  readonly pagination?: {
+    readonly policy: "fixed-scale-continuation-v1";
+    readonly yEndLimitMpt: Mpt;
+  };
   readonly columns: readonly BoringLogColumnInput[];
   readonly styles: readonly BoringLogTextStyleInput[];
   readonly occurrenceLayouts?: readonly BoringLogTextOccurrenceLayoutInput[];
@@ -754,6 +759,11 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "guides");
+  const hasPagination =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "pagination");
   const value = record(input, [
     "schemaVersion",
     "templateId",
@@ -762,6 +772,7 @@ function validateTemplate(input: unknown): void {
     "page",
     "regions",
     "depthTransform",
+    ...(hasPagination ? ["pagination"] : []),
     "columns",
     "styles",
     ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
@@ -823,6 +834,21 @@ function validateTemplate(input: unknown): void {
     fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
   }
   if (Math.abs(yStart + (depthEnd - depthStart) * scale - yEnd) > 1) {
+    fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+  const depthBody = (value["regions"] as readonly DataRecord[]).find(
+    (region) => region["role"] === "depth-body",
+  );
+  if (depthBody === undefined) fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+  const depthBodyEnd = (depthBody["yMpt"] as number) + (depthBody["heightMpt"] as number);
+  if (hasPagination) {
+    const pagination = record(value["pagination"], ["policy", "yEndLimitMpt"]);
+    literal(pagination["policy"], "fixed-scale-continuation-v1");
+    const yEndLimit = mpt(pagination["yEndLimitMpt"]);
+    if (yEndLimit <= yStart || yEndLimit > depthBodyEnd || yEnd <= yEndLimit) {
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    }
+  } else if (yEnd > depthBodyEnd) {
     fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   }
   const columnIds: string[] = [];

@@ -22,6 +22,8 @@ import type {
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
+import { planBoringLogContinuationPages } from "./boring-log-continuation-pages.js";
+
 export const boringLogLayoutEngineRevision = "bld-024-v1" as const;
 
 export type BoringLogLayoutEngineRejectionCode =
@@ -1425,26 +1427,49 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
 
 function createPagePlan(job: BoringLogLayoutJobInput, draft: DraftScene): BoringLogPagePlan {
   const inputDigest = sha256CanonicalJson(job);
+  const continuation =
+    job.template.pagination === undefined
+      ? null
+      : planBoringLogContinuationPages({
+          basePageId: job.document.identity.pageId,
+          regionId: job.template.depthTransform.regionId,
+          depthStartFt: job.template.depthTransform.depthStartFt,
+          depthEndFt: job.template.depthTransform.depthEndFt,
+          yStartMpt: job.template.depthTransform.yStartMpt,
+          yEndLimitMpt: job.template.pagination.yEndLimitMpt,
+          mptPerFoot: job.template.depthTransform.mptPerFoot,
+        });
+  if (continuation !== null && !continuation.accepted) {
+    throw new Error(continuation.code);
+  }
+  const plannedContinuations = continuation?.accepted
+    ? continuation.pages
+    : [
+        Object.freeze({
+          pageId: job.document.identity.pageId,
+          pageIndex: 0,
+          depthRange: job.document.referenceDepthRange,
+          depthTransform: job.template.depthTransform,
+        }),
+      ];
   return {
     contractVersion: boringLogRenderContractVersion,
     schemaVersion: boringLogPagePlanSchemaVersion,
     kind: "boring-log.page-plan",
     jobId: job.jobId,
     inputDigest,
-    pages: [
-      {
-        pageId: job.document.identity.pageId,
-        pageIndex: 0,
-        widthMpt: job.template.page.widthMpt,
-        heightMpt: job.template.page.heightMpt,
-        depthRange: job.document.referenceDepthRange,
-        depthTransform: job.template.depthTransform,
-        regions: job.template.regions,
-        columns: job.template.columns,
-        semanticOrder: draft.semanticOrder,
-      },
-    ],
-    overflow: "none",
+    pages: plannedContinuations.map((continuationPage) => ({
+      pageId: continuationPage.pageId,
+      pageIndex: continuationPage.pageIndex,
+      widthMpt: job.template.page.widthMpt,
+      heightMpt: job.template.page.heightMpt,
+      depthRange: continuationPage.depthRange,
+      depthTransform: continuationPage.depthTransform,
+      regions: job.template.regions,
+      columns: job.template.columns,
+      semanticOrder: draft.semanticOrder,
+    })),
+    overflow: plannedContinuations.length > 1 ? "continued" : "none",
     diagnostics: [],
   };
 }
