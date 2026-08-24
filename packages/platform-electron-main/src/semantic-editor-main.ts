@@ -136,6 +136,7 @@ const MULTI_BORING_PROBE_ARGUMENT = "--rsrender-bld036-probe";
 const TEXT_STYLE_PROBE_ARGUMENT = "--rsrender-bld037-probe";
 const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
 const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
+const LITHOLOGY_APPEARANCE_PROBE_ARGUMENT = "--rsrender-bld043-probe";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
 const PDF_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld027-profile=";
@@ -251,11 +252,14 @@ const runtimeProjectInputPath = process.argv
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_ARGUMENT);
+const lithologyAppearanceProbeMode = process.argv.includes(LITHOLOGY_APPEARANCE_PROBE_ARGUMENT);
 const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
 const textStyleProbeMode =
   process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
 const multiBoringProbeMode =
-  process.argv.includes(MULTI_BORING_PROBE_ARGUMENT) || textStyleProbeMode;
+  process.argv.includes(MULTI_BORING_PROBE_ARGUMENT) ||
+  textStyleProbeMode ||
+  lithologyAppearanceProbeMode;
 const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
 const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
 const studioProbeMode =
@@ -1867,7 +1871,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary","arrangeTextOccurrences","mutateTextOccurrences"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary","setLithologyAppearance","arrangeTextOccurrences","mutateTextOccurrences"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -1992,24 +1996,27 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-property", "Space", "FOCUS_STUDIO_STYLE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent === "Lithology Pattern Style applied at revision 5." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(pattern)} && document.querySelector('#svg-page pattern[id=${JSON.stringify(pattern)}]') !== null && [...document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"]')].every((node) => node.getAttribute("fill") === "url(#${pattern})")`,
+      `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const nodes = [...document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"]')]; return document.getElementById("editor-status")?.textContent === "Lithology Pattern Style applied at revision 5." && document.getElementById("property-effective-value")?.textContent === ${JSON.stringify(pattern)} && value.accepted && value.projection.lithologyAppearanceStates.length === 3 && value.projection.lithologyAppearanceStates.every(({ effectivePatternId }) => effectivePatternId === ${JSON.stringify(pattern)}) && nodes.length === 3 && nodes.every((node) => { const match = /^url\\(#([^)]*)\\)$/u.exec(node.getAttribute("fill") ?? ""); return match !== null && document.getElementById(match[1]) instanceof SVGPatternElement; }); })()`,
       "WAIT_STUDIO_STYLE_APPLY",
     );
     const style = record(
       await pageValue(
         window,
-        `(() => ({
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const nodes = [...document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"]')]; return ({
           source: document.getElementById("property-source-original")?.textContent,
           effective: document.getElementById("property-effective-value")?.textContent,
           provenance: document.getElementById("property-provenance")?.textContent,
-          patternedIntervals: document.querySelectorAll('#svg-page [data-node-role="lithology-pattern-interval"][fill="url(#${pattern})"]').length,
-        }))()`,
+          effectivePatternIds: value.accepted ? value.projection.lithologyAppearanceStates.map(({ effectivePatternId }) => effectivePatternId) : [],
+          patternedIntervals: nodes.filter((node) => { const match = /^url\\(#([^)]*)\\)$/u.exec(node.getAttribute("fill") ?? ""); return match !== null && document.getElementById(match[1]) instanceof SVGPatternElement; }).length,
+        }); })()`,
       ),
     );
     requireProbe(
       style["source"] === "reference-varied-patterns" &&
         style["effective"] === pattern &&
         (style["provenance"] as string).includes("Effective override") &&
+        JSON.stringify(style["effectivePatternIds"]) ===
+          JSON.stringify([pattern, pattern, pattern]) &&
         style["patternedIntervals"] === 3,
       "STUDIO_STYLE_INVALID",
     );
@@ -2106,6 +2113,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
   }
   let boringNavigation: DataRecord | null = null;
+  let lithologyAppearance: DataRecord | null = null;
   if (multiBoringProbeMode) {
     requireProbe(
       (await pageValue(
@@ -2171,6 +2179,117 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, dirty: value.accepted ? value.projection.dirty : null, effective: document.getElementById("property-effective-value")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
+    if (lithologyAppearanceProbeMode) {
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const color = document.getElementById("lithology-fill-color"); if (!(color instanceof HTMLInputElement) || document.getElementById("lithology-appearance-properties")?.hidden !== false) return false; color.value = "#7f1d1d"; color.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`,
+        )) === true,
+        "LITHOLOGY_INTERVAL_COLOR_CONTROL_INVALID",
+      );
+      await press(window, "#apply-lithology-interval", "Space", "FOCUS_LITHOLOGY_INTERVAL_APPLY");
+      await waitFor(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "b02-stratum-01") : null; return value.accepted && state?.effectiveMaterialFillColor === "#7f1d1d" && state?.materialFillApplication === "interval-override" && document.getElementById("node:lithology:b02-stratum-01:description-fill")?.getAttribute("fill") === "#7f1d1d"; })()`,
+        "WAIT_LITHOLOGY_INTERVAL_APPLY",
+      );
+      const intervalApplied = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "b02-stratum-01") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, state, paintedFill: document.getElementById("node:lithology:b02-stratum-01:description-fill")?.getAttribute("fill") }; })()`,
+        ),
+      );
+      await press(window, "#previous-boring", "Space", "FOCUS_LITHOLOGY_DEFAULT_FIRST_BORING");
+      await waitFor(
+        window,
+        `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-01" && document.querySelector('#svg-page [data-semantic-id="lithology:stratum-01"]') instanceof SVGElement`,
+        "WAIT_LITHOLOGY_DEFAULT_FIRST_BORING",
+      );
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const node = document.querySelector('#svg-page [data-semantic-id="lithology:stratum-01"]'); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+        )) === true,
+        "SELECT_LITHOLOGY_DEFAULT_TARGET",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("property-semantic-id")?.textContent === "lithology:stratum-01" && document.getElementById("lithology-appearance-properties")?.hidden === false`,
+        "WAIT_LITHOLOGY_DEFAULT_TARGET",
+      );
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const color = document.getElementById("lithology-fill-color"); if (!(color instanceof HTMLInputElement)) return false; color.value = "#a16207"; color.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`,
+        )) === true,
+        "LITHOLOGY_DEFAULT_COLOR_CONTROL_INVALID",
+      );
+      await press(window, "#set-lithology-default", "Space", "FOCUS_LITHOLOGY_DEFAULT_APPLY");
+      await waitFor(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return value.accepted && state?.effectiveMaterialFillColor === "#a16207" && state?.materialFillApplication === "classification-default" && document.getElementById("node:lithology:stratum-01:description-fill")?.getAttribute("fill") === "#a16207"; })()`,
+        "WAIT_LITHOLOGY_DEFAULT_APPLY",
+      );
+      const defaultApplied = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, state, paintedFill: document.getElementById("node:lithology:stratum-01:description-fill")?.getAttribute("fill") }; })()`,
+        ),
+      );
+      await press(window, "#undo", "Space", "FOCUS_LITHOLOGY_DEFAULT_UNDO");
+      await waitFor(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return value.accepted && state?.effectiveMaterialFillColor === state?.sourceMaterialFillColor && state?.materialFillApplication === "source"; })()`,
+        "WAIT_LITHOLOGY_DEFAULT_UNDO",
+      );
+      const defaultUndo = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, state }; })()`,
+        ),
+      );
+      await press(window, "#redo", "Space", "FOCUS_LITHOLOGY_DEFAULT_REDO");
+      await waitFor(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return value.accepted && state?.effectiveMaterialFillColor === "#a16207" && state?.materialFillApplication === "classification-default"; })()`,
+        "WAIT_LITHOLOGY_DEFAULT_REDO",
+      );
+      const defaultRedo = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "stratum-01") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, state }; })()`,
+        ),
+      );
+      await press(window, "#next-boring", "Space", "FOCUS_LITHOLOGY_OVERRIDE_RECHECK");
+      await waitFor(
+        window,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "b02-stratum-01") : null; return value.accepted && state?.effectiveMaterialFillColor === "#7f1d1d" && state?.materialFillApplication === "interval-override" && document.getElementById("node:lithology:b02-stratum-01:description-fill")?.getAttribute("fill") === "#7f1d1d"; })()`,
+        "WAIT_LITHOLOGY_OVERRIDE_RECHECK",
+      );
+      const overrideAfterDefault = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const state = value.accepted ? value.projection.lithologyAppearanceStates.find(({ intervalId }) => intervalId === "b02-stratum-01") : null; return { workingRevision: value.accepted ? value.projection.workingRevision : null, state, paintedFill: document.getElementById("node:lithology:b02-stratum-01:description-fill")?.getAttribute("fill") }; })()`,
+        ),
+      );
+      requireProbe(
+        Number(intervalApplied["workingRevision"]) === Number(second["workingRevision"]) + 1 &&
+          Number(defaultApplied["workingRevision"]) ===
+            Number(intervalApplied["workingRevision"]) + 1 &&
+          Number(defaultUndo["workingRevision"]) ===
+            Number(defaultApplied["workingRevision"]) + 1 &&
+          Number(defaultRedo["workingRevision"]) === Number(defaultUndo["workingRevision"]) + 1 &&
+          overrideAfterDefault["paintedFill"] === "#7f1d1d",
+        `LITHOLOGY_APPEARANCE_HISTORY_INVALID:${JSON.stringify({ intervalApplied, defaultApplied, defaultUndo, defaultRedo, overrideAfterDefault })}`,
+      );
+      lithologyAppearance = Object.freeze({
+        intervalApplied,
+        defaultApplied,
+        defaultUndo,
+        defaultRedo,
+        overrideAfterDefault,
+      });
+    }
     if (!textStyleProbeMode) {
       requireProbe(
         (await pageValue(
@@ -2235,7 +2354,8 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         (second["indicator"] as string).includes("Has overrides") &&
         first["dirty"] === true &&
         second["workingRevision"] === (beforeNavigation["workingRevision"] as number) + 1 &&
-        first["workingRevision"] === second["workingRevision"] &&
+        first["workingRevision"] ===
+          Number(second["workingRevision"]) + (lithologyAppearanceProbeMode ? 4 : 0) &&
         second["effective"] === "Second boring retained its own authored description." &&
         first["effective"] === "First boring retained its own authored description." &&
         (first["indicator"] as string).includes("Has overrides") &&
@@ -3743,23 +3863,50 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         reopened.value.project.presentationOverrideCollections.length === 1,
       "PROJECT_LIFECYCLE_REOPEN_INVALID",
     );
+    if (lithologyAppearanceProbeMode && reopened.accepted) {
+      const firstJob = reopened.value.project.layoutJobs.find(
+        ({ document }) => document.identity.boringLogId === "urn:rsrender:boring-log:test-01",
+      );
+      const secondJob = reopened.value.project.layoutJobs.find(
+        ({ document }) => document.identity.boringLogId === "urn:rsrender:boring-log:test-02",
+      );
+      const firstDefault = firstJob?.template.lithologyClassificationAppearanceDefaults?.find(
+        ({ mappedClassificationKey }) => mappedClassificationKey === "ML",
+      );
+      const secondDefault = secondJob?.template.lithologyClassificationAppearanceDefaults?.find(
+        ({ mappedClassificationKey }) => mappedClassificationKey === "ML",
+      );
+      const secondOverride = secondJob?.template.lithologyIntervalAppearanceOverrides?.find(
+        ({ boringLogIdentity, intervalId }) =>
+          boringLogIdentity === "urn:rsrender:boring-log:test-02" &&
+          intervalId === "b02-stratum-01",
+      );
+      requireProbe(
+        firstJob?.template.visualTokens[firstDefault?.materialFillToken ?? ""] === "#a16207" &&
+          secondJob?.template.visualTokens[secondDefault?.materialFillToken ?? ""] === "#a16207" &&
+          secondJob?.template.visualTokens[secondOverride?.materialFillToken ?? ""] === "#7f1d1d",
+        "LITHOLOGY_PROJECT_REOPEN_INVALID",
+      );
+    }
   }
   return Object.freeze({
-    schema: authoringSurfaceProbeMode
-      ? "rsrender.bld040.authoring-surface-probe.v1"
-      : directManipulationProbeMode
-        ? "rsrender.bld038.direct-manipulation-probe.v1"
-        : textStyleProbeMode
-          ? "rsrender.bld037.text-occurrence-style-probe.v1"
-          : multiBoringProbeMode
-            ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-            : lifecycleProbeMode
-              ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-              : pdfProbeMode
-                ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                : studioEditingMode
-                  ? "rsrender.bld026.boring-log-editor-probe.v1"
-                  : "rsrender.bld025.boring-log-studio-probe.v1",
+    schema: lithologyAppearanceProbeMode
+      ? "rsrender.bld043.lithology-appearance-probe.v1"
+      : authoringSurfaceProbeMode
+        ? "rsrender.bld040.authoring-surface-probe.v1"
+        : directManipulationProbeMode
+          ? "rsrender.bld038.direct-manipulation-probe.v1"
+          : textStyleProbeMode
+            ? "rsrender.bld037.text-occurrence-style-probe.v1"
+            : multiBoringProbeMode
+              ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+              : lifecycleProbeMode
+                ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                : pdfProbeMode
+                  ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                  : studioEditingMode
+                    ? "rsrender.bld026.boring-log-editor-probe.v1"
+                    : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
@@ -3768,6 +3915,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     interactions: Object.freeze({ ...interactions, fitSmall, fitLarge, panScroll, validation }),
     editing,
     boringNavigation,
+    lithologyAppearance,
     textOccurrenceStyle,
     directManipulation,
     authoringSurface,
@@ -3811,21 +3959,23 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? authoringSurfaceProbeMode
-            ? "rsrender.bld040.authoring-surface-probe.v1"
-            : directManipulationProbeMode
-              ? "rsrender.bld038.direct-manipulation-probe.v1"
-              : textStyleProbeMode
-                ? "rsrender.bld037.text-occurrence-style-probe.v1"
-                : multiBoringProbeMode
-                  ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-                  : lifecycleProbeMode
-                    ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                    : pdfProbeMode
-                      ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                      : studioEditingMode
-                        ? "rsrender.bld026.boring-log-editor-probe.v1"
-                        : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? lithologyAppearanceProbeMode
+            ? "rsrender.bld043.lithology-appearance-probe.v1"
+            : authoringSurfaceProbeMode
+              ? "rsrender.bld040.authoring-surface-probe.v1"
+              : directManipulationProbeMode
+                ? "rsrender.bld038.direct-manipulation-probe.v1"
+                : textStyleProbeMode
+                  ? "rsrender.bld037.text-occurrence-style-probe.v1"
+                  : multiBoringProbeMode
+                    ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                    : lifecycleProbeMode
+                      ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                      : pdfProbeMode
+                        ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                        : studioEditingMode
+                          ? "rsrender.bld026.boring-log-editor-probe.v1"
+                          : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
