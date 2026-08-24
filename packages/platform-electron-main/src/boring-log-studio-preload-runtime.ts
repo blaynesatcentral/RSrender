@@ -8,6 +8,7 @@ import {
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
@@ -94,6 +95,8 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "columnResizeConstraints",
     "regionResizeConstraints",
     "textTemplateScopeSummary",
+    "lithologyAppearanceStates",
+    "lithologyPatternOptions",
     "textOccurrencePresentationStates",
     "scene",
   ]);
@@ -119,6 +122,10 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     projection["regionResizeConstraints"] === null ||
     typeof projection["textTemplateScopeSummary"] !== "object" ||
     projection["textTemplateScopeSummary"] === null ||
+    !Array.isArray(projection["lithologyAppearanceStates"]) ||
+    projection["lithologyAppearanceStates"].length > 256 ||
+    !Array.isArray(projection["lithologyPatternOptions"]) ||
+    projection["lithologyPatternOptions"].length > 64 ||
     !Array.isArray(projection["textOccurrencePresentationStates"]) ||
     projection["textOccurrencePresentationStates"].length > 512
   ) {
@@ -200,6 +207,69 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     textTemplateScopeSummary["excludedOverrideStyleCount"] > 512
   ) {
     return null;
+  }
+  const patternIds = new Set<string>();
+  for (const inputOption of projection["lithologyPatternOptions"]) {
+    const option = exactRecord(inputOption, ["patternId", "kind"]);
+    if (
+      option === null ||
+      typeof option["patternId"] !== "string" ||
+      option["patternId"].length < 1 ||
+      option["patternId"].length > 512 ||
+      !["line-hatch", "horizontal-dash", "dot-ring"].includes(String(option["kind"])) ||
+      patternIds.has(option["patternId"])
+    ) {
+      return null;
+    }
+    patternIds.add(option["patternId"]);
+  }
+  const lithologyStateIds = new Set<string>();
+  for (const inputState of projection["lithologyAppearanceStates"]) {
+    const state = exactRecord(inputState, [
+      "semanticId",
+      "boringLogIdentity",
+      "intervalId",
+      "classification",
+      "mappedClassificationKey",
+      "sourceMaterialFillToken",
+      "sourceMaterialFillColor",
+      "sourcePatternId",
+      "effectiveMaterialFillToken",
+      "effectiveMaterialFillColor",
+      "effectivePatternId",
+      "materialFillApplication",
+      "patternApplication",
+    ]);
+    const boundedText = (value: unknown): value is string =>
+      typeof value === "string" && value.length >= 1 && value.length <= 512;
+    if (
+      state === null ||
+      !boundedText(state["semanticId"]) ||
+      !boundedText(state["boringLogIdentity"]) ||
+      !boundedText(state["intervalId"]) ||
+      !boundedText(state["classification"]) ||
+      !boundedText(state["mappedClassificationKey"]) ||
+      !boundedText(state["sourceMaterialFillToken"]) ||
+      typeof state["sourceMaterialFillColor"] !== "string" ||
+      !/^#[0-9a-f]{6}$/u.test(state["sourceMaterialFillColor"]) ||
+      !boundedText(state["sourcePatternId"]) ||
+      !boundedText(state["effectiveMaterialFillToken"]) ||
+      typeof state["effectiveMaterialFillColor"] !== "string" ||
+      !/^#[0-9a-f]{6}$/u.test(state["effectiveMaterialFillColor"]) ||
+      !boundedText(state["effectivePatternId"]) ||
+      !["source", "classification-default", "interval-override"].includes(
+        String(state["materialFillApplication"]),
+      ) ||
+      !["source", "classification-default", "interval-override"].includes(
+        String(state["patternApplication"]),
+      ) ||
+      !patternIds.has(state["sourcePatternId"]) ||
+      !patternIds.has(state["effectivePatternId"]) ||
+      lithologyStateIds.has(state["semanticId"])
+    ) {
+      return null;
+    }
+    lithologyStateIds.add(state["semanticId"]);
   }
   for (const inputValue of projection["editableValues"]) {
     const value = exactRecord(inputValue, [
@@ -850,6 +920,68 @@ const setRegionBoundary = Object.freeze(async function setRegionBoundary(input: 
   }
 });
 
+const setLithologyAppearance = Object.freeze(async function setLithologyAppearance(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, [
+    "expectedWorkingRevision",
+    "boringLogIdentity",
+    "intervalId",
+    "applyScope",
+    "materialFillColor",
+    "patternId",
+  ]);
+  const boundedIdentity = (value: unknown): value is string =>
+    typeof value === "string" && value.length >= 1 && value.length <= 512;
+  const materialFillColor = args?.["materialFillColor"];
+  const patternId = args?.["patternId"];
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    !boundedIdentity(args["boringLogIdentity"]) ||
+    !boundedIdentity(args["intervalId"]) ||
+    !["interval", "classification-default"].includes(String(args["applyScope"])) ||
+    (materialFillColor !== null &&
+      (typeof materialFillColor !== "string" || !/^#[0-9a-f]{6}$/u.test(materialFillColor))) ||
+    (patternId !== null && !boundedIdentity(patternId)) ||
+    (materialFillColor === null && patternId === null)
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 const arrangeTextOccurrences = Object.freeze(async function arrangeTextOccurrences(input: unknown) {
   if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
   const args = exactRecord(input, [
@@ -1029,6 +1161,7 @@ contextBridge.exposeInMainWorld(
     setPageGuides,
     setColumnDivider,
     setRegionBoundary,
+    setLithologyAppearance,
     arrangeTextOccurrences,
     mutateTextOccurrences,
   }),
@@ -1320,6 +1453,14 @@ export interface BoringLogStudioPreloadApi {
     readonly expectedWorkingRevision: number;
     readonly boundary: "header-depth" | "depth-footer";
     readonly requestedBoundaryYMpt: number;
+  }) => Promise<unknown>;
+  readonly setLithologyAppearance: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly boringLogIdentity: string;
+    readonly intervalId: string;
+    readonly applyScope: "interval" | "classification-default";
+    readonly materialFillColor: string | null;
+    readonly patternId: string | null;
   }) => Promise<unknown>;
   readonly arrangeTextOccurrences: (input: {
     readonly expectedWorkingRevision: number;

@@ -920,6 +920,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "setPageGuides",
     "setColumnDivider",
     "setRegionBoundary",
+    "setLithologyAppearance",
     "arrangeTextOccurrences",
     "mutateTextOccurrences",
   ]);

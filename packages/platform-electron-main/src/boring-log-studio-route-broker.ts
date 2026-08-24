@@ -159,6 +159,15 @@ export interface BoringLogStudioRegionBoundaryInput {
   readonly requestedBoundaryYMpt: number;
 }
 
+export interface BoringLogStudioLithologyAppearanceInput {
+  readonly expectedWorkingRevision: number;
+  readonly boringLogIdentity: string;
+  readonly intervalId: string;
+  readonly applyScope: "interval" | "classification-default";
+  readonly materialFillColor: string | null;
+  readonly patternId: string | null;
+}
+
 export interface BoringLogStudioArrangeTextOccurrencesInput {
   readonly expectedWorkingRevision: number;
   readonly keyElementId: string;
@@ -310,6 +319,9 @@ export class BoringLogStudioRouteBroker {
   readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
   readonly #setColumnDivider: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
   readonly #setRegionBoundary: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+  readonly #setLithologyAppearance: (
+    input: BoringLogStudioLithologyAppearanceInput,
+  ) => Promise<unknown>;
   readonly #arrangeTextOccurrences: (
     input: BoringLogStudioArrangeTextOccurrencesInput,
   ) => Promise<unknown>;
@@ -342,6 +354,9 @@ export class BoringLogStudioRouteBroker {
     readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
     readonly setColumnDivider?: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
     readonly setRegionBoundary?: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+    readonly setLithologyAppearance?: (
+      input: BoringLogStudioLithologyAppearanceInput,
+    ) => Promise<unknown>;
     readonly arrangeTextOccurrences?: (
       input: BoringLogStudioArrangeTextOccurrencesInput,
     ) => Promise<unknown>;
@@ -387,6 +402,12 @@ export class BoringLogStudioRouteBroker {
       input.setRegionBoundary ??
       (() =>
         Promise.resolve(Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" })));
+    this.#setLithologyAppearance =
+      input.setLithologyAppearance ??
+      (() =>
+        Promise.resolve(
+          Object.freeze({ accepted: false, code: "LITHOLOGY_APPEARANCE_UNAVAILABLE" }),
+        ));
     this.#arrangeTextOccurrences =
       input.arrangeTextOccurrences ??
       (() => Promise.resolve(Object.freeze({ accepted: false, code: "ARRANGEMENT_UNAVAILABLE" })));
@@ -1214,6 +1235,95 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setRegionBoundary(
         args as unknown as BoringLogStudioRegionBoundaryInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setLithologyAppearance(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "boringLogIdentity",
+      "intervalId",
+      "applyScope",
+      "materialFillColor",
+      "patternId",
+    ]);
+    const boundedIdentity = (value: unknown): value is string =>
+      typeof value === "string" && value.length >= 1 && value.length <= 512;
+    const materialFillColor = args?.["materialFillColor"];
+    const patternId = args?.["patternId"];
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !boundedIdentity(args["boringLogIdentity"]) ||
+      !boundedIdentity(args["intervalId"]) ||
+      !["interval", "classification-default"].includes(String(args["applyScope"])) ||
+      (materialFillColor !== null &&
+        (typeof materialFillColor !== "string" || !/^#[0-9a-f]{6}$/u.test(materialFillColor))) ||
+      (patternId !== null && !boundedIdentity(patternId)) ||
+      (materialFillColor === null && patternId === null)
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setLithologyAppearance(
+        args as unknown as BoringLogStudioLithologyAppearanceInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
