@@ -239,7 +239,17 @@ test("BLD-026 style and layout values rebuild vector resources and integer mpt g
   );
   assert.equal(patternNodes.length, 3);
   assert.ok(
-    patternNodes.every(({ fillToken }) => fillToken === pattern),
+    patternNodes.every(({ fillToken }, index) => {
+      const resource = styled.projection.scene.resources.patterns.find(
+        ({ id }) => id === fillToken,
+      );
+      const interval = session.layoutJob.document.lithologyIntervals[index];
+      return (
+        resource?.kind === "dot-ring" &&
+        styled.projection.scene.resources.visualTokens[resource.backgroundToken] ===
+          styled.projection.scene.resources.visualTokens[interval.materialFillToken]
+      );
+    }),
     JSON.stringify(patternNodes.map(({ fillToken }) => fillToken)),
   );
   assert.ok(

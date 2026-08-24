@@ -7,12 +7,12 @@ export const boringLogExampleDocumentSource = `
   "kind": "boring-log.layout-job",
   "jobId": "job:rsrender-example-boring-log@r1",
   "inputRevision": 1,
-  "fixtureDigest": "sha256:2ec5d2164bfcf0d4392030aae7b0de5820a6862d8868214299e1fcd912257b31",
-  "templateDigest": "sha256:aaa790ba0d1a090e63b4b14c14984fc1b2cbfef500b3d214702f2ec608c17c0f",
+  "fixtureDigest": "sha256:53b34d5efbf52af7f73b968cbf668796f5713aa54a5d40d5cdbff7d5028cac67",
+  "templateDigest": "sha256:a76ee89cbd28b9e11237f46b8910940c5141808607e68d9acc922eef59b8669d",
   "document": {
     "schemaVersion": "rsrender.boring-log-mvp-fixture.v1",
-    "fixtureId": "mvp-boring-log-test-01@r5",
-    "fixtureRevision": 5,
+    "fixtureId": "mvp-boring-log-test-01@r6",
+    "fixtureRevision": 6,
     "evidenceClass": "synthetic-coverage-only",
     "representativeClaimAllowed": false,
     "publicationEligibility": "example-dataset-only",
@@ -66,6 +66,7 @@ export const boringLogExampleDocumentSource = `
         "depthFromFt": 0,
         "depthToFt": 15,
         "classification": "SILT (ML)",
+        "mappedClassificationKey": "ML",
         "patternId": "pattern-silt-horizontal-dash",
         "materialFillToken": "materialSiltFill",
         "description": "Medium stiff, moist, brown SILT (ML); low plasticity; trace fine sand; homogeneous; no odor.",
@@ -94,6 +95,7 @@ export const boringLogExampleDocumentSource = `
         "depthFromFt": 15,
         "depthToFt": 30,
         "classification": "GRAVEL WITH SAND (GW)",
+        "mappedClassificationKey": "GW",
         "patternId": "pattern-gravel-dot-ring",
         "materialFillToken": "materialGravelFill",
         "description": "Dense, brown to gray GRAVEL WITH SAND (GW); angular to subrounded gravel up to 1½ in; little silt.",
@@ -118,6 +120,7 @@ export const boringLogExampleDocumentSource = `
         "depthFromFt": 30,
         "depthToFt": 40,
         "classification": "SILT (ML)",
+        "mappedClassificationKey": "ML",
         "patternId": "pattern-silt-blue-dash",
         "materialFillToken": "materialSiltFill",
         "description": "Very stiff, moist, gray with brown mottling SILT (ML); low plasticity; trace fine sand; blocky structure.",
@@ -728,8 +731,8 @@ export const boringLogExampleDocumentSource = `
   },
   "template": {
     "schemaVersion": "rsrender.boring-log-mvp-template.v1",
-    "templateId": "mvp-template-reference-shaped@r4",
-    "templateRevision": 4,
+    "templateId": "mvp-template-reference-shaped@r5",
+    "templateRevision": 5,
     "physicalUnits": "mpt",
     "page": {
       "widthMpt": 612000,
@@ -872,6 +875,62 @@ export const boringLogExampleDocumentSource = `
         "fontWeight": 400,
         "lineHeightMpt": 6875,
         "color": "#17202a"
+      }
+    ],
+    "vectorPatterns": [
+      {
+        "id": "pattern-silt-horizontal-dash",
+        "kind": "horizontal-dash",
+        "foregroundToken": "ink",
+        "backgroundToken": "lithologySiltFill",
+        "spacingMpt": 5000,
+        "markSizeMpt": 2000,
+        "strokeWidthMpt": 500
+      },
+      {
+        "id": "pattern-gravel-dot-ring",
+        "kind": "dot-ring",
+        "foregroundToken": "ink",
+        "backgroundToken": "lithologyGravelFill",
+        "spacingMpt": 6000,
+        "markSizeMpt": 1500,
+        "strokeWidthMpt": 500
+      },
+      {
+        "id": "pattern-silt-blue-dash",
+        "kind": "horizontal-dash",
+        "foregroundToken": "selection",
+        "backgroundToken": "lithologySiltFill",
+        "spacingMpt": 5000,
+        "markSizeMpt": 2000,
+        "strokeWidthMpt": 500
+      },
+      {
+        "id": "silt-horizontal-dash",
+        "kind": "horizontal-dash",
+        "foregroundToken": "ink",
+        "backgroundToken": "lithologySiltFill",
+        "spacingMpt": 5000,
+        "markSizeMpt": 2000,
+        "strokeWidthMpt": 500
+      },
+      {
+        "id": "sand-dot-ring",
+        "kind": "dot-ring",
+        "foregroundToken": "ink",
+        "backgroundToken": "lithologyGravelFill",
+        "spacingMpt": 6000,
+        "markSizeMpt": 1500,
+        "strokeWidthMpt": 500
+      },
+      {
+        "id": "gravel-dot-ring",
+        "kind": "dot-ring",
+        "foregroundToken": "ink",
+        "backgroundToken": "lithologyGravelFill",
+        "spacingMpt": 6000,
+        "markSizeMpt": 1500,
+        "strokeWidthMpt": 500
       }
     ],
     "hierarchy": {

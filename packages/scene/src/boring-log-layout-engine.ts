@@ -23,6 +23,10 @@ import type {
 } from "@rsrender/contracts";
 
 import { planBoringLogContinuationPages } from "./boring-log-continuation-pages.js";
+import {
+  resolveBoringLogLithologyAppearances,
+  resolveBoringLogLithologyPatternResources,
+} from "./boring-log-lithology-appearance.js";
 
 export const boringLogLayoutEngineRevision = "bld-024-v1" as const;
 
@@ -145,6 +149,12 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   const nodes: BoringLogSceneNode[] = [];
   const groups = new Map<string, MutableGroupNode>();
   const textRequests: BoringLogTextMeasurementRequest[] = [];
+  const lithologyAppearances = new Map(
+    resolveBoringLogLithologyAppearances(job).map((appearance) => [
+      appearance.intervalId,
+      appearance,
+    ]),
+  );
 
   const append = (node: BoringLogSceneNode): void => {
     nodes.push(node);
@@ -704,6 +714,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   const lithologyColumn = columnByRole(job, "lithology-pattern");
   const descriptionColumn = columnByRole(job, "material-description");
   for (const interval of job.document.lithologyIntervals) {
+    const appearance = lithologyAppearances.get(interval.id)!;
     const yFrom = depthToYMpt(job, interval.depthFromFt);
     const yTo = depthToYMpt(job, interval.depthToFt);
     addRect(
@@ -712,9 +723,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       depthGroupId,
       "material-description-fill",
       rect(descriptionColumn.xMpt, yFrom, descriptionColumn.widthMpt, yTo - yFrom),
-      interval.materialFillToken,
+      appearance.materialFillToken,
       null,
-      interval.provenance,
+      appearance.materialFillProvenance,
     );
     addRect(
       `node:lithology:${interval.id}:pattern`,
@@ -722,9 +733,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       depthGroupId,
       "lithology-pattern-interval",
       rect(lithologyColumn.xMpt, yFrom, lithologyColumn.widthMpt, yTo - yFrom),
-      interval.patternId,
+      appearance.patternPaintId,
       "rule",
-      interval.provenance,
+      appearance.patternProvenance,
     );
     addText(
       `node:lithology:${interval.id}:description`,
@@ -1967,22 +1978,7 @@ export function resolveBoringLogPageScene(
     const resources = {
       visualTokens: prepared.value.job.template.visualTokens,
       textStyles: prepared.value.job.template.styles,
-      patterns: [
-        ...new Set([
-          ...prepared.value.job.document.lithologyIntervals.map(({ patternId }) => patternId),
-          ...prepared.value.job.document.legend
-            .map(({ symbol }) => symbol)
-            .filter((symbol) => symbol.startsWith("pattern-")),
-        ]),
-      ].map((patternId) => ({
-        id: patternId,
-        kind: patternId.includes("gravel") ? ("dot-ring" as const) : ("horizontal-dash" as const),
-        foregroundToken: patternId.includes("blue") ? "selection" : "ink",
-        backgroundToken: patternId.includes("gravel") ? "lithologyGravelFill" : "lithologySiltFill",
-        spacingMpt: asMpt(patternId.includes("gravel") ? 6_000 : 5_000),
-        markSizeMpt: asMpt(patternId.includes("gravel") ? 1_500 : 2_000),
-        strokeWidthMpt: asMpt(500),
-      })),
+      patterns: resolveBoringLogLithologyPatternResources(prepared.value.job),
     };
     const pages = prepared.value.pagePlan.pages.map((plannedPage, index) => ({
       pageId: plannedPage.pageId,

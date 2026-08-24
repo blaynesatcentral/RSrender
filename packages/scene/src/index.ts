@@ -46,6 +46,16 @@ export {
   boringLogContinuationPagesRevision,
   planBoringLogContinuationPages,
 } from "./boring-log-continuation-pages.js";
+export {
+  boringLogLithologyAppearanceRevision,
+  resolveBoringLogLithologyAppearance,
+  resolveBoringLogLithologyAppearances,
+  resolveBoringLogLithologyPatternResources,
+} from "./boring-log-lithology-appearance.js";
+export type {
+  BoringLogLithologyAppearanceApplication,
+  ResolvedBoringLogLithologyAppearance,
+} from "./boring-log-lithology-appearance.js";
 export type {
   BoringLogContinuationPage,
   BoringLogContinuationPagesResult,

@@ -336,8 +336,8 @@ test("BLD-024 repeats one exact normalized Page Plan and scene in fresh processe
   assert.equal(new Set(transcripts.map((entry) => JSON.stringify(entry))).size, 1);
   assert.deepEqual(transcripts[0], {
     node: "v24.18.1",
-    pagePlanDigest: "sha256:128e639895effbb9e2470035cdbb67cd838c0faa64d3efc749805dec503d1d04",
-    sceneDigest: "sha256:6873137954097b4a5481696b729b19e48f649718c7f683058f60adbba0583a58",
+    pagePlanDigest: "sha256:edb4a92292932cd8ad5c3f36abb3a34c63cd110a37a4c49d25dbf5ceabea121b",
+    sceneDigest: "sha256:4a21bc31207bd8cd847cc6521ef7d325446a66fa8c55c2d23f063f6e6be68eb3",
     textRequestCount: 135,
     semanticCount: 90,
     nodeCount: 328,

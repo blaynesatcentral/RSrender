@@ -5,16 +5,16 @@ export const BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION =
   "rsrender.boring-log-mvp-template.v1" as const;
 export const BORING_LOG_MVP_ORACLE_SCHEMA_VERSION = "rsrender.boring-log-mvp-oracle.v1" as const;
 
-export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r5" as const;
-export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r4" as const;
+export const BORING_LOG_MVP_FIXTURE_ID = "mvp-boring-log-test-01@r6" as const;
+export const BORING_LOG_MVP_TEMPLATE_ID = "mvp-template-reference-shaped@r5" as const;
 export const BORING_LOG_MVP_FIXTURE_DIGEST =
-  "sha256:2ec5d2164bfcf0d4392030aae7b0de5820a6862d8868214299e1fcd912257b31" as const;
+  "sha256:53b34d5efbf52af7f73b968cbf668796f5713aa54a5d40d5cdbff7d5028cac67" as const;
 export const BORING_LOG_MVP_TEMPLATE_DIGEST =
-  "sha256:aaa790ba0d1a090e63b4b14c14984fc1b2cbfef500b3d214702f2ec608c17c0f" as const;
+  "sha256:a76ee89cbd28b9e11237f46b8910940c5141808607e68d9acc922eef59b8669d" as const;
 export const BORING_LOG_MVP_ORACLE_DIGEST =
-  "sha256:88d6bd591d564decf56d03b741e352fc146efd2490e44a89bcc7e8996d3e1af9" as const;
+  "sha256:da03844b964bc133222c4da2b380e4ccc3339dc3a0fcb8c0ab8ae5b5f07df21f" as const;
 export const BORING_LOG_MVP_BUNDLE_DIGEST =
-  "sha256:2fd06db13cec8919ca3f6555bae86b954e3685160e52445106157175ccad789a" as const;
+  "sha256:09d04fe345a9a01b4374930b1d6a01970f716a8eab8aae7db5a2918d37f0dacf" as const;
 
 const source = (entityId: string, fieldId: string) =>
   Object.freeze({
@@ -60,7 +60,7 @@ const sample = (
 export const boringLogMvpFixture = Object.freeze({
   schemaVersion: BORING_LOG_MVP_FIXTURE_SCHEMA_VERSION,
   fixtureId: BORING_LOG_MVP_FIXTURE_ID,
-  fixtureRevision: 5,
+  fixtureRevision: 6,
   evidenceClass: "synthetic-coverage-only" as const,
   representativeClaimAllowed: false,
   publicationEligibility: "example-dataset-only" as const,
@@ -103,6 +103,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthFromFt: 0,
       depthToFt: 15,
       classification: "SILT (ML)",
+      mappedClassificationKey: "ML",
       patternId: "pattern-silt-horizontal-dash",
       materialFillToken: "materialSiltFill",
       description:
@@ -119,6 +120,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthFromFt: 15,
       depthToFt: 30,
       classification: "GRAVEL WITH SAND (GW)",
+      mappedClassificationKey: "GW",
       patternId: "pattern-gravel-dot-ring",
       materialFillToken: "materialGravelFill",
       description:
@@ -132,6 +134,7 @@ export const boringLogMvpFixture = Object.freeze({
       depthFromFt: 30,
       depthToFt: 40,
       classification: "SILT (ML)",
+      mappedClassificationKey: "ML",
       patternId: "pattern-silt-blue-dash",
       materialFillToken: "materialSiltFill",
       description:
@@ -340,7 +343,7 @@ const textStyle = (id: string, sizeMpt: number, weight: number) =>
 export const boringLogMvpTemplate = Object.freeze({
   schemaVersion: BORING_LOG_MVP_TEMPLATE_SCHEMA_VERSION,
   templateId: BORING_LOG_MVP_TEMPLATE_ID,
-  templateRevision: 4,
+  templateRevision: 5,
   physicalUnits: "mpt" as const,
   page: Object.freeze({ widthMpt: 612_000, heightMpt: 792_000, orientation: "portrait" }),
   regions: Object.freeze([
@@ -415,6 +418,62 @@ export const boringLogMvpTemplate = Object.freeze({
     textStyle("style-heading", 7_500, 700),
     textStyle("style-body", 7_000, 400),
     textStyle("style-small", 5_500, 400),
+  ]),
+  vectorPatterns: Object.freeze([
+    Object.freeze({
+      id: "pattern-silt-horizontal-dash",
+      kind: "horizontal-dash" as const,
+      foregroundToken: "ink",
+      backgroundToken: "lithologySiltFill",
+      spacingMpt: 5_000,
+      markSizeMpt: 2_000,
+      strokeWidthMpt: 500,
+    }),
+    Object.freeze({
+      id: "pattern-gravel-dot-ring",
+      kind: "dot-ring" as const,
+      foregroundToken: "ink",
+      backgroundToken: "lithologyGravelFill",
+      spacingMpt: 6_000,
+      markSizeMpt: 1_500,
+      strokeWidthMpt: 500,
+    }),
+    Object.freeze({
+      id: "pattern-silt-blue-dash",
+      kind: "horizontal-dash" as const,
+      foregroundToken: "selection",
+      backgroundToken: "lithologySiltFill",
+      spacingMpt: 5_000,
+      markSizeMpt: 2_000,
+      strokeWidthMpt: 500,
+    }),
+    Object.freeze({
+      id: "silt-horizontal-dash",
+      kind: "horizontal-dash" as const,
+      foregroundToken: "ink",
+      backgroundToken: "lithologySiltFill",
+      spacingMpt: 5_000,
+      markSizeMpt: 2_000,
+      strokeWidthMpt: 500,
+    }),
+    Object.freeze({
+      id: "sand-dot-ring",
+      kind: "dot-ring" as const,
+      foregroundToken: "ink",
+      backgroundToken: "lithologyGravelFill",
+      spacingMpt: 6_000,
+      markSizeMpt: 1_500,
+      strokeWidthMpt: 500,
+    }),
+    Object.freeze({
+      id: "gravel-dot-ring",
+      kind: "dot-ring" as const,
+      foregroundToken: "ink",
+      backgroundToken: "lithologyGravelFill",
+      spacingMpt: 6_000,
+      markSizeMpt: 1_500,
+      strokeWidthMpt: 500,
+    }),
   ]),
   hierarchy: Object.freeze({
     id: "page-root",
@@ -770,7 +829,7 @@ export function validateBoringLogMvpFixtureBundle(
   const strings: string[] = [];
   collectStringsAndKeys({ fixture, template }, keys, strings);
   const forbiddenKey =
-    /(?:image|raster|bitmap|background(?:image)?|reference(?:path|file)|screenshot)/iu;
+    /(?:image|raster|bitmap|backgroundimage|reference(?:path|file)|screenshot)/iu;
   const forbiddenString = /(?:<img\b|data:image\/|file:\/\/|\.png\b|\.jpe?g\b)/iu;
   if (
     keys.some((key) => forbiddenKey.test(key)) ||

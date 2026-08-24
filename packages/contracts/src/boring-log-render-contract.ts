@@ -5,7 +5,7 @@ import type { Mpt } from "./physical-length.js";
 import type { Sha256Digest } from "./sha256.js";
 
 export const boringLogRenderContractVersion = 1 as const;
-export const boringLogRenderContractRevision = "bld-023-v1" as const;
+export const boringLogRenderContractRevision = "bld-043-lithology-appearance-v1" as const;
 
 export function boringLogTextColumnSemanticId(
   node: Readonly<{ readonly semanticId: string; readonly role: string }>,
@@ -196,6 +196,27 @@ export interface BoringLogTemplateBindingInput {
   readonly styleId: string;
 }
 
+export interface BoringLogLithologyAppearanceInput {
+  /** Null deliberately inherits the next authority in the appearance cascade. */
+  readonly materialFillToken: string | null;
+  /** Null deliberately inherits the next authority in the appearance cascade. */
+  readonly patternId: string | null;
+}
+
+export interface BoringLogLithologyClassificationAppearanceDefaultInput extends BoringLogLithologyAppearanceInput {
+  readonly mappedClassificationKey: string;
+  readonly overrideIdentity: string;
+  readonly overrideRevision: number;
+}
+
+export interface BoringLogLithologyIntervalAppearanceOverrideInput extends BoringLogLithologyAppearanceInput {
+  readonly boringLogIdentity: string;
+  readonly intervalId: string;
+  readonly mappedClassificationKey: string;
+  readonly overrideIdentity: string;
+  readonly overrideRevision: number;
+}
+
 export interface BoringLogTemplateInput {
   readonly schemaVersion: "rsrender.boring-log-mvp-template.v1";
   readonly templateId: string;
@@ -220,6 +241,12 @@ export interface BoringLogTemplateInput {
   readonly textOccurrenceClones?: readonly BoringLogTextOccurrenceCloneInput[];
   /** Persisted sibling-only text groups; grouping changes hierarchy without changing geometry. */
   readonly textOccurrenceGroups?: readonly BoringLogTextOccurrenceGroupInput[];
+  /** Admitted renderer-neutral pattern definitions; no external hatch bytes are referenced. */
+  readonly vectorPatterns: readonly BoringLogVectorPatternResource[];
+  /** Template/project defaults keyed only by an explicit mapped soil classification key. */
+  readonly lithologyClassificationAppearanceDefaults?: readonly BoringLogLithologyClassificationAppearanceDefaultInput[];
+  /** Exact interval appearance replacements. Each property may independently inherit. */
+  readonly lithologyIntervalAppearanceOverrides?: readonly BoringLogLithologyIntervalAppearanceOverrideInput[];
   /** Nonprinting layout guides. Absent in legacy v1 templates. */
   readonly guides?: readonly BoringLogPageGuideInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
@@ -294,6 +321,8 @@ export interface BoringLogLithologyIntervalInput {
   readonly depthFromFt: number;
   readonly depthToFt: number;
   readonly classification: string;
+  /** Explicit mapped classification authority; never inferred from description/display text. */
+  readonly mappedClassificationKey: string;
   readonly patternId: string;
   readonly materialFillToken: string;
   readonly description: string;
@@ -726,6 +755,64 @@ function validateStringMap(input: unknown): void {
   }
 }
 
+function mappedClassificationKey(input: unknown): string {
+  const value = textValue(input);
+  if (
+    value.length > 64 ||
+    value !== value.trim().toUpperCase() ||
+    !/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/u.test(value)
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  return value;
+}
+
+function validateVectorPattern(input: unknown): DataRecord {
+  const pattern = record(input, [
+    "id",
+    "kind",
+    "foregroundToken",
+    "backgroundToken",
+    "spacingMpt",
+    "markSizeMpt",
+    "strokeWidthMpt",
+  ]);
+  textValue(pattern["id"]);
+  if (!["line-hatch", "horizontal-dash", "dot-ring"].includes(textValue(pattern["kind"]))) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  textValue(pattern["foregroundToken"]);
+  textValue(pattern["backgroundToken"]);
+  if (
+    mpt(pattern["spacingMpt"]) <= 0 ||
+    mpt(pattern["markSizeMpt"]) <= 0 ||
+    mpt(pattern["strokeWidthMpt"]) <= 0
+  ) {
+    fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+  return pattern;
+}
+
+function validateLithologyAppearance(input: unknown, fields: readonly string[]): DataRecord {
+  const appearance = record(input, [
+    ...fields,
+    "mappedClassificationKey",
+    "materialFillToken",
+    "patternId",
+    "overrideIdentity",
+    "overrideRevision",
+  ]);
+  mappedClassificationKey(appearance["mappedClassificationKey"]);
+  const fill = nullableText(appearance["materialFillToken"]);
+  const pattern = nullableText(appearance["patternId"]);
+  if (fill === null && pattern === null) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  textValue(appearance["overrideIdentity"]);
+  if (nonnegativeInteger(appearance["overrideRevision"]) < 1) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  return appearance;
+}
+
 function assertNoForbiddenRaster(input: unknown): void {
   if (Array.isArray(input)) {
     for (const child of input) assertNoForbiddenRaster(child);
@@ -792,6 +879,16 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "textOccurrenceGroups");
+  const hasLithologyClassificationAppearanceDefaults =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "lithologyClassificationAppearanceDefaults");
+  const hasLithologyIntervalAppearanceOverrides =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "lithologyIntervalAppearanceOverrides");
   const hasPagination =
     typeof input === "object" &&
     input !== null &&
@@ -811,6 +908,11 @@ function validateTemplate(input: unknown): void {
     ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
     ...(hasTextOccurrenceClones ? ["textOccurrenceClones"] : []),
     ...(hasTextOccurrenceGroups ? ["textOccurrenceGroups"] : []),
+    "vectorPatterns",
+    ...(hasLithologyClassificationAppearanceDefaults
+      ? ["lithologyClassificationAppearanceDefaults"]
+      : []),
+    ...(hasLithologyIntervalAppearanceOverrides ? ["lithologyIntervalAppearanceOverrides"] : []),
     ...(hasGuides ? ["guides"] : []),
     "hierarchy",
     "bindings",
@@ -1116,6 +1218,33 @@ function validateTemplate(input: unknown): void {
   if (groupNodeIds.length > 64) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   unique(groupNodeIds);
   unique(groupedChildNodeIds);
+  const vectorPatternIds = array(value["vectorPatterns"]).map(
+    (pattern) => validateVectorPattern(pattern)["id"] as string,
+  );
+  unique(vectorPatternIds);
+  const classificationDefaultKeys: string[] = [];
+  for (const defaultInput of hasLithologyClassificationAppearanceDefaults
+    ? array(value["lithologyClassificationAppearanceDefaults"])
+    : []) {
+    const appearance = validateLithologyAppearance(defaultInput, []);
+    classificationDefaultKeys.push(appearance["mappedClassificationKey"] as string);
+  }
+  unique(classificationDefaultKeys);
+  const intervalOverrideKeys: string[] = [];
+  for (const overrideInput of hasLithologyIntervalAppearanceOverrides
+    ? array(value["lithologyIntervalAppearanceOverrides"])
+    : []) {
+    const appearance = validateLithologyAppearance(overrideInput, [
+      "boringLogIdentity",
+      "intervalId",
+    ]);
+    textValue(appearance["boringLogIdentity"]);
+    textValue(appearance["intervalId"]);
+    intervalOverrideKeys.push(
+      `${String(appearance["boringLogIdentity"])}\u0000${String(appearance["intervalId"])}`,
+    );
+  }
+  unique(intervalOverrideKeys);
   const hierarchyIds: string[] = [];
   const leafIds: string[] = [];
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);
@@ -1248,6 +1377,7 @@ function validateDocument(input: unknown): void {
       "depthFromFt",
       "depthToFt",
       "classification",
+      "mappedClassificationKey",
       "patternId",
       "materialFillToken",
       "description",
@@ -1262,6 +1392,7 @@ function validateDocument(input: unknown): void {
       fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
     previousEnd = to;
     textValue(interval["classification"]);
+    mappedClassificationKey(interval["mappedClassificationKey"]);
     textValue(interval["patternId"]);
     textValue(interval["materialFillToken"]);
     textValue(interval["description"]);
@@ -2124,9 +2255,52 @@ export function validateBoringLogLayoutJobInput(
       fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
     }
     const visualTokens = template["visualTokens"] as DataRecord;
+    const vectorPatterns = template["vectorPatterns"] as readonly DataRecord[];
+    const vectorPatternIds = new Set(vectorPatterns.map((pattern) => pattern["id"] as string));
+    for (const pattern of vectorPatterns) {
+      if (
+        !Object.hasOwn(visualTokens, pattern["foregroundToken"] as PropertyKey) ||
+        !Object.hasOwn(visualTokens, pattern["backgroundToken"] as PropertyKey)
+      ) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+    }
     for (const intervalInput of document["lithologyIntervals"] as readonly unknown[]) {
       const interval = intervalInput as DataRecord;
-      if (!Object.hasOwn(visualTokens, interval["materialFillToken"] as PropertyKey)) {
+      if (
+        !Object.hasOwn(visualTokens, interval["materialFillToken"] as PropertyKey) ||
+        !vectorPatternIds.has(interval["patternId"] as string)
+      ) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+    }
+    const appearances = [
+      ...((template["lithologyClassificationAppearanceDefaults"] as
+        readonly DataRecord[] | undefined) ?? []),
+      ...((template["lithologyIntervalAppearanceOverrides"] as readonly DataRecord[] | undefined) ??
+        []),
+    ];
+    for (const appearance of appearances) {
+      const fill = appearance["materialFillToken"];
+      const patternId = appearance["patternId"];
+      if (
+        (fill !== null && !Object.hasOwn(visualTokens, fill as PropertyKey)) ||
+        (patternId !== null && !vectorPatternIds.has(patternId as string))
+      ) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+    }
+    const boringLogIdentity = (document["identity"] as DataRecord)["boringLogId"];
+    for (const appearance of (template["lithologyIntervalAppearanceOverrides"] as
+      readonly DataRecord[] | undefined) ?? []) {
+      if (appearance["boringLogIdentity"] !== boringLogIdentity) continue;
+      const interval = (document["lithologyIntervals"] as readonly DataRecord[]).find(
+        (candidate) => candidate["id"] === appearance["intervalId"],
+      );
+      if (
+        interval === undefined ||
+        interval["mappedClassificationKey"] !== appearance["mappedClassificationKey"]
+      ) {
         fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
       }
     }
