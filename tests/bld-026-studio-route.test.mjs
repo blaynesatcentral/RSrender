@@ -8,6 +8,7 @@ import { createSyntheticBoringLogOverrideSession } from "../packages/application
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
+  BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
@@ -588,6 +589,57 @@ test("BLD-040 Studio route admits only an exact ordered text arrangement command
   }
 });
 
+test("BLD-040 Studio route admits exact bounded visibility, lock, and reorder mutations", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "6".repeat(64),
+    getProjection: source.getProjection,
+    mutateTextOccurrences: async (input) => {
+      received = input;
+      return { accepted: true, code: "TEXT_OCCURRENCES_AUTHORED", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    occurrenceNodeIds: ["node:first", "node:second"],
+    mutation: { kind: "set-visible", visible: false },
+  };
+  assert.equal((await route.mutateTextOccurrences(routeContext, envelope(1, args))).accepted, true);
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, occurrenceNodeIds: [] },
+    { ...args, occurrenceNodeIds: ["node:first", "node:first"] },
+    { ...args, mutation: { kind: "set-visible", visible: "false" } },
+    { ...args, mutation: { kind: "set-locked", locked: 1 } },
+    { ...args, mutation: { kind: "reorder", placement: "above-all" } },
+    { ...args, extra: true },
+  ]) {
+    assert.deepEqual(await route.mutateTextOccurrences(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -809,6 +861,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.mutateTextOccurrences(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -838,6 +898,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "setColumnDivider",
     "setRegionBoundary",
     "arrangeTextOccurrences",
+    "mutateTextOccurrences",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
@@ -892,6 +953,18 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.deepEqual(JSON.parse(JSON.stringify(arrangementResult)), {
     accepted: false,
     code: "ARRANGEMENT_UNAVAILABLE",
+  });
+  const authoringResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.mutateTextOccurrences(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      occurrenceNodeIds: ["node:key"],
+      mutation: { kind: "set-locked", locked: true },
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(authoringResult)), {
+    accepted: false,
+    code: "AUTHORING_UNAVAILABLE",
   });
   const previewResult = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection(${JSON.stringify({

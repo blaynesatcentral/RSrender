@@ -844,6 +844,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
             "column-divider-adjacent-resize",
             "column-divider-push-following-resize",
             "region-boundary-resize",
+            "text-occurrence-authoring",
           ].includes(String(command["operation"])))
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
@@ -970,7 +971,9 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
                     ? "Resize and push following Log Columns"
                     : operation === "region-boundary-resize"
                       ? "Resize Page Region boundary"
-                      : "Set text occurrence style";
+                      : operation === "text-occurrence-authoring"
+                        ? "Author selected text occurrences"
+                        : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
         kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],

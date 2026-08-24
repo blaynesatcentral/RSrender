@@ -3,6 +3,7 @@ import { validateResolvedBoringLogPageScene } from "@rsrender/contracts";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
+  BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
@@ -939,6 +940,76 @@ const arrangeTextOccurrences = Object.freeze(async function arrangeTextOccurrenc
   }
 });
 
+const mutateTextOccurrences = Object.freeze(async function mutateTextOccurrences(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, ["expectedWorkingRevision", "occurrenceNodeIds", "mutation"]);
+  const mutationRecord =
+    args !== null && typeof args["mutation"] === "object" && args["mutation"] !== null
+      ? (args["mutation"] as DataRecord)
+      : null;
+  const kind = mutationRecord?.["kind"];
+  const mutation =
+    kind === "set-visible"
+      ? exactRecord(mutationRecord, ["kind", "visible"])
+      : kind === "set-locked"
+        ? exactRecord(mutationRecord, ["kind", "locked"])
+        : kind === "reorder"
+          ? exactRecord(mutationRecord, ["kind", "placement"])
+          : null;
+  const nodeIds = args?.["occurrenceNodeIds"];
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    !Array.isArray(nodeIds) ||
+    nodeIds.length < 1 ||
+    nodeIds.length > 256 ||
+    nodeIds.some(
+      (nodeId) => typeof nodeId !== "string" || nodeId.length < 1 || nodeId.length > 512,
+    ) ||
+    new Set(nodeIds).size !== nodeIds.length ||
+    mutation === null ||
+    (kind === "set-visible" && typeof mutation["visible"] !== "boolean") ||
+    (kind === "set-locked" && typeof mutation["locked"] !== "boolean") ||
+    (kind === "reorder" &&
+      !["front", "forward", "backward", "back"].includes(String(mutation["placement"])))
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
   Object.freeze({
@@ -950,6 +1021,7 @@ contextBridge.exposeInMainWorld(
     setColumnDivider,
     setRegionBoundary,
     arrangeTextOccurrences,
+    mutateTextOccurrences,
   }),
 );
 
@@ -1263,6 +1335,17 @@ export interface BoringLogStudioPreloadApi {
           readonly kind: "distribute";
           readonly distribution:
             "horizontal-gaps" | "vertical-gaps" | "horizontal-centers" | "vertical-centers";
+        }>;
+  }) => Promise<unknown>;
+  readonly mutateTextOccurrences: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly occurrenceNodeIds: readonly string[];
+    readonly mutation:
+      | Readonly<{ readonly kind: "set-visible"; readonly visible: boolean }>
+      | Readonly<{ readonly kind: "set-locked"; readonly locked: boolean }>
+      | Readonly<{
+          readonly kind: "reorder";
+          readonly placement: "front" | "forward" | "backward" | "back";
         }>;
   }) => Promise<unknown>;
 }

@@ -99,3 +99,41 @@ test("BLD-040 coalesces repeated keyboard nudges at an explicit idle boundary", 
   assert.match(entry, /Pending keyboard nudge canceled; history and geometry are unchanged/u);
   assert.match(stylesheet, /\.keyboard-nudge-preview-frame/u);
 });
+
+test("BLD-040 exposes shared visibility, lock, and drawing-order commands", async () => {
+  const html = createBoringLogStudioHtml(null);
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  const stylesheet = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url),
+    "utf8",
+  );
+  for (const id of [
+    "show-selection",
+    "hide-selection",
+    "lock-selection",
+    "unlock-selection",
+    "bring-front",
+    "bring-forward",
+    "send-backward",
+    "send-back",
+    "context-hide-selection",
+    "context-lock-selection",
+    "context-bring-front",
+    "context-send-back",
+  ]) {
+    assert.match(html, new RegExp(`id="${id}"`, "u"));
+  }
+  assert.match(entry, /async function mutateSelectedText\(/u);
+  assert.match(entry, /apis\.studio\.mutateTextOccurrences/u);
+  assert.match(entry, /commandSource: "keyboard" \| "ribbon" \| "context-menu" \| "contents"/u);
+  assert.match(entry, /tree-state-command/u);
+  assert.match(entry, /tree-visibility/u);
+  assert.match(entry, /tree-lock/u);
+  assert.match(entry, /key === "\]" \|\| key === "\["/u);
+  assert.match(entry, /node\.presentation\?\.visible !== false/u);
+  assert.match(stylesheet, /\.tree-row\.is-hidden-element/u);
+  assert.match(stylesheet, /\.tree-row\.is-locked-element/u);
+});

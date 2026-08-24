@@ -172,6 +172,14 @@ type TextArrangementOperation =
         "horizontal-gaps" | "vertical-gaps" | "horizontal-centers" | "vertical-centers";
     }>;
 
+type TextAuthoringMutation =
+  | Readonly<{ readonly kind: "set-visible"; readonly visible: boolean }>
+  | Readonly<{ readonly kind: "set-locked"; readonly locked: boolean }>
+  | Readonly<{
+      readonly kind: "reorder";
+      readonly placement: "front" | "forward" | "backward" | "back";
+    }>;
+
 type PublicationResult =
   | Readonly<{ accepted: false; code: string }>
   | Readonly<{
@@ -292,6 +300,11 @@ type StudioApis = Readonly<{
       readonly keyElementId: string;
       readonly occurrenceNodeIds: readonly string[];
       readonly operation: TextArrangementOperation;
+    }) => Promise<CommandResult>;
+    readonly mutateTextOccurrences: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly occurrenceNodeIds: readonly string[];
+      readonly mutation: TextAuthoringMutation;
     }) => Promise<CommandResult>;
   };
   readonly document: {
@@ -511,6 +524,20 @@ async function main(): Promise<void> {
       element<HTMLButtonElement>("context-distribute-horizontal"),
     ],
   });
+  const authoringButtons = Object.freeze([
+    element<HTMLButtonElement>("show-selection"),
+    element<HTMLButtonElement>("hide-selection"),
+    element<HTMLButtonElement>("lock-selection"),
+    element<HTMLButtonElement>("unlock-selection"),
+    element<HTMLButtonElement>("bring-front"),
+    element<HTMLButtonElement>("bring-forward"),
+    element<HTMLButtonElement>("send-backward"),
+    element<HTMLButtonElement>("send-back"),
+    element<HTMLButtonElement>("context-hide-selection"),
+    element<HTMLButtonElement>("context-lock-selection"),
+    element<HTMLButtonElement>("context-bring-front"),
+    element<HTMLButtonElement>("context-send-back"),
+  ]);
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
   const documentState = element<HTMLElement>("document-state");
@@ -937,7 +964,7 @@ async function main(): Promise<void> {
       (candidate): candidate is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
         candidate.id === selectedSceneNodeId && candidate.kind === "text",
     );
-    if (node === undefined) return;
+    if (node === undefined || node.presentation?.visible === false) return;
     const namespace = "http://www.w3.org/2000/svg";
     const locked = node.presentation?.locked ?? false;
     const positionMode = node.presentation?.positionMode ?? "depth-bound";
@@ -1643,6 +1670,7 @@ async function main(): Promise<void> {
         (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
           node.kind === "text" &&
           node.presentation?.locked !== true &&
+          node.presentation?.visible !== false &&
           node.frame.xMpt < bounds.xMpt + bounds.widthMpt &&
           node.frame.xMpt + node.frame.widthMpt > bounds.xMpt &&
           node.frame.yMpt < bounds.yMpt + bounds.heightMpt &&
@@ -2292,11 +2320,11 @@ async function main(): Promise<void> {
       selectButton.className = "tree-select";
       selectButton.dataset["commandOwned"] = "tree-select";
       selectButton.append(icon, label);
+      const exactTextNodes = page.nodes.filter(
+        (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+          node.semanticId === item.semanticId && node.kind === "text",
+      );
       selectButton.addEventListener("click", (event) => {
-        const exactTextNodes = page.nodes.filter(
-          (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
-            node.semanticId === item.semanticId && node.kind === "text",
-        );
         select(
           item.semanticId,
           exactTextNodes.length === 1 ? exactTextNodes[0]!.id : null,
@@ -2304,6 +2332,42 @@ async function main(): Promise<void> {
         );
       });
       row.append(chevron, selectButton);
+      if (exactTextNodes.length === 1) {
+        const exact = exactTextNodes[0]!;
+        const visibility = document.createElement("button");
+        visibility.type = "button";
+        visibility.className = "tree-state-command";
+        visibility.dataset["commandOwned"] = "tree-visibility";
+        visibility.textContent = exact.presentation?.visible === false ? "○" : "●";
+        visibility.title = exact.presentation?.visible === false ? "Show element" : "Hide element";
+        visibility.setAttribute("aria-label", `${visibility.title}: ${item.label}`);
+        visibility.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void mutateSelectedText(
+            { kind: "set-visible", visible: exact.presentation?.visible === false },
+            "contents",
+            [exact.id],
+          );
+        });
+        const lock = document.createElement("button");
+        lock.type = "button";
+        lock.className = "tree-state-command";
+        lock.dataset["commandOwned"] = "tree-lock";
+        lock.textContent = exact.presentation?.locked === true ? "🔒" : "🔓";
+        lock.title = exact.presentation?.locked === true ? "Unlock element" : "Lock element";
+        lock.setAttribute("aria-label", `${lock.title}: ${item.label}`);
+        lock.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void mutateSelectedText(
+            { kind: "set-locked", locked: exact.presentation?.locked !== true },
+            "contents",
+            [exact.id],
+          );
+        });
+        row.classList.toggle("is-hidden-element", exact.presentation?.visible === false);
+        row.classList.toggle("is-locked-element", exact.presentation?.locked === true);
+        row.append(visibility, lock);
+      }
       tree.append(row);
     }
     tree.dataset["displayMode"] = contentsMode;
@@ -2465,6 +2529,59 @@ async function main(): Promise<void> {
       button.title = distributeReason;
       button.setAttribute("aria-disabled", String(distributeUnavailable));
     }
+    const authoringUnavailable =
+      studioProjection === null || lifecycleState?.readOnly === true || selectionCount < 1;
+    const authoringReason =
+      lifecycleState?.readOnly === true
+        ? "The Log Project is read-only"
+        : studioProjection === null
+          ? "The document projection is unavailable"
+          : selectionCount < 1
+            ? "Select one or more exact text elements"
+            : "Apply to the ordered text selection in one history command";
+    for (const button of authoringButtons) {
+      button.disabled = authoringUnavailable;
+      button.title = authoringReason;
+      button.setAttribute("aria-disabled", String(authoringUnavailable));
+    }
+  }
+
+  async function mutateSelectedText(
+    mutation: TextAuthoringMutation,
+    commandSource: "keyboard" | "ribbon" | "context-menu" | "contents",
+    explicitOccurrenceNodeIds?: readonly string[],
+  ): Promise<void> {
+    if (pendingKeyboardNudge !== undefined) await flushKeyboardNudge();
+    const apis = studioApis();
+    const occurrenceNodeIds = explicitOccurrenceNodeIds ?? [...selectedTextNodeIds];
+    if (apis === null || studioProjection === null || occurrenceNodeIds.length === 0) {
+      status.textContent = "Select one or more exact text elements before authoring.";
+      return;
+    }
+    if (lifecycleState?.readOnly === true) {
+      status.textContent = "This Log Project is read-only; authoring commands are unavailable.";
+      return;
+    }
+    hideCanvasContextMenu();
+    status.textContent = `${humanize(mutation.kind)} from ${commandSource}…`;
+    const response = await apis.studio.mutateTextOccurrences({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      occurrenceNodeIds,
+      mutation,
+    });
+    if (!response.accepted || response.workingRevision === undefined) {
+      status.textContent = `Authoring rejected: ${humanize(response.code ?? "unknown")}.`;
+      return;
+    }
+    if (response.code === "TEXT_AUTHORING_UNCHANGED") {
+      status.textContent =
+        "The requested authoring state was already effective; history was unchanged.";
+      return;
+    }
+    await refreshStudioProjection(
+      response.workingRevision,
+      `${humanize(mutation.kind)} applied to ${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"} from ${commandSource}; Undo restores the prior state.`,
+    );
   }
 
   async function arrangeSelectedText(
@@ -3988,6 +4105,19 @@ async function main(): Promise<void> {
       void arrangeSelectedText({ kind: "match-size", dimension: "height" }, "ribbon"),
     "distribute-horizontal": () =>
       void arrangeSelectedText({ kind: "distribute", distribution: "horizontal-gaps" }, "ribbon"),
+    "show-selection": () =>
+      void mutateSelectedText({ kind: "set-visible", visible: true }, "ribbon"),
+    "hide-selection": () =>
+      void mutateSelectedText({ kind: "set-visible", visible: false }, "ribbon"),
+    "lock-selection": () => void mutateSelectedText({ kind: "set-locked", locked: true }, "ribbon"),
+    "unlock-selection": () =>
+      void mutateSelectedText({ kind: "set-locked", locked: false }, "ribbon"),
+    "bring-front": () => void mutateSelectedText({ kind: "reorder", placement: "front" }, "ribbon"),
+    "bring-forward": () =>
+      void mutateSelectedText({ kind: "reorder", placement: "forward" }, "ribbon"),
+    "send-backward": () =>
+      void mutateSelectedText({ kind: "reorder", placement: "backward" }, "ribbon"),
+    "send-back": () => void mutateSelectedText({ kind: "reorder", placement: "back" }, "ribbon"),
     "inspect-samples": () => select("column-sample"),
     "inspect-track": () => select("column-data-track"),
     "validate-document": () => void validateDocument(),
@@ -4029,6 +4159,14 @@ async function main(): Promise<void> {
         "context-menu",
       );
     },
+    "context-hide-selection": () =>
+      void mutateSelectedText({ kind: "set-visible", visible: false }, "context-menu"),
+    "context-lock-selection": () =>
+      void mutateSelectedText({ kind: "set-locked", locked: true }, "context-menu"),
+    "context-bring-front": () =>
+      void mutateSelectedText({ kind: "reorder", placement: "front" }, "context-menu"),
+    "context-send-back": () =>
+      void mutateSelectedText({ kind: "reorder", placement: "back" }, "context-menu"),
     "apply-property": () => void applySelectedProperty(),
     "apply-column-width": () => {
       const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
@@ -4187,6 +4325,13 @@ async function main(): Promise<void> {
     if (key === "z" || key === "y") {
       event.preventDefault();
       void navigateHistory(key === "y" || event.shiftKey ? "redo" : "undo");
+      return;
+    }
+    if ((key === "]" || key === "[") && !editableTarget) {
+      event.preventDefault();
+      const placement =
+        key === "]" ? (event.shiftKey ? "front" : "forward") : event.shiftKey ? "back" : "backward";
+      void mutateSelectedText({ kind: "reorder", placement }, "keyboard");
       return;
     }
     if (key === "pageup" || key === "pagedown") {

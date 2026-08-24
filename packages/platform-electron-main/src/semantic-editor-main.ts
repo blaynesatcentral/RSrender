@@ -65,6 +65,7 @@ import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioColumnDividerInput,
   type BoringLogStudioArrangeTextOccurrencesInput,
+  type BoringLogStudioMutateTextOccurrencesInput,
   type BoringLogStudioRegionBoundaryInput,
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioPageGuidesInput,
@@ -75,6 +76,7 @@ import {
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
+  BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
@@ -4236,6 +4238,7 @@ async function main(): Promise<void> {
     let columnDividerCommandSequence = 0;
     let regionBoundaryCommandSequence = 0;
     let arrangementCommandSequence = 0;
+    let textAuthoringCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -5207,6 +5210,228 @@ async function main(): Promise<void> {
         excludedLockedOccurrenceNodeIds: arranged.excludedLockedOccurrenceNodeIds,
       });
     };
+    const handleMutateTextOccurrences = async (
+      input: BoringLogStudioMutateTextOccurrencesInput,
+    ) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const projected = await getStudioProjection(input.expectedWorkingRevision);
+      if (currentJob === null || !projected.accepted) {
+        return Object.freeze({ accepted: false, code: "AUTHORING_UNAVAILABLE" });
+      }
+      const selected = input.occurrenceNodeIds.map((occurrenceNodeId) => {
+        for (const candidatePage of projected.projection.scene.pages) {
+          const node = candidatePage.nodes.find(
+            (candidate) => candidate.kind === "text" && candidate.id === occurrenceNodeId,
+          );
+          if (node?.kind === "text") return Object.freeze({ page: candidatePage, node });
+        }
+        return null;
+      });
+      if (
+        selected.some((entry) => entry === null) ||
+        selected.some((entry) => entry!.page.pageId !== selected[0]!.page.pageId)
+      ) {
+        return Object.freeze({ accepted: false, code: "AUTHORING_SELECTION_INVALID" });
+      }
+      const selectedEntries = selected as readonly Exclude<(typeof selected)[number], null>[];
+      const page = selectedEntries[0]!.page;
+      const selectedIds = new Set(input.occurrenceNodeIds);
+      const drawingOffsets = new Map<string, number>();
+      const authoredNodes = new Map(
+        input.mutation.kind === "reorder"
+          ? []
+          : selectedEntries.map(({ node }) => [node.id, node] as const),
+      );
+      if (input.mutation.kind === "reorder") {
+        if (selectedEntries.some(({ node }) => node.presentation?.locked === true)) {
+          return Object.freeze({ accepted: false, code: "AUTHORING_LOCKED" });
+        }
+        for (const group of page.nodes.filter(
+          (
+            candidate,
+          ): candidate is Extract<(typeof page.nodes)[number], { readonly kind: "group" }> =>
+            candidate.kind === "group" &&
+            candidate.childIds.some((childId) => selectedIds.has(childId)),
+        )) {
+          const textIds = group.childIds.filter((childId) =>
+            page.nodes.some((candidate) => candidate.kind === "text" && candidate.id === childId),
+          );
+          const desired = [...textIds];
+          if (input.mutation.placement === "front") {
+            desired.splice(
+              0,
+              desired.length,
+              ...textIds.filter((id) => !selectedIds.has(id)),
+              ...textIds.filter((id) => selectedIds.has(id)),
+            );
+          } else if (input.mutation.placement === "back") {
+            desired.splice(
+              0,
+              desired.length,
+              ...textIds.filter((id) => selectedIds.has(id)),
+              ...textIds.filter((id) => !selectedIds.has(id)),
+            );
+          } else if (input.mutation.placement === "forward") {
+            for (let index = desired.length - 2; index >= 0; index -= 1) {
+              if (selectedIds.has(desired[index]!) && !selectedIds.has(desired[index + 1]!)) {
+                [desired[index], desired[index + 1]] = [desired[index + 1]!, desired[index]!];
+              }
+            }
+          } else {
+            for (let index = 1; index < desired.length; index += 1) {
+              if (selectedIds.has(desired[index]!) && !selectedIds.has(desired[index - 1]!)) {
+                [desired[index - 1], desired[index]] = [desired[index]!, desired[index - 1]!];
+              }
+            }
+          }
+          if (desired.every((id, index) => id === textIds[index])) continue;
+          const center = Math.floor((desired.length - 1) / 2);
+          desired.forEach((nodeId, index) => {
+            const node = page.nodes.find(
+              (candidate) => candidate.kind === "text" && candidate.id === nodeId,
+            );
+            if (node?.kind === "text") {
+              authoredNodes.set(node.id, node);
+              drawingOffsets.set(node.id, index - center);
+            }
+          });
+        }
+      } else {
+        for (const { node } of selectedEntries) {
+          const changed =
+            input.mutation.kind === "set-visible"
+              ? (node.presentation?.visible ?? true) !== input.mutation.visible
+              : (node.presentation?.locked ?? false) !== input.mutation.locked;
+          if (!changed) authoredNodes.delete(node.id);
+        }
+      }
+      if (authoredNodes.size === 0) {
+        return Object.freeze({
+          accepted: true,
+          code: "TEXT_AUTHORING_UNCHANGED",
+          workingRevision: projected.projection.workingRevision,
+          dirty: projected.projection.dirty,
+          canUndo: projected.projection.canUndo,
+          canRedo: projected.projection.canRedo,
+          targetCount: 0,
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "AUTHORING_UNAVAILABLE" });
+      }
+      const layoutOverrides = [...authoredNodes.values()].map((node) => {
+        const request = projected.projection.scene.textRequests.find(
+          ({ measurementId }) => measurementId === node.measurementId,
+        );
+        if (request === undefined) throw new Error("AUTHORING_TEXT_REQUEST_MISSING");
+        const overflowPolicy = node.presentation?.overflowPolicy ?? request.overflowPolicy;
+        const identityDigest = sha256CanonicalJson({
+          boringLogIdentity: document.boringLogIdentity,
+          occurrenceNodeId: node.id,
+        }).slice("sha256:".length);
+        return Object.freeze({
+          contractVersion: 1,
+          schemaVersion: "rsrender.boring-log-text-occurrence-layout-override.v1",
+          kind: "boring-log.text-occurrence-layout-override",
+          ownerDocumentIdentity: documentIdentity,
+          boringLogIdentity: document.boringLogIdentity,
+          overrideIdentity: `urn:rsrender:text-layout-override:${identityDigest}`,
+          overrideRevision: input.expectedWorkingRevision + 1,
+          scope: "occurrence",
+          occurrenceNodeId: node.id,
+          semanticId: node.semanticId,
+          layout: Object.freeze({
+            frame: node.frame,
+            frameAnchor: node.presentation?.frameAnchor ?? "top-left",
+            paddingMpt: node.presentation?.paddingMpt ?? {
+              topMpt: 0,
+              rightMpt: 0,
+              bottomMpt: 0,
+              leftMpt: 0,
+            },
+            horizontalAlignment: node.presentation?.horizontalAlignment ?? "start",
+            verticalAlignment: node.presentation?.verticalAlignment ?? "top",
+            wrapPolicy: node.presentation?.wrapPolicy ?? request.wrapPolicy,
+            overflowPolicy,
+            ...(overflowPolicy === "shrink-to-minimum"
+              ? {
+                  minimumFontSizeMpt:
+                    node.presentation?.minimumFontSizeMpt ?? request.minimumFontSizeMpt,
+                }
+              : {}),
+            frameFillColor: node.presentation?.frameFillColor ?? null,
+            frameStrokeColor: node.presentation?.frameStrokeColor ?? null,
+            frameStrokeWidthMpt: node.presentation?.frameStrokeWidthMpt ?? 0,
+            rotationMilliDegrees: node.presentation?.rotationMilliDegrees ?? 0,
+            positionMode: node.presentation?.positionMode ?? "depth-bound",
+            locked:
+              input.mutation.kind === "set-locked"
+                ? input.mutation.locked
+                : (node.presentation?.locked ?? false),
+            visible:
+              input.mutation.kind === "set-visible"
+                ? input.mutation.visible
+                : (node.presentation?.visible ?? true),
+            drawingOrderOffset:
+              input.mutation.kind === "reorder"
+                ? (drawingOffsets.get(node.id) ?? node.presentation?.drawingOrderOffset ?? 0)
+                : (node.presentation?.drawingOrderOffset ?? 0),
+          }),
+        } as const);
+      });
+      const authored = applyBoringLogTextOccurrenceStyles(currentJob, [], layoutOverrides);
+      if (!authored.accepted) return Object.freeze({ accepted: false, code: authored.code });
+      textAuthoringCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-040:request:text-authoring:${textAuthoringCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.job.templateDigest,
+        reason: `${input.mutation.kind} for ${input.occurrenceNodeIds.length} selected text occurrence(s) in Boring Log Studio`,
+        operation: "text-occurrence-authoring",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.job.templateDigest}`,
+        authored.job,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "TEXT_OCCURRENCES_AUTHORED",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        targetCount: authoredNodes.size,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -5221,6 +5446,7 @@ async function main(): Promise<void> {
       setColumnDivider: handleColumnDivider,
       setRegionBoundary: handleRegionBoundary,
       arrangeTextOccurrences: handleArrangeTextOccurrences,
+      mutateTextOccurrences: handleMutateTextOccurrences,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -5246,6 +5472,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL, (event, input: unknown) =>
       route.arrangeTextOccurrences(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL, (event, input: unknown) =>
+      route.mutateTextOccurrences(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,

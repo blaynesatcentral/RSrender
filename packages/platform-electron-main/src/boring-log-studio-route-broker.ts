@@ -181,6 +181,18 @@ export interface BoringLogStudioArrangeTextOccurrencesInput {
       }>;
 }
 
+export interface BoringLogStudioMutateTextOccurrencesInput {
+  readonly expectedWorkingRevision: number;
+  readonly occurrenceNodeIds: readonly string[];
+  readonly mutation:
+    | Readonly<{ readonly kind: "set-visible"; readonly visible: boolean }>
+    | Readonly<{ readonly kind: "set-locked"; readonly locked: boolean }>
+    | Readonly<{
+        readonly kind: "reorder";
+        readonly placement: "front" | "forward" | "backward" | "back";
+      }>;
+}
+
 export interface BoringLogStudioProjectionPreviewInput {
   readonly expectedWorkingRevision: number;
   readonly occurrenceNodeId: string;
@@ -295,6 +307,9 @@ export class BoringLogStudioRouteBroker {
   readonly #arrangeTextOccurrences: (
     input: BoringLogStudioArrangeTextOccurrencesInput,
   ) => Promise<unknown>;
+  readonly #mutateTextOccurrences: (
+    input: BoringLogStudioMutateTextOccurrencesInput,
+  ) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -323,6 +338,9 @@ export class BoringLogStudioRouteBroker {
     readonly setRegionBoundary?: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
     readonly arrangeTextOccurrences?: (
       input: BoringLogStudioArrangeTextOccurrencesInput,
+    ) => Promise<unknown>;
+    readonly mutateTextOccurrences?: (
+      input: BoringLogStudioMutateTextOccurrencesInput,
     ) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
@@ -366,6 +384,9 @@ export class BoringLogStudioRouteBroker {
     this.#arrangeTextOccurrences =
       input.arrangeTextOccurrences ??
       (() => Promise.resolve(Object.freeze({ accepted: false, code: "ARRANGEMENT_UNAVAILABLE" })));
+    this.#mutateTextOccurrences =
+      input.mutateTextOccurrences ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "AUTHORING_UNAVAILABLE" })));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -1302,6 +1323,107 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#arrangeTextOccurrences(
         args as unknown as BoringLogStudioArrangeTextOccurrencesInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async mutateTextOccurrences(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "occurrenceNodeIds",
+      "mutation",
+    ]);
+    const mutationRecord =
+      args !== null && typeof args["mutation"] === "object" && args["mutation"] !== null
+        ? (args["mutation"] as DataRecord)
+        : null;
+    const kind = mutationRecord?.["kind"];
+    const mutation =
+      kind === "set-visible"
+        ? exactRecord(mutationRecord, ["kind", "visible"])
+        : kind === "set-locked"
+          ? exactRecord(mutationRecord, ["kind", "locked"])
+          : kind === "reorder"
+            ? exactRecord(mutationRecord, ["kind", "placement"])
+            : null;
+    const nodeIds = args?.["occurrenceNodeIds"];
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !Array.isArray(nodeIds) ||
+      nodeIds.length < 1 ||
+      nodeIds.length > 256 ||
+      nodeIds.some(
+        (nodeId) => typeof nodeId !== "string" || nodeId.length < 1 || nodeId.length > 512,
+      ) ||
+      new Set(nodeIds).size !== nodeIds.length ||
+      mutation === null ||
+      (kind === "set-visible" && typeof mutation["visible"] !== "boolean") ||
+      (kind === "set-locked" && typeof mutation["locked"] !== "boolean") ||
+      (kind === "reorder" &&
+        !["front", "forward", "backward", "back"].includes(String(mutation["placement"])))
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#mutateTextOccurrences(
+        args as unknown as BoringLogStudioMutateTextOccurrencesInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
