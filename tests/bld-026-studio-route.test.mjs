@@ -468,13 +468,14 @@ test("BLD-039 Studio route admits only one exact adjacent column-divider command
     expectedWorkingRevision: 0,
     dividerAfterColumnId: "column-description",
     requestedDividerXMpt: 300_000,
+    resizeMode: "adjacent-pair",
   };
   assert.equal((await route.setColumnDivider(routeContext, envelope(1, args))).accepted, true);
   assert.deepEqual(received, args);
   for (const invalidArgs of [
     { ...args, dividerAfterColumnId: "" },
     { ...args, requestedDividerXMpt: -1 },
-    { ...args, mode: "free-scale" },
+    { ...args, resizeMode: "free-scale" },
   ]) {
     assert.deepEqual(await route.setColumnDivider(routeContext, envelope(2, invalidArgs)), {
       accepted: false,
@@ -732,6 +733,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
       expectedWorkingRevision: result.projection.workingRevision,
       dividerAfterColumnId: "column-description",
       requestedDividerXMpt: 300_000,
+      resizeMode: "adjacent-pair",
     })})`,
     vmContext,
   );

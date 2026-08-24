@@ -31,7 +31,7 @@ import {
   applyBoringLogTextOccurrenceStyles,
   boringLogDefaultColumnMinimumWidthMpt,
   clearBoringLogTextOccurrencePresentation,
-  resizeAdjacentBoringLogColumns,
+  resizeBoringLogColumns,
 } from "@rsrender/scene";
 
 import {
@@ -2029,7 +2029,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       layout["source"] === "186000" &&
         layout["effective"] === widthMpt &&
-        (layout["provenance"] as string).includes("Effective override") &&
+        (layout["provenance"] as string).includes("Computed by the frozen page plan") &&
         layout["width"] === widthMpt &&
         layout["followingX"] === "300000",
       "STUDIO_LAYOUT_INVALID",
@@ -3130,7 +3130,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Column preview:") === true && document.getElementById("canvas-stage")?.dataset.columnDividerAfter === "column-data-track"`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Column preview (") === true && document.getElementById("canvas-stage")?.dataset.columnDividerAfter === "column-data-track"`,
         "WAIT_COLUMN_DIVIDER_CANCEL_PREVIEW",
       );
       window.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
@@ -3152,6 +3152,90 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         columnCanceled["workingRevision"] === columnRedo["workingRevision"] &&
           JSON.stringify(columnCanceled["columns"]) === JSON.stringify(columnRedo["columns"]),
         `COLUMN_DIVIDER_CANCEL_INVALID:${JSON.stringify({ columnRedo, columnCanceled })}`,
+      );
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const target = document.querySelector('.tree-row[data-semantic-id="column-description"] .tree-select'); const mode = document.getElementById("column-resize-mode"); if (!(target instanceof HTMLButtonElement) || !(mode instanceof HTMLSelectElement)) return false; target.click(); mode.value = "push-following-columns"; mode.dispatchEvent(new Event("change", { bubbles: true })); return document.getElementById("column-resize-properties")?.hidden === false && mode.value === "push-following-columns"; })()`,
+        )) === true,
+        "COLUMN_PUSH_PROPERTIES_INVALID",
+      );
+      const pushBefore = record(await pageValue(window, columnSnapshotExpression));
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const width = document.getElementById("column-width"); const apply = document.getElementById("apply-column-width"); if (!(width instanceof HTMLInputElement) || !(apply instanceof HTMLButtonElement)) return false; width.value = String(Number(width.value) + 8); apply.click(); return true; })()`,
+        )) === true,
+        "COLUMN_PUSH_APPLY_INVALID",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.includes("width applied at revision") === true && document.getElementById("editor-status")?.textContent?.includes("push-following-columns") === true`,
+        "WAIT_COLUMN_PUSH_COMMIT",
+      );
+      const pushCommitted = record(await pageValue(window, columnSnapshotExpression));
+      const pushBeforeColumns = pushBefore["columns"] as readonly DataRecord[];
+      const pushCommittedColumns = pushCommitted["columns"] as readonly DataRecord[];
+      const descriptionIndex = pushBeforeColumns.findIndex(({ id }) => id === "column-description");
+      const pushDelta =
+        (pushCommittedColumns[descriptionIndex]!["widthMpt"] as number) -
+        (pushBeforeColumns[descriptionIndex]!["widthMpt"] as number);
+      requireProbe(
+        pushCommitted["workingRevision"] === (pushBefore["workingRevision"] as number) + 1 &&
+          pushDelta === 8_000 &&
+          pushCommittedColumns.every((column, index) => {
+            const before = pushBeforeColumns[index]!;
+            if (index < descriptionIndex) return JSON.stringify(column) === JSON.stringify(before);
+            if (index === descriptionIndex) {
+              return (
+                column["xMpt"] === before["xMpt"] &&
+                column["widthMpt"] === (before["widthMpt"] as number) + pushDelta
+              );
+            }
+            if (index < pushCommittedColumns.length - 1) {
+              return (
+                column["xMpt"] === (before["xMpt"] as number) + pushDelta &&
+                column["widthMpt"] === before["widthMpt"]
+              );
+            }
+            return (
+              column["xMpt"] === (before["xMpt"] as number) + pushDelta &&
+              column["widthMpt"] === (before["widthMpt"] as number) - pushDelta &&
+              column["xMpt"] + column["widthMpt"] ===
+                (before["xMpt"] as number) + (before["widthMpt"] as number)
+            );
+          }),
+        `COLUMN_PUSH_COMMIT_INVALID:${JSON.stringify({ pushBefore, pushCommitted })}`,
+      );
+      await press(window, "#undo", "Space", "FOCUS_COLUMN_PUSH_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true`,
+        "WAIT_COLUMN_PUSH_UNDO",
+      );
+      const pushUndo = record(await pageValue(window, columnSnapshotExpression));
+      await press(window, "#redo", "Space", "FOCUS_COLUMN_PUSH_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Redo completed at revision ") === true`,
+        "WAIT_COLUMN_PUSH_REDO",
+      );
+      const pushRedo = record(await pageValue(window, columnSnapshotExpression));
+      requireProbe(
+        JSON.stringify(pushUndo["columns"]) === JSON.stringify(pushBefore["columns"]) &&
+          JSON.stringify(pushRedo["columns"]) === JSON.stringify(pushCommitted["columns"]),
+        `COLUMN_PUSH_HISTORY_INVALID:${JSON.stringify({ pushUndo, pushRedo })}`,
+      );
+      await press(window, "#undo", "Space", "FOCUS_COLUMN_PUSH_EXPORT_SAFE_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true`,
+        "WAIT_COLUMN_PUSH_EXPORT_SAFE_UNDO",
+      );
+      const pushExportSafeUndo = record(await pageValue(window, columnSnapshotExpression));
+      requireProbe(
+        JSON.stringify(pushExportSafeUndo["columns"]) === JSON.stringify(pushBefore["columns"]),
+        `COLUMN_PUSH_EXPORT_SAFE_UNDO_INVALID:${JSON.stringify({ pushBefore, pushExportSafeUndo })}`,
       );
       directManipulation = Object.freeze({
         before: directBefore,
@@ -3175,6 +3259,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
           undo: columnUndo,
           redo: columnRedo,
           canceled: columnCanceled,
+          pushFollowing: Object.freeze({
+            before: pushBefore,
+            committed: pushCommitted,
+            undo: pushUndo,
+            redo: pushRedo,
+            exportSafeUndo: pushExportSafeUndo,
+          }),
         }),
       });
       emitStudioProbePhase("direct-manipulation-observed");
@@ -4598,7 +4689,7 @@ async function main(): Promise<void> {
       if (currentJob === null) {
         return Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" });
       }
-      const resized = resizeAdjacentBoringLogColumns({
+      const resized = resizeBoringLogColumns({
         columns: currentJob.template.columns,
         constraints: currentJob.template.columns.map((column) => ({
           columnId: column.id,
@@ -4607,6 +4698,7 @@ async function main(): Promise<void> {
         })),
         dividerAfterColumnId: input.dividerAfterColumnId,
         requestedDividerXMpt: input.requestedDividerXMpt,
+        resizeMode: input.resizeMode,
       });
       if (!resized.accepted || !resized.changed) {
         return Object.freeze({
@@ -4653,8 +4745,11 @@ async function main(): Promise<void> {
         explorationIdentity: document.explorationIdentity,
         expectedEffectiveContentDigest: representation.effectiveContentDigest,
         replacementEffectiveContentDigest: authored.value.templateDigest,
-        reason: `Resize divider between ${resized.leftColumnId} and ${resized.rightColumnId} in Boring Log Studio`,
-        operation: "column-divider-adjacent-resize",
+        reason: `Resize divider between ${resized.leftColumnId} and ${resized.rightColumnId} using ${resized.resizeMode} in Boring Log Studio`,
+        operation:
+          resized.resizeMode === "adjacent-pair"
+            ? "column-divider-adjacent-resize"
+            : "column-divider-push-following-resize",
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -4672,6 +4767,8 @@ async function main(): Promise<void> {
         leftColumnId: resized.leftColumnId,
         rightColumnId: resized.rightColumnId,
         effectiveDividerXMpt: resized.effectiveDividerXMpt,
+        resizeMode: resized.resizeMode,
+        affectedColumnIds: resized.affectedColumnIds,
         clamped: resized.clamped,
       });
     };

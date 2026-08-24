@@ -33,6 +33,8 @@ type PageGuideMutation =
   | Readonly<{ readonly kind: "delete"; readonly guideId: string }>
   | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 
+type ColumnResizeMode = "adjacent-pair" | "push-following-columns";
+
 type TextTemplateProperty =
   | "fontFamilyId"
   | "fontSizeMpt"
@@ -254,6 +256,7 @@ type StudioApis = Readonly<{
       readonly expectedWorkingRevision: number;
       readonly dividerAfterColumnId: string;
       readonly requestedDividerXMpt: number;
+      readonly resizeMode: ColumnResizeMode;
     }) => Promise<CommandResult>;
   };
   readonly document: {
@@ -379,6 +382,12 @@ async function main(): Promise<void> {
   const propertyProvenance = element<HTMLElement>("property-provenance");
   const propertySourceOriginal = element<HTMLElement>("property-source-original");
   const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
+  const columnResizeProperties = element<HTMLDetailsElement>("column-resize-properties");
+  const columnWidth = element<HTMLInputElement>("column-width");
+  const columnResizeMode = element<HTMLSelectElement>("column-resize-mode");
+  const applyColumnWidth = element<HTMLButtonElement>("apply-column-width");
+  const columnMinimumWidth = element<HTMLElement>("column-minimum-width");
+  const columnResizeAffected = element<HTMLElement>("column-resize-affected");
   const textStyleProperties = element<HTMLDetailsElement>("text-style-properties");
   const textLayoutProperties = element<HTMLDetailsElement>("text-layout-properties");
   const textFontFamily = element<HTMLSelectElement>("text-font-family");
@@ -525,7 +534,13 @@ async function main(): Promise<void> {
         readonly leftColumnId: string;
         readonly rightColumnId: string;
         readonly leftXMpt: number;
-        readonly pairEndMpt: number;
+        readonly conservedEndMpt: number;
+        readonly resizeMode: ColumnResizeMode;
+        readonly affectedColumns: readonly Readonly<{
+          readonly id: string;
+          readonly xMpt: number;
+          readonly widthMpt: number;
+        }>[];
         readonly originalDividerXMpt: number;
         readonly minimumDividerXMpt: number;
         readonly maximumDividerXMpt: number;
@@ -926,10 +941,20 @@ async function main(): Promise<void> {
     const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
     const depthBody = plannedPage?.regions.find(({ role }) => role === "depth-body");
     if (depthBody === undefined) return;
-    for (const [xMpt, widthMpt] of [
-      [gesture.leftXMpt, gesture.previewDividerXMpt - gesture.leftXMpt],
-      [gesture.previewDividerXMpt, gesture.pairEndMpt - gesture.previewDividerXMpt],
-    ] as const) {
+    const deltaMpt = gesture.previewDividerXMpt - gesture.originalDividerXMpt;
+    const previewColumns = gesture.affectedColumns.map((column, index) =>
+      index === 0
+        ? Object.freeze({ xMpt: column.xMpt, widthMpt: column.widthMpt + deltaMpt })
+        : Object.freeze({
+            xMpt: column.xMpt + deltaMpt,
+            widthMpt:
+              gesture.resizeMode === "push-following-columns" &&
+              index < gesture.affectedColumns.length - 1
+                ? column.widthMpt
+                : column.widthMpt - deltaMpt,
+          }),
+    );
+    for (const { xMpt, widthMpt } of previewColumns) {
       const preview = document.createElementNS(namespace, "rect");
       preview.classList.add("column-divider-preview");
       preview.setAttribute("x", String(xMpt));
@@ -946,7 +971,8 @@ async function main(): Promise<void> {
     control?.setAttribute("aria-valuenow", String(gesture.previewDividerXMpt));
     line?.setAttribute("x1", String(gesture.previewDividerXMpt));
     line?.setAttribute("x2", String(gesture.previewDividerXMpt));
-    status.textContent = `Column preview: ${gesture.leftColumnId} ${(gesture.previewDividerXMpt - gesture.leftXMpt) / 1_000} pt · ${gesture.rightColumnId} ${(gesture.pairEndMpt - gesture.previewDividerXMpt) / 1_000} pt. Adjacent-pair width is conserved; release commits one Undo item and Esc cancels.`;
+    const modeLabel = gesture.resizeMode === "adjacent-pair" ? "adjacent pair" : "push following";
+    status.textContent = `Column preview (${modeLabel}): ${previewColumns.map(({ widthMpt }, index) => `${gesture.affectedColumns[index]!.id} ${widthMpt / 1_000} pt`).join(" · ")}. The ${((gesture.conservedEndMpt - gesture.leftXMpt) / 1_000).toFixed(0)} pt affected span is conserved; release commits one Undo item and Esc cancels.`;
   }
 
   function beginColumnDividerGesture(event: PointerEvent, leftColumnId: string): void {
@@ -965,17 +991,26 @@ async function main(): Promise<void> {
       return;
     const left = plannedPage.columns[leftIndex]!;
     const right = plannedPage.columns[leftIndex + 1]!;
+    const resizeMode: ColumnResizeMode =
+      columnResizeMode.value === "push-following-columns"
+        ? "push-following-columns"
+        : "adjacent-pair";
+    const affectedColumns = plannedPage.columns.slice(
+      leftIndex,
+      resizeMode === "adjacent-pair" ? leftIndex + 2 : undefined,
+    );
+    const terminal = affectedColumns[affectedColumns.length - 1]!;
     const leftConstraint = studioProjection.columnResizeConstraints.find(
       ({ columnId }) => columnId === left.id,
     );
-    const rightConstraint = studioProjection.columnResizeConstraints.find(
-      ({ columnId }) => columnId === right.id,
+    const terminalConstraint = studioProjection.columnResizeConstraints.find(
+      ({ columnId }) => columnId === terminal.id,
     );
     if (
       leftConstraint === undefined ||
-      rightConstraint === undefined ||
+      terminalConstraint === undefined ||
       leftConstraint.widthPinned ||
-      rightConstraint.widthPinned
+      terminalConstraint.widthPinned
     ) {
       status.textContent = "This column divider is pinned and cannot be dragged.";
       return;
@@ -986,10 +1021,15 @@ async function main(): Promise<void> {
       leftColumnId: left.id,
       rightColumnId: right.id,
       leftXMpt: left.xMpt,
-      pairEndMpt: right.xMpt + right.widthMpt,
+      conservedEndMpt: terminal.xMpt + terminal.widthMpt,
+      resizeMode,
+      affectedColumns: Object.freeze(
+        affectedColumns.map(({ id, xMpt, widthMpt }) => Object.freeze({ id, xMpt, widthMpt })),
+      ),
       originalDividerXMpt,
       minimumDividerXMpt: left.xMpt + leftConstraint.minimumWidthMpt,
-      maximumDividerXMpt: right.xMpt + right.widthMpt - rightConstraint.minimumWidthMpt,
+      maximumDividerXMpt:
+        originalDividerXMpt + terminal.widthMpt - terminalConstraint.minimumWidthMpt,
       previewDividerXMpt: originalDividerXMpt,
     };
     pageHost.setPointerCapture(event.pointerId);
@@ -1022,23 +1062,98 @@ async function main(): Promise<void> {
     status.textContent = `Column divider gesture canceled for ${gesture.leftColumnId}; history and template geometry were unchanged.`;
   }
 
-  async function commitColumnDivider(leftColumnId: string, dividerXMpt: number): Promise<void> {
+  async function commitColumnDivider(
+    leftColumnId: string,
+    dividerXMpt: number,
+    resizeMode: ColumnResizeMode,
+    successStatus?: (workingRevision: number) => string,
+  ): Promise<boolean> {
     const apis = studioApis();
-    if (apis === null || studioProjection === null) return;
+    if (apis === null || studioProjection === null) return false;
     const result = await apis.studio.setColumnDivider({
       expectedWorkingRevision: studioProjection.workingRevision,
       dividerAfterColumnId: leftColumnId,
       requestedDividerXMpt: dividerXMpt,
+      resizeMode,
     });
     if (!result.accepted || result.workingRevision === undefined) {
       status.textContent = `Column divider command failed: ${result.code ?? "COLUMN_DIVIDER_UNAVAILABLE"}`;
       installSvg();
-      return;
+      return false;
     }
-    await refreshStudioProjection(
+    return refreshStudioProjection(
       result.workingRevision,
-      `Column divider committed at revision ${result.workingRevision}; adjacent widths were conserved through shared history.`,
+      successStatus?.(result.workingRevision) ??
+        `Column divider committed at revision ${result.workingRevision}; ${resizeMode === "adjacent-pair" ? "the adjacent pair" : "the pushed suffix"} was conserved through shared history.`,
     );
+  }
+
+  function selectedPlannedColumn():
+    | Readonly<{
+        readonly columns: ResolvedBoringLogPageScene["pagePlan"]["pages"][number]["columns"];
+        readonly index: number;
+      }>
+    | undefined {
+    if (selectedSemanticId === null) return undefined;
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const index = plannedPage?.columns.findIndex(({ id }) => id === selectedSemanticId) ?? -1;
+    return plannedPage === undefined || index < 0
+      ? undefined
+      : Object.freeze({ columns: plannedPage.columns, index });
+  }
+
+  function updateColumnResizePropertySummary(): void {
+    const selected = selectedPlannedColumn();
+    if (selected === undefined) return;
+    const mode: ColumnResizeMode =
+      columnResizeMode.value === "push-following-columns"
+        ? "push-following-columns"
+        : "adjacent-pair";
+    const affected =
+      selected.index === selected.columns.length - 1
+        ? selected.columns.slice(-2)
+        : selected.columns.slice(
+            selected.index,
+            mode === "adjacent-pair" ? selected.index + 2 : undefined,
+          );
+    columnResizeAffected.textContent = affected.map(({ id }) => humanize(id)).join(" → ");
+  }
+
+  async function applySelectedColumnWidthMpt(
+    requestedWidthMpt: number,
+    legacyDescriptionControl = false,
+  ): Promise<boolean> {
+    const selected = selectedPlannedColumn();
+    if (
+      selected === undefined ||
+      !Number.isSafeInteger(requestedWidthMpt) ||
+      requestedWidthMpt <= 0
+    ) {
+      status.textContent = "Column width must be a positive whole number of mpt.";
+      return false;
+    }
+    const selectedColumn = selected.columns[selected.index]!;
+    const selectedIsLast = selected.index === selected.columns.length - 1;
+    const left = selectedIsLast ? selected.columns[selected.index - 1]! : selectedColumn;
+    const requestedDividerXMpt = selectedIsLast
+      ? selectedColumn.xMpt + selectedColumn.widthMpt - requestedWidthMpt
+      : selectedColumn.xMpt + requestedWidthMpt;
+    const mode: ColumnResizeMode =
+      selectedIsLast || columnResizeMode.value !== "push-following-columns"
+        ? "adjacent-pair"
+        : "push-following-columns";
+    applyColumnWidth.disabled = true;
+    const committed = await commitColumnDivider(
+      left.id,
+      requestedDividerXMpt,
+      mode,
+      (workingRevision) =>
+        legacyDescriptionControl
+          ? `Description Column Width Mpt applied at revision ${workingRevision}.`
+          : `${humanize(selectedColumn.id)} width applied at revision ${workingRevision} using ${mode}.`,
+    );
+    applyColumnWidth.disabled = false;
+    return committed;
   }
 
   async function finishColumnDividerGesture(event: PointerEvent): Promise<void> {
@@ -1056,7 +1171,7 @@ async function main(): Promise<void> {
         "Column divider ended without a geometry change; no history item was created.";
       return;
     }
-    await commitColumnDivider(gesture.leftColumnId, gesture.previewDividerXMpt);
+    await commitColumnDivider(gesture.leftColumnId, gesture.previewDividerXMpt, gesture.resizeMode);
   }
 
   function pointerPagePoint(event: PointerEvent): Readonly<{ xMpt: number; yMpt: number }> | null {
@@ -1838,6 +1953,7 @@ async function main(): Promise<void> {
     selectedSemanticId = semanticId;
     selectedSceneNodeId = nodeId;
     showPropertyPanel("element");
+    columnResizeProperties.hidden = true;
     const nodes = page.nodes.filter((node) => node.semanticId === semanticId);
     const representative =
       (nodeId === null ? undefined : nodes.find((node) => node.id === nodeId)) ??
@@ -1881,6 +1997,22 @@ async function main(): Promise<void> {
     propertyNodeId.textContent = representative.id;
     propertyRole.textContent = representative.role;
     propertyNodeCount.textContent = String(nodes.length);
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const selectedColumn = plannedPage?.columns.find(({ id }) => id === semanticId);
+    const columnConstraint = studioProjection?.columnResizeConstraints.find(
+      ({ columnId }) => columnId === selectedColumn?.id,
+    );
+    columnResizeProperties.hidden = selectedColumn === undefined;
+    if (selectedColumn !== undefined && columnConstraint !== undefined) {
+      columnWidth.value = String(selectedColumn.widthMpt / 1_000);
+      columnWidth.min = String(columnConstraint.minimumWidthMpt / 1_000);
+      columnMinimumWidth.textContent = `${columnConstraint.minimumWidthMpt / 1_000} pt${columnConstraint.widthPinned ? " · width pinned" : ""}`;
+      applyColumnWidth.disabled =
+        columnConstraint.widthPinned ||
+        studioProjection === null ||
+        lifecycleState?.readOnly === true;
+      updateColumnResizePropertySummary();
+    }
     const textStyle =
       representative.kind === "text"
         ? scene.resources.textStyles.find(({ id }) => id === representative.styleId)
@@ -1988,7 +2120,12 @@ async function main(): Promise<void> {
       if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
     }
     const editable = editableFor(semanticId);
-    const effective = editable === null ? null : contentValue(editable.effectiveDisplay.content);
+    const legacyColumnWidth = editable?.property === "description-column-width-mpt";
+    const effective = legacyColumnWidth
+      ? (selectedColumn?.widthMpt ?? null)
+      : editable === null
+        ? null
+        : contentValue(editable.effectiveDisplay.content);
     const sourceOriginal = editable === null ? null : contentValue(editable.sourceOriginal.content);
     propertyContent.value =
       effective === null
@@ -2005,7 +2142,9 @@ async function main(): Promise<void> {
     propertyHelp.textContent =
       editable === null
         ? "This element is computed or read-only."
-        : `${humanize(editable.property)} · ${editable.valueType} · edits route through document history.`;
+        : legacyColumnWidth
+          ? "Historic source-original width · edits now route through embedded-template divider history."
+          : `${humanize(editable.property)} · ${editable.valueType} · edits route through document history.`;
     propertyBounds.textContent = boundsText([representative]);
     propertyProvenance.textContent = provenanceText(representative.provenance);
     propertySourceOriginal.textContent =
@@ -2120,6 +2259,14 @@ async function main(): Promise<void> {
             : editable.property === "lithology-pattern-style"
               ? "Choose silt-horizontal-dash, sand-dot-ring, or gravel-dot-ring."
               : "Enter a valid property value.";
+      propertyContent.focus();
+      return;
+    }
+    if (editable.property === "description-column-width-mpt") {
+      applyProperty.disabled = true;
+      const applied = await applySelectedColumnWidthMpt(Number(propertyContent.value), true);
+      applyProperty.disabled = false;
+      if (applied) await refreshLifecycleStateSilently();
       propertyContent.focus();
       return;
     }
@@ -2748,7 +2895,13 @@ async function main(): Promise<void> {
         Number(divider.getAttribute("aria-valuenow")) +
         (event.key === "ArrowLeft" ? -stepMpt : stepMpt);
       event.preventDefault();
-      void commitColumnDivider(leftColumnId, requested);
+      void commitColumnDivider(
+        leftColumnId,
+        requested,
+        columnResizeMode.value === "push-following-columns"
+          ? "push-following-columns"
+          : "adjacent-pair",
+      );
       return;
     }
     if (!event.key.startsWith("Arrow") || directManipulationGesture !== undefined) return;
@@ -2984,6 +3137,10 @@ async function main(): Promise<void> {
     "property-tab-diagnostics": showDiagnostics,
     "context-properties": focusSelectedProperties,
     "apply-property": () => void applySelectedProperty(),
+    "apply-column-width": () => {
+      const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
+      void applySelectedColumnWidthMpt(requestedWidthMpt);
+    },
     "apply-text-style": () => void applySelectedTextStyle(),
     "detach-text-annotation": () => void detachSelectedTextAsAnnotation(),
     "reset-text-presentation": () => void resetSelectedTextPresentation(),
@@ -3003,6 +3160,10 @@ async function main(): Promise<void> {
   document.body.dataset["ownedCommandCount"] = String(Object.keys(commandRegistry).length);
   textOverflowPolicy.addEventListener("change", () => {
     textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
+  });
+  columnResizeMode.addEventListener("change", () => {
+    updateColumnResizePropertySummary();
+    status.textContent = `Log Column divider behavior set to ${humanize(columnResizeMode.value)} for the next Canvas or numeric edit.`;
   });
   function updateTextStyleScopeHelp(): void {
     const summary = studioProjection?.textTemplateScopeSummary;

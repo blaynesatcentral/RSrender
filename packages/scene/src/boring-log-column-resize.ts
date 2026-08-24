@@ -2,11 +2,16 @@ import type { BoringLogColumnInput } from "@rsrender/contracts";
 
 export const boringLogColumnResizeRevision = "bld-039-column-resize-v1" as const;
 
+export type BoringLogColumnResizeMode = "adjacent-pair" | "push-following-columns";
+
 export function boringLogDefaultColumnMinimumWidthMpt(role: string): number {
   const minimums: Readonly<Record<string, number>> = Object.freeze({
     elevation: 18_000,
+    "elevation-ruler": 18_000,
     depth: 18_000,
+    "depth-ruler": 18_000,
     lithology: 18_000,
+    "lithology-pattern": 18_000,
     "material-description": 80_000,
     sample: 20_000,
     recovery: 18_000,
@@ -28,9 +33,12 @@ export type BoringLogAdjacentColumnResizeResult =
   | Readonly<{
       accepted: true;
       changed: boolean;
+      resizeMode: BoringLogColumnResizeMode;
       columns: readonly BoringLogColumnInput[];
       leftColumnId: string;
       rightColumnId: string;
+      terminalColumnId: string;
+      affectedColumnIds: readonly string[];
       originalDividerXMpt: number;
       requestedDividerXMpt: number;
       effectiveDividerXMpt: number;
@@ -84,12 +92,13 @@ function exactConstraint(input: unknown): input is BoringLogColumnResizeConstrai
   );
 }
 
-export function resizeAdjacentBoringLogColumns(
+export function resizeBoringLogColumns(
   input: Readonly<{
     readonly columns: readonly BoringLogColumnInput[];
     readonly constraints: readonly BoringLogColumnResizeConstraint[];
     readonly dividerAfterColumnId: string;
     readonly requestedDividerXMpt: number;
+    readonly resizeMode: BoringLogColumnResizeMode;
   }>,
 ): BoringLogAdjacentColumnResizeResult {
   try {
@@ -103,7 +112,8 @@ export function resizeAdjacentBoringLogColumns(
       !input.constraints.every(exactConstraint) ||
       typeof input.dividerAfterColumnId !== "string" ||
       input.dividerAfterColumnId.length === 0 ||
-      !Number.isSafeInteger(input.requestedDividerXMpt)
+      !Number.isSafeInteger(input.requestedDividerXMpt) ||
+      !["adjacent-pair", "push-following-columns"].includes(input.resizeMode)
     ) {
       return rejected("COLUMN_RESIZE_ARGUMENT_INVALID");
     }
@@ -140,22 +150,26 @@ export function resizeAdjacentBoringLogColumns(
     }
     const left = input.columns[leftIndex]!;
     const right = input.columns[leftIndex + 1]!;
+    const terminal =
+      input.resizeMode === "adjacent-pair" ? right : input.columns[input.columns.length - 1]!;
     const leftConstraint = constraints.get(left.id)!;
-    const rightConstraint = constraints.get(right.id)!;
+    const terminalConstraint = constraints.get(terminal.id)!;
     const originalDividerXMpt = right.xMpt;
     if (
       input.requestedDividerXMpt !== originalDividerXMpt &&
-      (leftConstraint.widthPinned || rightConstraint.widthPinned)
+      (leftConstraint.widthPinned || terminalConstraint.widthPinned)
     ) {
       return rejected("COLUMN_RESIZE_PINNED");
     }
-    const pairEndMpt = right.xMpt + right.widthMpt;
+    const conservedEndMpt = terminal.xMpt + terminal.widthMpt;
     const minimumDividerXMpt = left.xMpt + leftConstraint.minimumWidthMpt;
-    const maximumDividerXMpt = pairEndMpt - rightConstraint.minimumWidthMpt;
+    const maximumDividerXMpt =
+      originalDividerXMpt + terminal.widthMpt - terminalConstraint.minimumWidthMpt;
     const effectiveDividerXMpt = Math.min(
       maximumDividerXMpt,
       Math.max(minimumDividerXMpt, input.requestedDividerXMpt),
     );
+    const deltaMpt = effectiveDividerXMpt - originalDividerXMpt;
     const columns = input.columns.map((column, index) => {
       if (index === leftIndex) {
         return Object.freeze({
@@ -163,30 +177,55 @@ export function resizeAdjacentBoringLogColumns(
           widthMpt: effectiveDividerXMpt - left.xMpt,
         }) as BoringLogColumnInput;
       }
-      if (index === leftIndex + 1) {
+      if (input.resizeMode === "adjacent-pair" && index === leftIndex + 1) {
         return Object.freeze({
           ...column,
           xMpt: effectiveDividerXMpt,
-          widthMpt: pairEndMpt - effectiveDividerXMpt,
+          widthMpt: conservedEndMpt - effectiveDividerXMpt,
+        }) as BoringLogColumnInput;
+      }
+      if (input.resizeMode === "push-following-columns" && index > leftIndex) {
+        return Object.freeze({
+          ...column,
+          xMpt: column.xMpt + deltaMpt,
+          widthMpt:
+            index === input.columns.length - 1 ? column.widthMpt - deltaMpt : column.widthMpt,
         }) as BoringLogColumnInput;
       }
       return Object.freeze({ ...column });
     });
+    const affectedColumnIds = input.columns
+      .slice(leftIndex, input.resizeMode === "adjacent-pair" ? leftIndex + 2 : undefined)
+      .map(({ id }) => id);
     return Object.freeze({
       accepted: true,
       changed: effectiveDividerXMpt !== originalDividerXMpt,
+      resizeMode: input.resizeMode,
       columns: Object.freeze(columns),
       leftColumnId: left.id,
       rightColumnId: right.id,
+      terminalColumnId: terminal.id,
+      affectedColumnIds: Object.freeze(affectedColumnIds),
       originalDividerXMpt,
       requestedDividerXMpt: input.requestedDividerXMpt,
       effectiveDividerXMpt,
       clamped: effectiveDividerXMpt !== input.requestedDividerXMpt,
-      conservedWidthMpt: pairEndMpt - left.xMpt,
+      conservedWidthMpt: conservedEndMpt - left.xMpt,
       leftMinimumReached: effectiveDividerXMpt === minimumDividerXMpt,
       rightMinimumReached: effectiveDividerXMpt === maximumDividerXMpt,
     });
   } catch {
     return rejected("COLUMN_RESIZE_ARGUMENT_INVALID");
   }
+}
+
+export function resizeAdjacentBoringLogColumns(
+  input: Readonly<{
+    readonly columns: readonly BoringLogColumnInput[];
+    readonly constraints: readonly BoringLogColumnResizeConstraint[];
+    readonly dividerAfterColumnId: string;
+    readonly requestedDividerXMpt: number;
+  }>,
+): BoringLogAdjacentColumnResizeResult {
+  return resizeBoringLogColumns({ ...input, resizeMode: "adjacent-pair" });
 }

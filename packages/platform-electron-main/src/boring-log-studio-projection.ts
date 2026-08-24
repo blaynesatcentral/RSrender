@@ -182,7 +182,7 @@ export function prepareBoringLogStudioProjection(
     let intervals = jobInput.value.document.lithologyIntervals;
     let samples = jobInput.value.document.samples;
     let remarks = jobInput.value.document.remarks;
-    let template = jobInput.value.template;
+    const template = jobInput.value.template;
     const provenanceByNode = new Map<string, BoringLogValueProvenance>();
     const setNodeProvenance = (
       semanticId: string,
@@ -253,33 +253,14 @@ export function prepareBoringLogStudioProjection(
             setNodeProvenance(`lithology:${interval.id}`, "lithology-pattern-interval", provenance);
           }
         }
-      } else {
-        const widthMpt = effective as number;
-        if (!Number.isSafeInteger(widthMpt) || widthMpt < 100_000 || widthMpt > 230_000) {
+      } else if (binding.property === "description-column-width-mpt") {
+        if (!Number.isSafeInteger(effective)) {
           return rejected("BORING_LOG_STUDIO_EDITABLE_VALUE_INVALID");
         }
-        const original = template.columns.find(({ role }) => role === "material-description");
-        if (original === undefined) return rejected("BORING_LOG_STUDIO_LAYOUT_REJECTED");
-        const delta = widthMpt - original.widthMpt;
-        template = {
-          ...template,
-          columns: template.columns.map((column) => {
-            if (column.role === "material-description") {
-              return { ...column, widthMpt: widthMpt as typeof column.widthMpt };
-            }
-            if (column.role === "remarks") {
-              return {
-                ...column,
-                xMpt: (column.xMpt + delta) as typeof column.xMpt,
-                widthMpt: (column.widthMpt - delta) as typeof column.widthMpt,
-              };
-            }
-            return column.xMpt > original.xMpt
-              ? { ...column, xMpt: (column.xMpt + delta) as typeof column.xMpt }
-              : column;
-          }),
-        };
-        setNodeProvenance(binding.semanticId, "*", provenance);
+        // Retain the historic source field for source-original compatibility only. Production
+        // geometry is owned by the embedded template and the BLD-039 divider command.
+      } else {
+        return rejected("BORING_LOG_STUDIO_CONFIGURATION_INVALID");
       }
       editableValues.push(
         Object.freeze({

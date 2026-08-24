@@ -286,12 +286,15 @@ test("BLD-026 style and layout values rebuild vector resources and integer mpt g
   const columns = laidOut.projection.scene.pagePlan.pages[0].columns;
   const description = columns.find(({ role }) => role === "material-description");
   const remarks = columns.find(({ role }) => role === "remarks");
-  assert.equal(description.widthMpt, widthMpt);
+  assert.equal(
+    description.widthMpt,
+    session.layoutJob.template.columns.find(({ role }) => role === "material-description").widthMpt,
+  );
   assert.equal(remarks.xMpt + remarks.widthMpt, 588_000);
   assert.equal(
     laidOut.projection.scene.pages[0].nodes.find(
       ({ semanticId, kind }) => semanticId === "column-description" && kind === "rect",
-    ).provenance.provenanceClass,
-    "effective-override",
+    ).provenance,
+    null,
   );
 });

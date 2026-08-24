@@ -15,6 +15,7 @@ import {
   boringLogDefaultColumnMinimumWidthMpt,
   boringLogColumnResizeRevision,
   resizeAdjacentBoringLogColumns,
+  resizeBoringLogColumns,
 } from "../packages/scene/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
@@ -54,9 +55,32 @@ test("BLD-039 adjacent divider resize conserves the pair and every following col
 });
 
 test("BLD-039 default template constraints are explicit and role-aware", () => {
+  assert.equal(boringLogDefaultColumnMinimumWidthMpt("elevation-ruler"), 18_000);
+  assert.equal(boringLogDefaultColumnMinimumWidthMpt("depth-ruler"), 18_000);
+  assert.equal(boringLogDefaultColumnMinimumWidthMpt("lithology-pattern"), 18_000);
   assert.equal(boringLogDefaultColumnMinimumWidthMpt("material-description"), 80_000);
   assert.equal(boringLogDefaultColumnMinimumWidthMpt("penetration-moisture-plasticity"), 60_000);
   assert.equal(boringLogDefaultColumnMinimumWidthMpt("custom-column"), 12_000);
+});
+
+test("BLD-039 push-following resize moves the suffix and preserves its terminal boundary", () => {
+  const result = resizeBoringLogColumns({
+    columns,
+    constraints,
+    dividerAfterColumnId: "column-a",
+    requestedDividerXMpt: 60_000,
+    resizeMode: "push-following-columns",
+  });
+  assert.equal(result.accepted, true);
+  assert.equal(result.resizeMode, "push-following-columns");
+  assert.deepEqual(result.affectedColumnIds, ["column-a", "column-b", "column-c"]);
+  assert.deepEqual(result.columns, [
+    { id: "column-a", role: "a", xMpt: 24_000, widthMpt: 36_000 },
+    { id: "column-b", role: "b", xMpt: 60_000, widthMpt: 48_000 },
+    { id: "column-c", role: "c", xMpt: 108_000, widthMpt: 72_000 },
+  ]);
+  assert.equal(result.columns.at(-1).xMpt + result.columns.at(-1).widthMpt, 180_000);
+  assert.equal(result.conservedWidthMpt, 156_000);
 });
 
 test("BLD-039 adjacent divider resize clamps to both explicit minimum widths", () => {
@@ -148,10 +172,14 @@ test("BLD-039 adjacent divider resize is detached and total for hostile input", 
   );
 });
 
-test("BLD-039 Canvas and main route consume the constrained divider authority", async () => {
-  const [entry, stylesheet, main] = await Promise.all([
+test("BLD-039 Canvas, Properties, and main route consume the constrained divider authority", async () => {
+  const [entry, route, stylesheet, main] = await Promise.all([
     readFile(
       new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../packages/renderer-ui/src/boring-log-studio-route.ts", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url), "utf8"),
@@ -162,22 +190,26 @@ test("BLD-039 Canvas and main route consume the constrained divider authority", 
   ]);
   assert.match(entry, /id = "column-divider-controls"/u);
   assert.match(entry, /setAttribute\("role", "separator"\)/u);
-  assert.match(entry, /Column preview:/u);
-  assert.match(entry, /Adjacent-pair width is conserved/u);
+  assert.match(entry, /Column preview \(/u);
+  assert.match(entry, /push-following-columns/u);
+  assert.match(entry, /affected span is conserved/u);
   assert.match(entry, /setColumnDivider/u);
   assert.match(
     entry,
     /Column divider gesture canceled[\s\S]*history and template geometry were unchanged/u,
   );
   assert.match(entry, /ArrowLeft[\s\S]*ArrowRight/u);
+  assert.match(route, /id="column-resize-properties"/u);
+  assert.match(route, /value="push-following-columns"/u);
   assert.match(stylesheet, /\.column-divider-control/u);
   assert.match(stylesheet, /\.column-divider-preview/u);
-  assert.match(main, /resizeAdjacentBoringLogColumns/u);
+  assert.match(main, /resizeBoringLogColumns/u);
   assert.match(main, /commitEmbeddedTemplateReplacement/u);
   assert.match(main, /column-divider-adjacent-resize/u);
+  assert.match(main, /column-divider-push-following-resize/u);
 });
 
-test("BLD-039 adjacent divider replacement commits as one shared history item", async () => {
+test("BLD-039 push-following divider replacement commits as one shared history item", async () => {
   const documentId = "urn:rsrender:log-project:bld-039:column-divider";
   const layoutJob = {
     contractVersion: 1,
@@ -225,15 +257,16 @@ test("BLD-039 adjacent divider replacement commits as one shared history item", 
         embeddedTemplateRepresentationIdentity ===
         assignment.embeddedTemplateRepresentationIdentity,
     );
-  const resized = resizeAdjacentBoringLogColumns({
+  const resized = resizeBoringLogColumns({
     columns: layoutJob.template.columns,
     constraints: layoutJob.template.columns.map((column) => ({
       columnId: column.id,
       minimumWidthMpt: boringLogDefaultColumnMinimumWidthMpt(column.role),
       widthPinned: false,
     })),
-    dividerAfterColumnId: "column-data-track",
-    requestedDividerXMpt: 515_000,
+    dividerAfterColumnId: "column-description",
+    requestedDividerXMpt: 304_000,
+    resizeMode: "push-following-columns",
   });
   assert.equal(resized.accepted, true);
   const template = { ...layoutJob.template, columns: resized.columns };
@@ -251,8 +284,8 @@ test("BLD-039 adjacent divider replacement commits as one shared history item", 
     explorationIdentity,
     expectedEffectiveContentDigest: initialRepresentation.effectiveContentDigest,
     replacementEffectiveContentDigest: authored.templateDigest,
-    reason: "Resize adjacent Log Columns",
-    operation: "column-divider-adjacent-resize",
+    reason: "Resize and push following Log Columns",
+    operation: "column-divider-push-following-resize",
   });
   assert.equal(committed.accepted, true, JSON.stringify(committed));
   assert.equal(committed.workingRevision, 1);

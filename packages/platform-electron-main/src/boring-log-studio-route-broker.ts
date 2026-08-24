@@ -150,6 +150,7 @@ export interface BoringLogStudioColumnDividerInput {
   readonly expectedWorkingRevision: number;
   readonly dividerAfterColumnId: string;
   readonly requestedDividerXMpt: number;
+  readonly resizeMode: "adjacent-pair" | "push-following-columns";
 }
 
 export interface BoringLogStudioProjectionPreviewInput {
@@ -1043,6 +1044,7 @@ export class BoringLogStudioRouteBroker {
       "expectedWorkingRevision",
       "dividerAfterColumnId",
       "requestedDividerXMpt",
+      "resizeMode",
     ]);
     if (
       args === null ||
@@ -1052,7 +1054,8 @@ export class BoringLogStudioRouteBroker {
       args["dividerAfterColumnId"].length < 1 ||
       args["dividerAfterColumnId"].length > 128 ||
       !Number.isSafeInteger(args["requestedDividerXMpt"]) ||
-      (args["requestedDividerXMpt"] as number) < 0
+      (args["requestedDividerXMpt"] as number) < 0 ||
+      !["adjacent-pair", "push-following-columns"].includes(String(args["resizeMode"]))
     ) {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }

@@ -737,6 +737,7 @@ const setColumnDivider = Object.freeze(async function setColumnDivider(input: un
     "expectedWorkingRevision",
     "dividerAfterColumnId",
     "requestedDividerXMpt",
+    "resizeMode",
   ]);
   if (
     args === null ||
@@ -744,7 +745,8 @@ const setColumnDivider = Object.freeze(async function setColumnDivider(input: un
     typeof args["dividerAfterColumnId"] !== "string" ||
     args["dividerAfterColumnId"].length < 1 ||
     args["dividerAfterColumnId"].length > 128 ||
-    !isNonnegativeSafeInteger(args["requestedDividerXMpt"])
+    !isNonnegativeSafeInteger(args["requestedDividerXMpt"]) ||
+    !["adjacent-pair", "push-following-columns"].includes(String(args["resizeMode"]))
   ) {
     return unavailable;
   }
@@ -1071,6 +1073,7 @@ export interface BoringLogStudioPreloadApi {
     readonly expectedWorkingRevision: number;
     readonly dividerAfterColumnId: string;
     readonly requestedDividerXMpt: number;
+    readonly resizeMode: "adjacent-pair" | "push-following-columns";
   }) => Promise<unknown>;
 }
 

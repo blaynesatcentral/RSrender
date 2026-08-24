@@ -27,10 +27,12 @@ export {
   boringLogDefaultColumnMinimumWidthMpt,
   boringLogColumnResizeRevision,
   resizeAdjacentBoringLogColumns,
+  resizeBoringLogColumns,
 } from "./boring-log-column-resize.js";
 export type {
   BoringLogAdjacentColumnResizeResult,
   BoringLogColumnResizeConstraint,
+  BoringLogColumnResizeMode,
 } from "./boring-log-column-resize.js";
 export type {
   BoringLogTemplateTextProperty,
