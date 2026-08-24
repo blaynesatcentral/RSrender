@@ -738,6 +738,18 @@ textarea {
   cursor: grabbing;
   user-select: none;
 }
+.canvas-stage.is-marquee-selecting,
+.canvas-stage.is-marquee-selecting .scene-node {
+  cursor: crosshair;
+  user-select: none;
+}
+.canvas-marquee-selection {
+  fill: rgb(0 122 194 / 12%);
+  stroke: #007ac2;
+  stroke-width: 1200;
+  stroke-dasharray: 4500 2500;
+  pointer-events: none;
+}
 .canvas-context-menu {
   position: fixed;
   top: 124px;

@@ -57,3 +57,23 @@ test("BLD-040 makes the Key Element visually distinct from the rest of the selec
   assert.match(entry, /occurrence\.classList\.add\("is-key-element"\)/u);
   assert.match(entry, /button\.setAttribute\("aria-disabled", String\(unavailable\)\)/u);
 });
+
+test("BLD-040 supports additive Contents selection and a cancelable unlocked-text marquee", async () => {
+  const entry = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+    "utf8",
+  );
+  const stylesheet = await readFile(
+    new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(entry, /function beginMarquee\(event: PointerEvent\): void/u);
+  assert.match(entry, /function finishMarquee\(event: PointerEvent\): void/u);
+  assert.match(entry, /function cancelMarquee\(\): void/u);
+  assert.match(entry, /node\.presentation\?\.locked !== true/u);
+  assert.match(entry, /event\.shiftKey \|\| event\.ctrlKey \|\| event\.metaKey/u);
+  assert.match(entry, /exactTextNodes\.length === 1 \? exactTextNodes\[0\]!\.id : null/u);
+  assert.match(entry, /Properties values follow the Key Element/u);
+  assert.match(stylesheet, /\.canvas-marquee-selection/u);
+  assert.match(stylesheet, /\.canvas-stage\.is-marquee-selecting/u);
+});

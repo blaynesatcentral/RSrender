@@ -585,6 +585,14 @@ async function main(): Promise<void> {
         readonly originalFrameTransform: string | null;
       }
     | undefined;
+  let marqueeGesture:
+    | {
+        readonly pointerId: number;
+        readonly start: Readonly<{ xMpt: number; yMpt: number }>;
+        current: Readonly<{ xMpt: number; yMpt: number }>;
+        readonly additive: boolean;
+      }
+    | undefined;
   let pageGuideGesture:
     | {
         readonly pointerId: number;
@@ -1499,6 +1507,163 @@ async function main(): Promise<void> {
     return Object.freeze({ xMpt: Math.round(pagePoint.x), yMpt: Math.round(pagePoint.y) });
   }
 
+  function installOrderedTextSelection(
+    occurrenceNodeIds: readonly string[],
+    keyElementId: string,
+    announcement: string,
+  ): void {
+    const key = page.nodes.find(
+      (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+        node.kind === "text" && node.id === keyElementId,
+    );
+    if (key === undefined || occurrenceNodeIds.length === 0) {
+      clearSelection();
+      return;
+    }
+    select(key.semanticId, key.id);
+    selectedTextNodeIds.clear();
+    for (const occurrenceNodeId of occurrenceNodeIds) selectedTextNodeIds.add(occurrenceNodeId);
+    selectedSemanticId = key.semanticId;
+    selectedSceneNodeId = key.id;
+    installSvg();
+    renderTree();
+    updateArrangementControls();
+    selectionName.textContent = `${occurrenceNodeIds.length} text elements`;
+    propertySemanticId.textContent =
+      occurrenceNodeIds.length > 1 ? "Mixed selection" : key.semanticId;
+    propertyBounds.textContent =
+      occurrenceNodeIds.length > 1
+        ? `${occurrenceNodeIds.length} independent text frames; Properties values follow the Key Element`
+        : boundsText([key]);
+    selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${key.id}`;
+    status.textContent = announcement;
+  }
+
+  function marqueeBounds(): TextFrame | null {
+    const gesture = marqueeGesture;
+    if (gesture === undefined) return null;
+    const xMpt = Math.min(gesture.start.xMpt, gesture.current.xMpt);
+    const yMpt = Math.min(gesture.start.yMpt, gesture.current.yMpt);
+    return Object.freeze({
+      xMpt,
+      yMpt,
+      widthMpt: Math.max(1, Math.abs(gesture.current.xMpt - gesture.start.xMpt)),
+      heightMpt: Math.max(1, Math.abs(gesture.current.yMpt - gesture.start.yMpt)),
+    });
+  }
+
+  function renderMarquee(): void {
+    const svg = pageHost.querySelector<SVGSVGElement>("svg");
+    const bounds = marqueeBounds();
+    if (svg === null || bounds === null) return;
+    let rectangle = svg.querySelector<SVGRectElement>("#canvas-marquee-selection");
+    if (rectangle === null) {
+      rectangle = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rectangle.id = "canvas-marquee-selection";
+      rectangle.classList.add("canvas-marquee-selection");
+      rectangle.setAttribute("aria-hidden", "true");
+      svg.append(rectangle);
+    }
+    rectangle.setAttribute("x", String(bounds.xMpt));
+    rectangle.setAttribute("y", String(bounds.yMpt));
+    rectangle.setAttribute("width", String(bounds.widthMpt));
+    rectangle.setAttribute("height", String(bounds.heightMpt));
+  }
+
+  function beginMarquee(event: PointerEvent): void {
+    if (event.button !== 0 || interactionMode !== "select" || marqueeGesture !== undefined) return;
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      target.closest("svg") === null ||
+      target.closest("svg") !== pageHost.querySelector("svg")
+    )
+      return;
+    if (
+      target.closest(
+        "[data-node-id], [data-direct-manipulation-handle], [data-divider-after-column-id], [data-region-boundary]",
+      ) !== null
+    )
+      return;
+    const point = pointerPagePoint(event);
+    if (point === null) return;
+    marqueeGesture = {
+      pointerId: event.pointerId,
+      start: point,
+      current: point,
+      additive: event.shiftKey || event.ctrlKey || event.metaKey,
+    };
+    pageHost.setPointerCapture(event.pointerId);
+    canvasStage.classList.add("is-marquee-selecting");
+    renderMarquee();
+    event.preventDefault();
+  }
+
+  function updateMarquee(event: PointerEvent): void {
+    if (marqueeGesture?.pointerId !== event.pointerId) return;
+    const point = pointerPagePoint(event);
+    if (point === null) return;
+    marqueeGesture.current = point;
+    renderMarquee();
+    const bounds = marqueeBounds()!;
+    status.textContent = `Marquee ${bounds.widthMpt} × ${bounds.heightMpt} mpt; release selects unlocked text occurrences.`;
+  }
+
+  function finishMarquee(event: PointerEvent): void {
+    const gesture = marqueeGesture;
+    if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    const bounds = marqueeBounds();
+    marqueeGesture = undefined;
+    pageHost.querySelector("#canvas-marquee-selection")?.remove();
+    canvasStage.classList.remove("is-marquee-selecting");
+    if (pageHost.hasPointerCapture(event.pointerId))
+      pageHost.releasePointerCapture(event.pointerId);
+    suppressCanvasClick = true;
+    event.preventDefault();
+    if (bounds === null || bounds.widthMpt < 2_000 || bounds.heightMpt < 2_000) {
+      if (!gesture.additive) clearSelection();
+      return;
+    }
+    const hitIds = page.nodes
+      .filter(
+        (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+          node.kind === "text" &&
+          node.presentation?.locked !== true &&
+          node.frame.xMpt < bounds.xMpt + bounds.widthMpt &&
+          node.frame.xMpt + node.frame.widthMpt > bounds.xMpt &&
+          node.frame.yMpt < bounds.yMpt + bounds.heightMpt &&
+          node.frame.yMpt + node.frame.heightMpt > bounds.yMpt,
+      )
+      .map(({ id }) => id);
+    const nextIds = gesture.additive ? [...selectedTextNodeIds] : [];
+    for (const hitId of hitIds) {
+      const existingIndex = nextIds.indexOf(hitId);
+      if (gesture.additive && existingIndex >= 0) nextIds.splice(existingIndex, 1);
+      else nextIds.push(hitId);
+    }
+    const keyElementId = nextIds.at(-1);
+    if (keyElementId === undefined) {
+      clearSelection();
+      return;
+    }
+    installOrderedTextSelection(
+      nextIds,
+      keyElementId,
+      `${nextIds.length} unlocked text occurrence${nextIds.length === 1 ? "" : "s"} selected by marquee; the orange occurrence is the Key Element.`,
+    );
+  }
+
+  function cancelMarquee(): void {
+    const gesture = marqueeGesture;
+    if (gesture === undefined) return;
+    if (pageHost.hasPointerCapture(gesture.pointerId))
+      pageHost.releasePointerCapture(gesture.pointerId);
+    marqueeGesture = undefined;
+    pageHost.querySelector("#canvas-marquee-selection")?.remove();
+    canvasStage.classList.remove("is-marquee-selecting");
+    status.textContent = "Marquee selection canceled.";
+  }
+
   function renderPageRulers(): void {
     const render = (host: SVGSVGElement, extentMpt: number): void => {
       host.replaceChildren();
@@ -2113,7 +2278,17 @@ async function main(): Promise<void> {
       selectButton.className = "tree-select";
       selectButton.dataset["commandOwned"] = "tree-select";
       selectButton.append(icon, label);
-      selectButton.addEventListener("click", () => select(item.semanticId));
+      selectButton.addEventListener("click", (event) => {
+        const exactTextNodes = page.nodes.filter(
+          (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
+            node.semanticId === item.semanticId && node.kind === "text",
+        );
+        select(
+          item.semanticId,
+          exactTextNodes.length === 1 ? exactTextNodes[0]!.id : null,
+          event.shiftKey || event.ctrlKey || event.metaKey,
+        );
+      });
       row.append(chevron, selectButton);
       tree.append(row);
     }
@@ -3349,6 +3524,10 @@ async function main(): Promise<void> {
   pageHost.addEventListener("pointermove", updateDirectManipulation);
   pageHost.addEventListener("pointerup", (event) => void finishDirectManipulation(event));
   pageHost.addEventListener("pointercancel", () => cancelDirectManipulation());
+  pageHost.addEventListener("pointerdown", beginMarquee);
+  pageHost.addEventListener("pointermove", updateMarquee);
+  pageHost.addEventListener("pointerup", finishMarquee);
+  pageHost.addEventListener("pointercancel", cancelMarquee);
   pageHost.addEventListener("pointerdown", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -3770,6 +3949,11 @@ async function main(): Promise<void> {
     if (zoomMode === "fit") requestAnimationFrame(fitPage);
   });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && marqueeGesture !== undefined) {
+      event.preventDefault();
+      cancelMarquee();
+      return;
+    }
     if (event.key === "Escape" && regionBoundaryGesture !== undefined) {
       event.preventDefault();
       cancelRegionBoundaryGesture();
