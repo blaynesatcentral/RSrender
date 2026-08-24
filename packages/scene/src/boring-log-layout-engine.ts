@@ -1437,6 +1437,142 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     2,
   );
 
+  for (const clone of job.template.textOccurrenceClones ?? []) {
+    const source = nodes.find(({ id }) => id === clone.sourceOccurrenceNodeId);
+    if (source?.kind !== "text")
+      throw new Error(`missing-clone-source:${clone.sourceOccurrenceNodeId}`);
+    if (nodes.some(({ id }) => id === clone.cloneNodeId)) {
+      throw new Error(`duplicate-clone-node:${clone.cloneNodeId}`);
+    }
+    const sourceRequest = textRequests.find(
+      ({ measurementId }) => measurementId === source.measurementId,
+    );
+    if (!sourceRequest) throw new Error(`missing-clone-measurement:${source.measurementId}`);
+    const sourcePresentation = source.presentation;
+    const occurrenceLayoutBinding = job.template.bindings.find(
+      (binding) =>
+        binding.elementId === clone.cloneNodeId &&
+        binding.path === "presentation.text-occurrence-layout",
+    );
+    const occurrenceLayout = job.template.occurrenceLayouts?.find(
+      ({ id }) => id === occurrenceLayoutBinding?.styleId,
+    );
+    const occurrenceStyle = job.template.bindings.find(
+      (binding) =>
+        binding.elementId === clone.cloneNodeId &&
+        binding.path === "presentation.text-occurrence-style",
+    );
+    const frame =
+      occurrenceLayout?.frame ??
+      rect(
+        source.frame.xMpt + clone.offsetXMpt,
+        source.frame.yMpt + clone.offsetYMpt,
+        source.frame.widthMpt,
+        source.frame.heightMpt,
+      );
+    if (
+      frame.xMpt < 0 ||
+      frame.yMpt < 0 ||
+      frame.xMpt + frame.widthMpt > page.widthMpt ||
+      frame.yMpt + frame.heightMpt > page.heightMpt
+    ) {
+      throw new Error(`clone-outside-page:${clone.cloneNodeId}`);
+    }
+    const paddingMpt =
+      occurrenceLayout?.paddingMpt ??
+      sourcePresentation?.paddingMpt ??
+      Object.freeze({
+        topMpt: asMpt(0),
+        rightMpt: asMpt(0),
+        bottomMpt: asMpt(0),
+        leftMpt: asMpt(0),
+      });
+    const horizontalPadding = paddingMpt.leftMpt + paddingMpt.rightMpt;
+    const verticalPadding = paddingMpt.topMpt + paddingMpt.bottomMpt;
+    const measurementId = `measure:${clone.cloneNodeId}`;
+    const effectiveStyleId = occurrenceStyle?.styleId ?? source.styleId;
+    const style = styleById(job, effectiveStyleId);
+    const overflowPolicy = occurrenceLayout?.overflowPolicy ?? sourceRequest.overflowPolicy;
+    const minimumFontSizeMpt =
+      overflowPolicy === "shrink-to-minimum"
+        ? (occurrenceLayout?.minimumFontSizeMpt ?? sourceRequest.minimumFontSizeMpt)
+        : style.fontSizeMpt;
+    const maximumHeightMpt = asMpt(frame.heightMpt - verticalPadding);
+    const minimumLineHeightMpt = Math.max(
+      minimumFontSizeMpt,
+      Math.round((style.lineHeightMpt * minimumFontSizeMpt) / style.fontSizeMpt),
+    );
+    const maximumLines = Math.max(
+      1,
+      Math.floor(
+        maximumHeightMpt /
+          (overflowPolicy === "shrink-to-minimum" ? minimumLineHeightMpt : style.lineHeightMpt),
+      ),
+    );
+    textRequests.push({
+      ...sourceRequest,
+      measurementId,
+      sourceIdentity: clone.semanticId,
+      fontFamilyId: style.fontFamilyId,
+      fontSizeMpt: style.fontSizeMpt,
+      fontWeight: style.fontWeight,
+      lineHeightMpt: style.lineHeightMpt,
+      ...(style.letterSpacingMpt === undefined ? {} : { letterSpacingMpt: style.letterSpacingMpt }),
+      ...(style.wordSpacingMpt === undefined ? {} : { wordSpacingMpt: style.wordSpacingMpt }),
+      ...(style.paragraphSpacingMpt === undefined
+        ? {}
+        : { paragraphSpacingMpt: style.paragraphSpacingMpt }),
+      maximumWidthMpt: asMpt(frame.widthMpt - horizontalPadding),
+      maximumHeightMpt,
+      maximumLines,
+      wrapPolicy: occurrenceLayout?.wrapPolicy ?? sourceRequest.wrapPolicy,
+      overflowPolicy,
+      minimumFontSizeMpt,
+    });
+    append({
+      ...source,
+      id: clone.cloneNodeId,
+      semanticId: clone.semanticId,
+      order: nodes.length,
+      measurementId,
+      styleId: effectiveStyleId,
+      frame,
+      presentation: {
+        frameAnchor: occurrenceLayout?.frameAnchor ?? sourcePresentation?.frameAnchor ?? "top-left",
+        paddingMpt,
+        horizontalAlignment:
+          occurrenceLayout?.horizontalAlignment ??
+          sourcePresentation?.horizontalAlignment ??
+          "start",
+        verticalAlignment:
+          occurrenceLayout?.verticalAlignment ?? sourcePresentation?.verticalAlignment ?? "top",
+        wrapPolicy: occurrenceLayout?.wrapPolicy ?? sourceRequest.wrapPolicy,
+        overflowPolicy,
+        ...(overflowPolicy === "shrink-to-minimum" ? { minimumFontSizeMpt } : {}),
+        ...(occurrenceLayout?.frameStrokeWidthMpt !== undefined ||
+        sourcePresentation?.frameStrokeWidthMpt !== undefined
+          ? {
+              frameFillColor:
+                occurrenceLayout?.frameFillColor ?? sourcePresentation?.frameFillColor ?? null,
+              frameStrokeColor:
+                occurrenceLayout?.frameStrokeColor ?? sourcePresentation?.frameStrokeColor ?? null,
+              frameStrokeWidthMpt:
+                occurrenceLayout?.frameStrokeWidthMpt ??
+                sourcePresentation?.frameStrokeWidthMpt ??
+                asMpt(0),
+            }
+          : {}),
+        rotationMilliDegrees:
+          occurrenceLayout?.rotationMilliDegrees ?? sourcePresentation?.rotationMilliDegrees ?? 0,
+        positionMode: occurrenceLayout?.positionMode ?? "free",
+        locked: occurrenceLayout?.locked ?? false,
+        visible: occurrenceLayout?.visible ?? true,
+        drawingOrderOffset:
+          occurrenceLayout?.drawingOrderOffset ?? (sourcePresentation?.drawingOrderOffset ?? 0) + 1,
+      },
+    });
+  }
+
   for (const group of groups.values()) {
     const originalIndex = new Map(
       group.childIds.map((childId, index) => [childId, index] as const),

@@ -160,6 +160,14 @@ export interface BoringLogPageGuideInput {
   readonly locked: boolean;
 }
 
+export interface BoringLogTextOccurrenceCloneInput {
+  readonly cloneNodeId: string;
+  readonly sourceOccurrenceNodeId: string;
+  readonly semanticId: string;
+  readonly offsetXMpt: Mpt;
+  readonly offsetYMpt: Mpt;
+}
+
 export interface BoringLogDepthTransformInput {
   readonly regionId: string;
   readonly depthStartFt: number;
@@ -201,6 +209,8 @@ export interface BoringLogTemplateInput {
   readonly columns: readonly BoringLogColumnInput[];
   readonly styles: readonly BoringLogTextStyleInput[];
   readonly occurrenceLayouts?: readonly BoringLogTextOccurrenceLayoutInput[];
+  /** Persisted structured duplicates; each clone receives its own measurement and scene identity. */
+  readonly textOccurrenceClones?: readonly BoringLogTextOccurrenceCloneInput[];
   /** Nonprinting layout guides. Absent in legacy v1 templates. */
   readonly guides?: readonly BoringLogPageGuideInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
@@ -763,6 +773,11 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "guides");
+  const hasTextOccurrenceClones =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "textOccurrenceClones");
   const hasPagination =
     typeof input === "object" &&
     input !== null &&
@@ -780,6 +795,7 @@ function validateTemplate(input: unknown): void {
     "columns",
     "styles",
     ...(hasOccurrenceLayouts ? ["occurrenceLayouts"] : []),
+    ...(hasTextOccurrenceClones ? ["textOccurrenceClones"] : []),
     ...(hasGuides ? ["guides"] : []),
     "hierarchy",
     "bindings",
@@ -1023,6 +1039,32 @@ function validateTemplate(input: unknown): void {
     }
   }
   unique(occurrenceLayoutIds);
+  const cloneNodeIds: string[] = [];
+  for (const cloneInput of hasTextOccurrenceClones ? array(value["textOccurrenceClones"]) : []) {
+    const clone = record(cloneInput, [
+      "cloneNodeId",
+      "sourceOccurrenceNodeId",
+      "semanticId",
+      "offsetXMpt",
+      "offsetYMpt",
+    ]);
+    const cloneNodeId = textValue(clone["cloneNodeId"]);
+    const sourceOccurrenceNodeId = textValue(clone["sourceOccurrenceNodeId"]);
+    cloneNodeIds.push(cloneNodeId);
+    if (
+      !cloneNodeId.startsWith("node:clone:") ||
+      !sourceOccurrenceNodeId.startsWith("node:") ||
+      cloneNodeId === sourceOccurrenceNodeId
+    )
+      fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    textValue(clone["semanticId"]);
+    const offsetXMpt = mpt(clone["offsetXMpt"]);
+    const offsetYMpt = mpt(clone["offsetYMpt"]);
+    if (Math.abs(offsetXMpt) > pageWidth || Math.abs(offsetYMpt) > pageHeight)
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+  if (cloneNodeIds.length > 128) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  unique(cloneNodeIds);
   const hierarchyIds: string[] = [];
   const leafIds: string[] = [];
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);
