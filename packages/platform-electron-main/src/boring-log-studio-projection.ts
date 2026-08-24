@@ -57,6 +57,11 @@ export interface BoringLogStudioProjection {
     readonly minimumWidthMpt: number;
     readonly widthPinned: boolean;
   }>[];
+  readonly regionResizeConstraints: Readonly<{
+    readonly minimumHeaderHeightMpt: number;
+    readonly minimumDepthBodyHeightMpt: number;
+    readonly minimumFooterHeightMpt: number;
+  }>;
   readonly textTemplateScopeSummary: Readonly<{
     readonly authoredStyleCount: number;
     readonly excludedOverrideStyleCount: number;
@@ -325,6 +330,11 @@ export function prepareBoringLogStudioProjection(
               }),
             ),
           ),
+          regionResizeConstraints: Object.freeze({
+            minimumHeaderHeightMpt: 60_000,
+            minimumDepthBodyHeightMpt: 300_000,
+            minimumFooterHeightMpt: 72_000,
+          }),
           textTemplateScopeSummary: Object.freeze({
             authoredStyleCount: effectiveJob.value.template.styles.filter(
               ({ id }) => !excludedOverrideStyleIds.has(id),

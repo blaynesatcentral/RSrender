@@ -6,6 +6,7 @@ import {
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
@@ -89,6 +90,7 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     "editableValues",
     "guides",
     "columnResizeConstraints",
+    "regionResizeConstraints",
     "textTemplateScopeSummary",
     "textOccurrencePresentationStates",
     "scene",
@@ -111,6 +113,8 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
     projection["guides"].length > 128 ||
     !Array.isArray(projection["columnResizeConstraints"]) ||
     projection["columnResizeConstraints"].length > 64 ||
+    typeof projection["regionResizeConstraints"] !== "object" ||
+    projection["regionResizeConstraints"] === null ||
     typeof projection["textTemplateScopeSummary"] !== "object" ||
     projection["textTemplateScopeSummary"] === null ||
     !Array.isArray(projection["textOccurrencePresentationStates"]) ||
@@ -166,6 +170,19 @@ function validProjection(input: unknown, documentIdentity: string, ownerGenerati
   if (
     constrainedColumnIds.size !== plannedPage.columns.length ||
     plannedPage.columns.some(({ id }) => !constrainedColumnIds.has(id))
+  ) {
+    return null;
+  }
+  const regionResizeConstraints = exactRecord(projection["regionResizeConstraints"], [
+    "minimumHeaderHeightMpt",
+    "minimumDepthBodyHeightMpt",
+    "minimumFooterHeightMpt",
+  ]);
+  if (
+    regionResizeConstraints === null ||
+    !isPositiveSafeInteger(regionResizeConstraints["minimumHeaderHeightMpt"]) ||
+    !isPositiveSafeInteger(regionResizeConstraints["minimumDepthBodyHeightMpt"]) ||
+    !isPositiveSafeInteger(regionResizeConstraints["minimumFooterHeightMpt"])
   ) {
     return null;
   }
@@ -785,6 +802,52 @@ const setColumnDivider = Object.freeze(async function setColumnDivider(input: un
   }
 });
 
+const setRegionBoundary = Object.freeze(async function setRegionBoundary(input: unknown) {
+  if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
+  const args = exactRecord(input, ["expectedWorkingRevision", "boundary", "requestedBoundaryYMpt"]);
+  if (
+    args === null ||
+    !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
+    !["header-depth", "depth-footer"].includes(String(args["boundary"])) ||
+    !isNonnegativeSafeInteger(args["requestedBoundaryYMpt"])
+  ) {
+    return unavailable;
+  }
+  inFlight = true;
+  try {
+    const binding = await bootstrap;
+    if (binding === null) return unavailable;
+    sequence += 1;
+    const response = exactRecord(
+      await ipcRenderer.invoke(BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL, {
+        transportVersion: 1,
+        capability: binding.capability,
+        generation: binding.generation,
+        sequence,
+        documentIdentity: binding.documentIdentity,
+        ownerGeneration: binding.ownerGeneration,
+        args,
+      }),
+      ["accepted", "transportVersion", "generation", "sequence", "result"],
+    );
+    if (
+      response === null ||
+      response["accepted"] !== true ||
+      response["transportVersion"] !== 1 ||
+      response["generation"] !== binding.generation ||
+      response["sequence"] !== sequence
+    ) {
+      return unavailable;
+    }
+    const detached = boundedClone(response["result"]);
+    return detached === null ? unavailable : detached;
+  } catch {
+    return unavailable;
+  } finally {
+    inFlight = false;
+  }
+});
+
 contextBridge.exposeInMainWorld(
   "rsrenderStudio",
   Object.freeze({
@@ -794,6 +857,7 @@ contextBridge.exposeInMainWorld(
     resetTextOccurrencePresentation,
     setPageGuides,
     setColumnDivider,
+    setRegionBoundary,
   }),
 );
 
@@ -1074,6 +1138,11 @@ export interface BoringLogStudioPreloadApi {
     readonly dividerAfterColumnId: string;
     readonly requestedDividerXMpt: number;
     readonly resizeMode: "adjacent-pair" | "push-following-columns";
+  }) => Promise<unknown>;
+  readonly setRegionBoundary: (input: {
+    readonly expectedWorkingRevision: number;
+    readonly boundary: "header-depth" | "depth-footer";
+    readonly requestedBoundaryYMpt: number;
   }) => Promise<unknown>;
 }
 

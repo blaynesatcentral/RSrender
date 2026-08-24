@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -105,4 +106,33 @@ test("BLD-039 region boundaries clamp to typed minima and fail closed on bad top
     accepted: false,
     code: "REGION_RESIZE_ARGUMENT_INVALID",
   });
+});
+
+test("BLD-039 region commands use exact route admission and embedded-template history", async () => {
+  const [broker, preload, main] = await Promise.all([
+    readFile(
+      new URL(
+        "../packages/platform-electron-main/src/boring-log-studio-route-broker.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../packages/platform-electron-main/src/boring-log-studio-preload-runtime.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL("../packages/platform-electron-main/src/semantic-editor-main.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
+  assert.match(broker, /setRegionBoundary[\s\S]*requestedBoundaryYMpt/u);
+  assert.match(preload, /BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL/u);
+  assert.match(main, /resizeBoringLogPageRegions/u);
+  assert.match(main, /REGION_REPAGINATION_REQUIRED/u);
+  assert.match(main, /commitEmbeddedTemplateReplacement/u);
+  assert.match(main, /operation: "region-boundary-resize"/u);
 });

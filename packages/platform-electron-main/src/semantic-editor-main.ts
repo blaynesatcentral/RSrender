@@ -32,6 +32,7 @@ import {
   boringLogDefaultColumnMinimumWidthMpt,
   clearBoringLogTextOccurrencePresentation,
   resizeBoringLogColumns,
+  resizeBoringLogPageRegions,
 } from "@rsrender/scene";
 
 import {
@@ -62,6 +63,7 @@ import {
 import {
   BoringLogStudioRouteBroker,
   type BoringLogStudioColumnDividerInput,
+  type BoringLogStudioRegionBoundaryInput,
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioPageGuidesInput,
   type BoringLogStudioProjectionPreviewInput,
@@ -74,6 +76,7 @@ import {
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
@@ -377,6 +380,7 @@ const handlers = [
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
@@ -1847,7 +1851,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       JSON.stringify(before["documentApi"]) ===
         '["getProjection","setDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -4103,6 +4107,7 @@ async function main(): Promise<void> {
     let textPresentationResetCommandSequence = 0;
     let pageGuidesCommandSequence = 0;
     let columnDividerCommandSequence = 0;
+    let regionBoundaryCommandSequence = 0;
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -4772,6 +4777,108 @@ async function main(): Promise<void> {
         clamped: resized.clamped,
       });
     };
+    const handleRegionBoundary = async (input: BoringLogStudioRegionBoundaryInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null) {
+        return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
+      }
+      const resized = resizeBoringLogPageRegions({
+        pageHeightMpt: currentJob.template.page.heightMpt,
+        regions: currentJob.template.regions,
+        depthTransform: currentJob.template.depthTransform,
+        boundary: input.boundary,
+        requestedBoundaryYMpt: input.requestedBoundaryYMpt,
+        minimumHeaderHeightMpt: 60_000,
+        minimumDepthBodyHeightMpt: 300_000,
+        minimumFooterHeightMpt: 72_000,
+      });
+      if (!resized.accepted || !resized.changed || resized.depthTransform === null) {
+        return Object.freeze({
+          accepted: false,
+          code: !resized.accepted
+            ? resized.code
+            : !resized.changed
+              ? "REGION_BOUNDARY_NO_CHANGE"
+              : "REGION_REPAGINATION_REQUIRED",
+          ...(resized.accepted
+            ? {
+                pageCount: resized.pageCount,
+                maximumDepthPerPageFt: resized.maximumDepthPerPageFt,
+                publicationBlocked: resized.publicationBlocked,
+              }
+            : {}),
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
+      }
+      const template = Object.freeze({
+        ...currentJob.template,
+        regions: resized.regions,
+        depthTransform: resized.depthTransform,
+      });
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_LAYOUT_INVALID" });
+      }
+      regionBoundaryCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-039:request:region-boundary:${regionBoundaryCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Resize ${resized.boundary} Page Region boundary in Boring Log Studio`,
+        operation: "region-boundary-resize",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "REGION_BOUNDARY_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        boundary: resized.boundary,
+        effectiveBoundaryYMpt: resized.effectiveBoundaryYMpt,
+        pageCount: resized.pageCount,
+        clamped: resized.clamped,
+      });
+    };
     const route = new BoringLogStudioRouteBroker({
       expectedWindow: window,
       expectedWebContents: window.webContents,
@@ -4784,6 +4891,7 @@ async function main(): Promise<void> {
       resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
       setPageGuides: handlePageGuides,
       setColumnDivider: handleColumnDivider,
+      setRegionBoundary: handleRegionBoundary,
     });
     studioBroker = route;
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
@@ -4803,6 +4911,9 @@ async function main(): Promise<void> {
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL, (event, input: unknown) =>
       route.setColumnDivider(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL, (event, input: unknown) =>
+      route.setRegionBoundary(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,

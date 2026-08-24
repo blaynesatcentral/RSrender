@@ -9,6 +9,7 @@ import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   DOCUMENT_BOOTSTRAP_CHANNEL,
@@ -484,6 +485,54 @@ test("BLD-039 Studio route admits only one exact adjacent column-divider command
   }
 });
 
+test("BLD-039 Studio route admits only one exact Page Region boundary command", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "8".repeat(64),
+    getProjection: source.getProjection,
+    setRegionBoundary: async (input) => {
+      received = input;
+      return { accepted: true, code: "REGION_BOUNDARY_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    boundary: "header-depth",
+    requestedBoundaryYMpt: 124_000,
+  };
+  assert.equal((await route.setRegionBoundary(routeContext, envelope(1, args))).accepted, true);
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, boundary: "free-scale" },
+    { ...args, requestedBoundaryYMpt: -1 },
+    { ...args, extra: true },
+  ]) {
+    assert.deepEqual(await route.setRegionBoundary(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
 test("BLD-037 Studio route admits only bounded exact-occurrence presentation resets", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -689,6 +738,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setRegionBoundary(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === DOCUMENT_SET_DISPLAY_VALUE_CHANNEL) {
               documentSetInput = input;
               return intoPreloadRealm({ accepted: false, code: "EXPECTED_TEST_REJECTION" });
@@ -716,6 +773,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "resetTextOccurrencePresentation",
     "setPageGuides",
     "setColumnDivider",
+    "setRegionBoundary",
   ]);
   const result = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
@@ -728,6 +786,11 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.equal(result.projection.textTemplateScopeSummary.excludedOverrideStyleCount, 0);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
   assert.equal(result.projection.columnResizeConstraints.length, 10);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.projection.regionResizeConstraints)), {
+    minimumHeaderHeightMpt: 60_000,
+    minimumDepthBodyHeightMpt: 300_000,
+    minimumFooterHeightMpt: 72_000,
+  });
   const columnResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setColumnDivider(${JSON.stringify({
       expectedWorkingRevision: result.projection.workingRevision,
@@ -740,6 +803,18 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.deepEqual(JSON.parse(JSON.stringify(columnResult)), {
     accepted: false,
     code: "COLUMN_DIVIDER_UNAVAILABLE",
+  });
+  const regionResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.setRegionBoundary(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      boundary: "header-depth",
+      requestedBoundaryYMpt: 124_000,
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(regionResult)), {
+    accepted: false,
+    code: "REGION_BOUNDARY_UNAVAILABLE",
   });
   const previewResult = await vm.runInContext(
     `globalThis.rsrenderStudio.getProjection(${JSON.stringify({

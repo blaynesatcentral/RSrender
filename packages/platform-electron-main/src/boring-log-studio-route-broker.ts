@@ -153,6 +153,12 @@ export interface BoringLogStudioColumnDividerInput {
   readonly resizeMode: "adjacent-pair" | "push-following-columns";
 }
 
+export interface BoringLogStudioRegionBoundaryInput {
+  readonly expectedWorkingRevision: number;
+  readonly boundary: "header-depth" | "depth-footer";
+  readonly requestedBoundaryYMpt: number;
+}
+
 export interface BoringLogStudioProjectionPreviewInput {
   readonly expectedWorkingRevision: number;
   readonly occurrenceNodeId: string;
@@ -263,6 +269,7 @@ export class BoringLogStudioRouteBroker {
   ) => Promise<unknown>;
   readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
   readonly #setColumnDivider: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
+  readonly #setRegionBoundary: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
   #generation = 0;
   #binding: Binding | null = null;
 
@@ -288,6 +295,7 @@ export class BoringLogStudioRouteBroker {
     ) => Promise<unknown>;
     readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
     readonly setColumnDivider?: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
+    readonly setRegionBoundary?: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
   }) {
     this.#expectedWindow = input.expectedWindow;
     this.#expectedWebContents = input.expectedWebContents;
@@ -323,6 +331,10 @@ export class BoringLogStudioRouteBroker {
       input.setColumnDivider ??
       (() =>
         Promise.resolve(Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" })));
+    this.#setRegionBoundary =
+      input.setRegionBoundary ??
+      (() =>
+        Promise.resolve(Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" })));
   }
 
   public bootstrap(context: DocumentRouteContext): BoringLogStudioRouteBootstrapResult {
@@ -1066,6 +1078,84 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setColumnDivider(
         args as unknown as BoringLogStudioColumnDividerInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setRegionBoundary(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "boundary",
+      "requestedBoundaryYMpt",
+    ]);
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !["header-depth", "depth-footer"].includes(String(args["boundary"])) ||
+      !Number.isSafeInteger(args["requestedBoundaryYMpt"]) ||
+      (args["requestedBoundaryYMpt"] as number) < 0
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setRegionBoundary(
+        args as unknown as BoringLogStudioRegionBoundaryInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
