@@ -180,6 +180,7 @@ import {
   resolveStudioContextMenuPosition,
   resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
+  resolveStudioRibbonGroupPlacement,
   studioPaneLimits,
   type StudioPaneResizeTarget,
 } from "./boring-log-studio-viewport.js";
@@ -719,6 +720,11 @@ async function main(): Promise<void> {
   const ribbonQuery = document.querySelector<HTMLElement>(".ribbon");
   if (ribbonQuery === null) throw new Error("Studio ribbon is unavailable");
   const ribbon: HTMLElement = ribbonQuery;
+  const ribbonOverflow = element<HTMLDetailsElement>("ribbon-overflow");
+  const ribbonOverflowMenu = element<HTMLElement>("ribbon-overflow-menu");
+  const ribbonMessageQuery = ribbon.querySelector<HTMLElement>(".ribbon-message");
+  if (ribbonMessageQuery === null) throw new Error("Studio ribbon message is unavailable");
+  const ribbonMessage = ribbonMessageQuery;
   const workspaceQuery = document.querySelector<HTMLElement>(".workspace");
   if (workspaceQuery === null) throw new Error("Studio workspace is unavailable");
   const workspace: HTMLElement = workspaceQuery;
@@ -4210,6 +4216,7 @@ async function main(): Promise<void> {
   }
 
   function activateRibbonTab(tabId: string): void {
+    restoreRibbonGroups();
     const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")];
     const panels = [...document.querySelectorAll<HTMLElement>("[data-ribbon-panel]")];
     const activeTab = tabs.find((tab) => tab.dataset["ribbonTab"] === tabId);
@@ -4225,7 +4232,49 @@ async function main(): Promise<void> {
     ribbon.setAttribute("aria-label", `${activeTab.textContent?.trim() ?? tabId} commands`);
     publicationPackagePanel.hidden = tabId !== "publish";
     if (tabId === "publish") renderPublicationInventory();
+    queueResponsiveRibbonLayout();
     status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
+  }
+
+  function restoreRibbonGroups(): void {
+    for (const group of [...ribbonOverflowMenu.children]) {
+      ribbon.insertBefore(group, ribbonOverflow);
+    }
+    ribbonOverflow.open = false;
+    ribbonOverflow.hidden = true;
+  }
+
+  function layoutResponsiveRibbon(): void {
+    restoreRibbonGroups();
+    const activeGroups = [
+      ...ribbon.querySelectorAll<HTMLElement>(":scope > [data-ribbon-panel]:not([hidden])"),
+    ];
+    if (activeGroups.length === 0) return;
+    const style = getComputedStyle(ribbon);
+    const horizontalPadding =
+      Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+    const messageWidth = getComputedStyle(ribbonMessage).display === "none" ? 0 : 220;
+    const placement = resolveStudioRibbonGroupPlacement({
+      ribbonWidth: ribbon.clientWidth,
+      horizontalPadding,
+      messageWidth,
+      overflowTriggerWidth: 62,
+      groups: activeGroups.map((group, index) => ({
+        id: String(index),
+        width: Math.ceil(group.getBoundingClientRect().width),
+        alwaysOverflow: group.matches(".page-setup-group, .data-summary-group"),
+      })),
+    });
+    for (const index of placement.overflowIds) {
+      ribbonOverflowMenu.append(activeGroups[Number(index)]!);
+    }
+    ribbonOverflow.hidden = ribbonOverflowMenu.childElementCount === 0;
+  }
+
+  let ribbonLayoutFrame = 0;
+  function queueResponsiveRibbonLayout(): void {
+    cancelAnimationFrame(ribbonLayoutFrame);
+    ribbonLayoutFrame = requestAnimationFrame(layoutResponsiveRibbon);
   }
 
   function select(
@@ -6215,6 +6264,8 @@ async function main(): Promise<void> {
     propertiesPaneWidth = resolved.propertiesWidth;
     workspace.dataset["contentsWidth"] = String(resolved.contentsWidth);
     workspace.dataset["propertiesWidth"] = String(resolved.propertiesWidth);
+    workspace.style.setProperty("--contents-pane-width", `${resolved.contentsWidth}px`);
+    workspace.style.setProperty("--properties-pane-width", `${resolved.propertiesWidth}px`);
     contentsSplitter.setAttribute("aria-valuenow", String(resolved.contentsWidth));
     propertiesSplitter.setAttribute("aria-valuenow", String(resolved.propertiesWidth));
     canvasStage.dataset["viewportWidth"] = String(resolved.canvasWidth);
@@ -6766,21 +6817,14 @@ async function main(): Promise<void> {
   canvasStage.addEventListener("pointercancel", finishPan);
   canvasStage.addEventListener("wheel", applyTouchpadPinchZoom, { passive: false });
   canvasStage.addEventListener("scroll", hideCanvasContextMenu, { passive: true });
-  ribbon.addEventListener(
-    "wheel",
-    (event) => {
-      if (
-        event.ctrlKey ||
-        event.deltaX !== 0 ||
-        event.deltaY === 0 ||
-        ribbon.scrollWidth <= ribbon.clientWidth
-      )
-        return;
-      ribbon.scrollLeft += event.deltaY;
-      event.preventDefault();
-    },
-    { passive: false },
-  );
+  ribbonOverflowMenu.addEventListener("click", (event) => {
+    if ((event.target as Element).closest("button") !== null) ribbonOverflow.open = false;
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (ribbonOverflow.open && !ribbonOverflow.contains(event.target as Node)) {
+      ribbonOverflow.open = false;
+    }
+  });
   const installPaneSplitter = (
     splitter: HTMLElement,
     resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">,
@@ -7301,6 +7345,7 @@ async function main(): Promise<void> {
   window.addEventListener("resize", () => {
     hideCanvasContextMenu();
     applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
+    queueResponsiveRibbonLayout();
   });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && pendingKeyboardNudge !== undefined) {
@@ -7449,6 +7494,7 @@ async function main(): Promise<void> {
 
   installSvg();
   applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
+  queueResponsiveRibbonLayout();
   renderTree();
   renderDiagnostics();
   updateContentsOptions();

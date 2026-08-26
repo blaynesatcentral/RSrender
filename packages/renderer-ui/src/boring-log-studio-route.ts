@@ -52,6 +52,7 @@ export function createBoringLogStudioHtml(scene: unknown = null): string {
       <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="publication-select-all"><span>☑</span>Select All</button><button type="button" id="publication-clear"><span>☐</span>Clear</button><button type="button" id="publication-project-order"><span>↕</span>Project Order</button><small>Log set</small></div>
       <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="publication-move-up" disabled><span>↑</span>Move Up</button><button type="button" id="publication-move-down" disabled><span>↓</span>Move Down</button><small>Package order</small></div>
       <div class="ribbon-group" data-ribbon-panel="publish" hidden><button type="button" id="export-pdf" disabled><span>⇩</span>Export PDF Package</button><small>One PDF</small></div>
+      <details id="ribbon-overflow" class="ribbon-overflow" hidden><summary aria-label="More commands"><span aria-hidden="true">⋯</span>More</summary><div id="ribbon-overflow-menu" class="ribbon-overflow-menu"></div></details>
       <div class="ribbon-message"><strong>Resolved Page Scene</strong><span id="scene-summary">Loading structured page…</span></div>
     </section>
     <section class="boring-navigation" aria-label="Boring Log navigation">

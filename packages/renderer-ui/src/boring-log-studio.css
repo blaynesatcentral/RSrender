@@ -27,7 +27,7 @@ select {
 .app-shell {
   position: relative;
   display: grid;
-  grid-template-rows: 40px 34px auto 42px minmax(0, 1fr) auto 28px;
+  grid-template-rows: 40px 34px 92px 42px minmax(0, 1fr) auto 28px;
   width: 100vw;
   height: 100vh;
   height: 100dvh;
@@ -112,29 +112,32 @@ select {
   font-weight: 600;
 }
 .ribbon {
+  position: relative;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: stretch;
   align-content: flex-start;
   min-width: 0;
-  max-height: min(220px, 34vh);
+  height: 92px;
   padding: 6px 12px;
   overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  overflow-y: visible;
   background: #fff;
   border-bottom: 1px solid #b8c2c9;
   box-shadow: 0 1px 2px #23313c18;
 }
 .ribbon-group {
-  position: relative;
-  display: flex;
-  flex: 0 1 auto;
-  align-items: flex-start;
+  display: grid;
+  flex: 0 0 auto;
+  grid-auto-columns: minmax(44px, max-content);
+  grid-auto-flow: column;
+  grid-template-rows: 56px 14px;
+  align-items: start;
   min-width: 0;
-  min-height: 76px;
+  min-height: 70px;
   gap: 3px;
-  padding: 0 13px 18px;
+  padding: 0 13px;
   border-right: 1px solid #d9dfe3;
 }
 .ribbon-group:first-child {
@@ -151,6 +154,7 @@ select {
   background: transparent;
   color: #344654;
   font-size: 11px;
+  grid-row: 1;
 }
 .ribbon-group button:hover:not(:disabled),
 .canvas-toolbar button:hover {
@@ -166,10 +170,9 @@ select {
   color: #17688f;
 }
 .ribbon-group small {
-  position: absolute;
-  bottom: 2px;
-  left: 0;
-  right: 0;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: end;
   text-align: center;
   color: #788690;
   font-size: 10px;
@@ -179,16 +182,14 @@ select {
   white-space: nowrap;
 }
 .page-setup-group {
-  flex: 1 1 520px;
-  min-width: min(520px, 100%);
-  min-height: 98px;
+  min-width: min(760px, calc(100vw - 48px));
 }
 .page-setup-grid {
   display: grid;
   flex: 1;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 3px 6px;
-  margin: 0 0 18px;
+  margin: 0;
 }
 .page-setup-grid label {
   display: flex;
@@ -223,13 +224,13 @@ select {
   font-size: 10px;
 }
 .data-summary-group {
-  min-width: 430px;
+  min-width: min(940px, calc(100vw - 48px));
 }
 .data-control-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(86px, 1fr));
   gap: 3px 6px;
-  margin: 2px 0 15px;
+  margin: 2px 0;
 }
 .data-control-grid label {
   display: flex;
@@ -279,7 +280,86 @@ select {
   justify-content: center;
   margin-left: auto;
   padding: 0 18px;
+  min-width: 180px;
   text-align: right;
+}
+.ribbon-overflow {
+  position: relative;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 70px;
+}
+.ribbon-overflow > summary {
+  display: grid;
+  width: 58px;
+  height: 70px;
+  padding: 4px;
+  cursor: pointer;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #344654;
+  font-size: 11px;
+  list-style: none;
+}
+.ribbon-overflow > summary::-webkit-details-marker {
+  display: none;
+}
+.ribbon-overflow > summary span {
+  color: #17688f;
+  font-size: 20px;
+  line-height: 20px;
+}
+.ribbon-overflow > summary:hover,
+.ribbon-overflow[open] > summary {
+  border-color: #b9d5e4;
+  background: #e7f2f8;
+}
+.ribbon-overflow-menu {
+  position: absolute;
+  z-index: 60;
+  top: 76px;
+  right: 0;
+  display: grid;
+  width: min(980px, calc(100vw - 24px));
+  max-height: calc(100vh - 190px);
+  padding: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid #93aab7;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 30px #1c34454d;
+}
+.ribbon-overflow-menu:empty {
+  display: none;
+}
+.ribbon-overflow-menu .ribbon-group {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  grid-template-rows: auto 16px;
+  width: 100%;
+  padding: 6px;
+  border-right: 0;
+  border-bottom: 1px solid #d9dfe3;
+}
+.ribbon-overflow-menu .ribbon-group button,
+.ribbon-overflow-menu .ribbon-group > :not(small) {
+  grid-row: 1;
+}
+.ribbon-overflow-menu .page-setup-grid,
+.ribbon-overflow-menu .data-control-grid {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+.ribbon-overflow-menu .page-setup-grid {
+  grid-column: 1 / -1;
+}
+.ribbon-overflow-menu .data-summary-group {
+  display: block;
+}
+.ribbon-overflow-menu .data-summary-group > small {
+  display: block;
+  margin-top: 6px;
 }
 .ribbon-message strong {
   color: #1b566f;
@@ -342,7 +422,7 @@ select {
 .publication-package-panel {
   position: absolute;
   z-index: 30;
-  top: 198px;
+  top: 166px;
   right: 12px;
   display: grid;
   width: min(460px, calc(100vw - 24px));
@@ -442,8 +522,8 @@ select {
 .workspace {
   display: grid;
   grid-template-columns:
-    attr(data-contents-width px, 244px) 6px minmax(320px, 1fr) 6px
-    attr(data-properties-width px, 292px);
+    var(--contents-pane-width, 244px) 6px minmax(320px, 1fr) 6px
+    var(--properties-pane-width, 292px);
   width: 100%;
   max-width: none;
   min-width: 0;

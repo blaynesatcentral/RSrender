@@ -137,7 +137,13 @@ test("BLD-025 browser authority contains no raster, ambient transport, or inline
   assert.doesNotMatch(entry, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage)\b/u);
   assert.deepEqual(
     [...new Set([...entry.matchAll(/\.style\.([a-z]+)/gu)].map((match) => match[1]))].sort(),
-    ["height", "left", "top"],
+    ["height", "left", "set", "top"],
+  );
+  assert.deepEqual(
+    [...entry.matchAll(/workspace\.style\.setProperty\("([^"]+)"/gu)]
+      .map((match) => match[1])
+      .sort(),
+    ["--contents-pane-width", "--properties-pane-width"],
   );
   assert.doesNotMatch(entry, /\.style\.cssText|setAttribute\(["']style/u);
   assert.doesNotMatch(

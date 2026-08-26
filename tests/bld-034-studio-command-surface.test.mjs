@@ -86,6 +86,7 @@ const expectedCommandIds = Object.freeze([
   "apply-data-layer-symbology",
   "apply-column-width",
   "apply-region-height",
+  "apply-region-border",
   "apply-text-style",
   "detach-text-annotation",
   "context-properties",

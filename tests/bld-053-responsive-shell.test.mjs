@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
+  resolveStudioRibbonGroupPlacement,
   studioPaneLimits,
 } from "../packages/renderer-ui/dist/index.js";
 
@@ -53,6 +54,38 @@ test("BLD-053 restores preferred pane widths and gives enlarged space back to Ca
   );
 });
 
+test("BLD-060 moves whole command groups into a reachable overflow without horizontal scrolling", () => {
+  const groups = [
+    { id: "file", width: 330 },
+    { id: "selection", width: 120 },
+    { id: "page-setup", width: 760, alwaysOverflow: true },
+    { id: "history", width: 120 },
+  ];
+  assert.deepEqual(
+    resolveStudioRibbonGroupPlacement({
+      ribbonWidth: 900,
+      horizontalPadding: 24,
+      messageWidth: 0,
+      overflowTriggerWidth: 62,
+      groups,
+    }),
+    {
+      visibleIds: ["file", "selection", "history"],
+      overflowIds: ["page-setup"],
+    },
+  );
+  assert.deepEqual(
+    resolveStudioRibbonGroupPlacement({
+      ribbonWidth: 520,
+      horizontalPadding: 24,
+      messageWidth: 0,
+      overflowTriggerWidth: 62,
+      groups,
+    }).overflowIds,
+    ["selection", "page-setup", "history"],
+  );
+});
+
 test("BLD-053 shell CSS and resize wiring remain fluid across narrow-wide cycles", async () => {
   const [stylesheet, entry] = await Promise.all([
     readFile(new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url), "utf8"),
@@ -66,11 +99,14 @@ test("BLD-053 shell CSS and resize wiring remain fluid across narrow-wide cycles
   assert.doesNotMatch(stylesheet, /width:\s*attr\(data-effective-width px\)/u);
   assert.match(stylesheet, /@media \(max-width: 900px\)/u);
   assert.match(stylesheet, /font-size:\s*clamp\(9px,/u);
-  assert.match(stylesheet, /\.ribbon\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*hidden/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*flex-wrap:\s*nowrap[^}]*overflow-x:\s*hidden/su);
   assert.doesNotMatch(stylesheet, /\.ribbon\s*\{[^}]*overflow-x:\s*auto/su);
   assert.match(stylesheet, /grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(72px,\s*1fr\)\)/u);
   assert.match(entry, /preferredContentsPaneWidth/u);
   assert.match(entry, /preferredPropertiesPaneWidth/u);
+  assert.match(entry, /resolveStudioRibbonGroupPlacement/u);
+  assert.match(entry, /--contents-pane-width/u);
+  assert.match(entry, /--properties-pane-width/u);
   assert.match(
     entry,
     /workspace\.parentElement\?\.clientWidth \?\? document\.documentElement\.clientWidth/u,
