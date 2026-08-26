@@ -84,6 +84,20 @@ Files to update in lockstep: `bld-025`, `bld-031`, `bld-034`, `bld-038-direct-ma
 
 Fix the `bld-046` / `bld-053` `overflow-x` contradiction so `npm test` is green before any visual change lands. Capture reference screenshots of Home / Layout / Data / Review / Publish, the Properties pane populated, and the Attribute Table open, for before/after comparison.
 
+### Recovery gate after the failed first rollout
+
+The recoverable baseline is the known-good `main` build restored from commit `1118cdf` (`feat: checkpoint font-complete working beta`) plus the 2026-08-26 RSLog compatibility and project-session replacement fixes. Do not replay the prior UX commits wholesale.
+
+1. Build through the production Studio packager (`tooling/shell-package-bld026.mjs`), never the disconnected BLD-025 visual-shell packager. Confirm the packaged icon and full editor command surface before presenting a build.
+2. In the packaged executable, prove all of these before and after every UX increment: select/edit text; change font family and size; Undo/Redo; Save/Reopen; export a verified PDF; sign in to live RSLog; see the project catalog; select a project; select either one or multiple Explorations; and render the selected Boring Logs in the same window.
+3. Preserve the ownership handoff. A replacement project session must use `sessionHost.snapshot().ownerGeneration + 1`; never hard-code generation `1` after a host already exists. `DocumentSessionHost.replace` must remain atomic, and a one-Exploration Log Project must remain valid.
+4. Preserve the admitted live catalog boundary: project identities are bounded nonblank provider-native identities, blank titles receive the visible fallback, and optional catalog text is bounded and formatting-whitespace normalized. Do not broaden admission to arbitrary values or persist credentials, tokens, raw responses, or real project data.
+5. Treat CSS-source regexes, literal markup assertions, and screenshots as supporting checks only. They cannot close a ticket without the packaged workflows above. Focused behavioral checks include `bld-036-boring-log-project-session`, `bld-051-auth-entry-route`, `bld-051-project-catalog-ingress`, and the current catalog-compatibility regression test.
+6. Keep presentation tickets inside renderer markup/CSS whenever possible. Any contract, scene, preload, broker, main-process, source-ingress, document-session, or publication change becomes a separate prerequisite ticket with its own behavioral proof. Do not mix `semantic-editor-main.ts` behavior changes into a visual commit.
+7. Preserve every command route, preload method, element ID, selection binding, lifecycle operation, and visible error path. A prettier shell with dead controls, hidden failures, stale bindings, or a non-rendering import is a regression.
+8. Land one bounded UX increment at a time and stop on the first failure. Repair or remove that increment before starting the next; do not stack later presentation work over a broken packaged baseline.
+9. The live RSLog smoke test is a product-owner gate because authentication is intentionally session-only. Never automate credentials or write them into fixtures, logs, screenshots, command lines, or environment variables.
+
 ## Phase 1 — Design tokens
 
 **New file:** `packages/renderer-ui/src/design-tokens.css`, imported first from `boring-log-studio.css`.
@@ -241,7 +255,7 @@ Phases 1, 2, and 4 deliver most of the perceived quality jump, are independently
 
 1. **`npm test` green at Phase 0** before any visual change — resolves the pre-existing `bld-046` failure and establishes the baseline.
 2. **`npm run verify`** — full gate. **`dependency:verify-admission` must pass unchanged**, proving the 156-identity graph is untouched.
-3. **`npm run studio:package:bld049 && npm run studio:test:packaged:bld049`** plus the other `studio:test:packaged:*` variants — the ~410 packaged probes confirm no `id`, `aria-*`, or asserted-string regression.
+3. **Build with `npm run studio:package:bld026`**, then run the applicable `studio:test:packaged:*` variants — the ~410 packaged probes confirm no `id`, `aria-*`, or asserted-string regression. Never substitute the disconnected BLD-025 package or treat source-only assertions as packaged evidence.
 4. **Visual diff against the Phase 0 reference screenshots** at 1920×1080 and 1366×768, for all five ribbon tabs: chrome height ≈204px, ribbon fits without scrolling, **no clipped controls on the Data tab**, no caption/label overlap on Layout.
 5. **Windows display scaling 100 / 125 / 150 / 200%** and text scaling to 200% — reflow with no clipping (spec §18).
 6. **Windows High Contrast** — selection, focus, lock, diagnostics remain distinguishable.
@@ -249,3 +263,5 @@ Phases 1, 2, and 4 deliver most of the perceived quality jump, are independently
 8. **Error surface check** — force a failure (e.g. a column heading over 80 characters) and confirm it is now *visible*, not only announced.
 9. **Reduced motion** toggled in Windows settings — transitions stop, state cues remain.
 10. **PDF output byte-identical** to a pre-change publication — the presentation layer must not have touched the renderer.
+11. **Live RSLog replacement smoke test** — authenticate without persisted credentials; select a Source Project; select one Exploration and confirm it renders; repeat with multiple Explorations and confirm navigation plus one-package PDF selection. The window must not disappear, relaunch, silently retain the prior project, or report a stale owner generation.
+12. **Editing smoke test on the imported Log Project** — select an imported text occurrence from Canvas and Contents, change its text/font/size in Properties, Undo, Redo, Save, reopen, and verify the same scene reaches PDF publication.

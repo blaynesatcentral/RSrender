@@ -4284,7 +4284,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
       "WAIT_TEXT_OCCURRENCE_APPLY",
     );
     const applied = record(
@@ -4444,7 +4444,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#reset-text-presentation", "Space", "FOCUS_TEXT_OCCURRENCE_RESET");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Presentation reset to inherited for Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited" && document.getElementById("reset-text-presentation")?.disabled === true`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Presentation reset to inherited for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited" && document.getElementById("reset-text-presentation")?.disabled === true`,
       "WAIT_TEXT_OCCURRENCE_RESET",
     );
     const reset = record(
@@ -4559,7 +4559,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_NAMED_STYLE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Named style Style Small typography updated at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration") === "underline"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Named style style-small typography updated at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration") === "underline"`,
       "WAIT_TEXT_NAMED_STYLE_APPLY",
     );
     const namedStyleApplied = record(
@@ -4705,7 +4705,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     emitStudioProbePhase("column-apply-pressed");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Column Description typography default updated at revision ") === true && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("column-description typography default updated at revision ") === true && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
       "WAIT_TEXT_COLUMN_STYLE_APPLY",
     );
     const columnStyleApplied = record(
@@ -4892,7 +4892,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("direct-manipulation-overlay") !== null`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("direct-manipulation-overlay") !== null`,
         "WAIT_DIRECT_MANIPULATION_MOVE",
       );
       const directMoved = record(await pageValue(window, directSnapshotExpression));
@@ -4942,7 +4942,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for Stratum 1 note — Trace organics. at revision ") === true && Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")) !== ${String(movedFrame["widthMpt"])}`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")) !== ${String(movedFrame["widthMpt"])}`,
         "WAIT_DIRECT_MANIPULATION_RESIZE",
       );
       const directResized = record(await pageValue(window, directSnapshotExpression));
@@ -4980,7 +4980,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       });
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas gesture canceled for Stratum 1 note — Trace organics.") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === undefined`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas gesture canceled for node:lithology:stratum-01:transition:2:text") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === undefined`,
         "WAIT_DIRECT_MANIPULATION_CANCEL",
       );
       const directCanceled = record(await pageValue(window, directSnapshotExpression));
@@ -6808,17 +6808,26 @@ async function main(): Promise<void> {
         const importedDocumentIdentity = `urn:rsrender:log-project:rslog-live:${liveSource.value.sourceDigest.slice("sha256:".length)}`;
         const imported = createSyntheticBoringLogProjectSession({
           projectDocumentIdentity: importedDocumentIdentity,
-          ownerGeneration: 1,
+          ownerGeneration: sessionHost.snapshot().ownerGeneration + 1,
           layoutJobs: mapped.layoutJobs,
         });
         if (!imported.accepted) {
-          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+          await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "RSLog project not imported",
+            message: "RSrender decoded the project but could not initialize its editing session.",
+            detail: `${imported.code}. The current Log Project is unchanged.`,
+            buttons: ["OK"],
+            defaultId: 0,
+            noLink: true,
+          });
+          return lifecycleResponse(false, `RSLOG_PROJECT_DATA_SESSION_CREATE_${imported.code}`, current);
         }
         const importedCapture = await captureOverrideRenderDatasetWorkingState(
           imported.session.service,
         );
         if (importedCapture === null) {
-          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_CAPTURE_INVALID", current);
         }
         if (!removeStaleRsLogImportStaging()) {
           return lifecycleResponse(false, "RSLOG_IMPORT_STAGING_CLEANUP_FAILED", current);
@@ -6829,7 +6838,7 @@ async function main(): Promise<void> {
           displayName: liveSource.value.project.title,
         });
         if (!replaced) {
-          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_REPLACE_INVALID", current);
         }
         return lifecycleResponse(true, "RSLOG_LIVE_PROJECT_IMPORTED", await projectState());
       }
@@ -6921,7 +6930,7 @@ async function main(): Promise<void> {
         const importedDocumentIdentity = `urn:rsrender:log-project:rslog-project-json:${inspected.value.sourceDigest.slice("sha256:".length)}`;
         const imported = createSyntheticBoringLogProjectSession({
           projectDocumentIdentity: importedDocumentIdentity,
-          ownerGeneration: 1,
+          ownerGeneration: sessionHost.snapshot().ownerGeneration + 1,
           layoutJobs: mapped.layoutJobs,
         });
         if (!imported.accepted) {
@@ -7357,13 +7366,6 @@ async function main(): Promise<void> {
           !/^#[0-9a-f]{6}$/iu.test(input.layout.frameStrokeColor)) ||
         input.layout.frameStrokeWidthMpt < 0 ||
         input.layout.frameStrokeWidthMpt > 12_000 ||
-        (input.layout.frameBorder !== undefined &&
-          (!/^#[0-9a-f]{6}$/iu.test(input.layout.frameBorder.color) ||
-            input.layout.frameBorder.widthMpt < 0 ||
-            input.layout.frameBorder.widthMpt > 12_000 ||
-            !["solid", "dashed", "dotted", "dash-dot"].includes(
-              input.layout.frameBorder.linePattern,
-            ))) ||
         (input.layout.positionMode === "depth-bound" &&
           input.layout.frame.yMpt !== node.frame.yMpt) ||
         input.layout.frame.xMpt + input.layout.frame.widthMpt >
@@ -8729,20 +8731,17 @@ async function main(): Promise<void> {
       if (currentJob === null) {
         return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
       }
-      const borderMode = input.border !== null;
-      const resized = borderMode
-        ? null
-        : resizeBoringLogPageRegions({
-            pageHeightMpt: currentJob.template.page.heightMpt,
-            regions: currentJob.template.regions,
-            depthTransform: currentJob.template.depthTransform,
-            boundary: input.boundary!,
-            requestedBoundaryYMpt: input.requestedBoundaryYMpt!,
-            minimumHeaderHeightMpt: 60_000,
-            minimumDepthBodyHeightMpt: 300_000,
-            minimumFooterHeightMpt: 72_000,
-          });
-      if (resized !== null && (!resized.accepted || !resized.changed)) {
+      const resized = resizeBoringLogPageRegions({
+        pageHeightMpt: currentJob.template.page.heightMpt,
+        regions: currentJob.template.regions,
+        depthTransform: currentJob.template.depthTransform,
+        boundary: input.boundary,
+        requestedBoundaryYMpt: input.requestedBoundaryYMpt,
+        minimumHeaderHeightMpt: 60_000,
+        minimumDepthBodyHeightMpt: 300_000,
+        minimumFooterHeightMpt: 72_000,
+      });
+      if (!resized.accepted || !resized.changed) {
         return Object.freeze({
           accepted: false,
           code: !resized.accepted ? resized.code : "REGION_BOUNDARY_NO_CHANGE",
@@ -8773,59 +8772,36 @@ async function main(): Promise<void> {
       if (representation === undefined) {
         return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
       }
-      let template: BoringLogLayoutJobInput["template"];
-      if (borderMode) {
-        const target = currentJob.template.regions.find(({ id }) => id === input.regionId);
-        if (target === undefined) {
-          return Object.freeze({ accepted: false, code: "REGION_BORDER_UNAVAILABLE" });
-        }
-        if (sha256CanonicalJson(target.border ?? null) === sha256CanonicalJson(input.border)) {
-          return Object.freeze({ accepted: false, code: "REGION_BORDER_NO_CHANGE" });
-        }
-        template = Object.freeze({
-          ...currentJob.template,
-          regions: Object.freeze(
-            currentJob.template.regions.map((region) =>
-              region.id === input.regionId
-                ? Object.freeze({ ...region, border: input.border! })
-                : region,
-            ),
-          ),
+      const currentDepthBody = currentJob.template.regions.find(
+        ({ role }) => role === "depth-body",
+      )!;
+      const nextDepthBody = resized.regions.find(({ role }) => role === "depth-body")!;
+      const yStartMpt =
+        nextDepthBody.yMpt + (currentJob.template.depthTransform.yStartMpt - currentDepthBody.yMpt);
+      const depthTransform =
+        resized.depthTransform ??
+        Object.freeze({
+          ...currentJob.template.depthTransform,
+          yStartMpt,
+          yEndMpt: yStartMpt + resized.requiredPlotHeightMpt,
         });
-      } else {
-        const acceptedResize = resized!;
-        const currentDepthBody = currentJob.template.regions.find(
-          ({ role }) => role === "depth-body",
-        )!;
-        const nextDepthBody = acceptedResize.regions.find(({ role }) => role === "depth-body")!;
-        const yStartMpt =
-          nextDepthBody.yMpt +
-          (currentJob.template.depthTransform.yStartMpt - currentDepthBody.yMpt);
-        const depthTransform: typeof currentJob.template.depthTransform =
-          acceptedResize.depthTransform ??
-          (Object.freeze({
-            ...currentJob.template.depthTransform,
-            yStartMpt,
-            yEndMpt: yStartMpt + acceptedResize.requiredPlotHeightMpt,
-          }) as typeof currentJob.template.depthTransform);
-        const templateWithoutPagination: BoringLogLayoutJobInput["template"] = {
-          ...currentJob.template,
-        };
-        Reflect.deleteProperty(templateWithoutPagination, "pagination");
-        template = Object.freeze({
-          ...templateWithoutPagination,
-          regions: acceptedResize.regions,
-          depthTransform,
-          ...(acceptedResize.repaginationRequired
-            ? {
-                pagination: Object.freeze({
-                  policy: "fixed-scale-continuation-v1" as const,
-                  yEndLimitMpt: nextDepthBody.yMpt + nextDepthBody.heightMpt,
-                }),
-              }
-            : {}),
-        }) as BoringLogLayoutJobInput["template"];
-      }
+      const templateWithoutPagination: BoringLogLayoutJobInput["template"] = {
+        ...currentJob.template,
+      };
+      Reflect.deleteProperty(templateWithoutPagination, "pagination");
+      const template = Object.freeze({
+        ...templateWithoutPagination,
+        regions: resized.regions,
+        depthTransform,
+        ...(resized.repaginationRequired
+          ? {
+              pagination: Object.freeze({
+                policy: "fixed-scale-continuation-v1" as const,
+                yEndLimitMpt: nextDepthBody.yMpt + nextDepthBody.heightMpt,
+              }),
+            }
+          : {}),
+      });
       const authored = validateBoringLogLayoutJobInput({
         ...currentJob,
         templateDigest: sha256CanonicalJson(template),
@@ -8836,19 +8812,15 @@ async function main(): Promise<void> {
       }
       regionBoundaryCommandSequence += 1;
       const committed = await commitEmbeddedTemplateReplacement(source.service, {
-        requestId: `urn:rsrender:${borderMode ? "bld-058:request:region-border" : "bld-039:request:region-boundary"}:${regionBoundaryCommandSequence}`,
+        requestId: `urn:rsrender:bld-039:request:region-boundary:${regionBoundaryCommandSequence}`,
         documentId: documentIdentity,
         ownerGeneration: hosted.ownerGeneration,
         expectedWorkingRevision: input.expectedWorkingRevision,
         explorationIdentity: document.explorationIdentity,
         expectedEffectiveContentDigest: representation.effectiveContentDigest,
         replacementEffectiveContentDigest: authored.value.templateDigest,
-        reason: borderMode
-          ? `Set ${input.regionId} Page Region border in Boring Log Studio`
-          : `Resize ${resized!.accepted ? resized!.boundary : "unknown"} Page Region boundary in Boring Log Studio`,
-        ...(borderMode
-          ? { operation: "region-border-style" }
-          : { operation: "region-boundary-resize" }),
+        reason: `Resize ${resized.boundary} Page Region boundary in Boring Log Studio`,
+        operation: "region-boundary-resize",
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -8858,22 +8830,16 @@ async function main(): Promise<void> {
       projectionCache.clear();
       return Object.freeze({
         accepted: true,
-        code: borderMode ? "REGION_BORDER_SET" : "REGION_BOUNDARY_SET",
+        code: "REGION_BOUNDARY_SET",
         workingRevision: committed.workingRevision,
         dirty: committed.dirty,
         canUndo: committed.canUndo,
         canRedo: committed.canRedo,
-        ...(borderMode
-          ? { regionId: input.regionId }
-          : resized!.accepted
-            ? {
-                boundary: resized!.boundary,
-                effectiveBoundaryYMpt: resized!.effectiveBoundaryYMpt,
-                pageCount: resized!.pageCount,
-                repaginated: resized!.repaginationRequired,
-                clamped: resized!.clamped,
-              }
-            : {}),
+        boundary: resized.boundary,
+        effectiveBoundaryYMpt: resized.effectiveBoundaryYMpt,
+        pageCount: resized.pageCount,
+        repaginated: resized.repaginationRequired,
+        clamped: resized.clamped,
       });
     };
     const handleArrangeTextOccurrences = async (

@@ -17,103 +17,7 @@ export type BoringLogStudioTreeDataLayer = Readonly<{
 }>;
 
 function humanize(value: string): string {
-  return value
-    .replaceAll(":", " · ")
-    .replaceAll("-", " ")
-    .replace(/\b\w/gu, (character) => character.toUpperCase());
-}
-
-const uscsMaterialLabels: Readonly<Record<string, string>> = Object.freeze({
-  CH: "Fat clay (CH)",
-  CL: "Lean clay (CL)",
-  GC: "Clayey gravel (GC)",
-  GM: "Silty gravel (GM)",
-  GP: "Poorly graded gravel (GP)",
-  GW: "Well graded gravel (GW)",
-  MH: "Elastic silt (MH)",
-  ML: "Silt (ML)",
-  OH: "Organic soil (OH)",
-  OL: "Organic soil (OL)",
-  PT: "Peat (PT)",
-  SC: "Clayey sand (SC)",
-  SM: "Silty sand (SM)",
-  SP: "Poorly graded sand (SP)",
-  SW: "Well graded sand (SW)",
-});
-
-function compactLabel(value: string, maximum = 64): string {
-  const normalized = value.replace(/\s+/gu, " ").trim();
-  return normalized.length <= maximum
-    ? normalized
-    : `${normalized.slice(0, maximum - 1).trimEnd()}…`;
-}
-
-function textForRole(
-  scene: ResolvedBoringLogPageScene,
-  semanticId: string,
-  role: string,
-): string | null {
-  const node = scene.pages[0]?.nodes.find(
-    (candidate) =>
-      candidate.semanticId === semanticId && candidate.kind === "text" && candidate.role === role,
-  );
-  return node?.kind === "text" ? node.content : null;
-}
-
-function sampleLabel(scene: ResolvedBoringLogPageScene, sampleKey: string): string {
-  return textForRole(scene, `sample:${sampleKey}`, "sample-label") ?? humanize(sampleKey);
-}
-
-function ordinalFromKey(key: string): string {
-  const match = /(\d+)$/u.exec(key);
-  return match === null ? humanize(key) : String(Number.parseInt(match[1]!, 10));
-}
-
-export function boringLogStudioElementLabel(
-  scene: ResolvedBoringLogPageScene,
-  semanticId: string,
-): string {
-  if (semanticId.startsWith("sample:")) {
-    return `Sample ${sampleLabel(scene, semanticId.slice("sample:".length))}`;
-  }
-  if (semanticId.startsWith("remark:")) {
-    const content = textForRole(scene, semanticId, "remark-interval");
-    return content === null
-      ? `Remark ${ordinalFromKey(semanticId)}`
-      : `Remark — ${compactLabel(content)}`;
-  }
-  if (semanticId.startsWith("lithology:")) {
-    const [, stratumKey = semanticId, transition, transitionIndex] = semanticId.split(":");
-    const ordinal = ordinalFromKey(stratumKey);
-    if (transition === "transition") {
-      const content = textForRole(scene, semanticId, "material-transition-text");
-      return content === null
-        ? `Stratum ${ordinal} note ${transitionIndex ?? ""}`.trim()
-        : `Stratum ${ordinal} note — ${compactLabel(content)}`;
-    }
-    const content = textForRole(scene, semanticId, "material-description-interval") ?? "";
-    const uscsCode = /\(([A-Z]{2}(?:-[A-Z]{2})?)\)/u.exec(content)?.[1];
-    const material =
-      uscsCode === undefined
-        ? compactLabel(content, 42)
-        : (uscsMaterialLabels[uscsCode] ?? uscsCode);
-    return material.length === 0 ? `Stratum ${ordinal}` : `Stratum ${ordinal} — ${material}`;
-  }
-  if (semanticId.startsWith("data-layer:")) {
-    const [layerKey = "data", observationKey] = semanticId.slice("data-layer:".length).split(":");
-    const layerLabel =
-      layerKey === "layer-n-value"
-        ? "N value"
-        : layerKey === "layer-moisture"
-          ? "Moisture"
-          : layerKey === "layer-plasticity-range"
-            ? "Plasticity range"
-            : humanize(layerKey.replace(/^layer-/u, ""));
-    return observationKey === undefined
-      ? layerLabel
-      : `${layerLabel} — ${sampleLabel(scene, observationKey)}`;
-  }
-  return humanize(semanticId);
+  return value.replaceAll("-", " ").replace(/\b\w/gu, (character) => character.toUpperCase());
 }
 
 function extraParent(semanticId: string): string | null {
@@ -158,7 +62,7 @@ export function buildBoringLogStudioTree(
       semanticId,
       label: node.id.startsWith("node:clone:")
         ? `${humanize(node.role)} (Copy)`
-        : boringLogStudioElementLabel(scene, semanticId),
+        : humanize(semanticId),
       icon: "·",
       hidden: false,
     });
@@ -260,17 +164,7 @@ export function visibleBoringLogStudioTreeItems(
   if (query.length > 0) {
     const retained = new Set<string>();
     for (const item of items) {
-      const label = item.label.toLocaleLowerCase();
-      const matchIndex = label.indexOf(query);
-      if (matchIndex < 0) continue;
-      const followingCharacter = label[matchIndex + query.length];
-      if (
-        /\d$/u.test(query) &&
-        followingCharacter !== undefined &&
-        /\d/u.test(followingCharacter)
-      ) {
-        continue;
-      }
+      if (!item.label.toLocaleLowerCase().includes(query)) continue;
       let cursor: BoringLogStudioTreeItem | undefined = item;
       while (cursor !== undefined) {
         retained.add(cursor.semanticId);

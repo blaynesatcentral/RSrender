@@ -157,11 +157,11 @@ test("BLD-046 exposes accessible splitters and compact responsive panes", async 
   );
   assert.match(
     stylesheet,
-    /grid-template-columns:[\s\S]+var\(--contents-pane-width,[\s\S]+var\(--properties-pane-width,/u,
+    /grid-template-columns:[\s\S]+attr\(data-contents-width px,[\s\S]+attr\(data-properties-width px,/u,
   );
-  assert.match(stylesheet, /\.ribbon\s*\{[^}]*flex-wrap:\s*nowrap/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*flex-wrap:\s*wrap/su);
   assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-x:\s*hidden/su);
-  assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-y:\s*visible/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-y:\s*auto/su);
   assert.match(
     stylesheet,
     /\.canvas-context-menu\s*\{[^}]*position:\s*fixed[^}]*max-height:[^}]*overflow-y:\s*auto/su,
@@ -192,8 +192,7 @@ test("BLD-046 wires pointer, keyboard, and precision-touchpad input", async () =
   );
   assert.match(entry, /if \(!event\.ctrlKey\) \{/u);
   assert.match(entry, /canvasStage\.scrollLeft \+= event\.deltaY/u);
-  assert.match(entry, /resolveStudioRibbonGroupPlacement/u);
-  assert.match(entry, /ribbonOverflowMenu\.append/u);
+  assert.match(entry, /ribbon\.scrollLeft \+= event\.deltaY/u);
   assert.match(entry, /event\.preventDefault\(\)/u);
   assert.match(entry, /openCanvasContextMenu\(event\.clientX, event\.clientY\)/u);
   assert.match(main, /if \(!probeMode\) window\.center\(\)/u);

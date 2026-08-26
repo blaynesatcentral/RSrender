@@ -305,7 +305,7 @@ function createSession(
       Reflect.ownKeys(record).length !== expectedFields.length ||
       expectedFields.some((field) => !(field in record)) ||
       !Array.isArray(record["layoutJobs"]) ||
-      record["layoutJobs"].length < 2 ||
+      record["layoutJobs"].length < 1 ||
       record["layoutJobs"].length > 64
     ) {
       return rejected("BORING_LOG_PROJECT_CONFIGURATION_MALFORMED");

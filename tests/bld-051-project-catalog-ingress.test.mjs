@@ -44,7 +44,7 @@ test("BLD-051 admits the authorized tenant project-list shape without retaining 
 
 test("BLD-051 project catalog fails closed on drift, duplicates, and capacity", () => {
   const cases = [
-    [project({ id: "not-a-guid" })],
+    [project({ id: "" })],
     [project({ title: null })],
     [project({ boreholeCount: -1 })],
     [project(), project()],

@@ -7,7 +7,7 @@ RSrender is a Windows desktop application for turning structured RSLog project d
 RSrender is a working internal beta. The packaged application can:
 
 - sign in to an authorized RSLog account without persisting credentials;
-- select a project and import its supported borings in place;
+- select a project and import one or more supported borings in place;
 - navigate and edit multiple boring logs from structured data;
 - synchronize selection across Contents, Canvas, Properties, graphs, and the Attribute Table;
 - edit text, dynamic text, typography, layout, column widths, page setup, lithology appearance, and graph symbology through shared command history;
@@ -15,7 +15,7 @@ RSrender is a working internal beta. The packaged application can:
 - select all or a subset of borings and export one verified PDF package from the same resolved scene used on screen; and
 - use Arial plus bundled Source Sans 3, Source Serif 4, and Source Code Pro faces in Regular, Italic, Bold, and Bold Italic styles.
 
-The current source-of-truth beta checkpoint is commit `1118cdf`. Per-edge border authoring and the broader presentation overhaul remain active work. The bundled-font workflow passes packaged Save/Reopen/Undo/Redo/PDF qualification, while formal BLD-007 production-asset/topology admission remains open; this repository does not claim external release approval.
+The source of truth is the known-good build on `main`, recovered from the font-complete beta with current RSLog catalog compatibility and correct in-process project-session replacement. Per-edge border authoring and the broader presentation overhaul remain active work. The bundled-font workflow passes packaged Save/Reopen/Undo/Redo/PDF qualification, while formal BLD-007 production-asset/topology admission remains open; this repository does not claim external release approval.
 
 ## Rendering path
 

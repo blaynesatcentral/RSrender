@@ -164,7 +164,7 @@ test("BLD-047 exposes human Properties, effective depth data, and dedicated head
   assert.match(main, /Number\(document\.body\.dataset\.workingRevision\)/u);
   assert.match(
     stylesheet,
-    /\.data-control-grid\s*\{[^}]*grid-template-columns:\s*repeat\(8,\s*minmax\(86px,\s*1fr\)\)[^}]*margin:\s*2px 0/su,
+    /\.data-control-grid\s*\{[^}]*grid-template-columns:\s*repeat\(8,\s*minmax\(86px,\s*1fr\)\)[^}]*margin:\s*2px 0 15px/su,
   );
   assert.doesNotMatch(entry, /propertyBounds\.textContent = rawBoundsText/u);
 });

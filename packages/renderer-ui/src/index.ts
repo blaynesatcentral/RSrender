@@ -55,20 +55,12 @@ export {
   resolveStudioContextMenuPosition,
   resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
-  resolveStudioRibbonGroupPlacement,
   studioPaneLimits,
   type StudioContextMenuPosition,
   type StudioPaneResizeTarget,
   type StudioPaneWidths,
-  type StudioRibbonGroupMetrics,
-  type StudioRibbonPlacement,
   type StudioViewportMetrics,
 } from "./boring-log-studio-viewport.js";
-export {
-  resolveStudioFeedbackPresentation,
-  type StudioFeedbackPresentation,
-  type StudioFeedbackSeverity,
-} from "./boring-log-studio-feedback.js";
 export {
   boringLogAttributeTableCorpusLimits,
   resolveBoringLogAttributeTableWindow,

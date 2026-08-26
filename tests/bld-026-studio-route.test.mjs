@@ -689,35 +689,12 @@ test("BLD-039 Studio route admits only one exact Page Region boundary command", 
   };
   assert.equal((await route.setRegionBoundary(routeContext, envelope(1, args))).accepted, true);
   assert.deepEqual(received, args);
-  const borderArgs = {
-    expectedWorkingRevision: 1,
-    boundary: null,
-    requestedBoundaryYMpt: null,
-    regionId: "region-header",
-    border: {
-      top: true,
-      right: false,
-      bottom: true,
-      left: false,
-      color: "#b42318",
-      widthMpt: 1_500,
-      linePattern: "dash-dot",
-    },
-  };
-  assert.equal(
-    (await route.setRegionBoundary(routeContext, envelope(2, borderArgs))).accepted,
-    true,
-  );
-  assert.deepEqual(received, borderArgs);
   for (const invalidArgs of [
     { ...args, boundary: "free-scale" },
     { ...args, requestedBoundaryYMpt: -1 },
     { ...args, extra: true },
-    { ...borderArgs, regionId: "" },
-    { ...borderArgs, border: { ...borderArgs.border, color: "red" } },
-    { ...borderArgs, border: { ...borderArgs.border, linePattern: "wavy" } },
   ]) {
-    assert.deepEqual(await route.setRegionBoundary(routeContext, envelope(3, invalidArgs)), {
+    assert.deepEqual(await route.setRegionBoundary(routeContext, envelope(2, invalidArgs)), {
       accepted: false,
       code: "STUDIO_ROUTE_ARGUMENT_INVALID",
     });

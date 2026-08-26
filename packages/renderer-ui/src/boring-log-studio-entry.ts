@@ -1,6 +1,5 @@
 import { boringLogDynamicTextCatalog, boringLogTextColumnSemanticId } from "@rsrender/contracts";
 import type {
-  BoringLogBorderLinePattern,
   BoringLogSceneNode,
   BoringLogTextFrameAnchor,
   BoringLogValueProvenance,
@@ -9,18 +8,6 @@ import type {
   OverrideRenderUnitState,
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
-
-import { resolveStudioFeedbackPresentation } from "./boring-log-studio-feedback.js";
-
-type StudioBorderStyle = Readonly<{
-  top: boolean;
-  right: boolean;
-  bottom: boolean;
-  left: boolean;
-  color: string;
-  widthMpt: number;
-  linePattern: BoringLogBorderLinePattern;
-}>;
 
 type TextFrame = Readonly<{
   xMpt: number;
@@ -162,7 +149,6 @@ function frameFromAnchor(
 
 import { projectBoringLogSceneToSvg } from "./boring-log-svg-projection.js";
 import {
-  boringLogStudioElementLabel,
   buildBoringLogStudioTree,
   visibleBoringLogStudioTreeItems,
 } from "./boring-log-studio-tree.js";
@@ -183,7 +169,6 @@ import {
   resolveStudioContextMenuPosition,
   resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
-  resolveStudioRibbonGroupPlacement,
   studioPaneLimits,
   type StudioPaneResizeTarget,
 } from "./boring-log-studio-viewport.js";
@@ -499,7 +484,6 @@ type StudioApis = Readonly<{
         readonly frameFillColor: string | null;
         readonly frameStrokeColor: string | null;
         readonly frameStrokeWidthMpt: number;
-        readonly frameBorder?: StudioBorderStyle;
         readonly rotationMilliDegrees: number;
         readonly positionMode: "depth-bound" | "free";
       };
@@ -547,10 +531,8 @@ type StudioApis = Readonly<{
     }) => Promise<CommandResult>;
     readonly setRegionBoundary: (input: {
       readonly expectedWorkingRevision: number;
-      readonly boundary: RegionBoundary | null;
-      readonly requestedBoundaryYMpt: number | null;
-      readonly regionId: string | null;
-      readonly border: StudioBorderStyle | null;
+      readonly boundary: RegionBoundary;
+      readonly requestedBoundaryYMpt: number;
     }) => Promise<CommandResult>;
     readonly setDataDepthConfiguration: (input: {
       readonly expectedWorkingRevision: number;
@@ -714,8 +696,6 @@ async function main(): Promise<void> {
 
   let scene = initialProjection.scene;
   let page = scene.pages[0]!;
-  const elementLabel = (semanticId: string): string =>
-    boringLogStudioElementLabel(scene, semanticId);
   const pageHost = element<HTMLDivElement>("svg-page");
   const pageShadow = element<HTMLDivElement>("page-shadow");
   const pageGuidesHost = element<SVGSVGElement>("page-guides");
@@ -725,11 +705,6 @@ async function main(): Promise<void> {
   const ribbonQuery = document.querySelector<HTMLElement>(".ribbon");
   if (ribbonQuery === null) throw new Error("Studio ribbon is unavailable");
   const ribbon: HTMLElement = ribbonQuery;
-  const ribbonOverflow = element<HTMLDetailsElement>("ribbon-overflow");
-  const ribbonOverflowMenu = element<HTMLElement>("ribbon-overflow-menu");
-  const ribbonMessageQuery = ribbon.querySelector<HTMLElement>(".ribbon-message");
-  if (ribbonMessageQuery === null) throw new Error("Studio ribbon message is unavailable");
-  const ribbonMessage = ribbonMessageQuery;
   const workspaceQuery = document.querySelector<HTMLElement>(".workspace");
   if (workspaceQuery === null) throw new Error("Studio workspace is unavailable");
   const workspace: HTMLElement = workspaceQuery;
@@ -775,15 +750,6 @@ async function main(): Promise<void> {
   const regionResizeProperties = element<HTMLDetailsElement>("region-resize-properties");
   const regionHeight = element<HTMLInputElement>("region-height");
   const applyRegionHeight = element<HTMLButtonElement>("apply-region-height");
-  const regionBorderAll = element<HTMLInputElement>("region-border-all");
-  const regionBorderTop = element<HTMLInputElement>("region-border-top");
-  const regionBorderRight = element<HTMLInputElement>("region-border-right");
-  const regionBorderBottom = element<HTMLInputElement>("region-border-bottom");
-  const regionBorderLeft = element<HTMLInputElement>("region-border-left");
-  const regionBorderColor = element<HTMLInputElement>("region-border-color");
-  const regionBorderWidth = element<HTMLInputElement>("region-border-width");
-  const regionBorderPattern = element<HTMLSelectElement>("region-border-pattern");
-  const applyRegionBorder = element<HTMLButtonElement>("apply-region-border");
   const regionMinimumHeight = element<HTMLElement>("region-minimum-height");
   const regionDepthScale = element<HTMLElement>("region-depth-scale");
   const regionPagination = element<HTMLElement>("region-pagination");
@@ -902,11 +868,6 @@ async function main(): Promise<void> {
   const textFrameStrokeEnabled = element<HTMLInputElement>("text-frame-stroke-enabled");
   const textFrameStrokeColor = element<HTMLInputElement>("text-frame-stroke-color");
   const textFrameStrokeWidth = element<HTMLInputElement>("text-frame-stroke-width");
-  const textBorderTop = element<HTMLInputElement>("text-border-top");
-  const textBorderRight = element<HTMLInputElement>("text-border-right");
-  const textBorderBottom = element<HTMLInputElement>("text-border-bottom");
-  const textBorderLeft = element<HTMLInputElement>("text-border-left");
-  const textBorderPattern = element<HTMLSelectElement>("text-border-pattern");
   const textPositionMode = element<HTMLSelectElement>("text-position-mode");
   const detachTextAnnotation = element<HTMLButtonElement>("detach-text-annotation");
   const textLocked = element<HTMLInputElement>("text-locked");
@@ -918,50 +879,6 @@ async function main(): Promise<void> {
   const resetTextPresentation = element<HTMLButtonElement>("reset-text-presentation");
   const selectionStatus = element<HTMLElement>("selection-status");
   const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
-
-  const textBorderEdges = [textBorderTop, textBorderRight, textBorderBottom, textBorderLeft];
-  const regionBorderEdges = [
-    regionBorderTop,
-    regionBorderRight,
-    regionBorderBottom,
-    regionBorderLeft,
-  ];
-
-  function setBorderEdges(controls: readonly HTMLInputElement[], checked: boolean): void {
-    for (const control of controls) control.checked = checked;
-  }
-
-  function syncBorderControls(
-    allControl: HTMLInputElement,
-    controls: readonly HTMLInputElement[],
-    colorControl: HTMLInputElement,
-    widthControl: HTMLInputElement,
-    patternControl: HTMLSelectElement,
-  ): void {
-    allControl.checked = controls.every(({ checked }) => checked);
-    allControl.indeterminate = !allControl.checked && controls.some(({ checked }) => checked);
-    const enabled = controls.some(({ checked }) => checked);
-    colorControl.disabled = !enabled;
-    widthControl.disabled = !enabled;
-    patternControl.disabled = !enabled;
-  }
-
-  function borderFromControls(
-    controls: readonly HTMLInputElement[],
-    colorControl: HTMLInputElement,
-    widthControl: HTMLInputElement,
-    patternControl: HTMLSelectElement,
-  ): StudioBorderStyle {
-    return {
-      top: controls[0]!.checked,
-      right: controls[1]!.checked,
-      bottom: controls[2]!.checked,
-      left: controls[3]!.checked,
-      color: colorControl.value,
-      widthMpt: Math.round(Number(widthControl.value) * 1_000),
-      linePattern: patternControl.value as BoringLogBorderLinePattern,
-    };
-  }
   const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
   const propertiesScroll = element<HTMLElement>("properties-scroll");
   const propertyElementPanel = element<HTMLElement>("property-element-panel");
@@ -1060,37 +977,6 @@ async function main(): Promise<void> {
     element<HTMLButtonElement>("context-ungroup-selection"),
   ]);
   const status = element<HTMLParagraphElement>("editor-status");
-  const visibleStatus = element<HTMLOutputElement>("visible-editor-status");
-  const feedbackBanner = element<HTMLElement>("editor-feedback-banner");
-  const feedbackSeverity = element<HTMLElement>("editor-feedback-severity");
-  const feedbackMessage = element<HTMLElement>("editor-feedback-message");
-  const dismissFeedbackButton = element<HTMLButtonElement>("dismiss-editor-feedback");
-  let dismissedFeedbackMessage: string | null = null;
-
-  function renderVisibleFeedback(): void {
-    const message = status.textContent?.trim() ?? "";
-    const presentation = resolveStudioFeedbackPresentation(message);
-    if (dismissedFeedbackMessage !== null && dismissedFeedbackMessage !== message) {
-      dismissedFeedbackMessage = null;
-    }
-    visibleStatus.textContent = message;
-    visibleStatus.dataset["severity"] = presentation.severity;
-    feedbackBanner.dataset["severity"] = presentation.severity;
-    feedbackSeverity.textContent = presentation.severityLabel;
-    feedbackMessage.textContent = message;
-    feedbackBanner.hidden = !presentation.showBanner || dismissedFeedbackMessage === message;
-  }
-
-  new MutationObserver(renderVisibleFeedback).observe(status, {
-    childList: true,
-    characterData: true,
-    subtree: true,
-  });
-  dismissFeedbackButton.addEventListener("click", () => {
-    dismissedFeedbackMessage = status.textContent?.trim() ?? "";
-    feedbackBanner.hidden = true;
-  });
-  renderVisibleFeedback();
   const sceneSummary = element<HTMLElement>("scene-summary");
   const dataProjectName = element<HTMLElement>("data-project-name");
   const dataTopElevation = element<HTMLElement>("data-top-elevation");
@@ -1959,10 +1845,7 @@ async function main(): Promise<void> {
     group.dataset["semanticId"] = node.semanticId;
     group.dataset["positionMode"] = positionMode;
     group.dataset["locked"] = String(locked);
-    group.setAttribute(
-      "aria-label",
-      `Canvas geometry controls for ${elementLabel(node.semanticId)}`,
-    );
+    group.setAttribute("aria-label", `Canvas geometry controls for ${node.id}`);
     const moveTarget = document.createElementNS(namespace, "rect");
     moveTarget.id = "direct-manipulation-move";
     moveTarget.classList.add("direct-manipulation-move-target");
@@ -2184,7 +2067,7 @@ async function main(): Promise<void> {
     line?.setAttribute("x1", String(gesture.previewDividerXMpt));
     line?.setAttribute("x2", String(gesture.previewDividerXMpt));
     const modeLabel = gesture.resizeMode === "adjacent-pair" ? "adjacent pair" : "push following";
-    status.textContent = `Column preview (${modeLabel}): ${previewColumns.map(({ widthMpt }, index) => `${humanize(gesture.affectedColumns[index]!.id)} ${widthMpt / 1_000} pt`).join(" · ")}. The ${((gesture.conservedEndMpt - gesture.leftXMpt) / 1_000).toFixed(0)} pt affected span is conserved; release commits one Undo item and Esc cancels.`;
+    status.textContent = `Column preview (${modeLabel}): ${previewColumns.map(({ widthMpt }, index) => `${gesture.affectedColumns[index]!.id} ${widthMpt / 1_000} pt`).join(" · ")}. The ${((gesture.conservedEndMpt - gesture.leftXMpt) / 1_000).toFixed(0)} pt affected span is conserved; release commits one Undo item and Esc cancels.`;
   }
 
   function beginColumnDividerGesture(event: PointerEvent, leftColumnId: string): void {
@@ -2271,7 +2154,7 @@ async function main(): Promise<void> {
     columnDividerGesture = undefined;
     Reflect.deleteProperty(canvasStage.dataset, "columnDividerAfter");
     installSvg();
-    status.textContent = `Column divider gesture canceled for ${humanize(gesture.leftColumnId)}; history and template geometry were unchanged.`;
+    status.textContent = `Column divider gesture canceled for ${gesture.leftColumnId}; history and template geometry were unchanged.`;
   }
 
   async function commitColumnDivider(
@@ -2494,8 +2377,6 @@ async function main(): Promise<void> {
       expectedWorkingRevision: studioProjection.workingRevision,
       boundary,
       requestedBoundaryYMpt,
-      regionId: null,
-      border: null,
     });
     if (!result.accepted || result.workingRevision === undefined) {
       status.textContent = `Page Region command failed: ${result.code ?? "REGION_BOUNDARY_UNAVAILABLE"}`;
@@ -2505,43 +2386,6 @@ async function main(): Promise<void> {
     return refreshStudioProjection(
       result.workingRevision,
       `Page Region boundary committed at revision ${result.workingRevision}; ${result.pageCount ?? 1} page${result.pageCount === 1 ? "" : "s"} now preserve the fixed depth scale.`,
-    );
-  }
-
-  async function applySelectedRegionBorder(): Promise<boolean> {
-    const apis = studioApis();
-    if (apis === null || studioProjection === null || selectedSemanticId === null) return false;
-    const border = borderFromControls(
-      regionBorderEdges,
-      regionBorderColor,
-      regionBorderWidth,
-      regionBorderPattern,
-    );
-    if (
-      !/^#[0-9a-f]{6}$/iu.test(border.color) ||
-      !Number.isSafeInteger(border.widthMpt) ||
-      border.widthMpt < 0 ||
-      border.widthMpt > 12_000
-    ) {
-      status.textContent = "Region border requires a valid color and a width from 0 to 12 pt.";
-      return false;
-    }
-    applyRegionBorder.disabled = true;
-    const result = await apis.studio.setRegionBoundary({
-      expectedWorkingRevision: studioProjection.workingRevision,
-      boundary: null,
-      requestedBoundaryYMpt: null,
-      regionId: selectedSemanticId,
-      border,
-    });
-    applyRegionBorder.disabled = lifecycleState?.readOnly === true;
-    if (!result.accepted || result.workingRevision === undefined) {
-      status.textContent = `Page Region border failed: ${result.code ?? "REGION_BORDER_UNAVAILABLE"}`;
-      return false;
-    }
-    return refreshStudioProjection(
-      result.workingRevision,
-      `Page Region border committed at revision ${result.workingRevision}.`,
     );
   }
 
@@ -2603,7 +2447,7 @@ async function main(): Promise<void> {
       occurrenceNodeIds.length > 1
         ? `${occurrenceNodeIds.length} independent text frames; Properties values follow the Key Element`
         : physicalBoundsText([key]);
-    selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${elementLabel(key.semanticId)}`;
+    selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${key.id}`;
     status.textContent = announcement;
   }
 
@@ -3451,7 +3295,7 @@ async function main(): Promise<void> {
           selectionName.textContent = `${nextIds.size} text elements`;
           propertySemanticId.textContent =
             nextIds.size > 1 ? "Mixed selection" : keyNode.semanticId;
-          selectionStatus.textContent = `${nextIds.size} grouped text occurrence${nextIds.size === 1 ? "" : "s"}; Key Element ${elementLabel(keyNode.semanticId)}`;
+          selectionStatus.textContent = `${nextIds.size} grouped text occurrence${nextIds.size === 1 ? "" : "s"}; Key Element ${keyNode.id}`;
           status.textContent = `${humanize(exactGroupNode.semanticId)} selected from Contents.`;
           return;
         }
@@ -4255,7 +4099,6 @@ async function main(): Promise<void> {
   }
 
   function activateRibbonTab(tabId: string): void {
-    restoreRibbonGroups();
     const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-ribbon-tab]")];
     const panels = [...document.querySelectorAll<HTMLElement>("[data-ribbon-panel]")];
     const activeTab = tabs.find((tab) => tab.dataset["ribbonTab"] === tabId);
@@ -4271,49 +4114,7 @@ async function main(): Promise<void> {
     ribbon.setAttribute("aria-label", `${activeTab.textContent?.trim() ?? tabId} commands`);
     publicationPackagePanel.hidden = tabId !== "publish";
     if (tabId === "publish") renderPublicationInventory();
-    queueResponsiveRibbonLayout();
     status.textContent = `${activeTab.textContent?.trim() ?? tabId} commands active.`;
-  }
-
-  function restoreRibbonGroups(): void {
-    for (const group of [...ribbonOverflowMenu.children]) {
-      ribbon.insertBefore(group, ribbonOverflow);
-    }
-    ribbonOverflow.open = false;
-    ribbonOverflow.hidden = true;
-  }
-
-  function layoutResponsiveRibbon(): void {
-    restoreRibbonGroups();
-    const activeGroups = [
-      ...ribbon.querySelectorAll<HTMLElement>(":scope > [data-ribbon-panel]:not([hidden])"),
-    ];
-    if (activeGroups.length === 0) return;
-    const style = getComputedStyle(ribbon);
-    const horizontalPadding =
-      Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
-    const messageWidth = getComputedStyle(ribbonMessage).display === "none" ? 0 : 220;
-    const placement = resolveStudioRibbonGroupPlacement({
-      ribbonWidth: ribbon.clientWidth,
-      horizontalPadding,
-      messageWidth,
-      overflowTriggerWidth: 62,
-      groups: activeGroups.map((group, index) => ({
-        id: String(index),
-        width: Math.ceil(group.getBoundingClientRect().width),
-        alwaysOverflow: group.matches(".page-setup-group, .data-summary-group"),
-      })),
-    });
-    for (const index of placement.overflowIds) {
-      ribbonOverflowMenu.append(activeGroups[Number(index)]!);
-    }
-    ribbonOverflow.hidden = ribbonOverflowMenu.childElementCount === 0;
-  }
-
-  let ribbonLayoutFrame = 0;
-  function queueResponsiveRibbonLayout(): void {
-    cancelAnimationFrame(ribbonLayoutFrame);
-    ribbonLayoutFrame = requestAnimationFrame(layoutResponsiveRibbon);
   }
 
   function select(
@@ -4405,7 +4206,7 @@ async function main(): Promise<void> {
     if (representative === undefined) {
       emptySelection.hidden = false;
       selectionProperties.hidden = true;
-      selectionStatus.textContent = elementLabel(effectiveSemanticId);
+      selectionStatus.textContent = effectiveSemanticId;
       renderAttributeTable();
       return;
     }
@@ -4414,7 +4215,7 @@ async function main(): Promise<void> {
     selectionName.textContent =
       selectedTextNodeIds.size > 1
         ? `${selectedTextNodeIds.size} text elements`
-        : elementLabel(effectiveSemanticId);
+        : humanize(effectiveSemanticId);
     selectionRole.textContent = humanize(representative.role);
     selectionProvenance.textContent =
       representative.provenance?.provenanceClass === "effective-override"
@@ -4461,29 +4262,6 @@ async function main(): Promise<void> {
       regionDepthScale.textContent = `${plannedPage.depthTransform.mptPerFoot} mpt/ft (fixed)`;
       regionPagination.textContent = `${plannedPage.depthRange.endFt - plannedPage.depthRange.startFt} ft · 1 page`;
       applyRegionHeight.disabled = lifecycleState?.readOnly === true;
-      const border = selectedRegion.border;
-      setBorderEdges(regionBorderEdges, border === undefined ? true : false);
-      if (border !== undefined) {
-        regionBorderTop.checked = border.top;
-        regionBorderRight.checked = border.right;
-        regionBorderBottom.checked = border.bottom;
-        regionBorderLeft.checked = border.left;
-        regionBorderColor.value = border.color;
-        regionBorderWidth.value = String(border.widthMpt / 1_000);
-        regionBorderPattern.value = border.linePattern;
-      } else {
-        regionBorderColor.value = "#1f2529";
-        regionBorderWidth.value = "0.5";
-        regionBorderPattern.value = "solid";
-      }
-      syncBorderControls(
-        regionBorderAll,
-        regionBorderEdges,
-        regionBorderColor,
-        regionBorderWidth,
-        regionBorderPattern,
-      );
-      applyRegionBorder.disabled = lifecycleState?.readOnly === true;
     }
     const lithologyMatch = /^lithology:([^:]+)/u.exec(effectiveSemanticId);
     const lithologyState =
@@ -4581,31 +4359,13 @@ async function main(): Promise<void> {
         ? presentation!.frameFillColor!
         : "#fff4cc";
       textFrameFillColor.disabled = !textFrameFillEnabled.checked;
-      const frameBorder = presentation?.frameBorder;
-      const legacyFrameBorder = presentation?.frameStrokeColor != null;
-      setBorderEdges(textBorderEdges, frameBorder === undefined ? legacyFrameBorder : false);
-      if (frameBorder !== undefined) {
-        textBorderTop.checked = frameBorder.top;
-        textBorderRight.checked = frameBorder.right;
-        textBorderBottom.checked = frameBorder.bottom;
-        textBorderLeft.checked = frameBorder.left;
-      }
-      textFrameStrokeColor.value = /^#[0-9a-f]{6}$/iu.test(
-        frameBorder?.color ?? presentation?.frameStrokeColor ?? "",
-      )
-        ? (frameBorder?.color ?? presentation!.frameStrokeColor!)
+      textFrameStrokeEnabled.checked = presentation?.frameStrokeColor != null;
+      textFrameStrokeColor.value = /^#[0-9a-f]{6}$/iu.test(presentation?.frameStrokeColor ?? "")
+        ? presentation!.frameStrokeColor!
         : "#b42318";
-      textFrameStrokeWidth.value = String(
-        (frameBorder?.widthMpt ?? presentation?.frameStrokeWidthMpt ?? 500) / 1_000,
-      );
-      textBorderPattern.value = frameBorder?.linePattern ?? "solid";
-      syncBorderControls(
-        textFrameStrokeEnabled,
-        textBorderEdges,
-        textFrameStrokeColor,
-        textFrameStrokeWidth,
-        textBorderPattern,
-      );
+      textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
+      textFrameStrokeWidth.value = String((presentation?.frameStrokeWidthMpt ?? 500) / 1_000);
+      textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
       textPositionMode.value = presentation?.positionMode ?? "depth-bound";
       textFrameY.readOnly = textPositionMode.value !== "free";
       detachTextAnnotation.disabled =
@@ -4732,14 +4492,14 @@ async function main(): Promise<void> {
         : editable === null
           ? "Not applicable"
           : "Source original (not overridden)";
-    selectionStatus.textContent = elementLabel(effectiveSemanticId);
+    selectionStatus.textContent = `${humanize(effectiveSemanticId)} · ${representative.id}`;
     if (selectedTextNodeIds.size > 1) {
-      selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; Key Element ${elementLabel(representative.semanticId)}`;
+      selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; primary ${representative.id}`;
     }
     status.textContent =
       selectedTextNodeIds.size > 1
         ? `${selectedTextNodeIds.size} exact text occurrences selected. Shift-click toggles membership; the orange occurrence is the Key Element.`
-        : `${elementLabel(effectiveSemanticId)} selected. Canvas, Contents, and Properties synchronized.`;
+        : `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
     renderAttributeTable();
   }
 
@@ -4774,7 +4534,7 @@ async function main(): Promise<void> {
     updateArrangementControls();
     selectionName.textContent = `${textNodes.length} text elements`;
     propertySemanticId.textContent = "Mixed selection";
-    selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${elementLabel(key.semanticId)}`;
+    selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${key.id}`;
     status.textContent = `${textNodes.length} text occurrences selected on the active page; the orange occurrence is the Key Element.`;
     renderAttributeTable();
   }
@@ -5967,14 +5727,6 @@ async function main(): Promise<void> {
     };
     const rotationMilliDegrees = Math.round(Number(textRotation.value) * 1_000);
     const frameStrokeWidthMpt = Math.round(Number(textFrameStrokeWidth.value) * 1_000);
-    const frameBorder = borderFromControls(
-      textBorderEdges,
-      textFrameStrokeColor,
-      textFrameStrokeWidth,
-      textBorderPattern,
-    );
-    const useLegacyFullBorder =
-      textBorderEdges.every(({ checked }) => checked) && frameBorder.linePattern === "solid";
     const positionMode = textPositionMode.value as "depth-bound" | "free";
     if (
       !Number.isSafeInteger(fontSizeMpt) ||
@@ -6025,14 +5777,14 @@ async function main(): Promise<void> {
       return false;
     }
     applyTextStyle.disabled = true;
-    status.textContent = `Applying text properties to ${elementLabel(node.semanticId)}…`;
+    status.textContent = `Applying text properties to ${node.id}…`;
     if (applyScope === "named-style") {
-      status.textContent = `Applying typography to named style ${humanize(style.id)}…`;
+      status.textContent = `Applying typography to named style ${style.id}...`;
     } else if (applyScope === "template-default") {
       const summary = studioProjection.textTemplateScopeSummary;
       status.textContent = `Applying ${propertyMask.length} changed typography ${propertyMask.length === 1 ? "property" : "properties"} to ${summary.authoredStyleCount} embedded-template styles; preserving ${summary.excludedOverrideStyleCount} override styles...`;
     } else if (applyScope === "column-default") {
-      status.textContent = `Applying typography to ${humanize(columnId ?? "selected-column")}…`;
+      status.textContent = `Applying typography to ${columnId}...`;
     } else if (applyScope === "all-selected") {
       status.textContent = `Applying typography to ${selectedTargetNodes.length} selected occurrences...`;
     }
@@ -6072,9 +5824,8 @@ async function main(): Promise<void> {
         overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic" | "shrink-to-minimum",
         ...(textOverflowPolicy.value === "shrink-to-minimum" ? { minimumFontSizeMpt } : {}),
         frameFillColor: textFrameFillEnabled.checked ? textFrameFillColor.value : null,
-        frameStrokeColor: useLegacyFullBorder ? textFrameStrokeColor.value : null,
+        frameStrokeColor: textFrameStrokeEnabled.checked ? textFrameStrokeColor.value : null,
         frameStrokeWidthMpt,
-        ...(!useLegacyFullBorder ? { frameBorder } : {}),
         rotationMilliDegrees,
         positionMode,
       },
@@ -6102,14 +5853,14 @@ async function main(): Promise<void> {
       applyScope === "template-default"
         ? `Changed typography applied to ${String(result["affectedStyleCount"])} embedded-template styles at revision ${String(result["workingRevision"])}; ${String(result["excludedStyleCount"])} occurrence/column override styles were preserved.`
         : applyScope === "named-style"
-          ? `Named style ${humanize(style.id)} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
+          ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
           : applyScope === "column-default"
-            ? `${humanize(columnId ?? "selected-column")} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
+            ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
             : applyScope === "all-selected"
               ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
               : origin === "canvas"
-                ? `Canvas geometry committed for ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}; text was reflowed by the shared layout authority.`
-                : `Text properties applied to ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}.`,
+                ? `Canvas geometry committed for ${node.id} at revision ${String(result["workingRevision"])}; text was reflowed by the shared layout authority.`
+                : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -6130,8 +5881,7 @@ async function main(): Promise<void> {
     detachTextAnnotation.disabled = true;
     textPositionMode.value = "free";
     textFrameY.readOnly = false;
-    const selectedNode = page.nodes.find(({ id }) => id === selectedSceneNodeId);
-    status.textContent = `Detaching ${selectedNode === undefined ? "selected text" : elementLabel(selectedNode.semanticId)} as a free annotation…`;
+    status.textContent = `Detaching ${selectedSceneNodeId} as a free annotationâ€¦`;
     if (!(await applySelectedTextStyle())) {
       textPositionMode.value = "depth-bound";
       textFrameY.readOnly = true;
@@ -6162,7 +5912,7 @@ async function main(): Promise<void> {
       return;
     }
     resetTextPresentation.disabled = true;
-    status.textContent = `Resetting ${elementLabel(node.semanticId)} to inherited presentation…`;
+    status.textContent = `Resetting ${node.id} to inherited presentation…`;
     const raw = await apis.studio.resetTextOccurrencePresentation({
       expectedWorkingRevision: studioProjection.workingRevision,
       occurrenceNodeId: node.id,
@@ -6181,7 +5931,7 @@ async function main(): Promise<void> {
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
-      `Presentation reset to inherited for ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}.`,
+      `Presentation reset to inherited for ${node.id} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
   }
@@ -6304,8 +6054,6 @@ async function main(): Promise<void> {
     propertiesPaneWidth = resolved.propertiesWidth;
     workspace.dataset["contentsWidth"] = String(resolved.contentsWidth);
     workspace.dataset["propertiesWidth"] = String(resolved.propertiesWidth);
-    workspace.style.setProperty("--contents-pane-width", `${resolved.contentsWidth}px`);
-    workspace.style.setProperty("--properties-pane-width", `${resolved.propertiesWidth}px`);
     contentsSplitter.setAttribute("aria-valuenow", String(resolved.contentsWidth));
     propertiesSplitter.setAttribute("aria-valuenow", String(resolved.propertiesWidth));
     canvasStage.dataset["viewportWidth"] = String(resolved.canvasWidth);
@@ -6505,7 +6253,7 @@ async function main(): Promise<void> {
     canvasStage.dataset["directManipulationHandle"] = handle;
     event.preventDefault();
     event.stopPropagation();
-    status.textContent = `${humanize(handle)} gesture active for ${elementLabel(node.semanticId)}. Geometry is integer mpt; release commits one Undo/Redo step and Esc cancels.`;
+    status.textContent = `${humanize(handle)} gesture active for ${node.id}. Geometry is integer mpt; release commits one Undo/Redo step and Esc cancels.`;
   }
 
   function updateDirectManipulation(event: PointerEvent): void {
@@ -6570,7 +6318,7 @@ async function main(): Promise<void> {
     suppressCanvasClick = true;
     installSvg();
     syncTextFrameInputs(gesture.originalFrame);
-    status.textContent = `Canvas gesture canceled for ${elementLabel(gesture.semanticId)}; document history and scene authority were unchanged.`;
+    status.textContent = `Canvas gesture canceled for ${gesture.nodeId}; document history and scene authority were unchanged.`;
   }
 
   async function finishDirectManipulation(event: PointerEvent): Promise<void> {
@@ -6857,14 +6605,21 @@ async function main(): Promise<void> {
   canvasStage.addEventListener("pointercancel", finishPan);
   canvasStage.addEventListener("wheel", applyTouchpadPinchZoom, { passive: false });
   canvasStage.addEventListener("scroll", hideCanvasContextMenu, { passive: true });
-  ribbonOverflowMenu.addEventListener("click", (event) => {
-    if ((event.target as Element).closest("button") !== null) ribbonOverflow.open = false;
-  });
-  document.addEventListener("pointerdown", (event) => {
-    if (ribbonOverflow.open && !ribbonOverflow.contains(event.target as Node)) {
-      ribbonOverflow.open = false;
-    }
-  });
+  ribbon.addEventListener(
+    "wheel",
+    (event) => {
+      if (
+        event.ctrlKey ||
+        event.deltaX !== 0 ||
+        event.deltaY === 0 ||
+        ribbon.scrollWidth <= ribbon.clientWidth
+      )
+        return;
+      ribbon.scrollLeft += event.deltaY;
+      event.preventDefault();
+    },
+    { passive: false },
+  );
   const installPaneSplitter = (
     splitter: HTMLElement,
     resizeTarget: Exclude<StudioPaneResizeTarget, "viewport">,
@@ -7124,7 +6879,6 @@ async function main(): Promise<void> {
     "apply-region-height": () => {
       void applySelectedRegionHeightMpt(Math.round(Number(regionHeight.value) * 1_000));
     },
-    "apply-region-border": () => void applySelectedRegionBorder(),
     "apply-text-style": () => void applySelectedTextStyle(),
     "detach-text-annotation": () => void detachSelectedTextAsAnnotation(),
     "reset-text-presentation": () => void resetSelectedTextPresentation(),
@@ -7317,47 +7071,9 @@ async function main(): Promise<void> {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;
   });
   textFrameStrokeEnabled.addEventListener("change", () => {
-    setBorderEdges(textBorderEdges, textFrameStrokeEnabled.checked);
-    syncBorderControls(
-      textFrameStrokeEnabled,
-      textBorderEdges,
-      textFrameStrokeColor,
-      textFrameStrokeWidth,
-      textBorderPattern,
-    );
+    textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
+    textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
   });
-  for (const control of textBorderEdges) {
-    control.addEventListener("change", () =>
-      syncBorderControls(
-        textFrameStrokeEnabled,
-        textBorderEdges,
-        textFrameStrokeColor,
-        textFrameStrokeWidth,
-        textBorderPattern,
-      ),
-    );
-  }
-  regionBorderAll.addEventListener("change", () => {
-    setBorderEdges(regionBorderEdges, regionBorderAll.checked);
-    syncBorderControls(
-      regionBorderAll,
-      regionBorderEdges,
-      regionBorderColor,
-      regionBorderWidth,
-      regionBorderPattern,
-    );
-  });
-  for (const control of regionBorderEdges) {
-    control.addEventListener("change", () =>
-      syncBorderControls(
-        regionBorderAll,
-        regionBorderEdges,
-        regionBorderColor,
-        regionBorderWidth,
-        regionBorderPattern,
-      ),
-    );
-  }
   for (const control of [
     dataLayerLineColor,
     dataLayerLineWidth,
@@ -7385,7 +7101,6 @@ async function main(): Promise<void> {
   window.addEventListener("resize", () => {
     hideCanvasContextMenu();
     applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
-    queueResponsiveRibbonLayout();
   });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && pendingKeyboardNudge !== undefined) {
@@ -7534,7 +7249,6 @@ async function main(): Promise<void> {
 
   installSvg();
   applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
-  queueResponsiveRibbonLayout();
   renderTree();
   renderDiagnostics();
   updateContentsOptions();

@@ -72,27 +72,6 @@ function isPositiveSafeInteger(input: unknown): input is number {
   return isNonnegativeSafeInteger(input) && input > 0;
 }
 
-function validBorderStyle(input: unknown): boolean {
-  const border = exactRecord(input, [
-    "top",
-    "right",
-    "bottom",
-    "left",
-    "color",
-    "widthMpt",
-    "linePattern",
-  ]);
-  return (
-    border !== null &&
-    ["top", "right", "bottom", "left"].every((edge) => typeof border[edge] === "boolean") &&
-    typeof border["color"] === "string" &&
-    /^#[0-9a-f]{6}$/iu.test(border["color"]) &&
-    isNonnegativeSafeInteger(border["widthMpt"]) &&
-    border["widthMpt"] <= 12_000 &&
-    ["solid", "dashed", "dotted", "dash-dot"].includes(String(border["linePattern"]))
-  );
-}
-
 function boundedClone(input: unknown): unknown {
   try {
     const serialized = JSON.stringify(input);
@@ -1079,11 +1058,6 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
     typeof args["layout"] === "object" &&
     args["layout"] !== null &&
     Object.hasOwn(args["layout"], "minimumFontSizeMpt");
-  const hasFrameBorder =
-    args !== null &&
-    typeof args["layout"] === "object" &&
-    args["layout"] !== null &&
-    Object.hasOwn(args["layout"], "frameBorder");
   const layout =
     args === null
       ? null
@@ -1099,7 +1073,6 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
           "frameFillColor",
           "frameStrokeColor",
           "frameStrokeWidthMpt",
-          ...(hasFrameBorder ? ["frameBorder"] : []),
           "rotationMilliDegrees",
           "positionMode",
         ]);
@@ -1216,7 +1189,6 @@ const setTextOccurrenceStyle = Object.freeze(async function setTextOccurrenceSty
         !/^#[0-9a-f]{6}$/iu.test(layout["frameStrokeColor"]))) ||
     !isNonnegativeSafeInteger(layout["frameStrokeWidthMpt"]) ||
     layout["frameStrokeWidthMpt"] > 12_000 ||
-    (hasFrameBorder && !validBorderStyle(layout["frameBorder"])) ||
     !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
     (layout["rotationMilliDegrees"] as number) < -180_000 ||
     (layout["rotationMilliDegrees"] as number) > 180_000 ||
@@ -1631,35 +1603,12 @@ const setColumnHeading = Object.freeze(async function setColumnHeading(input: un
 
 const setRegionBoundary = Object.freeze(async function setRegionBoundary(input: unknown) {
   if (arguments.length !== 1 || inFlight || sequence >= Number.MAX_SAFE_INTEGER) return unavailable;
-  const hasBorderModeFields =
-    typeof input === "object" &&
-    input !== null &&
-    Object.hasOwn(input, "regionId") &&
-    Object.hasOwn(input, "border");
-  const args = exactRecord(input, [
-    "expectedWorkingRevision",
-    "boundary",
-    "requestedBoundaryYMpt",
-    ...(hasBorderModeFields ? ["regionId", "border"] : []),
-  ]);
-  const resizeMode =
-    args !== null &&
-    ["header-depth", "depth-footer"].includes(String(args["boundary"])) &&
-    isNonnegativeSafeInteger(args["requestedBoundaryYMpt"]) &&
-    (!hasBorderModeFields || (args["regionId"] === null && args["border"] === null));
-  const borderMode =
-    args !== null &&
-    hasBorderModeFields &&
-    args["boundary"] === null &&
-    args["requestedBoundaryYMpt"] === null &&
-    typeof args["regionId"] === "string" &&
-    args["regionId"].length > 0 &&
-    args["regionId"].length <= 512 &&
-    validBorderStyle(args["border"]);
+  const args = exactRecord(input, ["expectedWorkingRevision", "boundary", "requestedBoundaryYMpt"]);
   if (
     args === null ||
     !isNonnegativeSafeInteger(args["expectedWorkingRevision"]) ||
-    (!resizeMode && !borderMode)
+    !["header-depth", "depth-footer"].includes(String(args["boundary"])) ||
+    !isNonnegativeSafeInteger(args["requestedBoundaryYMpt"])
   ) {
     return unavailable;
   }
@@ -2512,15 +2461,6 @@ export interface BoringLogStudioPreloadApi {
       readonly frameFillColor: string | null;
       readonly frameStrokeColor: string | null;
       readonly frameStrokeWidthMpt: number;
-      readonly frameBorder?: Readonly<{
-        readonly top: boolean;
-        readonly right: boolean;
-        readonly bottom: boolean;
-        readonly left: boolean;
-        readonly color: string;
-        readonly widthMpt: number;
-        readonly linePattern: "solid" | "dashed" | "dotted" | "dash-dot";
-      }>;
       readonly rotationMilliDegrees: number;
       readonly positionMode: "depth-bound" | "free";
     };
@@ -2589,18 +2529,8 @@ export interface BoringLogStudioPreloadApi {
   }) => Promise<unknown>;
   readonly setRegionBoundary: (input: {
     readonly expectedWorkingRevision: number;
-    readonly boundary: "header-depth" | "depth-footer" | null;
-    readonly requestedBoundaryYMpt: number | null;
-    readonly regionId: string | null;
-    readonly border: Readonly<{
-      readonly top: boolean;
-      readonly right: boolean;
-      readonly bottom: boolean;
-      readonly left: boolean;
-      readonly color: string;
-      readonly widthMpt: number;
-      readonly linePattern: "solid" | "dashed" | "dotted" | "dash-dot";
-    }> | null;
+    readonly boundary: "header-depth" | "depth-footer";
+    readonly requestedBoundaryYMpt: number;
   }) => Promise<unknown>;
   readonly setDataDepthConfiguration: (input: {
     readonly expectedWorkingRevision: number;

@@ -28,6 +28,12 @@ export type RsLogProjectCatalogIngressResult =
       code:
         | "RSLOG_PROJECT_CATALOG_INPUT_INVALID"
         | "RSLOG_PROJECT_CATALOG_SCHEMA_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_ENTRY_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_IDENTITY_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_TITLE_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_OPTIONAL_TEXT_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_BOREHOLE_COUNT_UNADMITTED"
+        | "RSLOG_PROJECT_CATALOG_FLAGS_UNADMITTED"
         | "RSLOG_PROJECT_CATALOG_CAPACITY_EXCEEDED"
         | "RSLOG_PROJECT_CATALOG_DUPLICATE_IDENTITY";
     }>;
@@ -55,15 +61,22 @@ function boundedText(input: unknown, maximumBytes: number): string | null {
 }
 
 function nullableText(input: unknown, maximumBytes: number): string | null | undefined {
-  return input === null ? null : (boundedText(input, maximumBytes) ?? undefined);
+  if (input === null || input === "") return null;
+  if (typeof input !== "string") return undefined;
+  const normalized = input.replace(/[\u0009-\u000d]+/gu, " ").trim();
+  return normalized.length === 0 ? null : (boundedText(normalized, maximumBytes) ?? undefined);
 }
 
-function guid(input: unknown): string | null {
-  const value = boundedText(input, 64);
-  return value !== null &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value)
-    ? value
-    : null;
+function opaqueIdentity(input: unknown): string | null {
+  const value = boundedText(input, 512);
+  return value !== null && value.trim().length > 0 ? value : null;
+}
+
+function catalogTitle(input: unknown): string | null {
+  if (input === "" || (typeof input === "string" && input.trim().length === 0)) {
+    return "Untitled RSLog project";
+  }
+  return boundedText(input, 4_096);
 }
 
 function rejected(code: Extract<RsLogProjectCatalogIngressResult, { accepted: false }>["code"]) {
@@ -91,27 +104,25 @@ export function inspectRsLogProjectCatalog(input: Uint8Array): RsLogProjectCatal
   const projects: RsLogProjectCatalogEntry[] = [];
   for (const candidate of parsed) {
     const record = plainRecord(candidate);
-    const id = guid(record?.["id"]);
-    const title = boundedText(record?.["title"], 4_096);
+    if (record === null) return rejected("RSLOG_PROJECT_CATALOG_ENTRY_UNADMITTED");
+    const id = opaqueIdentity(record["id"]);
+    if (id === null) return rejected("RSLOG_PROJECT_CATALOG_IDENTITY_UNADMITTED");
+    const title = catalogTitle(record["title"]);
+    if (title === null) return rejected("RSLOG_PROJECT_CATALOG_TITLE_UNADMITTED");
     const jobNumber = nullableText(record?.["jobNo"], 2_048);
     const clientName = nullableText(record?.["clientName"], 4_096);
     const siteLocation = nullableText(record?.["siteLocation"], 8_192);
+    if (jobNumber === undefined || clientName === undefined || siteLocation === undefined) {
+      return rejected("RSLOG_PROJECT_CATALOG_OPTIONAL_TEXT_UNADMITTED");
+    }
     const boreholeCount = record?.["boreholeCount"];
     const isActive = record?.["isActive"];
     const isExample = record?.["isExample"];
-    if (
-      record === null ||
-      id === null ||
-      title === null ||
-      jobNumber === undefined ||
-      clientName === undefined ||
-      siteLocation === undefined ||
-      !Number.isSafeInteger(boreholeCount) ||
-      (boreholeCount as number) < 0 ||
-      typeof isActive !== "boolean" ||
-      typeof isExample !== "boolean"
-    ) {
-      return rejected("RSLOG_PROJECT_CATALOG_SCHEMA_UNADMITTED");
+    if (!Number.isSafeInteger(boreholeCount) || (boreholeCount as number) < 0) {
+      return rejected("RSLOG_PROJECT_CATALOG_BOREHOLE_COUNT_UNADMITTED");
+    }
+    if (typeof isActive !== "boolean" || typeof isExample !== "boolean") {
+      return rejected("RSLOG_PROJECT_CATALOG_FLAGS_UNADMITTED");
     }
     projects.push(
       Object.freeze({

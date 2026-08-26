@@ -1,6 +1,5 @@
 import {
   boringLogPagePlanSchemaVersion,
-  boringLogBorderDashMpt,
   boringLogRenderContractVersion,
   boringLogTextColumnSemanticId,
   resolveDynamicText,
@@ -12,7 +11,6 @@ import {
 } from "@rsrender/contracts";
 import type {
   BoringLogColumnInput,
-  BoringLogBorderStyleInput,
   BoringLogLayoutJobInput,
   BoringLogPagePlan,
   BoringLogRenderDiagnostic,
@@ -280,52 +278,6 @@ function buildDraft(
       dashMpt,
     });
 
-  const addBorder = (
-    id: string,
-    semanticId: string,
-    parentId: string,
-    role: string,
-    bounds: MptRect,
-    border: BoringLogBorderStyleInput,
-  ): void => {
-    const dashMpt = boringLogBorderDashMpt(border.linePattern);
-    const edges = [
-      ["top", bounds.xMpt, bounds.yMpt, bounds.xMpt + bounds.widthMpt, bounds.yMpt],
-      [
-        "right",
-        bounds.xMpt + bounds.widthMpt,
-        bounds.yMpt,
-        bounds.xMpt + bounds.widthMpt,
-        bounds.yMpt + bounds.heightMpt,
-      ],
-      [
-        "bottom",
-        bounds.xMpt,
-        bounds.yMpt + bounds.heightMpt,
-        bounds.xMpt + bounds.widthMpt,
-        bounds.yMpt + bounds.heightMpt,
-      ],
-      ["left", bounds.xMpt, bounds.yMpt, bounds.xMpt, bounds.yMpt + bounds.heightMpt],
-    ] as const;
-    for (const [edge, x1, y1, x2, y2] of edges) {
-      if (!border[edge]) continue;
-      addLine(
-        `${id}:border-${edge}`,
-        semanticId,
-        parentId,
-        `${role}-border-${edge}`,
-        x1,
-        y1,
-        x2,
-        y2,
-        `border-color-${border.color.slice(1).toLowerCase()}`,
-        null,
-        dashMpt,
-        border.widthMpt,
-      );
-    }
-  };
-
   const addPath = (
     id: string,
     semanticId: string,
@@ -582,9 +534,6 @@ function buildDraft(
                     frameStrokeColor: occurrenceLayout.frameStrokeColor ?? null,
                     frameStrokeWidthMpt: occurrenceLayout.frameStrokeWidthMpt,
                   }),
-              ...(occurrenceLayout.frameBorder === undefined
-                ? {}
-                : { frameBorder: occurrenceLayout.frameBorder }),
               rotationMilliDegrees: occurrenceLayout.rotationMilliDegrees,
               positionMode: occurrenceLayout.positionMode,
               locked: occurrenceLayout.locked,
@@ -609,27 +558,22 @@ function buildDraft(
   );
 
   for (const region of job.template.regions) {
-    const bounds = rect(region.xMpt, region.yMpt, region.widthMpt, region.heightMpt);
-    addGroup(`node:${region.id}`, region.id, "node:page-root", region.role, bounds);
+    addGroup(
+      `node:${region.id}`,
+      region.id,
+      "node:page-root",
+      region.role,
+      rect(region.xMpt, region.yMpt, region.widthMpt, region.heightMpt),
+    );
     addRect(
       `node:${region.id}:frame`,
       region.id,
       `node:${region.id}`,
       "region-frame",
-      bounds,
+      rect(region.xMpt, region.yMpt, region.widthMpt, region.heightMpt),
       "pageFill",
-      region.border === undefined ? "rule" : null,
+      "rule",
     );
-    if (region.border !== undefined) {
-      addBorder(
-        `node:${region.id}:frame`,
-        region.id,
-        `node:${region.id}`,
-        "region-frame",
-        bounds,
-        region.border,
-      );
-    }
   }
 
   const header = job.template.regions.find(({ role }) => role === "header")!;
@@ -1849,11 +1793,6 @@ function buildDraft(
                 asMpt(0),
             }
           : {}),
-        ...(occurrenceLayout?.frameBorder !== undefined
-          ? { frameBorder: occurrenceLayout.frameBorder }
-          : sourcePresentation?.frameBorder !== undefined
-            ? { frameBorder: sourcePresentation.frameBorder }
-            : {}),
         rotationMilliDegrees:
           occurrenceLayout?.rotationMilliDegrees ?? sourcePresentation?.rotationMilliDegrees ?? 0,
         positionMode: occurrenceLayout?.positionMode ?? "free",
@@ -2270,18 +2209,8 @@ export function resolveBoringLogPageScene(
     }
     const originalDraft = buildDraft(prepared.value.job);
     const pageDrafts = createPageDrafts(prepared.value.job, prepared.value.pagePlan, originalDraft);
-    const borderColorTokens = Object.fromEntries(
-      prepared.value.job.template.regions.flatMap(({ border }) =>
-        border === undefined
-          ? []
-          : [[`border-color-${border.color.slice(1).toLowerCase()}`, border.color]],
-      ),
-    );
     const resources = {
-      visualTokens: Object.freeze({
-        ...prepared.value.job.template.visualTokens,
-        ...borderColorTokens,
-      }),
+      visualTokens: prepared.value.job.template.visualTokens,
       textStyles: prepared.value.job.template.styles,
       patterns: resolveBoringLogLithologyPatternResources(prepared.value.job),
     };

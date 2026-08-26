@@ -100,16 +100,7 @@ test("BLD-031 builds a collapsible semantic tree and preserves filtered ancestry
   assert.equal(items[0].semanticId, "page-root");
   assert.equal(items[0].hasChildren, true);
   assert.ok(
-    items.some(
-      ({ semanticId, level, label }) =>
-        semanticId === "sample:sample-01" && level === 4 && label === "Sample S-1",
-    ),
-  );
-  assert.ok(
-    items.some(
-      ({ semanticId, label }) =>
-        semanticId === "lithology:stratum-01" && label === "Stratum 1 — Silt (ML)",
-    ),
+    items.some(({ semanticId, level }) => semanticId === "sample:sample-01" && level === 4),
   );
   assert.deepEqual(
     visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "").map(
@@ -117,10 +108,19 @@ test("BLD-031 builds a collapsible semantic tree and preserves filtered ancestry
     ),
     ["page-root"],
   );
-  const filtered = visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "sample s-1");
+  const filtered = visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "sample 01");
   assert.deepEqual(
     filtered.map(({ semanticId }) => semanticId),
-    ["page-root", "region-depth-body", "column-sample", "sample:sample-01"],
+    [
+      "page-root",
+      "region-depth-body",
+      "column-sample",
+      "sample:sample-01",
+      "column-data-track",
+      "data-layer:layer-n-value:sample-01",
+      "data-layer:layer-moisture:sample-01",
+      "data-layer:layer-plasticity-range:sample-01",
+    ],
   );
 });
 
@@ -137,8 +137,7 @@ test("BLD-031 route exposes live ribbon tabs, property tabs, and disclosure cont
     html,
     /id="property-tab-diagnostics"[^>]+aria-controls="property-diagnostics-panel"/u,
   );
-  assert.equal((html.match(/<details class="property-group" open>/gu) ?? []).length, 1);
-  assert.match(html, /<details class="property-group"><summary>Value source<\/summary>/u);
+  assert.equal((html.match(/<details class="property-group" open>/gu) ?? []).length, 2);
   assert.match(html, /<details class="property-group"><summary>Advanced diagnostics<\/summary>/u);
 });
 

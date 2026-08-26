@@ -22,17 +22,6 @@ export type StudioViewportMetrics = Readonly<{
   availableScreenWidth: number;
 }>;
 
-export type StudioRibbonGroupMetrics = Readonly<{
-  readonly id: string;
-  readonly width: number;
-  readonly alwaysOverflow?: boolean;
-}>;
-
-export type StudioRibbonPlacement = Readonly<{
-  readonly visibleIds: readonly string[];
-  readonly overflowIds: readonly string[];
-}>;
-
 function finiteInteger(value: number, fallback: number): number {
   return Number.isFinite(value) ? Math.round(value) : fallback;
 }
@@ -106,38 +95,6 @@ export function resolveStudioPaneWidths(input: {
     contentsWidth,
     canvasWidth: availableWidth - contentsWidth - propertiesWidth,
     propertiesWidth,
-  });
-}
-
-export function resolveStudioRibbonGroupPlacement(input: {
-  readonly ribbonWidth: number;
-  readonly horizontalPadding: number;
-  readonly messageWidth: number;
-  readonly overflowTriggerWidth: number;
-  readonly groups: readonly StudioRibbonGroupMetrics[];
-}): StudioRibbonPlacement {
-  const available = Math.max(
-    0,
-    finiteInteger(input.ribbonWidth, 0) -
-      Math.max(0, finiteInteger(input.horizontalPadding, 0)) -
-      Math.max(0, finiteInteger(input.messageWidth, 0)) -
-      Math.max(0, finiteInteger(input.overflowTriggerWidth, 0)),
-  );
-  const visibleIds: string[] = [];
-  const overflowIds: string[] = [];
-  let used = 0;
-  for (const group of input.groups) {
-    const width = Math.max(0, finiteInteger(group.width, 0));
-    if (group.alwaysOverflow === true || used + width > available) {
-      overflowIds.push(group.id);
-    } else {
-      visibleIds.push(group.id);
-      used += width;
-    }
-  }
-  return Object.freeze({
-    visibleIds: Object.freeze(visibleIds),
-    overflowIds: Object.freeze(overflowIds),
   });
 }
 

@@ -1,8 +1,5 @@
 import { isMpt, type Mpt } from "./physical-length.js";
-import type {
-  BoringLogBorderStyleInput,
-  BoringLogTextOccurrenceLayoutInput,
-} from "./boring-log-render-contract.js";
+import type { BoringLogTextOccurrenceLayoutInput } from "./boring-log-render-contract.js";
 
 export const boringLogTextOccurrenceLayoutOverrideSchemaVersion =
   "rsrender.boring-log-text-occurrence-layout-override.v1" as const;
@@ -87,37 +84,6 @@ function positiveMpt(input: unknown): Mpt {
   return input;
 }
 
-function borderStyle(input: unknown): BoringLogBorderStyleInput {
-  const value = record(input, [
-    "top",
-    "right",
-    "bottom",
-    "left",
-    "color",
-    "widthMpt",
-    "linePattern",
-  ]);
-  const widthMpt = nonnegativeMpt(value["widthMpt"]);
-  if (
-    ["top", "right", "bottom", "left"].some((edge) => typeof value[edge] !== "boolean") ||
-    typeof value["color"] !== "string" ||
-    !/^#[0-9a-f]{6}$/iu.test(value["color"]) ||
-    widthMpt > 12_000 ||
-    !["solid", "dashed", "dotted", "dash-dot"].includes(String(value["linePattern"]))
-  ) {
-    return fail("BORING_LOG_TEXT_LAYOUT_OVERRIDE_WRONG_TYPE");
-  }
-  return Object.freeze({
-    top: value["top"] as boolean,
-    right: value["right"] as boolean,
-    bottom: value["bottom"] as boolean,
-    left: value["left"] as boolean,
-    color: value["color"],
-    widthMpt,
-    linePattern: value["linePattern"] as BoringLogBorderStyleInput["linePattern"],
-  });
-}
-
 export function validateBoringLogTextOccurrenceLayoutOverride(
   input: unknown,
 ): BoringLogTextOccurrenceLayoutOverrideResult {
@@ -167,10 +133,6 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       typeof value["layout"] === "object" &&
       value["layout"] !== null &&
       Object.hasOwn(value["layout"], "visible");
-    const hasFrameBorder =
-      typeof value["layout"] === "object" &&
-      value["layout"] !== null &&
-      Object.hasOwn(value["layout"], "frameBorder");
     const hasDrawingOrderOffset =
       typeof value["layout"] === "object" &&
       value["layout"] !== null &&
@@ -185,7 +147,6 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
       "overflowPolicy",
       ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
       ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
-      ...(hasFrameBorder ? ["frameBorder"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -224,7 +185,6 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
     const frameStrokeWidthMpt = hasFrameStyle
       ? nonnegativeMpt(layout["frameStrokeWidthMpt"])
       : null;
-    const frameBorder = hasFrameBorder ? borderStyle(layout["frameBorder"]) : null;
     if (
       !(
         horizontalAlignment === "start" ||
@@ -289,7 +249,6 @@ export function validateBoringLogTextOccurrenceLayoutOverride(
           ...(hasFrameStyle
             ? { frameFillColor, frameStrokeColor, frameStrokeWidthMpt: frameStrokeWidthMpt! }
             : {}),
-          ...(hasFrameBorder ? { frameBorder: frameBorder! } : {}),
           rotationMilliDegrees: rotationMilliDegrees as number,
           positionMode,
           locked: layout["locked"],

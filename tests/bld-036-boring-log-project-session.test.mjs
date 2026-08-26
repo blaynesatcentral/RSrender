@@ -15,6 +15,7 @@ import {
 import {
   BoringLogStudioRouteBroker,
   DOCUMENT_ROUTE_URL,
+  DocumentSessionHost,
 } from "../packages/platform-electron-main/dist/index.js";
 import {
   BORING_LOG_MVP_FIXTURE_DIGEST,
@@ -126,6 +127,45 @@ test("BLD-036 one project session retains ordered distinct Explorations on one a
     restored.session.documents.map(({ boringLogIdentity }) => boringLogIdentity),
     created.session.documents.map(({ boringLogIdentity }) => boringLogIdentity),
   );
+});
+
+test("BLD-036 an imported single Boring Log can replace an already-hosted project", async () => {
+  const first = createSyntheticBoringLogProjectSession({
+    projectDocumentIdentity,
+    ownerGeneration: 1,
+    layoutJobs: jobs(),
+  });
+  assert.equal(first.accepted, true, first.code);
+  const host = new DocumentSessionHost();
+  assert.equal(
+    (
+      await host.replace({
+        documentIdentity: projectDocumentIdentity,
+        service: first.session.service,
+        initialRequestId: "urn:test:bld-036:host:first",
+        clock: () => "2026-08-22T16:00:00.000Z",
+        ownerNonce: "1".repeat(64),
+      })
+    ).accepted,
+    true,
+  );
+
+  const importedIdentity = "urn:rsrender:log-project:bld-036:single-import";
+  const imported = createSyntheticBoringLogProjectSession({
+    projectDocumentIdentity: importedIdentity,
+    ownerGeneration: host.snapshot().ownerGeneration + 1,
+    layoutJobs: [jobs()[0]],
+  });
+  assert.equal(imported.accepted, true, imported.code);
+  const replaced = await host.replace({
+    documentIdentity: importedIdentity,
+    service: imported.session.service,
+    initialRequestId: "urn:test:bld-036:host:imported",
+    clock: () => "2026-08-22T16:01:00.000Z",
+    ownerNonce: "2".repeat(64),
+  });
+  assert.equal(replaced.accepted, true, replaced.code);
+  assert.equal(replaced.ownerGeneration, 2);
 });
 
 test("BLD-036 project session rejects duplicate and cross-project Exploration inputs", () => {
