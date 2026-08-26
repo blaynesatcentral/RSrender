@@ -79,6 +79,7 @@ const expectedCommandIds = Object.freeze([
   "select-tool",
   "pan-tool",
   "properties-options",
+  "dismiss-editor-feedback",
   "property-tab-element",
   "property-tab-diagnostics",
   "apply-property",

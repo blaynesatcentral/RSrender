@@ -10,6 +10,8 @@ import type {
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
+import { resolveStudioFeedbackPresentation } from "./boring-log-studio-feedback.js";
+
 type StudioBorderStyle = Readonly<{
   top: boolean;
   right: boolean;
@@ -1055,6 +1057,37 @@ async function main(): Promise<void> {
     element<HTMLButtonElement>("context-ungroup-selection"),
   ]);
   const status = element<HTMLParagraphElement>("editor-status");
+  const visibleStatus = element<HTMLOutputElement>("visible-editor-status");
+  const feedbackBanner = element<HTMLElement>("editor-feedback-banner");
+  const feedbackSeverity = element<HTMLElement>("editor-feedback-severity");
+  const feedbackMessage = element<HTMLElement>("editor-feedback-message");
+  const dismissFeedbackButton = element<HTMLButtonElement>("dismiss-editor-feedback");
+  let dismissedFeedbackMessage: string | null = null;
+
+  function renderVisibleFeedback(): void {
+    const message = status.textContent?.trim() ?? "";
+    const presentation = resolveStudioFeedbackPresentation(message);
+    if (dismissedFeedbackMessage !== null && dismissedFeedbackMessage !== message) {
+      dismissedFeedbackMessage = null;
+    }
+    visibleStatus.textContent = message;
+    visibleStatus.dataset["severity"] = presentation.severity;
+    feedbackBanner.dataset["severity"] = presentation.severity;
+    feedbackSeverity.textContent = presentation.severityLabel;
+    feedbackMessage.textContent = message;
+    feedbackBanner.hidden = !presentation.showBanner || dismissedFeedbackMessage === message;
+  }
+
+  new MutationObserver(renderVisibleFeedback).observe(status, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+  dismissFeedbackButton.addEventListener("click", () => {
+    dismissedFeedbackMessage = status.textContent?.trim() ?? "";
+    feedbackBanner.hidden = true;
+  });
+  renderVisibleFeedback();
   const sceneSummary = element<HTMLElement>("scene-summary");
   const dataProjectName = element<HTMLElement>("data-project-name");
   const dataTopElevation = element<HTMLElement>("data-top-elevation");

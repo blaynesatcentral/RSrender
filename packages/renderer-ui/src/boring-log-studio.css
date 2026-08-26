@@ -24,6 +24,13 @@ textarea,
 select {
   font: inherit;
 }
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button[aria-pressed="true"] {
+  box-shadow: inset 0 -3px currentColor;
+  font-weight: 700;
+}
 .app-shell {
   position: relative;
   display: grid;
@@ -157,6 +164,7 @@ select {
   grid-row: 1;
 }
 .ribbon-group button:hover:not(:disabled),
+.ribbon-group button.is-active,
 .canvas-toolbar button:hover {
   background: #e7f2f8;
   border-color: #b9d5e4;
@@ -756,6 +764,7 @@ select {
   padding-left: 52px;
 }
 .canvas-workspace {
+  position: relative;
   display: grid;
   grid-template-rows: 34px 34px minmax(0, 1fr);
   min-width: 0;
@@ -794,6 +803,25 @@ select {
   background: #f7f9fa;
   border-bottom: 1px solid #b8c0c6;
 }
+.canvas-status {
+  min-width: 0;
+  overflow: hidden;
+  color: #536571;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.canvas-status[data-severity="danger"] {
+  color: #9f2520;
+  font-weight: 700;
+}
+.canvas-status[data-severity="warning"] {
+  color: #805600;
+  font-weight: 600;
+}
+.canvas-status[data-severity="success"] {
+  color: #286b4d;
+}
 .canvas-toolbar button {
   padding: 4px 9px;
   border: 1px solid transparent;
@@ -808,6 +836,47 @@ select {
 .canvas-toolbar output {
   padding-right: 5px;
   color: #64747e;
+}
+.editor-feedback-banner {
+  position: absolute;
+  z-index: 30;
+  top: 74px;
+  right: 12px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid #d29a2f;
+  border-left-width: 4px;
+  border-radius: 3px;
+  background: #fff8df;
+  box-shadow: 0 4px 14px #23313c33;
+  color: #604816;
+}
+.editor-feedback-banner[data-severity="danger"] {
+  border-color: #bd4a42;
+  background: #fff0ef;
+  color: #76211d;
+}
+.editor-feedback-banner strong {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+.editor-feedback-banner span {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.editor-feedback-banner button {
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: #fff9;
+  color: inherit;
 }
 .canvas-stage {
   overflow: auto;

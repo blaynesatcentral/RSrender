@@ -65,6 +65,11 @@ export {
   type StudioViewportMetrics,
 } from "./boring-log-studio-viewport.js";
 export {
+  resolveStudioFeedbackPresentation,
+  type StudioFeedbackPresentation,
+  type StudioFeedbackSeverity,
+} from "./boring-log-studio-feedback.js";
+export {
   boringLogAttributeTableCorpusLimits,
   resolveBoringLogAttributeTableWindow,
   type BoringLogAttributeTableWindow,
