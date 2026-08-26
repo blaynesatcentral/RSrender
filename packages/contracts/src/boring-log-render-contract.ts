@@ -119,6 +119,30 @@ export type BoringLogTextFrameAnchor =
   | "bottom-center"
   | "bottom-right";
 
+export type BoringLogBorderLinePattern = "solid" | "dashed" | "dotted" | "dash-dot";
+
+export interface BoringLogBorderStyleInput {
+  readonly top: boolean;
+  readonly right: boolean;
+  readonly bottom: boolean;
+  readonly left: boolean;
+  readonly color: string;
+  readonly widthMpt: Mpt;
+  readonly linePattern: BoringLogBorderLinePattern;
+}
+
+export function boringLogBorderDashMpt(linePattern: BoringLogBorderLinePattern): readonly Mpt[] {
+  return Object.freeze(
+    linePattern === "solid"
+      ? []
+      : linePattern === "dashed"
+        ? ([6_000, 3_000] as Mpt[])
+        : linePattern === "dotted"
+          ? ([1_000, 2_000] as Mpt[])
+          : ([6_000, 2_500, 1_000, 2_500] as Mpt[]),
+  );
+}
+
 export interface BoringLogTextOccurrenceLayoutInput {
   readonly id: string;
   readonly frame: MptRect;
@@ -140,6 +164,8 @@ export interface BoringLogTextOccurrenceLayoutInput {
   readonly frameFillColor?: string | null;
   readonly frameStrokeColor?: string | null;
   readonly frameStrokeWidthMpt?: Mpt;
+  /** Optional exact per-edge replacement; legacy stroke fields remain the full-border fallback. */
+  readonly frameBorder?: BoringLogBorderStyleInput;
   readonly rotationMilliDegrees: number;
   readonly positionMode: "depth-bound" | "free";
   readonly locked: boolean;
@@ -152,6 +178,8 @@ export interface BoringLogTextOccurrenceLayoutInput {
 export interface BoringLogTemplateRegionInput extends MptRect {
   readonly id: string;
   readonly role: "header" | "depth-body" | "footer";
+  /** Absent in legacy templates, which retain the qualified full rule border. */
+  readonly border?: BoringLogBorderStyleInput;
 }
 
 export interface BoringLogColumnInput {
@@ -516,6 +544,7 @@ export interface BoringLogDynamicTextContextInput {
 export interface BoringLogPlannedRegion extends MptRect {
   readonly id: string;
   readonly role: string;
+  readonly border?: BoringLogBorderStyleInput;
 }
 
 export interface BoringLogPlannedColumn {
@@ -805,6 +834,28 @@ function validateRect(input: unknown): void {
   mpt(value["yMpt"]);
   if (mpt(value["widthMpt"]) < 0 || mpt(value["heightMpt"]) < 0) {
     fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+}
+
+function validateBorderStyle(input: unknown): void {
+  const value = record(input, [
+    "top",
+    "right",
+    "bottom",
+    "left",
+    "color",
+    "widthMpt",
+    "linePattern",
+  ]);
+  for (const edge of ["top", "right", "bottom", "left"] as const) {
+    if (typeof value[edge] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  const color = textValue(value["color"]);
+  if (!/^#[0-9a-f]{6}$/iu.test(color)) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  const widthMpt = mpt(value["widthMpt"]);
+  if (widthMpt < 0 || widthMpt > 12_000) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  if (!["solid", "dashed", "dotted", "dash-dot"].includes(textValue(value["linePattern"]))) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   }
 }
 
@@ -1253,7 +1304,16 @@ function validateTemplate(input: unknown): void {
   }
   const regionIds: string[] = [];
   for (const regionInput of array(value["regions"])) {
-    const region = record(regionInput, ["id", "role", "xMpt", "yMpt", "widthMpt", "heightMpt"]);
+    const hasBorder = Object.hasOwn(regionInput as object, "border");
+    const region = record(regionInput, [
+      "id",
+      "role",
+      "xMpt",
+      "yMpt",
+      "widthMpt",
+      "heightMpt",
+      ...(hasBorder ? ["border"] : []),
+    ]);
     regionIds.push(textValue(region["id"]));
     if (!["header", "depth-body", "footer"].includes(textValue(region["role"]))) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
@@ -1272,6 +1332,7 @@ function validateTemplate(input: unknown): void {
     ) {
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
+    if (hasBorder) validateBorderStyle(region["border"]);
   }
   unique(regionIds);
   const transform = record(value["depthTransform"], [
@@ -1407,6 +1468,7 @@ function validateTemplate(input: unknown): void {
     const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
       (key) => Object.hasOwn(layoutInput as object, key),
     );
+    const hasFrameBorder = Object.hasOwn(layoutInput as object, "frameBorder");
     const hasVisible = Object.hasOwn(layoutInput as object, "visible");
     const hasDrawingOrderOffset = Object.hasOwn(layoutInput as object, "drawingOrderOffset");
     const layout = record(layoutInput, [
@@ -1420,6 +1482,7 @@ function validateTemplate(input: unknown): void {
       "overflowPolicy",
       ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
       ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
+      ...(hasFrameBorder ? ["frameBorder"] : []),
       "rotationMilliDegrees",
       "positionMode",
       "locked",
@@ -1449,6 +1512,7 @@ function validateTemplate(input: unknown): void {
       nullableText(layout["frameStrokeColor"]);
       if (mpt(layout["frameStrokeWidthMpt"]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
+    if (hasFrameBorder) validateBorderStyle(layout["frameBorder"]);
     const padding = record(layout["paddingMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
     for (const side of ["topMpt", "rightMpt", "bottomMpt", "leftMpt"] as const) {
       if (mpt(padding[side]) < 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
@@ -1994,7 +2058,16 @@ function validatePagePlanUnchecked(input: unknown): void {
     const plannedDepthRange = page["depthRange"] as DataRecord;
     const regionIds: string[] = [];
     for (const regionInput of array(page["regions"])) {
-      const region = record(regionInput, ["id", "role", "xMpt", "yMpt", "widthMpt", "heightMpt"]);
+      const hasBorder = Object.hasOwn(regionInput as object, "border");
+      const region = record(regionInput, [
+        "id",
+        "role",
+        "xMpt",
+        "yMpt",
+        "widthMpt",
+        "heightMpt",
+        ...(hasBorder ? ["border"] : []),
+      ]);
       regionIds.push(textValue(region["id"]));
       textValue(region["role"]);
       const x = mpt(region["xMpt"]);
@@ -2011,6 +2084,7 @@ function validatePagePlanUnchecked(input: unknown): void {
       ) {
         fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
       }
+      if (hasBorder) validateBorderStyle(region["border"]);
     }
     unique(regionIds);
     validateDepthTransform(page["depthTransform"], regionIds);
@@ -2265,6 +2339,7 @@ function validateSceneNode(input: unknown): {
       const hasFrameStyle = ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"].some(
         (key) => Object.hasOwn(value["presentation"] as object, key),
       );
+      const hasFrameBorder = Object.hasOwn(value["presentation"] as object, "frameBorder");
       const hasVisible = Object.hasOwn(value["presentation"] as object, "visible");
       const hasDrawingOrderOffset = Object.hasOwn(
         value["presentation"] as object,
@@ -2279,6 +2354,7 @@ function validateSceneNode(input: unknown): {
         "overflowPolicy",
         ...(hasMinimumFontSize ? ["minimumFontSizeMpt"] : []),
         ...(hasFrameStyle ? ["frameFillColor", "frameStrokeColor", "frameStrokeWidthMpt"] : []),
+        ...(hasFrameBorder ? ["frameBorder"] : []),
         "rotationMilliDegrees",
         "positionMode",
         "locked",
@@ -2309,13 +2385,14 @@ function validateSceneNode(input: unknown): {
         ].includes(textValue(presentation["frameAnchor"]))
       ) {
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-        if (hasFrameStyle) {
-          nullableText(presentation["frameFillColor"]);
-          nullableText(presentation["frameStrokeColor"]);
-          if (mpt(presentation["frameStrokeWidthMpt"]) < 0)
-            fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
-        }
       }
+      if (hasFrameStyle) {
+        nullableText(presentation["frameFillColor"]);
+        nullableText(presentation["frameStrokeColor"]);
+        if (mpt(presentation["frameStrokeWidthMpt"]) < 0)
+          fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+      }
+      if (hasFrameBorder) validateBorderStyle(presentation["frameBorder"]);
       if (!["start", "center", "end"].includes(textValue(presentation["horizontalAlignment"])))
         fail("BORING_LOG_CONTRACT_WRONG_TYPE");
       if (!["top", "middle", "bottom"].includes(textValue(presentation["verticalAlignment"])))

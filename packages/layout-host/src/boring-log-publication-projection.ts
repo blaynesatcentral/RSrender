@@ -1,4 +1,5 @@
 import {
+  boringLogBorderDashMpt,
   resolveExactFontProjectionFace,
   rsrenderSansFontProjectionBindings,
   rsrenderSansPublicationFontResources,
@@ -178,6 +179,36 @@ function attribute(name: string, value: string | number): string {
   return ` ${name}="${escapeAttribute(String(value))}"`;
 }
 
+function textFrameBorderMarkup(
+  node: Extract<BoringLogSceneNode, { readonly kind: "text" }>,
+  frameTransform: string,
+): string {
+  const border = node.presentation?.frameBorder;
+  if (border === undefined) return "";
+  const dash = boringLogBorderDashMpt(border.linePattern);
+  const dashAttribute =
+    dash.length === 0 ? "" : attribute("stroke-dasharray", dash.map(points).join(" "));
+  const common = `${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame-border")}${attribute("stroke", border.color)}${attribute("stroke-width", points(border.widthMpt))}${attribute("pointer-events", "none")}${dashAttribute}${frameTransform}`;
+  const x1 = points(node.frame.xMpt);
+  const x2 = points(node.frame.xMpt + node.frame.widthMpt);
+  const y1 = points(node.frame.yMpt);
+  const y2 = points(node.frame.yMpt + node.frame.heightMpt);
+  return [
+    border.top
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-top`)}${common}${attribute("x1", x1)}${attribute("y1", y1)}${attribute("x2", x2)}${attribute("y2", y1)}/>`
+      : "",
+    border.right
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-right`)}${common}${attribute("x1", x2)}${attribute("y1", y1)}${attribute("x2", x2)}${attribute("y2", y2)}/>`
+      : "",
+    border.bottom
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-bottom`)}${common}${attribute("x1", x1)}${attribute("y1", y2)}${attribute("x2", x2)}${attribute("y2", y2)}/>`
+      : "",
+    border.left
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-left`)}${common}${attribute("x1", x1)}${attribute("y1", y1)}${attribute("x2", x1)}${attribute("y2", y2)}/>`
+      : "",
+  ].join("");
+}
+
 function nodeAttributes(node: BoringLogSceneNode): string {
   const provenance = node.provenance === null ? "computed" : node.provenance.provenanceClass;
   return [
@@ -306,10 +337,12 @@ function renderNode(
           `rotate(${presentation.rotationMilliDegrees / 1_000} ${points(node.frame.xMpt + Math.round(node.frame.widthMpt / 2))} ${points(node.frame.yMpt + Math.round(node.frame.heightMpt / 2))})`,
         );
   const frameMarkup =
-    presentation?.frameStrokeWidthMpt === undefined ||
-    (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
-      ? ""
-      : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", points(node.frame.xMpt))}${attribute("y", points(node.frame.yMpt))}${attribute("width", points(node.frame.widthMpt))}${attribute("height", points(node.frame.heightMpt))}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", points(presentation.frameStrokeWidthMpt))}${attribute("pointer-events", "none")}${frameTransform}/>`;
+    presentation?.frameBorder === undefined
+      ? presentation?.frameStrokeWidthMpt === undefined ||
+        (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
+        ? ""
+        : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", points(node.frame.xMpt))}${attribute("y", points(node.frame.yMpt))}${attribute("width", points(node.frame.widthMpt))}${attribute("height", points(node.frame.heightMpt))}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", points(presentation.frameStrokeWidthMpt))}${attribute("pointer-events", "none")}${frameTransform}/>`
+      : `${presentation.frameFillColor == null ? "" : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", points(node.frame.xMpt))}${attribute("y", points(node.frame.yMpt))}${attribute("width", points(node.frame.widthMpt))}${attribute("height", points(node.frame.heightMpt))}${attribute("fill", presentation.frameFillColor)} stroke="none"${attribute("pointer-events", "none")}${frameTransform}/>`}${textFrameBorderMarkup(node, frameTransform)}`;
   return `${frameMarkup}<text${common}${attribute("font-family", fontFace.cssFamilyName)}${attribute("font-size", points(measurement.effectiveFontSizeMpt))}${attribute("font-style", style.fontStyle ?? "normal")}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", points(style.letterSpacingMpt))}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", points(style.wordSpacingMpt))}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-id", fontFace.faceId)}${attribute("data-font-style", style.fontStyle ?? "normal")}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
 }
 
