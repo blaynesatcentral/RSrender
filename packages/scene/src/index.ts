@@ -43,6 +43,25 @@ export type {
   BoringLogRegionResizeResult,
 } from "./boring-log-region-resize.js";
 export {
+  applyBoringLogPageSetup,
+  boringLogPageSetupRevision,
+  boringLogPaperPresetsMpt,
+} from "./boring-log-page-setup.js";
+export {
+  boringLogDataLayerSymbologyRevision,
+  resolveBoringLogDataLayerSymbology,
+} from "./boring-log-data-layer-symbology.js";
+export type {
+  BoringLogDataLayerSymbologyOverride,
+  BoringLogDataLayerSymbologyResult,
+  BoringLogLineSymbol,
+  BoringLogPointShape,
+  BoringLogPointSymbol,
+  BoringLogRangeSymbol,
+  BoringLogResolvedDataLayerSymbology,
+} from "./boring-log-data-layer-symbology.js";
+export type { BoringLogPageSetupInput, BoringLogPageSetupResult } from "./boring-log-page-setup.js";
+export {
   boringLogContinuationPagesRevision,
   planBoringLogContinuationPages,
 } from "./boring-log-continuation-pages.js";
@@ -64,6 +83,16 @@ export {
   arrangeBoringLogTextOccurrences,
   boringLogArrangementRevision,
 } from "./boring-log-arrangement.js";
+export {
+  addProviderBoundBoringLogColumn,
+  boringLogAddColumnRevision,
+  boringLogMaximumColumnCount,
+} from "./boring-log-add-column.js";
+export type {
+  BoringLogAddProviderColumnInput,
+  BoringLogAddProviderColumnRejectionCode,
+  BoringLogAddProviderColumnResult,
+} from "./boring-log-add-column.js";
 export type {
   BoringLogArrangementFrame,
   BoringLogArrangementItem,

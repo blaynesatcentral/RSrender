@@ -1,8 +1,15 @@
 import {
+  resolveExactFontProjectionFace,
+  rsrenderSansFontProjectionBindings,
+  rsrenderSansPublicationFontResources,
   sha256CanonicalJson,
+  validateFontProjectionBindingCatalog,
+  validateFontProjectionFaceResources,
   validateResolvedBoringLogPageScene,
   type BoringLogSceneNode,
   type BoringLogTextMeasurementResult,
+  type FontProjectionBindingCatalog,
+  type FontProjectionFaceResource,
   type ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
@@ -25,6 +32,8 @@ export interface BoringLogPublicationProjectionManifest {
   readonly semanticOrderDigest: string;
   readonly fontFaceDigests: readonly string[];
   readonly fontMetricsDigests: readonly string[];
+  readonly fontFaceIds: readonly string[];
+  readonly fontProjectionDigest: string;
   readonly pageCount?: number;
   readonly pageIds?: readonly string[];
   readonly pageSizes?: readonly Readonly<{ widthMpt: number; heightMpt: number }>[];
@@ -37,15 +46,125 @@ export interface BoringLogPublicationProjection {
   readonly documentTitle: string;
   readonly svgMarkup: string;
   readonly html: string;
+  readonly fontFaceCss: string;
 }
+
+export interface BoringLogPublicationFontProjectionInput {
+  readonly bindings: FontProjectionBindingCatalog;
+  readonly resources: readonly FontProjectionFaceResource[];
+}
+
+export const rsrenderSansPublicationFontProjection: BoringLogPublicationFontProjectionInput =
+  Object.freeze({
+    bindings: rsrenderSansFontProjectionBindings,
+    resources: rsrenderSansPublicationFontResources,
+  });
 
 export type BoringLogPublicationProjectionResult =
   | { readonly accepted: true; readonly projection: BoringLogPublicationProjection }
   | {
       readonly accepted: false;
       readonly code:
-        "BORING_LOG_PUBLICATION_SCENE_REJECTED" | "BORING_LOG_PUBLICATION_PAGE_MISSING";
+        | "BORING_LOG_PUBLICATION_SCENE_REJECTED"
+        | "BORING_LOG_PUBLICATION_PAGE_MISSING"
+        | "BORING_LOG_PUBLICATION_FONT_BINDING_REJECTED";
     };
+
+interface ResolvedPublicationFace {
+  readonly faceId: string;
+  readonly cssFamilyName: string;
+}
+
+function cssString(value: string): string {
+  return `"${value
+    .replaceAll("\\", "\\\\")
+    .replaceAll('"', '\\"')
+    .replaceAll("&", "\\26 ")
+    .replaceAll("<", "\\3c ")
+    .replaceAll(">", "\\3e ")
+    .replaceAll("\n", "\\a ")
+    .replaceAll("\r", "\\d ")}"`;
+}
+
+function resolvePublicationFonts(
+  scene: ResolvedBoringLogPageScene,
+  input: unknown,
+):
+  | Readonly<{
+      readonly accepted: true;
+      readonly byStyleId: ReadonlyMap<string, ResolvedPublicationFace>;
+      readonly fontFaceCss: string;
+      readonly fontFaceIds: readonly string[];
+      readonly fontProjectionDigest: string;
+    }>
+  | Readonly<{ readonly accepted: false }> {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return Object.freeze({ accepted: false });
+  }
+  const keys = Reflect.ownKeys(input);
+  if (keys.length !== 2 || keys.some((key) => key !== "bindings" && key !== "resources")) {
+    return Object.freeze({ accepted: false });
+  }
+  const bindingsDescriptor = Object.getOwnPropertyDescriptor(input, "bindings");
+  const resourcesDescriptor = Object.getOwnPropertyDescriptor(input, "resources");
+  if (
+    !bindingsDescriptor?.enumerable ||
+    !("value" in bindingsDescriptor) ||
+    !resourcesDescriptor?.enumerable ||
+    !("value" in resourcesDescriptor)
+  ) {
+    return Object.freeze({ accepted: false });
+  }
+  const catalog = validateFontProjectionBindingCatalog(bindingsDescriptor.value);
+  if (!catalog.accepted) return Object.freeze({ accepted: false });
+  const resources = validateFontProjectionFaceResources(resourcesDescriptor.value, catalog.value);
+  if (!resources.accepted) return Object.freeze({ accepted: false });
+  const resourceByFaceId = new Map(resources.value.map((resource) => [resource.faceId, resource]));
+  const byStyleId = new Map<string, ResolvedPublicationFace>();
+  const usedFaceIds = new Set<string>();
+  for (const style of scene.resources.textStyles) {
+    const resolved = resolveExactFontProjectionFace(
+      catalog.value,
+      style.fontFamilyId,
+      style.fontStyle ?? "normal",
+      style.fontWeight,
+    );
+    if (!resolved.accepted || !resourceByFaceId.has(resolved.face.faceId)) {
+      return Object.freeze({ accepted: false });
+    }
+    usedFaceIds.add(resolved.face.faceId);
+    byStyleId.set(
+      style.id,
+      Object.freeze({
+        faceId: resolved.face.faceId,
+        cssFamilyName: resolved.family.cssFamilyName,
+      }),
+    );
+  }
+  const fontFaceCss = catalog.value.faces
+    .filter(({ faceId }) => usedFaceIds.has(faceId))
+    .map((face) => {
+      const family = catalog.value.families.find(({ familyId }) => familyId === face.familyId)!;
+      const resource = resourceByFaceId.get(face.faceId)!;
+      return `@font-face{font-family:${cssString(family.cssFamilyName)};src:url(${cssString(resource.resourceUrl)}) format(${cssString(resource.format)});font-style:${face.style};font-weight:${face.weight}}`;
+    })
+    .join("");
+  const fontFaceIds = Object.freeze(
+    catalog.value.faces.filter(({ faceId }) => usedFaceIds.has(faceId)).map(({ faceId }) => faceId),
+  );
+  const fontProjectionDigest = sha256CanonicalJson({
+    bindings: catalog.value,
+    resources: resources.value.filter(({ faceId }) => usedFaceIds.has(faceId)),
+    fontFaceIds,
+  });
+  return Object.freeze({
+    accepted: true,
+    byStyleId,
+    fontFaceCss,
+    fontFaceIds,
+    fontProjectionDigest,
+  });
+}
 
 function escapeText(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -104,6 +223,7 @@ function renderNode(
   nodes: ReadonlyMap<string, BoringLogSceneNode>,
   measurements: ReadonlyMap<string, BoringLogTextMeasurementResult>,
   scene: ResolvedBoringLogPageScene,
+  fontFaces: ReadonlyMap<string, ResolvedPublicationFace>,
   stack: ReadonlySet<string>,
 ): string {
   if (stack.has(node.id)) return "";
@@ -115,7 +235,7 @@ function renderNode(
     const children = node.childIds
       .map((id) => nodes.get(id))
       .filter((child): child is BoringLogSceneNode => child !== undefined)
-      .map((child) => renderNode(child, nodes, measurements, scene, nextStack))
+      .map((child) => renderNode(child, nodes, measurements, scene, fontFaces, nextStack))
       .join("");
     return `<g${common}${attribute("aria-label", node.role)}>${children}</g>`;
   }
@@ -145,7 +265,8 @@ function renderNode(
   }
   const measurement = measurements.get(node.measurementId);
   const style = scene.resources.textStyles.find(({ id }) => id === node.styleId);
-  if (measurement === undefined || style === undefined) return "";
+  const fontFace = fontFaces.get(node.styleId);
+  if (measurement === undefined || style === undefined || fontFace === undefined) return "";
   const presentation = node.presentation;
   if (presentation?.visible === false) return "";
   const padding = presentation?.paddingMpt ?? {
@@ -189,7 +310,7 @@ function renderNode(
     (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
       ? ""
       : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", points(node.frame.xMpt))}${attribute("y", points(node.frame.yMpt))}${attribute("width", points(node.frame.widthMpt))}${attribute("height", points(node.frame.heightMpt))}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", points(presentation.frameStrokeWidthMpt))}${attribute("pointer-events", "none")}${frameTransform}/>`;
-  return `${frameMarkup}<text${common}${attribute("font-family", "RSrender Qualified Arial")}${attribute("font-size", points(measurement.effectiveFontSizeMpt))}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", points(style.letterSpacingMpt))}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", points(style.wordSpacingMpt))}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
+  return `${frameMarkup}<text${common}${attribute("font-family", fontFace.cssFamilyName)}${attribute("font-size", points(measurement.effectiveFontSizeMpt))}${attribute("font-style", style.fontStyle ?? "normal")}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", points(style.letterSpacingMpt))}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", points(style.wordSpacingMpt))}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-id", fontFace.faceId)}${attribute("data-font-style", style.fontStyle ?? "normal")}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
 }
 
 function points(mpt: number): string {
@@ -198,6 +319,7 @@ function points(mpt: number): string {
 
 export function projectBoringLogSceneForPublication(
   input: unknown,
+  fontProjectionInput: BoringLogPublicationFontProjectionInput = rsrenderSansPublicationFontProjection,
 ): BoringLogPublicationProjectionResult {
   const validated = validateResolvedBoringLogPageScene(input);
   if (!validated.accepted) {
@@ -207,6 +329,13 @@ export function projectBoringLogSceneForPublication(
     });
   }
   const scene = validated.value;
+  const fontProjection = resolvePublicationFonts(scene, fontProjectionInput);
+  if (!fontProjection.accepted) {
+    return Object.freeze({
+      accepted: false,
+      code: "BORING_LOG_PUBLICATION_FONT_BINDING_REJECTED",
+    });
+  }
   if (scene.pages.length > 1) {
     const projections = scene.pages.map((scenePage) => {
       const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === scenePage.pageId)!;
@@ -218,7 +347,7 @@ export function projectBoringLogSceneForPublication(
         },
         pages: [scenePage],
       };
-      const projected = projectBoringLogSceneForPublication(pageScene);
+      const projected = projectBoringLogSceneForPublication(pageScene, fontProjectionInput);
       if (!projected.accepted) throw new Error(projected.code);
       return projected.projection;
     });
@@ -273,7 +402,7 @@ export function projectBoringLogSceneForPublication(
           `<section class="publication-page" data-page-index="${pageIndex}">${pageSvgMarkup}</section>`,
       )
       .join("");
-    const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-regular.ttf') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-bold.ttf') format('truetype');font-style:normal;font-weight:700}@page{size:${points(first.widthMpt)}pt ${points(first.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;background:#fff}.publication-page{width:${points(first.widthMpt)}pt;height:${points(first.heightMpt)}pt;overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pagesMarkup}</body></html>`;
+    const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>${fontProjection.fontFaceCss}@page{size:${points(first.widthMpt)}pt ${points(first.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;background:#fff}.publication-page{width:${points(first.widthMpt)}pt;height:${points(first.heightMpt)}pt;overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pagesMarkup}</body></html>`;
     return Object.freeze({
       accepted: true,
       projection: Object.freeze({
@@ -283,6 +412,7 @@ export function projectBoringLogSceneForPublication(
         documentTitle,
         svgMarkup,
         html,
+        fontFaceCss: fontProjection.fontFaceCss,
       }),
     });
   }
@@ -341,12 +471,14 @@ export function projectBoringLogSceneForPublication(
     fontMetricsDigests: Object.freeze(
       [...new Set(scene.textResults.map(({ fontMetricsDigest }) => fontMetricsDigest))].sort(),
     ),
+    fontFaceIds: fontProjection.fontFaceIds,
+    fontProjectionDigest: fontProjection.fontProjectionDigest,
   });
   const projectionDigest = sha256CanonicalJson(manifest);
   const documentTitle = `RSrender Boring Log | Scene ${manifest.sceneDigest} | Projection ${projectionDigest}`;
-  const body = renderNode(root, nodes, measurements, scene, new Set());
+  const body = renderNode(root, nodes, measurements, scene, fontProjection.byStyleId, new Set());
   const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg"${attribute("viewBox", `0 0 ${points(page.widthMpt)} ${points(page.heightMpt)}`)}${attribute("width", `${points(page.widthMpt)}pt`)}${attribute("height", `${points(page.heightMpt)}pt`)}${attribute("data-page-id", page.pageId)}${attribute("data-scene-input-digest", scene.inputDigest)}${attribute("data-scene-digest", manifest.sceneDigest)}${attribute("data-projection-digest", projectionDigest)} role="document" aria-label="Structured boring log page"><title>Structured boring log</title><desc>One-page vector boring log generated from structured RSrender data.</desc><defs>${renderPatterns(scene)}</defs>${body}</svg>`;
-  const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-regular.ttf') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-bold.ttf') format('truetype');font-style:normal;font-weight:700}@page{size:${points(page.widthMpt)}pt ${points(page.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;width:${points(page.widthMpt)}pt;height:${points(page.heightMpt)}pt;overflow:hidden;background:#fff}svg{display:block;width:${points(page.widthMpt)}pt;height:${points(page.heightMpt)}pt}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${svgMarkup}</body></html>`;
+  const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-scene-digest" content="${escapeAttribute(manifest.sceneDigest)}"><meta name="rsrender-projection-digest" content="${escapeAttribute(projectionDigest)}"><title>${escapeText(documentTitle)}</title><style>${fontProjection.fontFaceCss}@page{size:${points(page.widthMpt)}pt ${points(page.heightMpt)}pt;margin:0}html,body{margin:0;padding:0;width:${points(page.widthMpt)}pt;height:${points(page.heightMpt)}pt;overflow:hidden;background:#fff}svg{display:block;width:${points(page.widthMpt)}pt;height:${points(page.heightMpt)}pt}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${svgMarkup}</body></html>`;
   return Object.freeze({
     accepted: true,
     projection: Object.freeze({
@@ -356,6 +488,7 @@ export function projectBoringLogSceneForPublication(
       documentTitle,
       svgMarkup,
       html,
+      fontFaceCss: fontProjection.fontFaceCss,
     }),
   });
 }

@@ -1,7 +1,11 @@
 import {
+  resolveExactFontProjectionFace,
+  rsrenderSansFontProjectionBindings,
+  validateFontProjectionBindingCatalog,
   validateResolvedBoringLogPageScene,
   type BoringLogSceneNode,
   type BoringLogTextMeasurementResult,
+  type FontProjectionBindingCatalog,
   type ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
@@ -17,9 +21,53 @@ export type BoringLogSvgProjectionResult =
     }>
   | Readonly<{
       readonly accepted: false;
-      readonly code: "BORING_LOG_SVG_SCENE_REJECTED" | "BORING_LOG_SVG_PAGE_MISSING";
+      readonly code:
+        | "BORING_LOG_SVG_SCENE_REJECTED"
+        | "BORING_LOG_SVG_PAGE_MISSING"
+        | "BORING_LOG_SVG_FONT_BINDING_REJECTED";
       readonly detail: string;
     }>;
+
+interface ResolvedProjectionFace {
+  readonly faceId: string;
+  readonly cssFamilyName: string;
+}
+
+function resolveSceneFontFaces(
+  scene: ResolvedBoringLogPageScene,
+  input: unknown,
+):
+  | Readonly<{
+      readonly accepted: true;
+      readonly byStyleId: ReadonlyMap<string, ResolvedProjectionFace>;
+    }>
+  | Readonly<{ readonly accepted: false; readonly detail: string }> {
+  const catalog = validateFontProjectionBindingCatalog(input);
+  if (!catalog.accepted) return Object.freeze({ accepted: false, detail: catalog.code });
+  const byStyleId = new Map<string, ResolvedProjectionFace>();
+  for (const style of scene.resources.textStyles) {
+    const resolved = resolveExactFontProjectionFace(
+      catalog.value,
+      style.fontFamilyId,
+      style.fontStyle ?? "normal",
+      style.fontWeight,
+    );
+    if (!resolved.accepted) {
+      return Object.freeze({
+        accepted: false,
+        detail: `${resolved.code}:${style.fontFamilyId}:${style.fontStyle ?? "normal"}:${style.fontWeight}`,
+      });
+    }
+    byStyleId.set(
+      style.id,
+      Object.freeze({
+        faceId: resolved.face.faceId,
+        cssFamilyName: resolved.family.cssFamilyName,
+      }),
+    );
+  }
+  return Object.freeze({ accepted: true, byStyleId });
+}
 
 function escapeText(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -46,6 +94,40 @@ function semanticAttributes(node: BoringLogSceneNode, selectedSemanticId: string
       node.semanticId === selectedSemanticId ? "scene-node is-selected" : "scene-node",
     ),
   ].join("");
+}
+
+const dataHitTargetMinimumMpt = 12_000;
+
+function dataHitTarget(node: BoringLogSceneNode): string {
+  if (
+    !node.semanticId.startsWith("data-layer:") ||
+    !(
+      node.role.startsWith("data-point") ||
+      node.role.startsWith("data-range") ||
+      node.role === "data-polyline" ||
+      node.role === "sample-refusal-glyph"
+    )
+  ) {
+    return "";
+  }
+  const common = `${attribute("data-node-id", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", `${node.role}-hit-target`)}${attribute("class", "scene-data-hit-target")}${attribute("aria-label", `Inspect ${node.role}`)}`;
+  if (node.kind === "rect") {
+    const width = Math.max(node.bounds.widthMpt, dataHitTargetMinimumMpt);
+    const height = Math.max(node.bounds.heightMpt, dataHitTargetMinimumMpt);
+    return `<rect${common}${attribute("x", node.bounds.xMpt - Math.round((width - node.bounds.widthMpt) / 2))}${attribute("y", node.bounds.yMpt - Math.round((height - node.bounds.heightMpt) / 2))}${attribute("width", width)}${attribute("height", height)} fill="transparent"/>`;
+  }
+  if (node.kind === "circle") {
+    return `<circle${common}${attribute("cx", node.center.xMpt)}${attribute("cy", node.center.yMpt)}${attribute("r", Math.max(node.radiusMpt, Math.round(dataHitTargetMinimumMpt / 2)))} fill="transparent"/>`;
+  }
+  if (node.kind === "line") {
+    return `<line${common}${attribute("x1", node.from.xMpt)}${attribute("y1", node.from.yMpt)}${attribute("x2", node.to.xMpt)}${attribute("y2", node.to.yMpt)} stroke="transparent"${attribute("stroke-width", dataHitTargetMinimumMpt)} pointer-events="stroke"/>`;
+  }
+  if (node.kind === "path") {
+    const points = node.points.map(({ xMpt, yMpt }) => `${xMpt},${yMpt}`).join(" ");
+    const elementName = node.closed ? "polygon" : "polyline";
+    return `<${elementName}${common}${attribute("points", points)} fill="transparent" stroke="transparent"${attribute("stroke-width", dataHitTargetMinimumMpt)} pointer-events="all"/>`;
+  }
+  return "";
 }
 
 function tokenPaint(
@@ -82,6 +164,7 @@ function renderNode(
   nodes: ReadonlyMap<string, BoringLogSceneNode>,
   measurements: ReadonlyMap<string, BoringLogTextMeasurementResult>,
   scene: ResolvedBoringLogPageScene,
+  fontFaces: ReadonlyMap<string, ResolvedProjectionFace>,
   selectedSemanticId: string | null,
   stack: ReadonlySet<string>,
 ): string {
@@ -94,31 +177,34 @@ function renderNode(
     const children = node.childIds
       .map((id) => nodes.get(id))
       .filter((child): child is BoringLogSceneNode => child !== undefined)
-      .map((child) => renderNode(child, nodes, measurements, scene, selectedSemanticId, nextStack))
+      .map((child) =>
+        renderNode(child, nodes, measurements, scene, fontFaces, selectedSemanticId, nextStack),
+      )
       .join("");
     return `<g${common}${attribute("aria-label", node.role)}>${children}</g>`;
   }
   if (node.kind === "rect") {
-    return `<rect${common}${attribute("x", node.bounds.xMpt)}${attribute("y", node.bounds.yMpt)}${attribute("width", node.bounds.widthMpt)}${attribute("height", node.bounds.heightMpt)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>`;
+    return `<rect${common}${attribute("x", node.bounds.xMpt)}${attribute("y", node.bounds.yMpt)}${attribute("width", node.bounds.widthMpt)}${attribute("height", node.bounds.heightMpt)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>${dataHitTarget(node)}`;
   }
   if (node.kind === "line") {
     const dash =
       node.dashMpt.length === 0 ? "" : attribute("stroke-dasharray", node.dashMpt.join(" "));
-    return `<line${common}${attribute("x1", node.from.xMpt)}${attribute("y1", node.from.yMpt)}${attribute("x2", node.to.xMpt)}${attribute("y2", node.to.yMpt)}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}${dash}/>`;
+    return `<line${common}${attribute("x1", node.from.xMpt)}${attribute("y1", node.from.yMpt)}${attribute("x2", node.to.xMpt)}${attribute("y2", node.to.yMpt)}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}${dash}/>${dataHitTarget(node)}`;
   }
   if (node.kind === "path") {
     const points = node.points.map(({ xMpt, yMpt }) => `${xMpt},${yMpt}`).join(" ");
     const elementName = node.closed ? "polygon" : "polyline";
     const dash =
       node.dashMpt.length === 0 ? "" : attribute("stroke-dasharray", node.dashMpt.join(" "));
-    return `<${elementName}${common}${attribute("points", points)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}${dash}/>`;
+    return `<${elementName}${common}${attribute("points", points)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}${dash}/>${dataHitTarget(node)}`;
   }
   if (node.kind === "circle") {
-    return `<circle${common}${attribute("cx", node.center.xMpt)}${attribute("cy", node.center.yMpt)}${attribute("r", node.radiusMpt)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>`;
+    return `<circle${common}${attribute("cx", node.center.xMpt)}${attribute("cy", node.center.yMpt)}${attribute("r", node.radiusMpt)}${attribute("fill", tokenPaint(node.fillToken, tokens, patternIds))}${attribute("stroke", tokenPaint(node.strokeToken, tokens, patternIds))}${attribute("stroke-width", node.strokeWidthMpt)}/>${dataHitTarget(node)}`;
   }
   const measurement = measurements.get(node.measurementId);
   const style = scene.resources.textStyles.find(({ id }) => id === node.styleId);
-  if (measurement === undefined || style === undefined) return "";
+  const fontFace = fontFaces.get(node.styleId);
+  if (measurement === undefined || style === undefined || fontFace === undefined) return "";
   const presentation = node.presentation;
   if (presentation?.visible === false) return "";
   const padding = presentation?.paddingMpt ?? {
@@ -162,13 +248,14 @@ function renderNode(
     (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
       ? ""
       : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", node.frame.xMpt)}${attribute("y", node.frame.yMpt)}${attribute("width", node.frame.widthMpt)}${attribute("height", node.frame.heightMpt)}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", presentation.frameStrokeWidthMpt)}${attribute("pointer-events", "none")}${frameTransform}/>`;
-  return `${frameMarkup}<text${common}${attribute("font-family", "RSrender Qualified Arial")}${attribute("font-size", measurement.effectiveFontSizeMpt)}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", style.wordSpacingMpt)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
+  return `${frameMarkup}<text${common}${attribute("font-family", fontFace.cssFamilyName)}${attribute("font-size", measurement.effectiveFontSizeMpt)}${attribute("font-style", style.fontStyle ?? "normal")}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", style.wordSpacingMpt)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-id", fontFace.faceId)}${attribute("data-font-style", style.fontStyle ?? "normal")}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
 }
 
 export function projectBoringLogSceneToSvg(
   input: unknown,
   selectedSemanticId: string | null = null,
   requestedPageId: string | null = null,
+  fontBindingInput: FontProjectionBindingCatalog = rsrenderSansFontProjectionBindings,
 ): BoringLogSvgProjectionResult {
   const validated = validateResolvedBoringLogPageScene(input);
   if (!validated.accepted) {
@@ -179,6 +266,14 @@ export function projectBoringLogSceneToSvg(
     });
   }
   const scene = validated.value;
+  const fontFaces = resolveSceneFontFaces(scene, fontBindingInput);
+  if (!fontFaces.accepted) {
+    return Object.freeze({
+      accepted: false,
+      code: "BORING_LOG_SVG_FONT_BINDING_REJECTED",
+      detail: fontFaces.detail,
+    });
+  }
   const page =
     requestedPageId === null
       ? scene.pages[0]
@@ -200,7 +295,15 @@ export function projectBoringLogSceneToSvg(
       detail: "Resolved scene root is missing",
     });
   }
-  const body = renderNode(root, nodes, measurements, scene, selectedSemanticId, new Set());
+  const body = renderNode(
+    root,
+    nodes,
+    measurements,
+    scene,
+    fontFaces.byStyleId,
+    selectedSemanticId,
+    new Set(),
+  );
   const markup = `<svg xmlns="http://www.w3.org/2000/svg"${attribute("viewBox", `0 0 ${page.widthMpt} ${page.heightMpt}`)}${attribute("data-page-id", page.pageId)}${attribute("data-scene-input-digest", scene.inputDigest)} role="document" aria-label="Structured boring log page"><defs>${renderPatterns(scene)}</defs>${body}</svg>`;
   return Object.freeze({
     accepted: true,

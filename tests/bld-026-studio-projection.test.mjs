@@ -101,7 +101,7 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
   const initial = resolve(session, await dataset(session, "urn:test:bld-026:query:scene-1"));
   assert.equal(boringLogStudioProjectionRevision, "bld-026-studio-projection-v1");
   assert.equal(initial.accepted, true, initial.code);
-  assert.equal(initial.projection.editableValues.length, 24);
+  assert.equal(initial.projection.editableValues.length, 27);
   assert.deepEqual(initial.projection.textTemplateScopeSummary, {
     authoredStyleCount: 5,
     excludedOverrideStyleCount: 0,
@@ -203,6 +203,12 @@ test("BLD-026 main-owned Studio projection combines structured values and the re
   );
   assert.equal(editedValue.sourceOriginal.digest, editable.sourceOriginal.digest);
   assert.equal(editedValue.effectiveDisplay.content.value, replacement);
+  assert.deepEqual(editedValue.application, {
+    kind: "display-value-override",
+    presentationOverrideIdentity: committed.projection.overrides[0].presentationOverrideIdentity,
+    localOverrideIdentity: `urn:rsrender:bld-026:local-override:${editable.sourceFieldIdentity}`,
+    overrideRevision: 1,
+  });
 });
 
 test("BLD-038 Studio projection exposes guides without painting them into the shared scene", async () => {

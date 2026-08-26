@@ -1,0 +1,41 @@
+{
+  "executable": "C:/frv/RSRender/.tmp/bld-046-dpi-fresh-2/out/RSrender-win32-x64/RSrender.exe",
+  "arguments": [],
+  "workflow": "data-depth-configuration",
+  "persona": "geotechnical-editor",
+  "actions": [
+    { "op": "launch", "label": "launch" },
+    { "op": "focus", "label": "focused" },
+    { "op": "wait", "milliseconds": 1500, "label": "initial-settle" },
+    { "op": "click", "x": 423, "y": 108, "label": "data-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "data-settle" },
+    { "op": "screenshot", "label": "data-controls-left" },
+    {
+      "op": "drag",
+      "from": { "x": 500, "y": 222 },
+      "to": { "x": 1050, "y": 222 },
+      "durationMs": 300,
+      "label": "data-ribbon-pan-right"
+    },
+    { "op": "wait", "milliseconds": 250, "label": "data-pan-settle" },
+    { "op": "screenshot", "label": "data-controls-right" },
+    { "op": "click", "x": 1020, "y": 170, "label": "depth-scale-input" },
+    { "op": "key", "key": "BACKSPACE", "label": "clear-depth-scale-1" },
+    { "op": "key", "key": "BACKSPACE", "label": "clear-depth-scale-2" },
+    { "op": "key", "key": "BACKSPACE", "label": "clear-depth-scale-3" },
+    { "op": "key", "key": "BACKSPACE", "label": "clear-depth-scale-4" },
+    { "op": "key", "key": "BACKSPACE", "label": "clear-depth-scale-5" },
+    { "op": "type", "text": "10000", "label": "replace-depth-scale" },
+    { "op": "screenshot", "label": "depth-scale-authored" },
+    { "op": "click", "x": 1195, "y": 170, "label": "apply-data-controls" },
+    { "op": "wait", "milliseconds": 1500, "label": "apply-data-settle" },
+    { "op": "screenshot", "label": "depth-scale-applied" },
+    { "op": "key", "key": "CTRL+Z", "label": "undo-depth-configuration" },
+    { "op": "wait", "milliseconds": 5000, "label": "undo-settle" },
+    { "op": "screenshot", "label": "depth-scale-undone" },
+    { "op": "key", "key": "CTRL+Y", "label": "redo-depth-configuration" },
+    { "op": "wait", "milliseconds": 5000, "label": "redo-settle" },
+    { "op": "screenshot", "label": "depth-scale-redone" },
+    { "op": "close", "label": "close" }
+  ]
+}

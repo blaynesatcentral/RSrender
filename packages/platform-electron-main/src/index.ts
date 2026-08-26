@@ -33,6 +33,7 @@ export {
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_ROUTE_URL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
@@ -71,6 +72,7 @@ export type {
   DocumentSessionHistoryInput,
   DocumentSessionInvocationResult,
   DocumentSessionProjectionInput,
+  DocumentSessionRevertDisplayValueInput,
   DocumentSessionSetDisplayValueInput,
   DocumentSessionSnapshot,
 } from "./document-session.js";
@@ -93,6 +95,7 @@ export type {
   DocumentPreloadHistoryInput,
   DocumentPreloadProjectionInput,
   DocumentPreloadPublicResult,
+  DocumentPreloadRevertDisplayValueInput,
   DocumentPreloadSetDisplayValueInput,
 } from "./document-preload-runtime.js";
 export type { PackagedDocumentPreloadVerification } from "./packaged-document-preload.js";
@@ -107,7 +110,22 @@ export {
   completeBoringLogStudioProjection,
   prepareBoringLogStudioProjection,
 } from "./boring-log-studio-projection.js";
+export {
+  boringLogAttributeRecordProjectionRevision,
+  projectBoringLogAttributeRecords,
+} from "./boring-log-attribute-record-projection.js";
 export type {
+  BoringLogStudioAttributeField,
+  BoringLogStudioAttributeRecord,
+  BoringLogStudioAttributeRecordKind,
+  BoringLogStudioAttributeScalar,
+} from "./boring-log-attribute-record-projection.js";
+export type {
+  BoringLogStudioDataSummary,
+  BoringLogStudioDataLayerSymbologyState,
+  BoringLogStudioDataLineSymbol,
+  BoringLogStudioDataPointSymbol,
+  BoringLogStudioPageSetup,
   BoringLogStudioEditableValue,
   BoringLogStudioProjection,
   BoringLogStudioProjectionPreparation,
@@ -117,16 +135,21 @@ export type {
 } from "./boring-log-studio-projection.js";
 export {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_LAYER_SYMBOLOGY_CHANNEL,
   BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_DEPTH_CONFIGURATION_CHANNEL,
   boringLogStudioRouteRevision,
 } from "./boring-log-studio-route-contract.js";
 export { BoringLogStudioRouteBroker } from "./boring-log-studio-route-broker.js";
@@ -135,10 +158,15 @@ export type {
   BoringLogStudioRouteRejectionCode,
   BoringLogStudioRouteResult,
   BoringLogStudioLifecycleOperation,
+  BoringLogStudioAddProviderColumnInput,
   BoringLogStudioColumnDividerInput,
+  BoringLogStudioColumnHeadingInput,
   BoringLogStudioLithologyAppearanceInput,
   BoringLogStudioRegionBoundaryInput,
+  BoringLogStudioDataDepthConfigurationInput,
+  BoringLogStudioDataLayerSymbologyInput,
   BoringLogStudioPageGuidesInput,
+  BoringLogStudioPageSetupInput,
   BoringLogStudioProjectionPreviewInput,
   BoringLogStudioTextOccurrencePresentationResetInput,
   BoringLogStudioTextOccurrenceStyleInput,
@@ -190,13 +218,138 @@ export type {
 } from "./boring-log-pdf-publication.js";
 export {
   inspectRsLogProjectDataJson,
+  maximumRsLogBoreholeCollectionItems,
+  maximumRsLogProjectBoreholes,
   maximumRsLogProjectDataBytes,
   rsLogProjectDataIngressRevision,
 } from "./rslog-project-data-ingress.js";
 export type {
+  RsLogProjectDataBorehole,
+  RsLogProjectDataBoringMethod,
+  RsLogProjectDataComment,
+  RsLogProjectDataDocument,
   RsLogProjectDataIngressRejectionCode,
   RsLogProjectDataIngressResult,
+  RsLogProjectDataSample,
+  RsLogProjectDataStratigraphy,
 } from "./rslog-project-data-ingress.js";
+export {
+  createRsLogProjectDataLayoutJobs,
+  rsLogProjectDataLayoutJobRevision,
+} from "./rslog-project-data-layout-job.js";
+export type {
+  RsLogProjectDataLayoutJobFailureCode,
+  RsLogProjectDataLayoutJobResult,
+} from "./rslog-project-data-layout-job.js";
+export {
+  maximumRsLogLiveResponseBytes,
+  RSLOG_CLOUD_ORIGIN,
+  RsLogLiveSessionBroker,
+  rsLogLiveSessionBrokerRevision,
+} from "./rslog-live-session-broker.js";
+export type {
+  RsLogAuthActionResult,
+  RsLogAuthFailureCode,
+  RsLogAuthProjection,
+  RsLogDatasetId,
+  RsLogHttpRequest,
+  RsLogHttpResponse,
+  RsLogHttpTransport,
+  RsLogHttpTransportFailureCode,
+  RsLogLiveOperationId,
+  RsLogReadFailureCode,
+  RsLogReadRequestSpec,
+  RsLogReadResult,
+} from "./rslog-live-session-broker.js";
+export { RsLogHttpTransportFailure } from "./rslog-live-session-broker.js";
+export {
+  createRsLogNodeFetchTransport,
+  defaultRsLogRequestTimeoutMs,
+  maximumRsLogLiveRequestBytes,
+  rsLogNodeFetchTransportRevision,
+} from "./rslog-node-fetch-transport.js";
+export type {
+  RsLogFetchImplementation,
+  RsLogNodeFetchTransportOptions,
+} from "./rslog-node-fetch-transport.js";
+export {
+  createRsLogAuthEntryHtml,
+  RSLOG_AUTH_ENTRY_BOOTSTRAP_CHANNEL,
+  RSLOG_AUTH_ENTRY_CANCEL_CHANNEL,
+  RSLOG_AUTH_ENTRY_STYLESHEET,
+  RSLOG_AUTH_ENTRY_STYLESHEET_URL,
+  RSLOG_AUTH_ENTRY_SUBMIT_CHANNEL,
+  RSLOG_AUTH_ENTRY_URL,
+  RsLogAuthEntryRouteBroker,
+  rsLogAuthEntryRouteRevision,
+} from "./rslog-auth-entry-route.js";
+export type {
+  RsLogAuthEntryBootstrapResult,
+  RsLogAuthEntryContext,
+  RsLogAuthEntryMode,
+  RsLogAuthEntryResult,
+} from "./rslog-auth-entry-route.js";
+export {
+  generateRsLogAuthEntryPreloadSource,
+  generatedRsLogAuthEntryPreloadRevision,
+} from "./generated-rslog-auth-entry-preload.js";
+export {
+  createRsLogSourceSelectionHtml,
+  RSLOG_SOURCE_SELECTION_BOOTSTRAP_CHANNEL,
+  RSLOG_SOURCE_SELECTION_CANCEL_CHANNEL,
+  RSLOG_SOURCE_SELECTION_STYLESHEET,
+  RSLOG_SOURCE_SELECTION_STYLESHEET_URL,
+  RSLOG_SOURCE_SELECTION_SUBMIT_CHANNEL,
+  RSLOG_SOURCE_SELECTION_URL,
+  RsLogSourceSelectionRouteBroker,
+  rsLogSourceSelectionRouteRevision,
+} from "./rslog-source-selection-route.js";
+export type {
+  RsLogSourceSelectionBootstrapResult,
+  RsLogSourceSelectionContext,
+  RsLogSourceSelectionMode,
+  RsLogSourceSelectionOption,
+  RsLogSourceSelectionResult,
+} from "./rslog-source-selection-route.js";
+export {
+  generateRsLogSourceSelectionPreloadSource,
+  generatedRsLogSourceSelectionPreloadRevision,
+} from "./generated-rslog-source-selection-preload.js";
+export {
+  inspectRsLogJsonShape,
+  maximumRsLogJsonShapeDepth,
+  maximumRsLogJsonShapeNodes,
+  maximumRsLogJsonShapePaths,
+  rsLogJsonShapeLedgerRevision,
+} from "./rslog-json-shape-ledger.js";
+export {
+  inspectRsLogProjectCatalog,
+  maximumRsLogProjectCatalogBytes,
+  maximumRsLogProjectCatalogEntries,
+  rsLogProjectCatalogIngressRevision,
+} from "./rslog-project-catalog-ingress.js";
+export type {
+  RsLogProjectCatalogEntry,
+  RsLogProjectCatalogIngressResult,
+} from "./rslog-project-catalog-ingress.js";
+export {
+  inspectRsLogLiveBoreholeCatalog,
+  inspectRsLogLiveProjectData,
+  normalizeRsLogRichText,
+  rsLogLiveProjectDataIngressRevision,
+} from "./rslog-live-project-data-ingress.js";
+export type {
+  RsLogLiveBoreholeCatalogEntry,
+  RsLogLiveBoreholeCatalogResult,
+  RsLogLiveProjectDataIngressResult,
+  RsLogLiveRsGeoResponse,
+} from "./rslog-live-project-data-ingress.js";
+export type {
+  RsLogJsonShapeLedger,
+  RsLogJsonShapeLedgerResult,
+  RsLogJsonShapeObservation,
+  RsLogJsonValueKind,
+} from "./rslog-json-shape-ledger.js";
 export {
   BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,

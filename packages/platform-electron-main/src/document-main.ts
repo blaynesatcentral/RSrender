@@ -11,6 +11,7 @@ import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_ROUTE_URL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
@@ -80,6 +81,7 @@ const handlers = [
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
 ] as const;
@@ -282,7 +284,8 @@ async function runProbe(
   );
   requireProbe(JSON.stringify(surface["root"]) === '["document"]', "SURFACE_ROOT_INVALID");
   requireProbe(
-    JSON.stringify(surface["document"]) === '["getProjection","setDisplayValue","undo","redo"]',
+    JSON.stringify(surface["document"]) ===
+      '["getProjection","setDisplayValue","revertDisplayValue","undo","redo"]',
     "SURFACE_METHODS_INVALID",
   );
   requireProbe(
@@ -290,12 +293,12 @@ async function runProbe(
     "SURFACE_MUTABLE",
   );
   requireProbe(
-    JSON.stringify(surface["methodFrozen"]) === "[true,true,true,true]",
+    JSON.stringify(surface["methodFrozen"]) === "[true,true,true,true,true]",
     "METHOD_MUTABLE",
   );
   // Electron's contextBridge proxies callable values with arity zero in the main world.
-  // The generated-preload VM oracle separately proves the four source closures are arity one.
-  requireProbe(JSON.stringify(surface["methodArities"]) === "[0,0,0,0]", "METHOD_ARITY_INVALID");
+  // The generated-preload VM oracle separately proves the five source closures are arity one.
+  requireProbe(JSON.stringify(surface["methodArities"]) === "[0,0,0,0,0]", "METHOD_ARITY_INVALID");
   requireProbe(
     surface["requireType"] === "undefined" &&
       surface["processType"] === "undefined" &&
@@ -611,6 +614,9 @@ async function main(): Promise<void> {
   );
   ipcMain.handle(DOCUMENT_SET_DISPLAY_VALUE_CHANNEL, (event, input: unknown) =>
     brokerResult.broker.setDisplayValue(routeContext(window, event), input),
+  );
+  ipcMain.handle(DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL, (event, input: unknown) =>
+    brokerResult.broker.revertDisplayValue(routeContext(window, event), input),
   );
   ipcMain.handle(DOCUMENT_UNDO_CHANNEL, (event, input: unknown) =>
     brokerResult.broker.undo(routeContext(window, event), input),

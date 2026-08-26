@@ -1,3 +1,5 @@
+import { isWellFormedUnicode } from "@rsrender/contracts";
+
 import type { BoringLogStudioProjectionResult } from "./boring-log-studio-projection.js";
 import { DOCUMENT_ROUTE_URL } from "./document-route-contract.js";
 import type { DocumentRouteContext } from "./document-route-broker.js";
@@ -41,6 +43,7 @@ export type BoringLogStudioLifecycleOperation =
   | "get-state"
   | "new-project"
   | "open-project"
+  | "connect-rslog"
   | "import-rslog-project-data"
   | "save-project"
   | "save-project-as"
@@ -65,6 +68,7 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
     "occurrence" | "all-selected" | "column-default" | "named-style" | "template-default";
   readonly propertyMask?: readonly (
     | "fontFamilyId"
+    | "fontStyle"
     | "fontSizeMpt"
     | "fontWeight"
     | "lineHeightMpt"
@@ -83,6 +87,7 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
     readonly baseStyleId: string;
   }>[];
   readonly fontFamilyId: string;
+  readonly fontStyle?: "normal" | "italic";
   readonly fontSizeMpt: number;
   readonly fontWeight: number;
   readonly lineHeightMpt: number;
@@ -147,6 +152,20 @@ export interface BoringLogStudioPageGuidesInput {
     | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 }
 
+export interface BoringLogStudioPageSetupInput {
+  readonly expectedWorkingRevision: number;
+  readonly paperPreset: "letter" | "a4" | "custom";
+  readonly orientation: "portrait" | "landscape";
+  readonly widthMpt: number;
+  readonly heightMpt: number;
+  readonly marginsMpt: Readonly<{
+    readonly topMpt: number;
+    readonly rightMpt: number;
+    readonly bottomMpt: number;
+    readonly leftMpt: number;
+  }>;
+}
+
 export interface BoringLogStudioColumnDividerInput {
   readonly expectedWorkingRevision: number;
   readonly dividerAfterColumnId: string;
@@ -154,10 +173,38 @@ export interface BoringLogStudioColumnDividerInput {
   readonly resizeMode: "adjacent-pair" | "push-following-columns";
 }
 
+export interface BoringLogStudioAddProviderColumnInput {
+  readonly expectedWorkingRevision: number;
+  readonly fieldId: string;
+  readonly targetRole:
+    | "interval-text-column"
+    | "lithology-pattern-column"
+    | "numeric-value-column"
+    | "point-text-column"
+    | "remarks-column";
+  readonly referenceColumnId: string | null;
+  readonly side: "before" | "after";
+}
+
+export interface BoringLogStudioColumnHeadingInput {
+  readonly expectedWorkingRevision: number;
+  readonly columnId: string;
+  readonly heading: string;
+}
+
 export interface BoringLogStudioRegionBoundaryInput {
   readonly expectedWorkingRevision: number;
   readonly boundary: "header-depth" | "depth-footer";
   readonly requestedBoundaryYMpt: number;
+}
+
+export interface BoringLogStudioDataDepthConfigurationInput {
+  readonly expectedWorkingRevision: number;
+  readonly startDepthFt: number;
+  readonly totalDepthFt: number;
+  readonly intervalFt: number;
+  readonly mptPerFoot: number;
+  readonly nValueGraphMaximum: number | null;
 }
 
 export interface BoringLogStudioLithologyAppearanceInput {
@@ -167,6 +214,32 @@ export interface BoringLogStudioLithologyAppearanceInput {
   readonly applyScope: "interval" | "classification-default";
   readonly materialFillColor: string | null;
   readonly patternId: string | null;
+}
+
+export interface BoringLogStudioDataLayerSymbologyInput {
+  readonly expectedWorkingRevision: number;
+  readonly layerId: string;
+  readonly applyScope: "layer" | "project-default";
+  readonly visible: boolean;
+  readonly order: number;
+  readonly line: Readonly<{
+    readonly strokeToken: string;
+    readonly strokeWidthMpt: number;
+    readonly dashMpt: readonly number[];
+  }> | null;
+  readonly point: Readonly<{
+    readonly shape: "square" | "triangle" | "circle";
+    readonly sizeMpt: number;
+    readonly fillToken: string | null;
+    readonly strokeToken: string;
+    readonly strokeWidthMpt: number;
+  }> | null;
+  readonly range: Readonly<{
+    readonly line: NonNullable<BoringLogStudioDataLayerSymbologyInput["line"]>;
+    readonly firstEndpoint: NonNullable<BoringLogStudioDataLayerSymbologyInput["point"]>;
+    readonly secondEndpoint: NonNullable<BoringLogStudioDataLayerSymbologyInput["point"]>;
+  }> | null;
+  readonly legend: Readonly<{ readonly visible: boolean; readonly label: string }>;
 }
 
 export interface BoringLogStudioArrangeTextOccurrencesInput {
@@ -297,6 +370,63 @@ function boundedProjection(input: unknown): boolean {
   }
 }
 
+function validDataSymbologyToken(input: unknown): input is string {
+  return (
+    typeof input === "string" &&
+    input.length >= 1 &&
+    input.length <= 128 &&
+    isWellFormedUnicode(input)
+  );
+}
+
+function validDataLineSymbol(input: unknown): boolean {
+  const line = exactRecord(input, ["strokeToken", "strokeWidthMpt", "dashMpt"]);
+  if (line === null || !Array.isArray(line["dashMpt"])) return false;
+  const dash = line["dashMpt"];
+  return (
+    validDataSymbologyToken(line["strokeToken"]) &&
+    Number.isSafeInteger(line["strokeWidthMpt"]) &&
+    (line["strokeWidthMpt"] as number) >= 100 &&
+    (line["strokeWidthMpt"] as number) <= 12_000 &&
+    dash.length <= 8 &&
+    dash.length % 2 === 0 &&
+    Object.keys(dash).length === dash.length &&
+    dash.every((entry) => Number.isSafeInteger(entry) && entry > 0 && entry <= 72_000)
+  );
+}
+
+function validDataPointSymbol(input: unknown): boolean {
+  const point = exactRecord(input, [
+    "shape",
+    "sizeMpt",
+    "fillToken",
+    "strokeToken",
+    "strokeWidthMpt",
+  ]);
+  return (
+    point !== null &&
+    ["square", "triangle", "circle"].includes(String(point["shape"])) &&
+    Number.isSafeInteger(point["sizeMpt"]) &&
+    (point["sizeMpt"] as number) >= 1_000 &&
+    (point["sizeMpt"] as number) <= 24_000 &&
+    (point["fillToken"] === null || validDataSymbologyToken(point["fillToken"])) &&
+    validDataSymbologyToken(point["strokeToken"]) &&
+    Number.isSafeInteger(point["strokeWidthMpt"]) &&
+    (point["strokeWidthMpt"] as number) >= 100 &&
+    (point["strokeWidthMpt"] as number) <= 12_000
+  );
+}
+
+function validDataRangeSymbol(input: unknown): boolean {
+  const range = exactRecord(input, ["line", "firstEndpoint", "secondEndpoint"]);
+  return (
+    range !== null &&
+    validDataLineSymbol(range["line"]) &&
+    validDataPointSymbol(range["firstEndpoint"]) &&
+    validDataPointSymbol(range["secondEndpoint"])
+  );
+}
+
 export class BoringLogStudioRouteBroker {
   readonly #expectedWindow: object;
   readonly #expectedWebContents: object;
@@ -318,10 +448,19 @@ export class BoringLogStudioRouteBroker {
     input: BoringLogStudioTextOccurrencePresentationResetInput,
   ) => Promise<unknown>;
   readonly #setPageGuides: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
+  readonly #setPageSetup: (input: BoringLogStudioPageSetupInput) => Promise<unknown>;
   readonly #setColumnDivider: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
+  readonly #addProviderColumn: (input: BoringLogStudioAddProviderColumnInput) => Promise<unknown>;
+  readonly #setColumnHeading: (input: BoringLogStudioColumnHeadingInput) => Promise<unknown>;
   readonly #setRegionBoundary: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+  readonly #setDataDepthConfiguration: (
+    input: BoringLogStudioDataDepthConfigurationInput,
+  ) => Promise<unknown>;
   readonly #setLithologyAppearance: (
     input: BoringLogStudioLithologyAppearanceInput,
+  ) => Promise<unknown>;
+  readonly #setDataLayerSymbology: (
+    input: BoringLogStudioDataLayerSymbologyInput,
   ) => Promise<unknown>;
   readonly #arrangeTextOccurrences: (
     input: BoringLogStudioArrangeTextOccurrencesInput,
@@ -353,10 +492,19 @@ export class BoringLogStudioRouteBroker {
       input: BoringLogStudioTextOccurrencePresentationResetInput,
     ) => Promise<unknown>;
     readonly setPageGuides?: (input: BoringLogStudioPageGuidesInput) => Promise<unknown>;
+    readonly setPageSetup?: (input: BoringLogStudioPageSetupInput) => Promise<unknown>;
     readonly setColumnDivider?: (input: BoringLogStudioColumnDividerInput) => Promise<unknown>;
+    readonly addProviderColumn?: (input: BoringLogStudioAddProviderColumnInput) => Promise<unknown>;
+    readonly setColumnHeading?: (input: BoringLogStudioColumnHeadingInput) => Promise<unknown>;
     readonly setRegionBoundary?: (input: BoringLogStudioRegionBoundaryInput) => Promise<unknown>;
+    readonly setDataDepthConfiguration?: (
+      input: BoringLogStudioDataDepthConfigurationInput,
+    ) => Promise<unknown>;
     readonly setLithologyAppearance?: (
       input: BoringLogStudioLithologyAppearanceInput,
+    ) => Promise<unknown>;
+    readonly setDataLayerSymbology?: (
+      input: BoringLogStudioDataLayerSymbologyInput,
     ) => Promise<unknown>;
     readonly arrangeTextOccurrences?: (
       input: BoringLogStudioArrangeTextOccurrencesInput,
@@ -395,19 +543,38 @@ export class BoringLogStudioRouteBroker {
     this.#setPageGuides =
       input.setPageGuides ??
       (() => Promise.resolve(Object.freeze({ accepted: false, code: "PAGE_GUIDES_UNAVAILABLE" })));
+    this.#setPageSetup =
+      input.setPageSetup ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "PAGE_SETUP_UNAVAILABLE" })));
     this.#setColumnDivider =
       input.setColumnDivider ??
       (() =>
         Promise.resolve(Object.freeze({ accepted: false, code: "COLUMN_DIVIDER_UNAVAILABLE" })));
+    this.#addProviderColumn =
+      input.addProviderColumn ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "ADD_COLUMN_UNAVAILABLE" })));
+    this.#setColumnHeading =
+      input.setColumnHeading ??
+      (() =>
+        Promise.resolve(Object.freeze({ accepted: false, code: "COLUMN_HEADING_UNAVAILABLE" })));
     this.#setRegionBoundary =
       input.setRegionBoundary ??
       (() =>
         Promise.resolve(Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" })));
+    this.#setDataDepthConfiguration =
+      input.setDataDepthConfiguration ??
+      (() => Promise.resolve(Object.freeze({ accepted: false, code: "DATA_DEPTH_UNAVAILABLE" })));
     this.#setLithologyAppearance =
       input.setLithologyAppearance ??
       (() =>
         Promise.resolve(
           Object.freeze({ accepted: false, code: "LITHOLOGY_APPEARANCE_UNAVAILABLE" }),
+        ));
+    this.#setDataLayerSymbology =
+      input.setDataLayerSymbology ??
+      (() =>
+        Promise.resolve(
+          Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_UNAVAILABLE" }),
         ));
     this.#arrangeTextOccurrences =
       input.arrangeTextOccurrences ??
@@ -639,6 +806,7 @@ export class BoringLogStudioRouteBroker {
         "get-state",
         "new-project",
         "open-project",
+        "connect-rslog",
         "import-rslog-project-data",
         "save-project",
         "save-project-as",
@@ -715,6 +883,10 @@ export class BoringLogStudioRouteBroker {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }
     const requestArgs = request["args"];
+    const hasFontStyle =
+      typeof requestArgs === "object" &&
+      requestArgs !== null &&
+      Object.hasOwn(requestArgs, "fontStyle");
     const hasPropertyMask =
       typeof requestArgs === "object" &&
       requestArgs !== null &&
@@ -728,6 +900,7 @@ export class BoringLogStudioRouteBroker {
       "baseStyleId",
       "targets",
       "fontFamilyId",
+      ...(hasFontStyle ? ["fontStyle"] : []),
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
@@ -780,19 +953,21 @@ export class BoringLogStudioRouteBroker {
         : null;
     if (
       args === null ||
+      typeof args["expectedWorkingRevision"] !== "number" ||
       !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
-      (args["expectedWorkingRevision"] as number) < 0 ||
+      args["expectedWorkingRevision"] < 0 ||
       !["occurrence", "all-selected", "column-default", "named-style", "template-default"].includes(
         String(args["applyScope"]),
       ) ||
       (args["applyScope"] === "template-default" &&
         (!Array.isArray(args["propertyMask"]) ||
           args["propertyMask"].length < 1 ||
-          args["propertyMask"].length > 9 ||
+          args["propertyMask"].length > 10 ||
           args["propertyMask"].some(
             (property) =>
               ![
                 "fontFamilyId",
+                "fontStyle",
                 "fontSizeMpt",
                 "fontWeight",
                 "lineHeightMpt",
@@ -825,6 +1000,7 @@ export class BoringLogStudioRouteBroker {
       (args["applyScope"] === "all-selected" && targets.length < 2) ||
       (args["applyScope"] !== "all-selected" && targets.length !== 1) ||
       !boundedText(args["fontFamilyId"]) ||
+      (hasFontStyle && !["normal", "italic"].includes(String(args["fontStyle"]))) ||
       !Number.isSafeInteger(args["fontSizeMpt"]) ||
       (args["fontSizeMpt"] as number) < 1 ||
       ![400, 700].includes(Number(args["fontWeight"])) ||
@@ -1095,6 +1271,115 @@ export class BoringLogStudioRouteBroker {
     }
   }
 
+  public async setPageSetup(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "paperPreset",
+      "orientation",
+      "widthMpt",
+      "heightMpt",
+      "marginsMpt",
+    ]);
+    const margins =
+      args === null
+        ? null
+        : exactRecord(args["marginsMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
+    if (
+      args === null ||
+      margins === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      !["letter", "a4", "custom"].includes(String(args["paperPreset"])) ||
+      !["portrait", "landscape"].includes(String(args["orientation"])) ||
+      !Number.isSafeInteger(args["widthMpt"]) ||
+      (args["widthMpt"] as number) < 216_000 ||
+      (args["widthMpt"] as number) > 2_000_000 ||
+      !Number.isSafeInteger(args["heightMpt"]) ||
+      (args["heightMpt"] as number) < 216_000 ||
+      (args["heightMpt"] as number) > 2_000_000 ||
+      (args["orientation"] === "portrait" &&
+        (args["widthMpt"] as number) > (args["heightMpt"] as number)) ||
+      (args["orientation"] === "landscape" &&
+        (args["widthMpt"] as number) < (args["heightMpt"] as number)) ||
+      (args["paperPreset"] === "letter" &&
+        (args["widthMpt"] !== (args["orientation"] === "portrait" ? 612_000 : 792_000) ||
+          args["heightMpt"] !== (args["orientation"] === "portrait" ? 792_000 : 612_000))) ||
+      (args["paperPreset"] === "a4" &&
+        (args["widthMpt"] !== (args["orientation"] === "portrait" ? 595_276 : 841_890) ||
+          args["heightMpt"] !== (args["orientation"] === "portrait" ? 841_890 : 595_276))) ||
+      ["topMpt", "rightMpt", "bottomMpt", "leftMpt"].some(
+        (field) =>
+          !Number.isSafeInteger(margins[field]) ||
+          (margins[field] as number) < 0 ||
+          (margins[field] as number) > 2_000_000,
+      ) ||
+      (margins["leftMpt"] as number) + (margins["rightMpt"] as number) >=
+        (args["widthMpt"] as number) ||
+      (margins["topMpt"] as number) + (margins["bottomMpt"] as number) >=
+        (args["heightMpt"] as number)
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setPageSetup(args as unknown as BoringLogStudioPageSetupInput);
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
   public async setColumnDivider(
     context: DocumentRouteContext,
     input: unknown,
@@ -1159,6 +1444,175 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setColumnDivider(
         args as unknown as BoringLogStudioColumnDividerInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async addProviderColumn(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "fieldId",
+      "targetRole",
+      "referenceColumnId",
+      "side",
+    ]);
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      typeof args["fieldId"] !== "string" ||
+      args["fieldId"].length < 1 ||
+      args["fieldId"].length > 256 ||
+      ![
+        "interval-text-column",
+        "lithology-pattern-column",
+        "numeric-value-column",
+        "point-text-column",
+        "remarks-column",
+      ].includes(String(args["targetRole"])) ||
+      (args["referenceColumnId"] !== null &&
+        (typeof args["referenceColumnId"] !== "string" ||
+          args["referenceColumnId"].length < 1 ||
+          args["referenceColumnId"].length > 128)) ||
+      !["before", "after"].includes(String(args["side"]))
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#addProviderColumn(
+        args as unknown as BoringLogStudioAddProviderColumnInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setColumnHeading(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], ["expectedWorkingRevision", "columnId", "heading"]);
+    if (
+      args === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      typeof args["columnId"] !== "string" ||
+      !/^[a-z0-9][a-z0-9-]{0,127}$/u.test(args["columnId"]) ||
+      typeof args["heading"] !== "string" ||
+      args["heading"].trim().length < 1 ||
+      args["heading"].length > 80 ||
+      !isWellFormedUnicode(args["heading"])
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setColumnHeading(
+        args as unknown as BoringLogStudioColumnHeadingInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
@@ -1255,6 +1709,99 @@ export class BoringLogStudioRouteBroker {
     }
   }
 
+  public async setDataDepthConfiguration(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    )
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "startDepthFt",
+      "totalDepthFt",
+      "intervalFt",
+      "mptPerFoot",
+      "nValueGraphMaximum",
+    ]);
+    if (
+      args === null ||
+      typeof args["expectedWorkingRevision"] !== "number" ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      args["expectedWorkingRevision"] < 0 ||
+      typeof args["startDepthFt"] !== "number" ||
+      !Number.isFinite(args["startDepthFt"]) ||
+      args["startDepthFt"] < 0 ||
+      typeof args["totalDepthFt"] !== "number" ||
+      !Number.isFinite(args["totalDepthFt"]) ||
+      args["totalDepthFt"] <= args["startDepthFt"] ||
+      typeof args["intervalFt"] !== "number" ||
+      !Number.isFinite(args["intervalFt"]) ||
+      args["intervalFt"] !== args["totalDepthFt"] - args["startDepthFt"] ||
+      typeof args["mptPerFoot"] !== "number" ||
+      !Number.isSafeInteger(args["mptPerFoot"]) ||
+      args["mptPerFoot"] <= 0 ||
+      (args["nValueGraphMaximum"] !== null &&
+        (typeof args["nValueGraphMaximum"] !== "number" ||
+          !Number.isSafeInteger(args["nValueGraphMaximum"]) ||
+          args["nValueGraphMaximum"] < 1 ||
+          args["nValueGraphMaximum"] > 1_000))
+    )
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setDataDepthConfiguration(
+        args as unknown as BoringLogStudioDataDepthConfigurationInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result))
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
   public async setLithologyAppearance(
     context: DocumentRouteContext,
     input: unknown,
@@ -1326,6 +1873,114 @@ export class BoringLogStudioRouteBroker {
     try {
       const result = await this.#setLithologyAppearance(
         args as unknown as BoringLogStudioLithologyAppearanceInput,
+      );
+      if (this.#binding !== binding || !boundedProjection(result)) {
+        return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+      }
+      return Object.freeze({
+        accepted: true,
+        transportVersion: 1,
+        generation: binding.generation,
+        sequence,
+        result,
+      });
+    } catch {
+      return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");
+    } finally {
+      binding.inFlight = false;
+    }
+  }
+
+  public async setDataLayerSymbology(
+    context: DocumentRouteContext,
+    input: unknown,
+  ): Promise<BoringLogStudioLifecycleResult> {
+    const binding = this.#binding;
+    if (
+      !validContext(
+        context,
+        this.#expectedWindow,
+        this.#expectedWebContents,
+        binding?.frame ?? null,
+      )
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_CONTEXT_INVALID");
+    }
+    if (binding === null) return lifecycleRejected("STUDIO_ROUTE_UNAVAILABLE");
+    const request = exactRecord(input, [
+      "transportVersion",
+      "capability",
+      "generation",
+      "sequence",
+      "documentIdentity",
+      "ownerGeneration",
+      "args",
+    ]);
+    if (
+      request === null ||
+      request["transportVersion"] !== 1 ||
+      request["capability"] !== binding.capability ||
+      request["generation"] !== binding.generation ||
+      request["documentIdentity"] !== this.#documentIdentity ||
+      request["ownerGeneration"] !== this.#ownerGeneration ||
+      !Number.isSafeInteger(request["sequence"]) ||
+      request["sequence"] !== binding.nextSequence ||
+      binding.nextSequence >= Number.MAX_SAFE_INTEGER
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    const args = exactRecord(request["args"], [
+      "expectedWorkingRevision",
+      "layerId",
+      "applyScope",
+      "visible",
+      "order",
+      "line",
+      "point",
+      "range",
+      "legend",
+    ]);
+    const legend = args === null ? null : exactRecord(args["legend"], ["visible", "label"]);
+    const polylineTopology =
+      args !== null &&
+      validDataLineSymbol(args["line"]) &&
+      validDataPointSymbol(args["point"]) &&
+      args["range"] === null;
+    const rangeTopology =
+      args !== null &&
+      args["line"] === null &&
+      args["point"] === null &&
+      validDataRangeSymbol(args["range"]);
+    if (
+      args === null ||
+      legend === null ||
+      !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
+      (args["expectedWorkingRevision"] as number) < 0 ||
+      typeof args["layerId"] !== "string" ||
+      args["layerId"].length < 1 ||
+      args["layerId"].length > 512 ||
+      !isWellFormedUnicode(args["layerId"]) ||
+      !["layer", "project-default"].includes(String(args["applyScope"])) ||
+      typeof args["visible"] !== "boolean" ||
+      !Number.isSafeInteger(args["order"]) ||
+      (args["order"] as number) < 0 ||
+      (args["order"] as number) > 255 ||
+      (!polylineTopology && !rangeTopology) ||
+      typeof legend["visible"] !== "boolean" ||
+      typeof legend["label"] !== "string" ||
+      legend["label"].length < 1 ||
+      legend["label"].length > 256 ||
+      !isWellFormedUnicode(legend["label"])
+    ) {
+      return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
+    }
+    if (binding.inFlight) return lifecycleRejected("STUDIO_ROUTE_IN_FLIGHT");
+    binding.inFlight = true;
+    const sequence = binding.nextSequence;
+    binding.nextSequence += 1;
+    try {
+      const result = await this.#setDataLayerSymbology(
+        args as unknown as BoringLogStudioDataLayerSymbologyInput,
       );
       if (this.#binding !== binding || !boundedProjection(result)) {
         return lifecycleRejected("STUDIO_ROUTE_RESULT_INVALID");

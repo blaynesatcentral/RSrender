@@ -11,12 +11,22 @@ export const BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL =
   "rsrender:boring-log-studio:reset-text-occurrence-presentation:v1" as const;
 export const BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL =
   "rsrender:boring-log-studio:set-page-guides:v1" as const;
+export const BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL =
+  "rsrender:boring-log-studio:set-page-setup:v1" as const;
 export const BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL =
   "rsrender:boring-log-studio:set-column-divider:v1" as const;
+export const BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL =
+  "rsrender:boring-log-studio:set-column-heading:v1" as const;
+export const BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL =
+  "rsrender:boring-log-studio:add-provider-column:v1" as const;
 export const BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL =
   "rsrender:boring-log-studio:set-region-boundary:v1" as const;
+export const BORING_LOG_STUDIO_SET_DATA_DEPTH_CONFIGURATION_CHANNEL =
+  "rsrender:boring-log-studio:set-data-depth-configuration:v1" as const;
 export const BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL =
   "rsrender:boring-log-studio:set-lithology-appearance:v1" as const;
+export const BORING_LOG_STUDIO_SET_DATA_LAYER_SYMBOLOGY_CHANNEL =
+  "rsrender:boring-log-studio:set-data-layer-symbology:v1" as const;
 export const BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL =
   "rsrender:boring-log-studio:arrange-text-occurrences:v1" as const;
 export const BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL =

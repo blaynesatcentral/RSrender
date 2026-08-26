@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { canonicalizeJson } from "../packages/contracts/dist/index.js";
 import { boringLogMvpFixture } from "../packages/test-support/dist/index.js";
 import { inspectBoringLogPdf } from "./inspect-boring-log-pdf.mjs";
+import { inspectBoringLogPdfPackage } from "./inspect-boring-log-pdf-package.mjs";
 import { packageBoringLogPdfStudio } from "./shell-package-bld027.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -154,23 +155,36 @@ async function runPackaged(packageResult, index, outputPath) {
   ) {
     throw new Error(`POSITIVE_PDF_PACKAGE_INVALID:${index}:${JSON.stringify({ outcome, result })}`);
   }
-  const inspection = await inspectBoringLogPdf({
-    pdfPath: outputPath,
-    expectedSceneDigest: result.publication.sceneDigest,
-    expectedProjectionDigest: result.publication.projectionDigest,
-    expectedText: [
-      boringLogMvpFixture.metadata.companyName,
-      boringLogMvpFixture.metadata.documentTitle,
-      ...boringLogMvpFixture.notes,
-      ...boringLogMvpFixture.remarks.map(({ text }) => text),
-      ...boringLogMvpFixture.lithologyIntervals.flatMap(({ classification, description }) => [
-        classification,
-        description,
-      ]),
-    ],
-    expectedSceneNodes: result.initial.sceneNodes,
-    renderPrefix: path.join(temporaryPdfDirectory, `bld027-run-${index}-preview`),
-  });
+  const pageCount = result.publication.pageCount;
+  const inspection =
+    pageCount === 1
+      ? await inspectBoringLogPdf({
+          pdfPath: outputPath,
+          expectedSceneDigest: result.publication.sceneDigest,
+          expectedProjectionDigest: result.publication.projectionDigest,
+          expectedText: [
+            boringLogMvpFixture.metadata.companyName,
+            boringLogMvpFixture.metadata.documentTitle,
+            ...boringLogMvpFixture.notes,
+            ...boringLogMvpFixture.remarks.map(({ text }) => text),
+            ...boringLogMvpFixture.lithologyIntervals.flatMap(({ classification, description }) => [
+              classification,
+              description,
+            ]),
+          ],
+          expectedSceneNodes: result.initial.sceneNodes,
+          renderPrefix: path.join(temporaryPdfDirectory, `bld027-run-${index}-preview`),
+        })
+      : await inspectBoringLogPdfPackage({
+          pdfPath: outputPath,
+          expectedOrderedTitles: result.publication.orderedBoringLogIdentities.map((identity) =>
+            identity === "urn:rsrender:boring-log:test-02"
+              ? "BORING LOG TEST-02"
+              : boringLogMvpFixture.metadata.documentTitle,
+          ),
+          expectedPageSizesPoints: Array.from({ length: pageCount }, () => [612, 792]),
+          expectedProjectionDigest: result.publication.projectionDigest,
+        });
   if (
     inspection.pdfSha256 !== result.publication.pdfDigest ||
     inspection.pdfBytes !== result.publication.pdfBytes

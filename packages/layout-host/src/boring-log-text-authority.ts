@@ -1,4 +1,4 @@
-import { sha256CanonicalJson } from "@rsrender/contracts";
+import { sha256CanonicalJson, validateDynamicTextResolution } from "@rsrender/contracts";
 import type {
   BoringLogResolvedTextLine,
   BoringLogTextMeasurementRequest,
@@ -40,6 +40,10 @@ function runtimeArray(input: unknown): boolean {
 }
 
 function validRequest(request: BoringLogTextMeasurementRequest): boolean {
+  const dynamicTextResolution =
+    request.dynamicTextResolution === undefined
+      ? null
+      : validateDynamicTextResolution(request.dynamicTextResolution);
   return (
     typeof request.measurementId === "string" &&
     request.measurementId.length > 0 &&
@@ -65,7 +69,10 @@ function validRequest(request: BoringLogTextMeasurementRequest): boolean {
       request.overflowPolicy === "shrink-to-minimum") &&
     Number.isSafeInteger(request.minimumFontSizeMpt) &&
     request.minimumFontSizeMpt > 0 &&
-    request.minimumFontSizeMpt <= request.fontSizeMpt
+    request.minimumFontSizeMpt <= request.fontSizeMpt &&
+    (dynamicTextResolution === null ||
+      (dynamicTextResolution.accepted &&
+        dynamicTextResolution.value.measurementText === request.text))
   );
 }
 
@@ -160,7 +167,11 @@ function resolveLinesAtSize(
     }
     const visibleText = request.text.slice(cursor, end);
     const hasParagraphBreak = end === paragraphEnd && paragraphEndCandidate !== -1;
-    const text = request.text.slice(cursor, end + (hasParagraphBreak ? 1 : 0));
+    let consumedEnd = end + (hasParagraphBreak ? 1 : 0);
+    if (!hasParagraphBreak && end < paragraphEnd) {
+      while (request.text[consumedEnd] === " ") consumedEnd += 1;
+    }
+    const text = request.text.slice(cursor, consumedEnd);
     const advanceMpt = styledAdvance(
       visibleText,
       characterAdvanceMpt,
@@ -171,7 +182,7 @@ function resolveLinesAtSize(
       Object.freeze({
         text,
         sourceStartUtf16: request.sourceStartUtf16 + cursor,
-        sourceEndUtf16: request.sourceStartUtf16 + end + (hasParagraphBreak ? 1 : 0),
+        sourceEndUtf16: request.sourceStartUtf16 + consumedEnd,
         xMpt: mpt(0),
         baselineMpt: mpt(
           lines.length * lineHeightMpt +
@@ -182,14 +193,12 @@ function resolveLinesAtSize(
         advanceMpt: mpt(advanceMpt),
       }),
     );
-    cursor = end + (hasParagraphBreak ? 1 : 0);
+    cursor = consumedEnd;
     if (hasParagraphBreak) {
       paragraphOffsetMpt += paragraphSpacingMpt;
     }
-    while (request.text[cursor] === " ") cursor += 1;
     if (request.wrapPolicy === "no-wrap" && paragraphEndCandidate === -1) break;
   }
-  while (request.text[cursor] === " ") cursor += 1;
   if (request.text.length === 0) {
     lines.push(
       Object.freeze({

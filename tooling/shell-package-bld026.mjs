@@ -9,6 +9,7 @@ import { packager } from "@electron/packager";
 import { build } from "esbuild";
 
 import { PACKAGING_PROFILE } from "./shell-package-bld006.mjs";
+import { rsrenderAppIconRevision, writeRsrenderAppIcon } from "./rsrender-app-icon.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const temporaryLabel = process.env.RSRENDER_BORING_LOG_PACKAGE_LABEL ?? "bld-026-boring-log-editor";
@@ -109,6 +110,11 @@ async function prepareStage() {
     path.join(stageDirectory, "main"),
     { recursive: true },
   );
+  await cp(
+    path.join(root, "packages", "platform-electron-main", "assets"),
+    path.join(stageDirectory, "assets"),
+    { recursive: true },
+  );
   for (const packageName of [
     "application",
     "contracts",
@@ -117,6 +123,7 @@ async function prepareStage() {
     "package-contract",
     "platform-zipjs",
     "scene",
+    "source-contract",
   ]) {
     const target = path.join(stageDirectory, "node_modules", "@rsrender", packageName);
     await mkdir(target, { recursive: true });
@@ -145,6 +152,8 @@ async function prepareStage() {
   await mkdir(preloadDirectory, { recursive: true });
   await mkdir(rendererDirectory, { recursive: true });
   const preload = platform.generateBoringLogStudioPreloadSource();
+  const authEntryPreload = platform.generateRsLogAuthEntryPreloadSource();
+  const sourceSelectionPreload = platform.generateRsLogSourceSelectionPreloadSource();
   const renderer = await rendererBundle();
   const stylesheet = await readFile(
     path.join(root, "packages", "renderer-ui", "src", "boring-log-studio.css"),
@@ -152,11 +161,17 @@ async function prepareStage() {
   );
   const rendererSha256 = sha256(Buffer.from(renderer, "utf8"));
   await writeFile(path.join(preloadDirectory, "boring-log-studio.cjs"), preload, "utf8");
+  await writeFile(path.join(preloadDirectory, "rslog-auth-entry.cjs"), authEntryPreload, "utf8");
+  await writeFile(
+    path.join(preloadDirectory, "rslog-source-selection.cjs"),
+    sourceSelectionPreload,
+    "utf8",
+  );
   await writeFile(path.join(rendererDirectory, "semantic-editor.js"), renderer, "utf8");
   await writeFile(path.join(rendererDirectory, "boring-log-studio.css"), stylesheet, "utf8");
   await writeFile(
     path.join(stageDirectory, "entry.mjs"),
-    `globalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ = ${JSON.stringify(html)};\nglobalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__ = ${JSON.stringify(rendererSha256)};\nglobalThis.__RSRENDER_WINDOW_TITLE__ = "RSrender Boring Log Studio";\nglobalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ = true;\nawait import("./main/semantic-editor-main.js");\n`,
+    `import { app } from "electron";\napp.disableHardwareAcceleration();\napp.commandLine.appendSwitch("disable-gpu");\napp.commandLine.appendSwitch("in-process-gpu");\nglobalThis.__RSRENDER_SEMANTIC_EDITOR_HTML__ = ${JSON.stringify(html)};\nglobalThis.__RSRENDER_SEMANTIC_EDITOR_RENDERER_SHA256__ = ${JSON.stringify(rendererSha256)};\nglobalThis.__RSRENDER_WINDOW_TITLE__ = "RSrender Boring Log Studio";\nglobalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ = true;\nawait import("./main/semantic-editor-main.js");\n`,
     "utf8",
   );
   await writeFile(
@@ -181,6 +196,10 @@ async function prepareStage() {
     rendererBytes: Buffer.byteLength(renderer, "utf8"),
     preloadSha256: sha256(Buffer.from(preload, "utf8")),
     preloadBytes: Buffer.byteLength(preload, "utf8"),
+    authEntryPreloadSha256: sha256(Buffer.from(authEntryPreload, "utf8")),
+    authEntryPreloadBytes: Buffer.byteLength(authEntryPreload, "utf8"),
+    sourceSelectionPreloadSha256: sha256(Buffer.from(sourceSelectionPreload, "utf8")),
+    sourceSelectionPreloadBytes: Buffer.byteLength(sourceSelectionPreload, "utf8"),
     stylesheetSha256: sha256(stylesheet),
     layoutJobSha256: sha256(Buffer.from(JSON.stringify(inputs.layoutJob), "utf8")),
     initialSceneSha256: null,
@@ -194,9 +213,11 @@ async function prepareStage() {
 
 export async function packageBoringLogEditor() {
   const staged = await prepareStage();
+  const appIconPath = path.join(temporaryRoot, "rsrender-app-icon.ico");
+  await writeRsrenderAppIcon(appIconPath);
   const zip = await electronZip();
   const admittedExecutable = path.join(root, "node_modules", "electron", "dist", "electron.exe");
-  const executableSha256 = sha256(await readFile(admittedExecutable));
+  const admittedElectronExecutableSha256 = sha256(await readFile(admittedExecutable));
   const options = {
     dir: stageDirectory,
     name: applicationName,
@@ -211,10 +232,10 @@ export async function packageBoringLogEditor() {
     overwrite: true,
     asar: true,
     prune: false,
+    icon: appIconPath,
     quiet: true,
     afterComplete: [
       async ({ buildPath }) => {
-        await copyFile(admittedExecutable, path.join(buildPath, `${applicationName}.exe`));
         const runtimeInputDirectory = path.join(buildPath, "example-data");
         await mkdir(runtimeInputDirectory, { recursive: true });
         await copyFile(generatedExampleInputPath, path.join(buildPath, exampleInputRelativePath));
@@ -241,8 +262,9 @@ export async function packageBoringLogEditor() {
   if (outputs?.length !== 1 || path.resolve(outputs[0]) !== packagedDirectory) {
     throw new Error("BLD026_UNEXPECTED_PACKAGE_OUTPUT");
   }
-  if (sha256(await readFile(packagedExecutable)) !== executableSha256) {
-    throw new Error("BLD026_EXECUTABLE_DRIFT");
+  const executableSha256 = sha256(await readFile(packagedExecutable));
+  if (executableSha256 === admittedElectronExecutableSha256) {
+    throw new Error("BLD054_ICON_NOT_APPLIED");
   }
   const packagedRuntimeInput = path.join(packagedDirectory, exampleInputRelativePath);
   if (sha256(await readFile(packagedRuntimeInput)) !== staged.runtimeInputSha256) {
@@ -262,9 +284,12 @@ export async function packageBoringLogEditor() {
     }),
     electronZipSha256: sha256(await readFile(zip)),
     executableSha256,
+    admittedElectronExecutableSha256,
     executableBytes: (await stat(packagedExecutable)).size,
     appAsarSha256: sha256(await readFile(appAsar)),
     appAsarBytes: (await stat(appAsar)).size,
+    appIconRevision: rsrenderAppIconRevision,
+    appIconPath,
     ...staged,
   });
 }

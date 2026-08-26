@@ -252,6 +252,11 @@ test("BLD-038 installs accessible SVG handles and coalesces pointer completion t
   assert.match(entry, /textBaselineYMpt/u);
   assert.match(entry, /snapYKind/u);
   assert.match(entry, /scheduleLiveReflowPreview/u);
+  assert.match(entry, /scheduleDirectManipulationPreview/u);
+  assert.match(entry, /window\.requestAnimationFrame/u);
+  assert.match(entry, /window\.cancelAnimationFrame/u);
+  assert.match(entry, /\}, 180\);/u);
+  assert.match(entry, /flushDirectManipulationPreview\(\)/u);
   assert.match(entry, /preview: \{/u);
   assert.match(entry, /installLiveReflowPreview/u);
   assert.match(entry, /await flushLiveReflowPreview\(\)/u);

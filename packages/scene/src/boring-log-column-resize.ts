@@ -66,8 +66,9 @@ function rejected(
 function exactColumn(input: unknown): input is BoringLogColumnInput {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return false;
   const value = input as Readonly<Record<string, unknown>>;
+  const hasHeading = Object.hasOwn(value, "heading");
   return (
-    Reflect.ownKeys(value).length === 4 &&
+    Reflect.ownKeys(value).length === (hasHeading ? 5 : 4) &&
     typeof value["id"] === "string" &&
     value["id"].length > 0 &&
     typeof value["role"] === "string" &&
@@ -75,7 +76,11 @@ function exactColumn(input: unknown): input is BoringLogColumnInput {
     Number.isSafeInteger(value["xMpt"]) &&
     (value["xMpt"] as number) >= 0 &&
     Number.isSafeInteger(value["widthMpt"]) &&
-    (value["widthMpt"] as number) > 0
+    (value["widthMpt"] as number) > 0 &&
+    (!hasHeading ||
+      (typeof value["heading"] === "string" &&
+        value["heading"].length > 0 &&
+        value["heading"].length <= 512))
   );
 }
 

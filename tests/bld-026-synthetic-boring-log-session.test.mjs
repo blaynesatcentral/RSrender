@@ -110,10 +110,10 @@ test("BLD-026 creates a structured source session with exact semantic edit bindi
   const session = initialized();
   assert.equal(Object.isFrozen(session), true);
   assert.equal(Object.isFrozen(session.bindings), true);
-  assert.equal(session.bindings.length, 24);
+  assert.equal(session.bindings.length, 27);
   assert.equal(
     new Set(session.bindings.map(({ sourceFieldIdentity }) => sourceFieldIdentity)).size,
-    24,
+    27,
   );
   assert.deepEqual(
     Object.fromEntries(
@@ -125,6 +125,9 @@ test("BLD-026 creates a structured source session with exact semantic edit bindi
         "remark-text",
         "lithology-pattern-style",
         "description-column-width-mpt",
+        "ground-elevation-ft",
+        "elevation-datum",
+        "completion-depth-ft",
       ].map((property) => [
         property,
         session.bindings.filter((binding) => binding.property === property).length,
@@ -138,15 +141,18 @@ test("BLD-026 creates a structured source session with exact semantic edit bindi
       "remark-text": 7,
       "lithology-pattern-style": 1,
       "description-column-width-mpt": 1,
+      "ground-elevation-ft": 1,
+      "elevation-datum": 1,
+      "completion-depth-ft": 1,
     },
   );
   const projection = await query(session, "urn:test:bld-026:query:initial");
   assert.equal(projection.kind, "render-dataset.projection.result");
-  assert.equal(projection.projection.values.length, 79);
+  assert.equal(projection.projection.values.length, 82);
   const eligible = projection.projection.values.filter(
     ({ sourceOriginal }) => sourceOriginal.eligibility.state === "eligible",
   );
-  assert.equal(eligible.length, 24);
+  assert.equal(eligible.length, 27);
   assert.deepEqual(
     new Set(eligible.map(({ sourceFieldIdentity }) => sourceFieldIdentity)),
     new Set(session.bindings.map(({ sourceFieldIdentity }) => sourceFieldIdentity)),

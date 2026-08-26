@@ -13,12 +13,40 @@ export type StudioPaneWidths = Readonly<{
   propertiesWidth: number;
 }>;
 
+export type StudioViewportMetrics = Readonly<{
+  /** Renderer-reported CSS viewport width. */
+  innerWidth: number;
+  /** Renderer-reported display scale. */
+  devicePixelRatio: number;
+  /** Renderer-reported available screen width, in CSS pixels. */
+  availableScreenWidth: number;
+}>;
+
 function finiteInteger(value: number, fallback: number): number {
   return Number.isFinite(value) ? Math.round(value) : fallback;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+/**
+ * Converts an Electron/native physical-size mismatch into the width that is
+ * actually visible to the renderer. Electron's Win32 SetWindowPos path can
+ * leave innerWidth in physical pixels while devicePixelRatio remains > 1.
+ * A correctly reported CSS viewport is left unchanged. Some Win32/Electron
+ * The 32px allowance absorbs window-frame rounding. A larger available screen
+ * alone is not evidence of a unit split: treating an ordinary maximized CSS
+ * viewport that way causes the workspace to remain artificially narrow after
+ * the native window grows.
+ */
+export function resolveStudioEffectiveViewportWidth(input: StudioViewportMetrics): number {
+  const innerWidth = Math.max(1, finiteInteger(input.innerWidth, 1));
+  const devicePixelRatio = Math.max(1, input.devicePixelRatio || 1);
+  const availableScreenWidth = Math.max(0, finiteInteger(input.availableScreenWidth, 0));
+  const nativeSizingMismatch =
+    devicePixelRatio > 1 && availableScreenWidth > 0 && innerWidth > availableScreenWidth + 32;
+  return nativeSizingMismatch ? Math.max(1, Math.floor(innerWidth / devicePixelRatio)) : innerWidth;
 }
 
 export function resolveStudioPaneWidths(input: {

@@ -125,9 +125,9 @@
     {
       "id": "esbuildTarball",
       "label": "exact npm-cache esbuild 0.28.1 tarball",
-      "state": "present",
-      "sha256": "sha256:eb8ef756f8299d16d5c8b35678606d715ba29923f500db7b37c181310eed40a5",
-      "bytes": 34131,
+      "state": "missing",
+      "sha256": null,
+      "bytes": 0,
       "binding": {
         "identity": "esbuild@0.28.1",
         "admissionIdentity": "esbuild@0.28.1",
@@ -309,7 +309,7 @@
   ],
   "inputDigests": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
+    "implementationTopologyLockSha256": "a8095b34770c83e97ced0dc3631ba04ed29f0ca7251820293b76e447c660be49",
     "admissionSha256": "52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
     "authorityPacketSha256": "4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "foundationEvidenceSha256": "4bedd86d520def5de02cb5487ec8396abc3d9fd72e13bd2a8801f8029b5e5734"
@@ -318,7 +318,7 @@
   "counts": {
     "admittedIdentities": 156,
     "workspacePackageCount": 11,
-    "dependencyEdges": 232,
+    "dependencyEdges": 233,
     "locallyPresentIdentities": 131,
     "platformOptionalAbsentIdentities": 25
   },
@@ -8526,7 +8526,8 @@
         "@rsrender/layout-host": "0.0.0",
         "@rsrender/package-contract": "0.0.0",
         "@rsrender/platform-zipjs": "0.0.0",
-        "@rsrender/scene": "0.0.0"
+        "@rsrender/scene": "0.0.0",
+        "@rsrender/source-contract": "0.0.0"
       }
     },
     {
@@ -8816,6 +8817,10 @@
     {
       "from": "@rsrender/platform-electron-main@0.0.0",
       "to": "@rsrender/scene@0.0.0"
+    },
+    {
+      "from": "@rsrender/platform-electron-main@0.0.0",
+      "to": "@rsrender/source-contract@0.0.0"
     },
     {
       "from": "@rsrender/platform-zipjs@0.0.0",

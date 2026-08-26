@@ -7,12 +7,15 @@ import { TextEncoder } from "node:util";
 import { createSyntheticBoringLogOverrideSession } from "../packages/application/dist/index.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_ROUTE_URL,
@@ -127,6 +130,66 @@ async function routed() {
   assert.equal(binding.accepted, true, binding.code);
   return { ...source, route, routeContext, binding };
 }
+
+test("BLD-047 Studio data-depth route enforces one bounded atomic relationship", async () => {
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "d".repeat(64),
+    getProjection: async () => ({
+      accepted: false,
+      code: "BORING_LOG_STUDIO_CONFIGURATION_INVALID",
+    }),
+    setDataDepthConfiguration: async (input) => {
+      received = input;
+      return { accepted: true, code: "DATA_DEPTH_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  assert.equal(binding.accepted, true, binding.code);
+  const makeEnvelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const rejected = await route.setDataDepthConfiguration(
+    routeContext,
+    makeEnvelope(1, {
+      expectedWorkingRevision: 0,
+      startDepthFt: 2,
+      totalDepthFt: 10,
+      intervalFt: 7,
+      mptPerFoot: 1_000,
+      nValueGraphMaximum: 100,
+    }),
+  );
+  assert.deepEqual(rejected, { accepted: false, code: "STUDIO_ROUTE_ARGUMENT_INVALID" });
+  const committed = await route.setDataDepthConfiguration(
+    routeContext,
+    makeEnvelope(1, {
+      expectedWorkingRevision: 0,
+      startDepthFt: 2,
+      totalDepthFt: 10,
+      intervalFt: 8,
+      mptPerFoot: 1_000,
+      nValueGraphMaximum: 50,
+    }),
+  );
+  assert.equal(committed.accepted, true);
+  assert.equal(received?.intervalFt, 8);
+  assert.equal(received?.nValueGraphMaximum, 50);
+});
 
 test("BLD-037 Studio route admits only bounded exact-occurrence typography commands", async () => {
   const source = await authority();
@@ -437,6 +500,59 @@ test("BLD-038 Studio route admits only exact atomic page-guide mutations", async
   );
 });
 
+test("BLD-049 Studio route admits one exact bounded Page Setup command", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "9".repeat(64),
+    getProjection: source.getProjection,
+    setPageSetup: async (input) => {
+      received = input;
+      return { accepted: true, code: "PAGE_SETUP_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    paperPreset: "letter",
+    orientation: "landscape",
+    widthMpt: 792_000,
+    heightMpt: 612_000,
+    marginsMpt: { topMpt: 36_000, rightMpt: 48_000, bottomMpt: 36_000, leftMpt: 48_000 },
+  };
+  assert.equal((await route.setPageSetup(routeContext, envelope(1, args))).accepted, true);
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, extra: true },
+    { ...args, paperPreset: "legal" },
+    { ...args, widthMpt: 612_000 },
+    { ...args, marginsMpt: { ...args.marginsMpt, leftMpt: -1 } },
+    { ...args, marginsMpt: { ...args.marginsMpt, rightMpt: 792_000 } },
+  ]) {
+    assert.deepEqual(await route.setPageSetup(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
 test("BLD-039 Studio route admits only one exact adjacent column-divider command", async () => {
   const source = await authority();
   const expectedWindow = {};
@@ -481,6 +597,56 @@ test("BLD-039 Studio route admits only one exact adjacent column-divider command
     { ...args, resizeMode: "free-scale" },
   ]) {
     assert.deepEqual(await route.setColumnDivider(routeContext, envelope(2, invalidArgs)), {
+      accepted: false,
+      code: "STUDIO_ROUTE_ARGUMENT_INVALID",
+    });
+  }
+});
+
+test("BLD-047 Studio route admits one exact bounded embedded-template column heading command", async () => {
+  const source = await authority();
+  const expectedWindow = {};
+  const expectedWebContents = {};
+  const frame = {};
+  let received = null;
+  const route = new BoringLogStudioRouteBroker({
+    expectedWindow,
+    expectedWebContents,
+    documentIdentity,
+    ownerGeneration: 1,
+    createCapability: () => "7".repeat(64),
+    getProjection: source.getProjection,
+    setColumnHeading: async (input) => {
+      received = input;
+      return { accepted: true, code: "COLUMN_HEADING_SET", workingRevision: 1 };
+    },
+  });
+  const routeContext = context(expectedWindow, expectedWebContents, frame);
+  const binding = route.bootstrap(routeContext);
+  const envelope = (sequence, args) => ({
+    transportVersion: 1,
+    capability: binding.capability,
+    generation: binding.generation,
+    sequence,
+    documentIdentity,
+    ownerGeneration: 1,
+    args,
+  });
+  const args = {
+    expectedWorkingRevision: 0,
+    columnId: "column-description",
+    heading: "STRATUM DESCRIPTION",
+  };
+  assert.equal((await route.setColumnHeading(routeContext, envelope(1, args))).accepted, true);
+  assert.deepEqual(received, args);
+  for (const invalidArgs of [
+    { ...args, columnId: "" },
+    { ...args, columnId: "column description" },
+    { ...args, heading: "" },
+    { ...args, heading: "x".repeat(81) },
+    { ...args, heading: "\ud800" },
+  ]) {
+    assert.deepEqual(await route.setColumnHeading(routeContext, envelope(2, invalidArgs)), {
       accepted: false,
       code: "STUDIO_ROUTE_ARGUMENT_INVALID",
     });
@@ -723,7 +889,7 @@ test("BLD-026 Studio route is capability-bound, ordered, origin-exact, and scene
   );
   assert.equal(first.accepted, true, first.code);
   assert.equal(first.projection.scene.pages[0].nodes.length, 328);
-  assert.equal(first.projection.editableValues.length, 24);
+  assert.equal(first.projection.editableValues.length, 27);
   assert.equal(first.projection.textOccurrencePresentationStates.length, 135);
   assert.equal(
     first.projection.textOccurrencePresentationStates.every(
@@ -807,6 +973,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   let documentSetInput;
   let studioProjectionInput;
   let studioProjectionResponse;
+  let hostileProjectionResponse = null;
   const intoPreloadRealm = (value) =>
     vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(value))})`, vmContext);
   const sandbox = {
@@ -842,6 +1009,29 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 routedAuthority.routeContext,
                 studioProjectionInput,
               );
+              if (hostileProjectionResponse !== null && studioProjectionResponse.accepted) {
+                const projection = JSON.parse(JSON.stringify(studioProjectionResponse.projection));
+                if (hostileProjectionResponse === "missing-data-summary") {
+                  delete projection.dataSummary;
+                } else if (hostileProjectionResponse === "extra-data-summary-field") {
+                  projection.dataSummary.unexpected = true;
+                } else if (hostileProjectionResponse === "missing-attribute-records") {
+                  delete projection.attributeRecords;
+                } else if (hostileProjectionResponse === "extra-attribute-field") {
+                  projection.attributeRecords[0].fields[0].unexpected = true;
+                } else if (hostileProjectionResponse === "duplicate-attribute-identity") {
+                  projection.attributeRecords[1].recordIdentity =
+                    projection.attributeRecords[0].recordIdentity;
+                } else if (hostileProjectionResponse === "broken-attribute-semantic") {
+                  projection.attributeRecords[0].semanticId = "lithology:not-in-scene";
+                } else if (hostileProjectionResponse === "malformed-attribute-provenance") {
+                  projection.attributeRecords[0].fields[0].provenance.effective.unexpected = true;
+                }
+                return intoPreloadRealm({
+                  ...studioProjectionResponse,
+                  projection,
+                });
+              }
               return intoPreloadRealm(studioProjectionResponse);
             }
             if (channel === BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL) {
@@ -860,9 +1050,33 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
                 ),
               );
             }
+            if (channel === BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setPageSetup(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
             if (channel === BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL) {
               return intoPreloadRealm(
                 await routedAuthority.route.setColumnDivider(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
+            if (channel === BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.addProviderColumn(
+                  routedAuthority.routeContext,
+                  JSON.parse(JSON.stringify(input)),
+                ),
+              );
+            }
+            if (channel === BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL) {
+              return intoPreloadRealm(
+                await routedAuthority.route.setColumnHeading(
                   routedAuthority.routeContext,
                   JSON.parse(JSON.stringify(input)),
                 ),
@@ -909,6 +1123,7 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.deepEqual(Object.keys(sandbox.rsrender.document), [
     "getProjection",
     "setDisplayValue",
+    "revertDisplayValue",
     "undo",
     "redo",
   ]);
@@ -918,9 +1133,14 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     "setTextOccurrenceStyle",
     "resetTextOccurrencePresentation",
     "setPageGuides",
+    "setPageSetup",
     "setColumnDivider",
+    "addProviderColumn",
+    "setColumnHeading",
     "setRegionBoundary",
+    "setDataDepthConfiguration",
     "setLithologyAppearance",
+    "setDataLayerSymbology",
     "arrangeTextOccurrences",
     "mutateTextOccurrences",
   ]);
@@ -930,7 +1150,66 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   );
   assert.equal(result.accepted, true);
   assert.equal(result.projection.scene.kind, "boring-log.resolved-page-scene");
-  assert.equal(result.projection.editableValues.length, 24);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.projection.pageSetup)), {
+    paperPreset: "letter",
+    orientation: "portrait",
+    widthMpt: 612_000,
+    heightMpt: 792_000,
+    marginsMpt: { topMpt: 14_000, rightMpt: 24_000, bottomMpt: 14_000, leftMpt: 24_000 },
+  });
+  const validPageSetup = await vm.runInContext(
+    `globalThis.rsrenderStudio.setPageSetup(${JSON.stringify({
+      expectedWorkingRevision: 0,
+      paperPreset: "letter",
+      orientation: "portrait",
+      widthMpt: 612_000,
+      heightMpt: 792_000,
+      marginsMpt: { topMpt: 14_000, rightMpt: 24_000, bottomMpt: 14_000, leftMpt: 24_000 },
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(validPageSetup)), {
+    accepted: false,
+    code: "PAGE_SETUP_UNAVAILABLE",
+  });
+  const malformedPageSetup = await vm.runInContext(
+    `globalThis.rsrenderStudio.setPageSetup(${JSON.stringify({
+      expectedWorkingRevision: 0,
+      paperPreset: "letter",
+      orientation: "portrait",
+      widthMpt: 612_001,
+      heightMpt: 792_000,
+      marginsMpt: { topMpt: 14_000, rightMpt: 24_000, bottomMpt: 14_000, leftMpt: 24_000 },
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(malformedPageSetup)), {
+    accepted: false,
+    code: "STUDIO_ROUTE_UNAVAILABLE",
+  });
+  assert.equal(result.projection.editableValues.length, 27);
+  assert.equal(
+    result.projection.attributeRecords.length,
+    boringLogMvpFixture.lithologyIntervals.length +
+      boringLogMvpFixture.samples.length +
+      boringLogMvpFixture.dataTrack.layers.reduce((sum, layer) => sum + layer.values.length, 0) +
+      boringLogMvpFixture.remarks.length,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(result.projection.dataSummary)), {
+    projectName: boringLogMvpFixture.metadata.projectName,
+    groundElevationFt: boringLogMvpFixture.metadata.groundElevationFt,
+    elevationDatum: boringLogMvpFixture.metadata.elevationDatum,
+    referenceStartFt: boringLogMvpFixture.referenceDepthRange.startFt,
+    referenceEndFt: boringLogMvpFixture.referenceDepthRange.endFt,
+    totalDepthFt: boringLogMvpFixture.metadata.totalDepthFt,
+    completionDepthFt: boringLogMvpFixture.metadata.completionDepthFt,
+    depthScaleMptPerFoot: boringLogMvpTemplate.depthTransform.mptPerFoot,
+    depthIntervalFt:
+      boringLogMvpTemplate.depthTransform.depthEndFt -
+      boringLogMvpTemplate.depthTransform.depthStartFt,
+    nValueGraphMaximum: boringLogMvpFixture.dataTrack.axes.find(({ id }) => id === "axis-n-value")
+      .maximum,
+  });
   assert.equal(result.projection.textTemplateScopeSummary.authoredStyleCount, 5);
   assert.equal(result.projection.textTemplateScopeSummary.excludedOverrideStyleCount, 0);
   assert.equal(result.projection.textOccurrencePresentationStates.length, 135);
@@ -940,6 +1219,36 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
     minimumDepthBodyHeightMpt: 300_000,
     minimumFooterHeightMpt: 72_000,
   });
+  hostileProjectionResponse = "missing-data-summary";
+  const missingDataSummary = await vm.runInContext(
+    `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
+    vmContext,
+  );
+  assert.equal(missingDataSummary.accepted, false);
+  assert.equal(missingDataSummary.code, "STUDIO_ROUTE_UNAVAILABLE");
+  hostileProjectionResponse = "extra-data-summary-field";
+  const extraDataSummaryField = await vm.runInContext(
+    `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
+    vmContext,
+  );
+  assert.equal(extraDataSummaryField.accepted, false);
+  assert.equal(extraDataSummaryField.code, "STUDIO_ROUTE_UNAVAILABLE");
+  for (const hostile of [
+    "missing-attribute-records",
+    "extra-attribute-field",
+    "duplicate-attribute-identity",
+    "broken-attribute-semantic",
+    "malformed-attribute-provenance",
+  ]) {
+    hostileProjectionResponse = hostile;
+    const rejectedAttributeProjection = await vm.runInContext(
+      `globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null })`,
+      vmContext,
+    );
+    assert.equal(rejectedAttributeProjection.accepted, false, hostile);
+    assert.equal(rejectedAttributeProjection.code, "STUDIO_ROUTE_UNAVAILABLE", hostile);
+  }
+  hostileProjectionResponse = null;
   const columnResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setColumnDivider(${JSON.stringify({
       expectedWorkingRevision: result.projection.workingRevision,
@@ -952,6 +1261,18 @@ test("BLD-026 generated Studio preload preserves document methods and exposes bo
   assert.deepEqual(JSON.parse(JSON.stringify(columnResult)), {
     accepted: false,
     code: "COLUMN_DIVIDER_UNAVAILABLE",
+  });
+  const headingResult = await vm.runInContext(
+    `globalThis.rsrenderStudio.setColumnHeading(${JSON.stringify({
+      expectedWorkingRevision: result.projection.workingRevision,
+      columnId: "column-description",
+      heading: "STRATUM DESCRIPTION",
+    })})`,
+    vmContext,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(headingResult)), {
+    accepted: false,
+    code: "COLUMN_HEADING_UNAVAILABLE",
   });
   const regionResult = await vm.runInContext(
     `globalThis.rsrenderStudio.setRegionBoundary(${JSON.stringify({

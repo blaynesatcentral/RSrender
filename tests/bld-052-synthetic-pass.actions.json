@@ -1,0 +1,53 @@
+{
+  "executable": "C:/frv/RSRender/.tmp/bld-046-dpi-fresh-2/out/RSrender-win32-x64/RSrender.exe",
+  "arguments": [],
+  "actions": [
+    { "op": "launch", "label": "launch" },
+    { "op": "focus", "label": "focused" },
+    { "op": "wait", "milliseconds": 1500, "label": "initial-settle" },
+    { "op": "screenshot", "label": "initial-screen" },
+    { "op": "click", "x": 237, "y": 108, "label": "home-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "home-tab-settle" },
+    { "op": "click", "x": 423, "y": 108, "label": "data-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "data-tab-settle" },
+    { "op": "click", "x": 330, "y": 108, "label": "layout-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "layout-tab-settle" },
+    { "op": "click", "x": 511, "y": 108, "label": "review-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "review-tab-settle" },
+    { "op": "click", "x": 596, "y": 108, "label": "publish-tab" },
+    { "op": "wait", "milliseconds": 250, "label": "publish-tab-settle" },
+    { "op": "click", "x": 237, "y": 108, "label": "home-return" },
+    { "op": "click", "x": 310, "y": 350, "label": "contents-row" },
+    { "op": "scroll", "x": 305, "y": 500, "dx": 0, "dy": -5, "label": "contents-scroll-down" },
+    { "op": "scroll", "x": 305, "y": 500, "dx": 0, "dy": 5, "label": "contents-scroll-up" },
+    {
+      "op": "drag",
+      "from": { "x": 483, "y": 430 },
+      "to": { "x": 535, "y": 430 },
+      "durationMs": 300,
+      "label": "contents-pane-resize"
+    },
+    {
+      "op": "drag",
+      "from": { "x": 992, "y": 430 },
+      "to": { "x": 934, "y": 430 },
+      "durationMs": 300,
+      "label": "properties-pane-resize"
+    },
+    { "op": "click", "x": 850, "y": 430, "label": "canvas-select" },
+    { "op": "scroll", "x": 900, "y": 450, "dx": 0, "dy": -4, "label": "canvas-scroll" },
+    { "op": "key", "key": "CTRL+Z", "label": "undo" },
+    { "op": "key", "key": "CTRL+Y", "label": "redo" },
+    { "op": "click", "x": 850, "y": 430, "button": "right", "label": "canvas-context-menu" },
+    { "op": "key", "key": "ESC", "label": "context-menu-dismiss" },
+    { "op": "click", "x": 1100, "y": 575, "label": "properties-control" },
+    { "op": "type", "text": "Synthetic qualification note", "label": "synthetic-type" },
+    { "op": "key", "key": "CTRL+S", "label": "save" },
+    { "op": "wait", "milliseconds": 500, "label": "save-settle" },
+    { "op": "click", "x": 596, "y": 108, "label": "publish-for-export" },
+    { "op": "wait", "milliseconds": 250, "label": "publish-settle" },
+    { "op": "click", "x": 500, "y": 170, "label": "publish-control" },
+    { "op": "key", "key": "ESC", "label": "dismiss-dialog" },
+    { "op": "close", "label": "close" }
+  ]
+}

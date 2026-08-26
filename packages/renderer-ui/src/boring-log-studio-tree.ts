@@ -6,7 +6,14 @@ export type BoringLogStudioTreeItem = Readonly<{
   readonly label: string;
   readonly level: number;
   readonly icon: string;
+  readonly hidden: boolean;
   readonly hasChildren: boolean;
+}>;
+
+export type BoringLogStudioTreeDataLayer = Readonly<{
+  readonly semanticId: string;
+  readonly label: string;
+  readonly visible: boolean;
 }>;
 
 function humanize(value: string): string {
@@ -23,10 +30,14 @@ function extraParent(semanticId: string): string | null {
 
 export function buildBoringLogStudioTree(
   scene: ResolvedBoringLogPageScene,
+  dataLayers: readonly BoringLogStudioTreeDataLayer[] = [],
 ): readonly BoringLogStudioTreeItem[] {
   const page = scene.pages[0]!;
   const pagePlan = scene.pagePlan.pages[0]!;
-  const extras = new Map<string, { semanticId: string; label: string; icon: string }[]>();
+  const extras = new Map<
+    string,
+    { semanticId: string; label: string; icon: string; hidden: boolean }[]
+  >();
   const represented = new Set([
     "page-root",
     "region-header",
@@ -53,12 +64,33 @@ export function buildBoringLogStudioTree(
         ? `${humanize(node.role)} (Copy)`
         : humanize(semanticId),
       icon: "·",
+      hidden: false,
     });
     extras.set(parent, children);
     represented.add(semanticId);
   }
 
-  const mutable: Omit<BoringLogStudioTreeItem, "hasChildren">[] = [
+  for (const dataLayer of dataLayers) {
+    const parentSemanticId = "column-data-track";
+    const children = extras.get(parentSemanticId) ?? [];
+    const existingIndex = children.findIndex(
+      ({ semanticId }) => semanticId === dataLayer.semanticId,
+    );
+    const item = {
+      semanticId: dataLayer.semanticId,
+      label: dataLayer.label,
+      icon: "·",
+      hidden: !dataLayer.visible,
+    };
+    if (existingIndex < 0) children.push(item);
+    else children[existingIndex] = item;
+    extras.set(parentSemanticId, children);
+    represented.add(dataLayer.semanticId);
+  }
+
+  const mutable: Array<
+    Omit<BoringLogStudioTreeItem, "hasChildren" | "hidden"> & { readonly hidden?: boolean }
+  > = [
     {
       semanticId: "page-root",
       parentSemanticId: null,
@@ -112,7 +144,13 @@ export function buildBoringLogStudioTree(
     ),
   );
   return Object.freeze(
-    mutable.map((item) => Object.freeze({ ...item, hasChildren: parentIds.has(item.semanticId) })),
+    mutable.map((item) =>
+      Object.freeze({
+        ...item,
+        hidden: item.hidden === true,
+        hasChildren: parentIds.has(item.semanticId),
+      }),
+    ),
   );
 }
 

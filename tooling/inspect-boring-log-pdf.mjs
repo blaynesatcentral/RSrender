@@ -302,6 +302,8 @@ export async function inspectBoringLogPdf({
   expectedText,
   expectedSceneNodes,
   renderPrefix,
+  expectedPageCount = 1,
+  requireSceneDigestInTitle = true,
 }) {
   const absolutePdfPath = path.resolve(pdfPath);
   const [bytes, info, fonts, images, text] = await Promise.all([
@@ -393,7 +395,9 @@ export async function inspectBoringLogPdf({
   const order = result.text.representativeOrder;
   const warnings = Object.values(result.toolWarnings).filter((value) => value.length > 0);
   if (
-    result.pageCount !== 1 ||
+    !Number.isSafeInteger(expectedPageCount) ||
+    expectedPageCount < 1 ||
+    result.pageCount !== expectedPageCount ||
     JSON.stringify(result.pageSizePoints) !== JSON.stringify([612, 792]) ||
     Object.values(result.boxes).some(
       (value) => JSON.stringify(value) !== JSON.stringify(expectedBox),
@@ -402,7 +406,7 @@ export async function inspectBoringLogPdf({
     result.encrypted !== false ||
     result.javascript !== false ||
     title === null ||
-    !title.includes(expectedSceneDigest) ||
+    (requireSceneDigestInTitle && !title.includes(expectedSceneDigest)) ||
     !title.includes(expectedProjectionDigest) ||
     result.fonts.length < 1 ||
     result.fonts.some(

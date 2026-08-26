@@ -155,7 +155,7 @@ export function applyBoringLogTextMeasurements(
       overflow:
         candidate.value.pages.length > 1
           ? ("continued" as const)
-          : textDiagnostics.length === 0
+          : diagnostics.length === 0
             ? ("none" as const)
             : candidate.value.textResults.some(({ overflow }) => overflow === "continued")
               ? ("continued" as const)

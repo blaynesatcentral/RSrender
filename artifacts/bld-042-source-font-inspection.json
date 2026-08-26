@@ -1,0 +1,185 @@
+{
+  "schema": "rsrender.admitted-source-font-inspection.v1",
+  "fonts": [
+    {
+      "fileName": "SourceCodePro-Bold.ttf",
+      "bytes": 206804,
+      "byteDigest": "sha256:b2095e0d657e6d28dc32444a9dacabab0c9241d0bf39d96371756cc9bdbc3a5f",
+      "names": {
+        "family": "Source Code Pro",
+        "subfamily": "Bold",
+        "fullName": "Source Code Pro Bold",
+        "postScriptName": "SourceCodePro-Bold"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:5a3cb1dcaac10ccbe8bf9dac29fffc88209c5788a8851fa40853dbf6e4ae0077",
+      "glyphCoverageDigest": "sha256:7d6d5d594ae2a69ae9b07d818b3a8918bd4aeb684b7cbe4012ade887d1188792"
+    },
+    {
+      "fileName": "SourceCodePro-BoldIt.ttf",
+      "bytes": 169140,
+      "byteDigest": "sha256:1b49d9304012bf8db9e5dd4104183d5c122c445d0570a2259125f71977595b90",
+      "names": {
+        "family": "Source Code Pro",
+        "subfamily": "Bold Italic",
+        "fullName": "Source Code Pro Bold Italic",
+        "postScriptName": "SourceCodePro-BoldIt"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:0cf7562d40b754f623e41d1918aa52a3daeaebe07eb023bea1cf1cc503814b0d",
+      "glyphCoverageDigest": "sha256:1334d815308d03369673535422d4c0aa99388b4bf9104ac32f6e8417933631f5"
+    },
+    {
+      "fileName": "SourceCodePro-It.ttf",
+      "bytes": 166548,
+      "byteDigest": "sha256:9c9e0f4d016210a3c5bdfba5262637c5b26ddff4ccc382ebbc781de5961d0042",
+      "names": {
+        "family": "Source Code Pro",
+        "subfamily": "Italic",
+        "fullName": "Source Code Pro Italic",
+        "postScriptName": "SourceCodePro-It"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:2795aa1610d4a8ec5d8a82013d94f4cf187411a93eb45182bf6b883e1feecb68",
+      "glyphCoverageDigest": "sha256:1334d815308d03369673535422d4c0aa99388b4bf9104ac32f6e8417933631f5"
+    },
+    {
+      "fileName": "SourceCodePro-Regular.ttf",
+      "bytes": 210312,
+      "byteDigest": "sha256:74bd80d3e42a08517cd7e1108ba3d86f2da29ac0f3065be95e0357956ab9db37",
+      "names": {
+        "family": "Source Code Pro",
+        "subfamily": "Regular",
+        "fullName": "Source Code Pro",
+        "postScriptName": "SourceCodePro-Regular"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:ecb78dd8cfd026909f83fdfa4a55c30ccb815d62f10fb39b8c81877c3d728690",
+      "glyphCoverageDigest": "sha256:7d6d5d594ae2a69ae9b07d818b3a8918bd4aeb684b7cbe4012ade887d1188792"
+    },
+    {
+      "fileName": "SourceSans3-Bold.ttf",
+      "bytes": 428176,
+      "byteDigest": "sha256:9214b9d95e4231c609802815c2646c98174e2102d0d37f88978a7f8e71006e6a",
+      "names": {
+        "family": "Source Sans 3",
+        "subfamily": "Bold",
+        "fullName": "Source Sans 3 Bold",
+        "postScriptName": "SourceSans3-Bold"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:9717e94165e6a128a85ae6a37d5ac176a93d7d268d66f3c2090849e375fdf5cb",
+      "glyphCoverageDigest": "sha256:17255866c4345cda8ec99c1d1af0381d252acbefa9232e239bf5cd44bf0080f3"
+    },
+    {
+      "fileName": "SourceSans3-BoldIt.ttf",
+      "bytes": 318700,
+      "byteDigest": "sha256:7978291fc1bf314db887e0366853b33c5cf2e964c7b95cfb9ce403a6ec46a842",
+      "names": {
+        "family": "Source Sans 3",
+        "subfamily": "Bold Italic",
+        "fullName": "Source Sans 3 Bold Italic",
+        "postScriptName": "SourceSans3-BoldIt"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:1a69b92985aef0257f4d6dc82142cbd1b3c18193d1d23cdb4b516185fd019c83",
+      "glyphCoverageDigest": "sha256:1d80a9f1ba522ed2bde2f9503863bb810270e4e707b715081a0cec021362dc72"
+    },
+    {
+      "fileName": "SourceSans3-It.ttf",
+      "bytes": 315812,
+      "byteDigest": "sha256:192afd78f0f54a3c69eaf02d43f4d9a821e9d6110e41d3d25d61a7385cd580e4",
+      "names": {
+        "family": "Source Sans 3",
+        "subfamily": "Italic",
+        "fullName": "Source Sans 3 Italic",
+        "postScriptName": "SourceSans3-It"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:ebb3c4b13c82822206fd2bb7bae0b90aa62bb53806956cf827801dd6d83aaaba",
+      "glyphCoverageDigest": "sha256:1d80a9f1ba522ed2bde2f9503863bb810270e4e707b715081a0cec021362dc72"
+    },
+    {
+      "fileName": "SourceSans3-Regular.ttf",
+      "bytes": 431196,
+      "byteDigest": "sha256:4644c81b86ec9caaa76b634889968ed3c4f4f52f054855933acc7c2b21e53b0f",
+      "names": {
+        "family": "Source Sans 3",
+        "subfamily": "Regular",
+        "fullName": "Source Sans 3",
+        "postScriptName": "SourceSans3-Regular"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:2387db3a64fc3cd324980511ae2d462199145ced109dc98696252f0341af2e5a",
+      "glyphCoverageDigest": "sha256:17255866c4345cda8ec99c1d1af0381d252acbefa9232e239bf5cd44bf0080f3"
+    },
+    {
+      "fileName": "SourceSerif4-Bold.ttf",
+      "bytes": 271568,
+      "byteDigest": "sha256:7cf4f4e1ad74f45058d5bc61716b82560442fbdcd9d3654d2dea96bf6c683d86",
+      "names": {
+        "family": "Source Serif 4",
+        "subfamily": "Bold",
+        "fullName": "Source Serif 4 Bold",
+        "postScriptName": "SourceSerif4-Bold"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:bfef5fa1f22c30334c4c2bb59bdc1dd374a81685781f8738019f44ef83f3c1cd",
+      "glyphCoverageDigest": "sha256:8043c882e8a1f0227ab12325c2ad62de866cbf11fbe107eba260b2dfe9d02a44"
+    },
+    {
+      "fileName": "SourceSerif4-BoldIt.ttf",
+      "bytes": 191832,
+      "byteDigest": "sha256:7b215b37f8873f5579f3f8d2ded3ca7c588e2f435cd996605ebfc5befe2cd5eb",
+      "names": {
+        "family": "Source Serif 4",
+        "subfamily": "Bold Italic",
+        "fullName": "Source Serif 4 Bold Italic",
+        "postScriptName": "SourceSerif4-BoldIt"
+      },
+      "weightClass": 700,
+      "fsType": 0,
+      "metricsDigest": "sha256:f057826173c7df47881637f459ea87cbb8af6836053dff0dc83921ad50772890",
+      "glyphCoverageDigest": "sha256:a0d49a4491302495ef564a1e32d12f2e4ad8c70579e523a89e635ab8abd33015"
+    },
+    {
+      "fileName": "SourceSerif4-It.ttf",
+      "bytes": 187808,
+      "byteDigest": "sha256:9d2950a8f1da66e21502c35d646a1d2148e79f9ea43fd2158cf02f5232e7f430",
+      "names": {
+        "family": "Source Serif 4",
+        "subfamily": "Italic",
+        "fullName": "Source Serif 4 Italic",
+        "postScriptName": "SourceSerif4-It"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:1de0977bc59fc0ade8e8d89d6c3c6ccb7b53375968b8f6b27cdab2d12f510709",
+      "glyphCoverageDigest": "sha256:a0d49a4491302495ef564a1e32d12f2e4ad8c70579e523a89e635ab8abd33015"
+    },
+    {
+      "fileName": "SourceSerif4-Regular.ttf",
+      "bytes": 261868,
+      "byteDigest": "sha256:e5a4ee6a3d87bb9024796be390c6771e2a0eb1883dae25effaf57ca01668e24b",
+      "names": {
+        "family": "Source Serif 4",
+        "subfamily": "Regular",
+        "fullName": "Source Serif 4",
+        "postScriptName": "SourceSerif4-Regular"
+      },
+      "weightClass": 400,
+      "fsType": 0,
+      "metricsDigest": "sha256:1ea41a7cc2da7043c82d8b1aa7cefcfa1619c8876ddf3fdc6a652a40a29eb46f",
+      "glyphCoverageDigest": "sha256:8043c882e8a1f0227ab12325c2ad62de866cbf11fbe107eba260b2dfe9d02a44"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "executable": "C:/frv/RSRender/.tmp/bld-046-dpi-fresh-2/out/RSrender-win32-x64/RSrender.exe",
+  "actions": [
+    { "op": "launch", "label": "launch-observe" },
+    { "op": "wait", "milliseconds": 3000, "label": "startup-settle" },
+    { "op": "screenshot", "label": "startup-screen" },
+    { "op": "close", "label": "close" }
+  ]
+}

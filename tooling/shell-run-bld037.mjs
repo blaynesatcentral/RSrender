@@ -59,10 +59,15 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     !run.process.profileRemoved ||
     style?.before?.fontSize !== "5500" ||
     style?.before?.fontWeight !== "400" ||
+    style?.before?.fontFamily !== "font.logical.rsrender-sans" ||
+    style?.before?.fontStyle !== "normal" ||
     style?.before?.scope !== "occurrence" ||
     style?.applied?.workingRevision !== style.before.workingRevision + 1 ||
     style?.applied?.fontSize !== "9000" ||
     style?.applied?.fontWeight !== "700" ||
+    style?.applied?.fontFamily !== "font.logical.source-serif-4" ||
+    style?.applied?.fontStyle !== "italic" ||
+    style?.applied?.fontFace !== "font.face.source-serif-4.bold-italic" ||
     style?.applied?.textDecoration !== "underline line-through" ||
     style?.applied?.letterSpacing !== "250" ||
     style?.applied?.wordSpacing !== "500" ||
@@ -83,10 +88,15 @@ export async function runTextOccurrenceStyleQualification({ record = false } = {
     style?.applied?.sceneInputDigest === style.before.sceneInputDigest ||
     style?.undo?.fontSize !== "5500" ||
     style?.undo?.fontWeight !== "400" ||
+    style?.undo?.fontFamily !== "font.logical.rsrender-sans" ||
+    style?.undo?.fontStyle !== "normal" ||
     style?.undo?.frameX !== null ||
     style?.undo?.presentationFrame !== false ||
     style?.redo?.fontSize !== "9000" ||
     style?.redo?.fontWeight !== "700" ||
+    style?.redo?.fontFamily !== "font.logical.source-serif-4" ||
+    style?.redo?.fontStyle !== "italic" ||
+    style?.redo?.fontFace !== "font.face.source-serif-4.bold-italic" ||
     style?.redo?.textDecoration !== "underline line-through" ||
     style?.redo?.letterSpacing !== "250" ||
     style?.redo?.wordSpacing !== "500" ||

@@ -2,6 +2,7 @@ import {
   boringLogPagePlanSchemaVersion,
   boringLogRenderContractVersion,
   boringLogTextColumnSemanticId,
+  resolveDynamicText,
   resolvedBoringLogPageSceneSchemaVersion,
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
@@ -23,6 +24,11 @@ import type {
 } from "@rsrender/contracts";
 
 import { planBoringLogContinuationPages } from "./boring-log-continuation-pages.js";
+import {
+  resolveBoringLogDataLayerSymbology,
+  type BoringLogPointSymbol,
+  type BoringLogResolvedDataLayerSymbology,
+} from "./boring-log-data-layer-symbology.js";
 import {
   resolveBoringLogLithologyAppearances,
   resolveBoringLogLithologyPatternResources,
@@ -58,6 +64,7 @@ interface DraftScene {
   readonly nodes: readonly BoringLogSceneNode[];
   readonly textRequests: readonly BoringLogTextMeasurementRequest[];
   readonly semanticOrder: readonly string[];
+  readonly diagnostics: readonly BoringLogRenderDiagnostic[];
 }
 
 function accepted<Value>(value: Value): BoringLogLayoutEngineResult<Value> {
@@ -145,16 +152,46 @@ function formatBlowIncrements(
     .join("-");
 }
 
-function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
+function buildDraft(
+  job: BoringLogLayoutJobInput,
+  requireAllDynamicTextElements = true,
+): DraftScene {
   const nodes: BoringLogSceneNode[] = [];
   const groups = new Map<string, MutableGroupNode>();
   const textRequests: BoringLogTextMeasurementRequest[] = [];
+  const diagnostics: BoringLogRenderDiagnostic[] = [];
+  const dynamicTextElementIds = new Set<string>(job.dynamicText?.elementIds ?? []);
+  const resolvedDynamicTextElementIds = new Set<string>();
   const lithologyAppearances = new Map(
     resolveBoringLogLithologyAppearances(job).map((appearance) => [
       appearance.intervalId,
       appearance,
     ]),
   );
+  const graphSymbologyByLayerId = new Map<string, BoringLogResolvedDataLayerSymbology>();
+  const graphSymbologyByLegendId = new Map<string, BoringLogResolvedDataLayerSymbology>();
+  const visualTokenIds = Object.keys(job.template.visualTokens);
+  for (const layer of job.document.dataTrack.layers) {
+    const legacyLegendSymbol =
+      layer.kind === "numeric-range"
+        ? "open-circle-range"
+        : layer.glyph === "filled-square"
+          ? "filled-square-line"
+          : "open-triangle-line";
+    const legendItem = job.document.legend.find(({ symbol }) => symbol === legacyLegendSymbol);
+    const persistedOverride = job.template.dataLayerSymbologyOverrides?.find(
+      ({ layerId }) => layerId === layer.id,
+    );
+    const resolved = resolveBoringLogDataLayerSymbology({
+      layer,
+      legendLabel: legendItem?.label ?? layer.id,
+      visualTokenIds,
+      ...(persistedOverride === undefined ? {} : { override: persistedOverride }),
+    });
+    if (!resolved.accepted) throw new Error(resolved.code);
+    graphSymbologyByLayerId.set(layer.id, resolved.value);
+    if (legendItem !== undefined) graphSymbologyByLegendId.set(legendItem.id, resolved.value);
+  }
 
   const append = (node: BoringLogSceneNode): void => {
     nodes.push(node);
@@ -224,6 +261,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     strokeToken = "rule",
     provenance: BoringLogValueProvenance | null = null,
     dashMpt: readonly Mpt[] = [],
+    strokeWidthMpt = 500,
   ): void =>
     append({
       id,
@@ -236,7 +274,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       from: { xMpt: asMpt(x1), yMpt: asMpt(y1) },
       to: { xMpt: asMpt(x2), yMpt: asMpt(y2) },
       strokeToken,
-      strokeWidthMpt: asMpt(500),
+      strokeWidthMpt: asMpt(strokeWidthMpt),
       dashMpt,
     });
 
@@ -251,6 +289,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     strokeToken: string | null,
     provenance: BoringLogValueProvenance | null,
     dashMpt: readonly Mpt[] = [],
+    strokeWidthMpt = 650,
   ): void =>
     append({
       id,
@@ -264,7 +303,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       closed,
       fillToken,
       strokeToken,
-      strokeWidthMpt: asMpt(650),
+      strokeWidthMpt: asMpt(strokeWidthMpt),
       dashMpt,
     });
 
@@ -279,6 +318,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     fillToken: string | null,
     provenance: BoringLogValueProvenance | null,
     strokeToken = "ink",
+    strokeWidthMpt = 500,
   ): void =>
     append({
       id,
@@ -292,8 +332,68 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       radiusMpt: asMpt(radius),
       fillToken,
       strokeToken,
-      strokeWidthMpt: asMpt(500),
+      strokeWidthMpt: asMpt(strokeWidthMpt),
     });
+
+  const addPointSymbol = (
+    id: string,
+    semanticId: string,
+    parentId: string,
+    role: string,
+    xMpt: number,
+    yMpt: number,
+    symbol: BoringLogPointSymbol,
+    provenance: BoringLogValueProvenance | null,
+  ): void => {
+    const half = Math.round(symbol.sizeMpt / 2);
+    if (symbol.shape === "square") {
+      addRect(
+        id,
+        semanticId,
+        parentId,
+        role,
+        rect(xMpt - half, yMpt - half, symbol.sizeMpt, symbol.sizeMpt),
+        symbol.fillToken,
+        symbol.strokeToken,
+        provenance,
+        symbol.strokeWidthMpt,
+      );
+      return;
+    }
+    if (symbol.shape === "circle") {
+      addCircle(
+        id,
+        semanticId,
+        parentId,
+        role,
+        xMpt,
+        yMpt,
+        half,
+        symbol.fillToken,
+        provenance,
+        symbol.strokeToken,
+        symbol.strokeWidthMpt,
+      );
+      return;
+    }
+    addPath(
+      id,
+      semanticId,
+      parentId,
+      role,
+      [
+        { xMpt: asMpt(xMpt), yMpt: asMpt(yMpt - half) },
+        { xMpt: asMpt(xMpt - half), yMpt: asMpt(yMpt + half - 500) },
+        { xMpt: asMpt(xMpt + half), yMpt: asMpt(yMpt + half - 500) },
+      ],
+      true,
+      symbol.fillToken,
+      symbol.strokeToken,
+      provenance,
+      [],
+      symbol.strokeWidthMpt,
+    );
+  };
 
   const addText = (
     id: string,
@@ -307,6 +407,27 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     maximumLines: number,
     wrapPolicy: "word-v1" | "no-wrap" = "word-v1",
   ): void => {
+    const dynamicResolution = dynamicTextElementIds.has(id)
+      ? resolveDynamicText(content, job.dynamicText!.catalog, job.dynamicText!.values)
+      : null;
+    if (dynamicResolution !== null && !dynamicResolution.accepted) {
+      throw new Error(`dynamic-text-resolution:${dynamicResolution.code}:${id}`);
+    }
+    const resolvedContent =
+      dynamicResolution?.accepted === true ? dynamicResolution.value.measurementText : content;
+    if (dynamicResolution?.accepted === true) {
+      resolvedDynamicTextElementIds.add(id);
+      diagnostics.push(
+        ...dynamicResolution.value.diagnostics.map((diagnostic) =>
+          Object.freeze({
+            code: diagnostic.code,
+            severity: diagnostic.severity,
+            message: `${diagnostic.message} in ${id} at UTF-16 ${diagnostic.sourceStartUtf16}-${diagnostic.sourceEndUtf16}`,
+            semanticId,
+          }),
+        ),
+      );
+    }
     const occurrenceStyle = job.template.bindings.find(
       (binding) =>
         binding.elementId === id && binding.path === "presentation.text-occurrence-style",
@@ -357,11 +478,12 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     const measurementId = `measure:${id}`;
     textRequests.push({
       measurementId,
-      text: content,
+      text: resolvedContent,
       sourceIdentity: semanticId,
       sourceStartUtf16: 0,
-      sourceEndUtf16: content.length,
+      sourceEndUtf16: resolvedContent.length,
       fontFamilyId: style.fontFamilyId,
+      ...(style.fontStyle === undefined ? {} : { fontStyle: style.fontStyle }),
       fontSizeMpt: style.fontSizeMpt,
       fontWeight: style.fontWeight,
       lineHeightMpt: style.lineHeightMpt,
@@ -376,6 +498,9 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       wrapPolicy: occurrenceLayout?.wrapPolicy ?? wrapPolicy,
       overflowPolicy: occurrenceLayout?.overflowPolicy ?? "clip-with-diagnostic",
       minimumFontSizeMpt,
+      ...(dynamicResolution?.accepted === true
+        ? { dynamicTextResolution: dynamicResolution.value }
+        : {}),
     });
     append({
       id,
@@ -387,7 +512,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       provenance,
       measurementId,
       styleId: effectiveStyleId,
-      content,
+      content: resolvedContent,
       frame: effectiveFrame,
       ...(occurrenceLayout === undefined
         ? {}
@@ -620,7 +745,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       column.id,
       depthGroupId,
       "log-column-heading",
-      columnLabels[column.role] ?? column.role.toUpperCase(),
+      column.heading ?? columnLabels[column.role] ?? column.role.toUpperCase(),
       rect(column.xMpt + 1_000, depthBody.yMpt + 3_000, column.widthMpt - 2_000, 21_000),
       column.role === "penetration-moisture-plasticity" || column.role === "sample"
         ? "style-small"
@@ -885,9 +1010,17 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     }
     const cells: readonly [string, BoringLogColumnInput, string][] = [
       [sample.label, sampleColumn, "sample-label"],
-      [`${sample.recoveryPercent}%`, recoveryColumn, "sample-recovery"],
+      [
+        sample.recoveryPercent === null ? "" : `${sample.recoveryPercent}%`,
+        recoveryColumn,
+        "sample-recovery",
+      ],
       [formatBlowIncrements(sample.blowIncrements), blowsColumn, "sample-blows"],
-      [sample.nValue === null ? "REF" : String(sample.nValue), nColumn, "sample-n-value"],
+      [
+        sample.refusal ? "REF" : sample.nValue === null ? "" : String(sample.nValue),
+        nColumn,
+        "sample-n-value",
+      ],
     ];
     cells.forEach(([content, column, role], index) =>
       addText(
@@ -961,9 +1094,16 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     }
   });
   const sampleById = new Map(job.document.samples.map((sample) => [sample.id, sample]));
-  for (const layer of job.document.dataTrack.layers) {
+  for (const layer of [...job.document.dataTrack.layers].sort(
+    (left, right) =>
+      graphSymbologyByLayerId.get(left.id)!.order - graphSymbologyByLayerId.get(right.id)!.order,
+  )) {
     const axis = axesById.get(layer.axisId)!;
+    const symbology = graphSymbologyByLayerId.get(layer.id)!;
+    if (!symbology.visible) continue;
     if (layer.kind === "numeric-polyline") {
+      const lineSymbol = symbology.line!;
+      const pointSymbol = symbology.point!;
       const points = layer.values.map(([sampleId, value]) => {
         const sample = sampleById.get(sampleId)!;
         return {
@@ -980,9 +1120,10 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           points,
           false,
           null,
-          layer.id === "layer-n-value" ? "nTrack" : "moistureTrack",
+          lineSymbol.strokeToken,
           layer.provenance,
-          layer.id === "layer-moisture" ? [asMpt(3_000), asMpt(2_000)] : [],
+          lineSymbol.dashMpt,
+          lineSymbol.strokeWidthMpt,
         );
       }
       layer.values.forEach(([sampleId], index) => {
@@ -1001,39 +1142,30 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
             ],
             false,
             null,
-            "nTrack",
+            pointSymbol.strokeToken,
             layer.provenance,
-          );
-        } else if (layer.glyph === "filled-square") {
-          addRect(
-            `node:data-layer:${layer.id}:point:${sampleId}`,
-            `data-layer:${layer.id}:${sampleId}`,
-            depthGroupId,
-            "data-point-filled-square",
-            rect(point.xMpt - 1_500, point.yMpt - 1_500, 3_000, 3_000),
-            "nTrack",
-            "ink",
-            layer.provenance,
+            [],
+            pointSymbol.strokeWidthMpt,
           );
         } else {
-          addPath(
+          addPointSymbol(
             `node:data-layer:${layer.id}:point:${sampleId}`,
             `data-layer:${layer.id}:${sampleId}`,
             depthGroupId,
-            "data-point-open-triangle",
-            [
-              { xMpt: point.xMpt, yMpt: asMpt(point.yMpt - 2_000) },
-              { xMpt: asMpt(point.xMpt - 2_000), yMpt: asMpt(point.yMpt + 1_500) },
-              { xMpt: asMpt(point.xMpt + 2_000), yMpt: asMpt(point.yMpt + 1_500) },
-            ],
-            true,
-            "pageFill",
-            "moistureTrack",
+            pointSymbol.shape === "square"
+              ? "data-point-filled-square"
+              : pointSymbol.shape === "triangle"
+                ? "data-point-open-triangle"
+                : "data-point-circle",
+            point.xMpt,
+            point.yMpt,
+            pointSymbol,
             layer.provenance,
           );
         }
       });
     } else {
+      const rangeSymbol = symbology.range!;
       for (const [sampleId, first, second] of layer.values) {
         const sample = sampleById.get(sampleId)!;
         const y = depthToYMpt(job, sample.depthFt);
@@ -1048,32 +1180,30 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
           y,
           Math.max(firstX, secondX),
           y,
-          "plasticityTrack",
+          rangeSymbol.line.strokeToken,
           layer.provenance,
+          rangeSymbol.line.dashMpt,
+          rangeSymbol.line.strokeWidthMpt,
         );
-        addCircle(
+        addPointSymbol(
           `node:data-layer:${layer.id}:first:${sampleId}`,
           `data-layer:${layer.id}:${sampleId}`,
           depthGroupId,
           "data-range-endpoint-pl-open",
           firstX,
           y,
-          1_750,
-          "pageFill",
+          rangeSymbol.firstEndpoint,
           layer.provenance,
-          "plasticityTrack",
         );
-        addCircle(
+        addPointSymbol(
           `node:data-layer:${layer.id}:second:${sampleId}`,
           `data-layer:${layer.id}:${sampleId}`,
           depthGroupId,
           "data-range-endpoint-ll-filled",
           secondX,
           y,
-          1_750,
-          "plasticityTrack",
+          rangeSymbol.secondEndpoint,
           layer.provenance,
-          "plasticityTrack",
         );
       }
     }
@@ -1160,14 +1290,103 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
     1,
     "no-wrap",
   );
-  job.document.legend.forEach((item, index) => {
+  const sourceLegendItems = [...job.document.legend];
+  const orderedGraphLegendItems = sourceLegendItems
+    .filter(({ id }) => graphSymbologyByLegendId.has(id))
+    .sort((left, right) => {
+      const orderDelta =
+        graphSymbologyByLegendId.get(left.id)!.order -
+        graphSymbologyByLegendId.get(right.id)!.order;
+      return orderDelta === 0
+        ? sourceLegendItems.indexOf(left) - sourceLegendItems.indexOf(right)
+        : orderDelta;
+    });
+  let graphLegendIndex = 0;
+  const visibleLegendItems = sourceLegendItems
+    .map((item) =>
+      graphSymbologyByLegendId.has(item.id) ? orderedGraphLegendItems[graphLegendIndex++]! : item,
+    )
+    .filter((item) => graphSymbologyByLegendId.get(item.id)?.legend.visible !== false);
+  visibleLegendItems.forEach((item, index) => {
+    const graphSymbology = graphSymbologyByLegendId.get(item.id);
     const column = Math.floor(index / 5);
     const row = index % 5;
     const x = footer.xMpt + 3_000 + column * 89_000;
     const y = footer.yMpt + 14_000 + row * 15_000;
     const symbolProvenance = sourceFor(job, item.id, "symbol");
     const symbolId = `node:legend:${item.id}:symbol`;
-    if (item.symbol === "split-spoon") {
+    if (graphSymbology?.legend.range !== null && graphSymbology?.legend.range !== undefined) {
+      const rangeSymbol = graphSymbology.legend.range;
+      addLine(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-plasticity-range",
+        x + 1_000,
+        y + 5_000,
+        x + 9_000,
+        y + 5_000,
+        rangeSymbol.line.strokeToken,
+        symbolProvenance,
+        rangeSymbol.line.dashMpt,
+        rangeSymbol.line.strokeWidthMpt,
+      );
+      addPointSymbol(
+        `${symbolId}:first`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-pl-open",
+        x + 1_000,
+        y + 5_000,
+        rangeSymbol.firstEndpoint,
+        symbolProvenance,
+      );
+      addPointSymbol(
+        `${symbolId}:second`,
+        `legend:${item.id}`,
+        footerGroupId,
+        "legend-symbol-ll-filled",
+        x + 9_000,
+        y + 5_000,
+        rangeSymbol.secondEndpoint,
+        symbolProvenance,
+      );
+    } else if (
+      graphSymbology?.legend.line !== null &&
+      graphSymbology?.legend.line !== undefined &&
+      graphSymbology.legend.point !== null
+    ) {
+      const lineSymbol = graphSymbology.legend.line;
+      const pointSymbol = graphSymbology.legend.point;
+      addLine(
+        symbolId,
+        `legend:${item.id}`,
+        footerGroupId,
+        pointSymbol.shape === "triangle" ? "legend-symbol-moisture-line" : "legend-symbol-line",
+        x,
+        y + 5_000,
+        x + 10_000,
+        y + 5_000,
+        lineSymbol.strokeToken,
+        symbolProvenance,
+        lineSymbol.dashMpt,
+        lineSymbol.strokeWidthMpt,
+      );
+      addPointSymbol(
+        `${symbolId}:point`,
+        `legend:${item.id}`,
+        footerGroupId,
+        pointSymbol.shape === "square"
+          ? "legend-symbol-filled-square"
+          : pointSymbol.shape === "triangle"
+            ? "legend-symbol-moisture-open-triangle"
+            : "legend-symbol-circle",
+        x + 5_000,
+        y + 5_000,
+        pointSymbol,
+        symbolProvenance,
+      );
+    } else if (item.symbol === "split-spoon") {
       addRect(
         symbolId,
         `legend:${item.id}`,
@@ -1341,7 +1560,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       `legend:${item.id}`,
       footerGroupId,
       "legend-label",
-      item.label,
+      graphSymbology?.legend.label ?? item.label,
       rect(x + 13_000, y, 73_000, 11_000),
       "style-small",
       sourceFor(job, item.id, "label"),
@@ -1525,6 +1744,7 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
       measurementId,
       sourceIdentity: clone.semanticId,
       fontFamilyId: style.fontFamilyId,
+      ...(style.fontStyle === undefined ? {} : { fontStyle: style.fontStyle }),
       fontSizeMpt: style.fontSizeMpt,
       fontWeight: style.fontWeight,
       lineHeightMpt: style.lineHeightMpt,
@@ -1654,7 +1874,14 @@ function buildDraft(job: BoringLogLayoutJobInput): DraftScene {
   const semanticOrder = nodes
     .map(({ semanticId }) => semanticId)
     .filter((semanticId, index, all) => all.indexOf(semanticId) === index);
-  return { nodes, textRequests, semanticOrder };
+  if (
+    requireAllDynamicTextElements &&
+    (resolvedDynamicTextElementIds.size !== dynamicTextElementIds.size ||
+      [...dynamicTextElementIds].some((elementId) => !resolvedDynamicTextElementIds.has(elementId)))
+  ) {
+    throw new Error("dynamic-text-element-reference");
+  }
+  return { nodes, textRequests, semanticOrder, diagnostics };
 }
 
 function createPagePlan(job: BoringLogLayoutJobInput, draft: DraftScene): BoringLogPagePlan {
@@ -1701,8 +1928,13 @@ function createPagePlan(job: BoringLogLayoutJobInput, draft: DraftScene): Boring
       columns: job.template.columns,
       semanticOrder: draft.semanticOrder,
     })),
-    overflow: plannedContinuations.length > 1 ? "continued" : "none",
-    diagnostics: [],
+    overflow:
+      plannedContinuations.length > 1
+        ? "continued"
+        : draft.diagnostics.length > 0
+          ? "clipped-with-diagnostic"
+          : "none",
+    diagnostics: draft.diagnostics,
   };
 }
 
@@ -1739,6 +1971,7 @@ function namespaceDraft(draft: DraftScene, pageIndex: number): DraftScene {
       ),
     ),
     semanticOrder: draft.semanticOrder,
+    diagnostics: draft.diagnostics,
   });
 }
 
@@ -1844,7 +2077,7 @@ function createPageDrafts(
           depthTransform: plannedPage.depthTransform,
         }),
       }) as BoringLogLayoutJobInput;
-      const rawDraft = buildDraft(pageJob);
+      const rawDraft = buildDraft(pageJob, false);
       const retainedNodes = rawDraft.nodes.filter(
         ({ role, semanticId }) =>
           (terminalInclusive || role !== "log-completion-note") &&
@@ -1884,6 +2117,7 @@ function createPageDrafts(
               .map(({ semanticId }) => semanticId)
               .filter((semanticId, index, all) => all.indexOf(semanticId) === index),
           ),
+          diagnostics: rawDraft.diagnostics,
         }),
         plannedPage.pageIndex,
       );
@@ -2006,16 +2240,19 @@ export function resolveBoringLogPageScene(
       return rejected("BORING_LOG_LAYOUT_TEXT_RESULTS_MISMATCH", provisionalScene.code);
     }
     const textResults = provisionalScene.value.textResults;
-    const diagnostics: BoringLogRenderDiagnostic[] = textResults
-      .filter(({ overflow }) => overflow !== "none")
-      .map(({ measurementId, overflow }) => ({
-        code: "BORING_LOG_TEXT_OVERFLOW",
-        severity: overflow === "continued" ? "warning" : "error",
-        message: `Text measurement ${measurementId} resolved with ${overflow}`,
-        semanticId:
-          prepared.value.textRequests.find((request) => request.measurementId === measurementId)
-            ?.sourceIdentity ?? null,
-      }));
+    const diagnostics: BoringLogRenderDiagnostic[] = [
+      ...prepared.value.pagePlan.diagnostics,
+      ...textResults
+        .filter(({ overflow }) => overflow !== "none")
+        .map(({ measurementId, overflow }) => ({
+          code: "BORING_LOG_TEXT_OVERFLOW",
+          severity: overflow === "continued" ? ("warning" as const) : ("error" as const),
+          message: `Text measurement ${measurementId} resolved with ${overflow}`,
+          semanticId:
+            prepared.value.textRequests.find((request) => request.measurementId === measurementId)
+              ?.sourceIdentity ?? null,
+        })),
+    ];
     const pagePlan: BoringLogPagePlan = {
       ...prepared.value.pagePlan,
       overflow:

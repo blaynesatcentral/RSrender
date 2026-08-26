@@ -74,7 +74,8 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
     html,
     /id="text-decoration"[\s\S]*?Underline[\s\S]*?Strikethrough[\s\S]*?Underline \+ strikethrough/u,
   );
-  assert.match(html, /Font style \/ weight[\s\S]*?Regular · 400[\s\S]*?Bold · 700/u);
+  assert.match(html, /Font style[\s\S]*?Regular[\s\S]*?Italic/u);
+  assert.match(html, /Weight[\s\S]*?Regular · 400[\s\S]*?Bold · 700/u);
   assert.match(html, /id="text-line-height"/u);
   assert.match(html, /id="text-letter-spacing"[^>]+min="-2"[^>]+max="12"/u);
   assert.match(html, /id="text-word-spacing"[^>]+min="-2"[^>]+max="24"/u);
@@ -85,7 +86,7 @@ test("BLD-037 exposes right-click Properties and exact occurrence identity", () 
     /id="text-style-scope"[^>]*>[\s\S]*?This occurrence[\s\S]*?All selected \(typography\)[\s\S]*?Log Column default \(typography\)[\s\S]*?Named style default \(typography\)[\s\S]*?Template default \(changed typography\)/u,
   );
   assert.match(html, /Only exactly qualified font faces are listed/u);
-  assert.match(html, /never synthesizes faux italic/u);
+  assert.match(html, /never synthesizes a face/u);
   assert.match(html, /id="text-layout-properties"/u);
   assert.match(html, /id="text-frame-x"/u);
   assert.match(html, /id="text-frame-y"[^>]+readonly/u);
@@ -122,6 +123,10 @@ test("BLD-037 routes canvas click and contextmenu through exact node selection",
   );
   assert.match(entry, /propertyNodeId\.textContent = representative\.id/u);
   assert.match(entry, /propertiesScroll\.focus\(\)/u);
+  assert.match(entry, /row\.addEventListener\("contextmenu"/u);
+  assert.match(entry, /selectButton\.addEventListener\("keydown"/u);
+  assert.match(entry, /event\.key !== "ContextMenu"/u);
+  assert.match(entry, /openContentsContextMenu\(event\.clientX, event\.clientY\)/u);
   assert.match(entry, /selectionByBoring[\s\S]+nodeId: selectedSceneNodeId/u);
   assert.match(entry, /setTextOccurrenceStyle/u);
   assert.match(entry, /const applyScope = textStyleScope\.value/u);

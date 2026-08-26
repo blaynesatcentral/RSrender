@@ -7,6 +7,7 @@ import {
   type OverrideRenderDatasetQueryResult,
   type OverrideRenderDatasetRejectionReason,
   type OverrideHistoryNavigationCommand,
+  type RevertDisplayValueOverrideCommand,
   type SetDisplayValueOverrideCommand,
 } from "@rsrender/contracts";
 
@@ -14,6 +15,7 @@ import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
 } from "./document-route-contract.js";
@@ -33,7 +35,7 @@ const dummyIdentity = "urn:rsrender:document-preload:validation";
 const dummyRequestIdentity = "urn:rsrender:document-preload:validation-request";
 const dummyRecordedAtUtc = "2000-01-01T00:00:00.000Z";
 
-type Operation = "getProjection" | "setDisplayValue" | "undo" | "redo";
+type Operation = "getProjection" | "setDisplayValue" | "revertDisplayValue" | "undo" | "redo";
 type DataRecord = Readonly<Record<string, unknown>>;
 
 function exactRecord(input: unknown, fields: readonly string[]): DataRecord | null {
@@ -172,6 +174,39 @@ function pageArguments(operation: Operation, input: unknown): DataRecord | null 
       ? Object.freeze({ expectedWorkingRevision: decoded.value.expectedWorkingRevision })
       : null;
   }
+  if (operation === "revertDisplayValue") {
+    const record = exactRecord(detached, [
+      "expectedWorkingRevision",
+      "localOverrideIdentity",
+      "targetSourceFieldIdentity",
+      "expectedOverrideRevision",
+    ]);
+    if (record === null) return null;
+    const decoded = decodeOverrideRenderDatasetCommand({
+      contractVersion: 1,
+      messageType: "command",
+      scope: "document-domain",
+      kind: "presentation-override.revert-display-value",
+      requestId: dummyRequestIdentity,
+      commandId: "presentation-override.revert-display-value",
+      documentId: dummyIdentity,
+      ownerGeneration: 1,
+      expectedWorkingRevision: record["expectedWorkingRevision"],
+      payload: {
+        localOverrideIdentity: record["localOverrideIdentity"],
+        targetSourceFieldIdentity: record["targetSourceFieldIdentity"],
+        expectedOverrideRevision: record["expectedOverrideRevision"],
+      },
+    });
+    return decoded.accepted && decoded.value.kind === "presentation-override.revert-display-value"
+      ? Object.freeze({
+          expectedWorkingRevision: decoded.value.expectedWorkingRevision,
+          localOverrideIdentity: decoded.value.payload.localOverrideIdentity,
+          targetSourceFieldIdentity: decoded.value.payload.targetSourceFieldIdentity,
+          expectedOverrideRevision: decoded.value.payload.expectedOverrideRevision,
+        })
+      : null;
+  }
   const record = exactRecord(detached, [
     "expectedWorkingRevision",
     "localOverrideIdentity",
@@ -265,6 +300,7 @@ let inFlight = false;
 function channelFor(operation: Operation): string {
   if (operation === "getProjection") return DOCUMENT_GET_PROJECTION_CHANNEL;
   if (operation === "setDisplayValue") return DOCUMENT_SET_DISPLAY_VALUE_CHANNEL;
+  if (operation === "revertDisplayValue") return DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL;
   if (operation === "undo") return DOCUMENT_UNDO_CHANNEL;
   return DOCUMENT_REDO_CHANNEL;
 }
@@ -348,11 +384,17 @@ async function call(operation: Operation, input: unknown, argumentCount: number)
     const expectedCommandId =
       operation === "setDisplayValue"
         ? "presentation-override.set-display-value"
-        : operation === "undo"
-          ? "history.undo"
-          : "history.redo";
+        : operation === "revertDisplayValue"
+          ? "presentation-override.revert-display-value"
+          : operation === "undo"
+            ? "history.undo"
+            : "history.redo";
     const expectedOperation =
-      operation === "setDisplayValue" ? "mutation" : operation === "undo" ? "undo" : "redo";
+      operation === "setDisplayValue" || operation === "revertDisplayValue"
+        ? "mutation"
+        : operation === "undo"
+          ? "undo"
+          : "redo";
     return decoded.value.commandId === expectedCommandId &&
       decoded.value.operation === expectedOperation &&
       decoded.value.previousWorkingRevision === args["expectedWorkingRevision"] &&
@@ -383,13 +425,22 @@ const getProjection = Object.freeze(async function getProjection(input: unknown)
 const setDisplayValue = Object.freeze(async function setDisplayValue(input: unknown) {
   return call("setDisplayValue", input, arguments.length);
 });
+const revertDisplayValue = Object.freeze(async function revertDisplayValue(input: unknown) {
+  return call("revertDisplayValue", input, arguments.length);
+});
 const undo = Object.freeze(async function undo(input: unknown) {
   return call("undo", input, arguments.length);
 });
 const redo = Object.freeze(async function redo(input: unknown) {
   return call("redo", input, arguments.length);
 });
-const documentApi = Object.freeze({ getProjection, setDisplayValue, undo, redo });
+const documentApi = Object.freeze({
+  getProjection,
+  setDisplayValue,
+  revertDisplayValue,
+  undo,
+  redo,
+});
 
 contextBridge.exposeInMainWorld("rsrender", Object.freeze({ document: documentApi }));
 
@@ -434,6 +485,10 @@ export type DocumentPreloadSetDisplayValueInput = Readonly<
   Pick<SetDisplayValueOverrideCommand, "expectedWorkingRevision"> &
     Omit<SetDisplayValueOverrideCommand["payload"], "authorIdentity" | "recordedAtUtc">
 >;
+export type DocumentPreloadRevertDisplayValueInput = Readonly<
+  Pick<RevertDisplayValueOverrideCommand, "expectedWorkingRevision"> &
+    RevertDisplayValueOverrideCommand["payload"]
+>;
 export type DocumentPreloadHistoryInput = Readonly<
   Pick<OverrideHistoryNavigationCommand, "expectedWorkingRevision">
 >;
@@ -444,6 +499,9 @@ export interface DocumentPreloadApi {
   ) => Promise<DocumentPreloadPublicResult>;
   readonly setDisplayValue: (
     input: DocumentPreloadSetDisplayValueInput,
+  ) => Promise<DocumentPreloadPublicResult>;
+  readonly revertDisplayValue: (
+    input: DocumentPreloadRevertDisplayValueInput,
   ) => Promise<DocumentPreloadPublicResult>;
   readonly undo: (input: DocumentPreloadHistoryInput) => Promise<DocumentPreloadPublicResult>;
   readonly redo: (input: DocumentPreloadHistoryInput) => Promise<DocumentPreloadPublicResult>;

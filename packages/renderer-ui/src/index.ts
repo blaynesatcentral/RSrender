@@ -53,9 +53,16 @@ export {
 } from "./boring-log-direct-manipulation.js";
 export {
   resolveStudioContextMenuPosition,
+  resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
   studioPaneLimits,
   type StudioContextMenuPosition,
   type StudioPaneResizeTarget,
   type StudioPaneWidths,
+  type StudioViewportMetrics,
 } from "./boring-log-studio-viewport.js";
+export {
+  boringLogAttributeTableCorpusLimits,
+  resolveBoringLogAttributeTableWindow,
+  type BoringLogAttributeTableWindow,
+} from "./boring-log-attribute-table-window.js";

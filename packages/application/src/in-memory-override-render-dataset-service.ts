@@ -86,6 +86,7 @@ export interface InMemoryOverrideRenderDatasetServiceCapacities {
 
 export interface InMemoryOverrideRenderDatasetService {
   readonly setDisplayValue: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
+  readonly revertDisplayValue: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
   readonly undo: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
   readonly redo: (input: unknown) => Promise<OverrideRenderDatasetCommandResult>;
   readonly getProjection: (input: unknown) => Promise<OverrideRenderDatasetQueryResult>;
@@ -126,6 +127,27 @@ export const lithologyClassificationDefaultBatchOperationIdentity =
   "embedded-template.lithology-classification-default" as const;
 export const lithologyClassificationDefaultBatchOperationLabel =
   "Set lithology classification default" as const;
+export const dataLayerSymbologyProjectDefaultBatchOperationIdentity =
+  "embedded-template.data-layer-symbology-project-default" as const;
+export const dataLayerSymbologyProjectDefaultBatchOperationLabel =
+  "Set Data Layer symbology project default" as const;
+
+type EmbeddedTemplateReplacementBatchOperation =
+  "lithology-classification-default" | "data-layer-symbology-project-default";
+
+function embeddedTemplateReplacementBatchOperationMetadata(
+  operation: EmbeddedTemplateReplacementBatchOperation,
+) {
+  return operation === "lithology-classification-default"
+    ? Object.freeze({
+        identity: lithologyClassificationDefaultBatchOperationIdentity,
+        label: lithologyClassificationDefaultBatchOperationLabel,
+      })
+    : Object.freeze({
+        identity: dataLayerSymbologyProjectDefaultBatchOperationIdentity,
+        label: dataLayerSymbologyProjectDefaultBatchOperationLabel,
+      });
+}
 
 export type EmbeddedTemplateReplacementBatchCommitResult =
   | Readonly<{
@@ -136,8 +158,12 @@ export type EmbeddedTemplateReplacementBatchCommitResult =
       readonly dirty: boolean;
       readonly canUndo: boolean;
       readonly canRedo: boolean;
-      readonly operationIdentity: typeof lithologyClassificationDefaultBatchOperationIdentity;
-      readonly operationLabel: typeof lithologyClassificationDefaultBatchOperationLabel;
+      readonly operationIdentity:
+        | typeof lithologyClassificationDefaultBatchOperationIdentity
+        | typeof dataLayerSymbologyProjectDefaultBatchOperationIdentity;
+      readonly operationLabel:
+        | typeof lithologyClassificationDefaultBatchOperationLabel
+        | typeof dataLayerSymbologyProjectDefaultBatchOperationLabel;
       readonly embeddedTemplateRepresentationIdentities: readonly string[];
     }>
   | Readonly<{
@@ -768,6 +794,10 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     return this.#namedCommand(input, "presentation-override.set-display-value");
   }
 
+  public revertDisplayValue(input: unknown): Promise<OverrideRenderDatasetCommandResult> {
+    return this.#namedCommand(input, "presentation-override.revert-display-value");
+  }
+
   public undo(input: unknown): Promise<OverrideRenderDatasetCommandResult> {
     return this.#namedCommand(input, "history.undo");
   }
@@ -878,9 +908,13 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
             "page-guide-lock",
             "column-divider-adjacent-resize",
             "column-divider-push-following-resize",
+            "column-heading-text",
+            "data-depth-configuration",
             "region-boundary-resize",
+            "page-setup",
             "text-occurrence-authoring",
             "lithology-interval-appearance",
+            "data-layer-symbology",
           ].includes(String(command["operation"])))
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
@@ -1005,13 +1039,19 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
                   ? "Resize adjacent Log Columns"
                   : operation === "column-divider-push-following-resize"
                     ? "Resize and push following Log Columns"
-                    : operation === "region-boundary-resize"
-                      ? "Resize Page Region boundary"
-                      : operation === "text-occurrence-authoring"
-                        ? "Author selected text occurrences"
-                        : operation === "lithology-interval-appearance"
-                          ? "Set lithology interval appearance"
-                          : "Set text occurrence style";
+                    : operation === "column-heading-text"
+                      ? "Set Log Column heading"
+                      : operation === "region-boundary-resize"
+                        ? "Resize Page Region boundary"
+                        : operation === "page-setup"
+                          ? "Set physical Page Setup"
+                          : operation === "text-occurrence-authoring"
+                            ? "Author selected text occurrences"
+                            : operation === "lithology-interval-appearance"
+                              ? "Set lithology interval appearance"
+                              : operation === "data-layer-symbology"
+                                ? "Set Data Layer symbology"
+                                : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
         kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],
@@ -1114,7 +1154,9 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
         (command["ownerGeneration"] as number) < 0 ||
         !Number.isSafeInteger(command["expectedWorkingRevision"]) ||
         (command["expectedWorkingRevision"] as number) < 0 ||
-        command["operation"] !== "lithology-classification-default" ||
+        !["lithology-classification-default", "data-layer-symbology-project-default"].includes(
+          String(command["operation"]),
+        ) ||
         suppliedReplacements === null ||
         suppliedReplacements.length < 1 ||
         typeof command["reason"] !== "string" ||
@@ -1122,6 +1164,8 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
       ) {
         return Object.freeze({ accepted: false, code: "AUTHORING_COMMAND_MALFORMED" });
       }
+      const operation = command["operation"] as EmbeddedTemplateReplacementBatchOperation;
+      const operationMetadata = embeddedTemplateReplacementBatchOperationMetadata(operation);
       const replacements: Array<
         Readonly<{
           explorationIdentity: string;
@@ -1384,7 +1428,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
         ]),
       ];
       const eventPayload = canonicalizeJson({
-        kind: lithologyClassificationDefaultBatchOperationIdentity,
+        kind: operationMetadata.identity,
         replacements: resolved.map((entry) => ({
           explorationIdentity: entry.explorationIdentity,
           templateAssignmentIdentity: entry.assignment.assignmentIdentity,
@@ -1397,8 +1441,8 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
       const effect = createProjectDomainEffect({
         sourceRequestId: command["requestId"],
         sourceCommandCanonicalJson: canonicalCommand,
-        sourceCommandIdentity: lithologyClassificationDefaultBatchOperationIdentity,
-        commandLabel: lithologyClassificationDefaultBatchOperationLabel,
+        sourceCommandIdentity: operationMetadata.identity,
+        commandLabel: operationMetadata.label,
         documentId: snapshot.documentId,
         ownerGeneration: snapshot.ownerGeneration,
         expectedWorkingRevision: snapshot.workingRevision,
@@ -1410,7 +1454,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
           "urn:rsrender:projection:effective-template",
         ],
         eventResult: {
-          resultCode: lithologyClassificationDefaultBatchOperationIdentity,
+          resultCode: operationMetadata.identity,
           canonicalPayload: eventPayload,
         },
       });
@@ -1456,8 +1500,8 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
         dirty: committed.dirty,
         canUndo: committed.historyCursor > 0,
         canRedo: committed.historyCursor < committed.historyLength,
-        operationIdentity: lithologyClassificationDefaultBatchOperationIdentity,
-        operationLabel: lithologyClassificationDefaultBatchOperationLabel,
+        operationIdentity: operationMetadata.identity,
+        operationLabel: operationMetadata.label,
         embeddedTemplateRepresentationIdentities: resultIdentities,
       });
     });
@@ -1548,7 +1592,14 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
           encodedCommand.digest,
           snapshot,
         )
-      : this.#navigate(command, encodedCommand.digest, snapshot);
+      : command.kind === "presentation-override.revert-display-value"
+        ? this.#revertDisplayValue(
+            command,
+            encodedCommand.canonicalJson,
+            encodedCommand.digest,
+            snapshot,
+          )
+        : this.#navigate(command, encodedCommand.digest, snapshot);
   }
 
   #setDisplayValue(
@@ -1835,10 +1886,203 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
     return external;
   }
 
+  #revertDisplayValue(
+    command: Extract<
+      OverrideRenderDatasetCommand,
+      { readonly kind: "presentation-override.revert-display-value" }
+    >,
+    canonicalCommand: string,
+    commandDigest: Sha256Digest,
+    snapshot: ProjectDomainHistorySnapshot,
+  ): OverrideRenderDatasetCommandResult {
+    if (snapshot.workingRevision === Number.MAX_SAFE_INTEGER) {
+      return this.#retainedRejection(command, commandDigest, "CAPACITY_EXHAUSTED");
+    }
+    const presentationHandle = getProjectInputRevisionHandle(
+      snapshot.aggregate,
+      "presentation-overrides",
+    );
+    if (!presentationHandle.accepted) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const previousCollection = collectionFor(
+      this.#state,
+      presentationHandle.value,
+      snapshot.documentId,
+    );
+    if (presentationHandle.value.state !== "current" || previousCollection === null) {
+      return this.#retainedRejection(command, commandDigest, "TARGET_NOT_FOUND");
+    }
+    const derivedIdentity = derivePresentationOverrideIdentity({
+      ownerDocumentIdentity: snapshot.documentId,
+      localOverrideIdentity: command.payload.localOverrideIdentity,
+    });
+    if (!derivedIdentity.accepted) {
+      return this.#retainedRejection(command, commandDigest, "DOMAIN_PRECONDITION_FAILED");
+    }
+    const prior = previousCollection.items.find(
+      (item) =>
+        item.presentationOverrideIdentity === derivedIdentity.value &&
+        item.targetSourceFieldIdentity === command.payload.targetSourceFieldIdentity,
+    );
+    if (prior === undefined) {
+      return this.#retainedRejection(command, commandDigest, "TARGET_NOT_FOUND");
+    }
+    if (prior.overrideRevision !== command.payload.expectedOverrideRevision) {
+      return this.#retainedRejection(command, commandDigest, "DOMAIN_PRECONDITION_FAILED");
+    }
+    const nextItems = Object.freeze(
+      previousCollection.items.filter(
+        (item) => item.presentationOverrideIdentity !== prior.presentationOverrideIdentity,
+      ),
+    );
+    const nextCollection = createNextPresentationOverrideCollection({
+      previousCollection,
+      items: nextItems,
+    });
+    if (!nextCollection.accepted) {
+      return this.#retainedRejection(
+        command,
+        commandDigest,
+        mapOverrideFailure(nextCollection.code),
+      );
+    }
+    const retained = retainedCollection(nextCollection.value);
+    if (retained === null) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const alreadyStored = this.#state.collections.some(
+      (candidate) => candidate.logicalDigest === retained.logicalDigest,
+    );
+    if (!alreadyStored && this.#state.collections.length >= this.#capacities.collectionEntries) {
+      return this.#retainedRejection(command, commandDigest, "CAPACITY_EXHAUSTED");
+    }
+    const nextHandle = createProjectInputRevisionHandle({
+      collectionKind: "presentation-overrides",
+      ownerDocumentIdentity: snapshot.documentId,
+      state: "current",
+      projectRevision: nextCollection.value.projectRevision,
+      contentDigest: nextCollection.value.logicalDigest,
+    });
+    if (!nextHandle.accepted) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const after = decodePhase1LogProjectAggregate({
+      ...snapshot.aggregate,
+      phase1Inputs: {
+        acceptedSourceSnapshot: snapshot.aggregate.phase1Inputs.acceptedSourceSnapshot,
+        revisionHandles: snapshot.aggregate.phase1Inputs.revisionHandles.map((handle) =>
+          handle.collectionKind === "presentation-overrides" ? nextHandle.value : handle,
+        ),
+      },
+    });
+    if (!after.accepted) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const acceptedSourceSnapshot = snapshot.aggregate.phase1Inputs.acceptedSourceSnapshot;
+    if (acceptedSourceSnapshot === null) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const beforeEncoded = encodePhase1LogProjectAggregate(snapshot.aggregate);
+    const afterEncoded = encodePhase1LogProjectAggregate(after.value);
+    const beforeSource = encodeSourceSnapshot(acceptedSourceSnapshot);
+    const afterSource = encodeSourceSnapshot(after.value.phase1Inputs.acceptedSourceSnapshot);
+    if (
+      !beforeEncoded.accepted ||
+      !afterEncoded.accepted ||
+      !beforeSource.accepted ||
+      !afterSource.accepted ||
+      beforeSource.canonicalJson !== afterSource.canonicalJson
+    ) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const nextCollections = alreadyStored
+      ? this.#state.collections
+      : Object.freeze([...this.#state.collections, retained]);
+    const stagedState: WrapperState = Object.freeze({
+      collections: nextCollections,
+      replay: this.#state.replay,
+    });
+    const assemblyPreflight = assembleFor(stagedState, after.value);
+    if (!assemblyPreflight.assembled) {
+      return this.#retainedRejection(
+        command,
+        commandDigest,
+        mapAssemblyFailure(assemblyPreflight.code),
+      );
+    }
+    const eventPayload = canonicalizeJson({
+      kind: "presentation-override.display-value-reverted",
+      presentationOverrideIdentity: prior.presentationOverrideIdentity,
+      presentationOverrideCollectionIdentity: nextCollection.value.collectionIdentity,
+      presentationOverrideCollectionDigest: nextCollection.value.logicalDigest,
+      targetSourceFieldIdentity: prior.targetSourceFieldIdentity,
+    });
+    const effect = createProjectDomainEffect({
+      sourceRequestId: command.requestId,
+      sourceCommandCanonicalJson: canonicalCommand,
+      sourceCommandIdentity: commandIdentity(command.commandId),
+      commandLabel: "Revert display value override",
+      documentId: command.documentId,
+      ownerGeneration: command.ownerGeneration,
+      expectedWorkingRevision: command.expectedWorkingRevision,
+      beforeAggregateCanonicalJson: beforeEncoded.canonicalJson,
+      afterAggregateCanonicalJson: afterEncoded.canonicalJson,
+      affectedIdentities: [
+        prior.presentationOverrideIdentity,
+        prior.targetSourceFieldIdentity,
+        nextCollection.value.collectionIdentity,
+        nextCollection.value.revisionIdentity,
+      ].sort(),
+      invalidations: ["urn:rsrender:projection:render-dataset"],
+      eventResult: {
+        resultCode: "presentation-override.display-value-reverted",
+        canonicalPayload: eventPayload,
+      },
+    });
+    if (!effect.accepted) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const preparation = this.#core.prepareProjectDomainEffect(effect.value);
+    if (preparation.kind !== "ready") {
+      return this.#retainedRejection(
+        command,
+        commandDigest,
+        preparation.result.kind === "project-domain-history.rejected"
+          ? mapHistoryReason(preparation.result.reason)
+          : "INTERNAL_STATE_INVALID",
+      );
+    }
+    const projection = projectionFor(
+      stagedState,
+      simulatedSnapshot(snapshot, after.value, preparation.result),
+    );
+    if (!projection.projected) {
+      return this.#retainedRejection(command, commandDigest, mapAssemblyFailure(projection.code));
+    }
+    const external = externalCommitted(
+      command,
+      preparation.result,
+      projection.value,
+      beforeEncoded.digest,
+    );
+    if (external === null) {
+      return this.#retainedRejection(command, commandDigest, "INTERNAL_STATE_INVALID");
+    }
+    const candidateState = this.#stateWithReplay(command, commandDigest, external, nextCollections);
+    const committed = this.#core.commitPreparedProjectDomainEffect(preparation.prepared);
+    if (committed.kind === "project-domain-history.rejected") {
+      return this.#retainedRejection(command, commandDigest, mapHistoryReason(committed.reason));
+    }
+    this.#state = candidateState;
+    return external;
+  }
+
   #navigate(
     command: Exclude<
       OverrideRenderDatasetCommand,
-      { readonly kind: "presentation-override.set-display-value" }
+      | { readonly kind: "presentation-override.set-display-value" }
+      | { readonly kind: "presentation-override.revert-display-value" }
     >,
     commandDigest: Sha256Digest,
     snapshot: ProjectDomainHistorySnapshot,
@@ -2031,6 +2275,9 @@ export function createInMemoryOverrideRenderDatasetService(
     );
     const service: InMemoryOverrideRenderDatasetService = Object.freeze({
       setDisplayValue: Object.freeze((command: unknown) => implementation.setDisplayValue(command)),
+      revertDisplayValue: Object.freeze((command: unknown) =>
+        implementation.revertDisplayValue(command),
+      ),
       undo: Object.freeze((command: unknown) => implementation.undo(command)),
       redo: Object.freeze((command: unknown) => implementation.redo(command)),
       getProjection: Object.freeze((query: unknown) => implementation.getProjection(query)),

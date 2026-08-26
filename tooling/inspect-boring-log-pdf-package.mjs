@@ -56,6 +56,7 @@ export async function inspectBoringLogPdfPackage({
   expectedOrderedTitles,
   expectedPageSizesPoints,
   expectedProjectionDigest,
+  pageSizeTolerancePoints = 0,
 }) {
   const absolutePdfPath = path.resolve(pdfPath);
   const [bytes, summary, fonts, images, text] = await Promise.all([
@@ -94,9 +95,23 @@ export async function inspectBoringLogPdfPackage({
     orderedTitleIndexes: Object.freeze(observedTitleIndexes),
     toolWarnings: Object.freeze(warnings),
   });
+  const pageSizesMatch =
+    Number.isFinite(pageSizeTolerancePoints) &&
+    pageSizeTolerancePoints >= 0 &&
+    result.pageSizesPoints.length === expectedPageSizesPoints.length &&
+    result.pageSizesPoints.every(
+      (observed, pageIndex) =>
+        observed.length === 2 &&
+        expectedPageSizesPoints[pageIndex]?.length === 2 &&
+        observed.every(
+          (value, dimensionIndex) =>
+            Math.abs(value - expectedPageSizesPoints[pageIndex][dimensionIndex]) <=
+            pageSizeTolerancePoints,
+        ),
+    );
   if (
     result.pageCount !== expectedPageSizesPoints.length ||
-    JSON.stringify(result.pageSizesPoints) !== JSON.stringify(expectedPageSizesPoints) ||
+    !pageSizesMatch ||
     result.tagged !== true ||
     result.encrypted !== false ||
     result.javascript !== false ||

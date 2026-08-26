@@ -45,7 +45,10 @@ export type SyntheticBoringLogEditableProperty =
   | "sample-recovery"
   | "remark-text"
   | "lithology-pattern-style"
-  | "description-column-width-mpt";
+  | "description-column-width-mpt"
+  | "ground-elevation-ft"
+  | "elevation-datum"
+  | "completion-depth-ft";
 
 export interface SyntheticBoringLogEditableBinding {
   readonly semanticId: string;
@@ -284,7 +287,42 @@ export function buildSyntheticBoringLogSnapshot(
     feetUnit,
     false,
   );
-  if (projectName === null || boringTitle === null || totalDepth === null) return null;
+  const groundElevation = editableField(
+    context.value,
+    explorationIdentity,
+    SOURCE_MAPPED_FIELD_PATHS.explorationGroundElevation,
+    document.metadata.groundElevationFt,
+    feetUnit,
+    "data:ground-elevation",
+    "ground-elevation-ft",
+  );
+  const elevationDatum = editableField(
+    context.value,
+    explorationIdentity,
+    SOURCE_MAPPED_FIELD_PATHS.explorationElevationDatum,
+    document.metadata.elevationDatum,
+    noUnit,
+    "data:elevation-datum",
+    "elevation-datum",
+  );
+  const completionDepth = editableField(
+    context.value,
+    explorationIdentity,
+    SOURCE_MAPPED_FIELD_PATHS.explorationCompletionDepth,
+    document.metadata.completionDepthFt,
+    feetUnit,
+    "data:completion-depth",
+    "completion-depth-ft",
+  );
+  if (
+    projectName === null ||
+    boringTitle === null ||
+    totalDepth === null ||
+    groundElevation === null ||
+    elevationDatum === null ||
+    completionDepth === null
+  )
+    return null;
   const project = createSourceRecord({
     recordVersion: 1,
     entityKind: "source-project",
@@ -306,13 +344,25 @@ export function buildSyntheticBoringLogSnapshot(
     parentEntityIdentity: projectIdentity,
     relatedEntityIdentity: null,
     sourceOrder: 1,
-    fields: [boringTitle.field, totalDepth],
+    fields: [
+      boringTitle.field,
+      totalDepth,
+      groundElevation.field,
+      elevationDatum.field,
+      completionDepth.field,
+    ],
     lookupReferences: [],
     fieldTestColumns: [],
     extensionObservations: [],
   });
   if (!project.accepted || !exploration.accepted) return null;
-  const bindings: SyntheticBoringLogEditableBinding[] = [projectName.binding, boringTitle.binding];
+  const bindings: SyntheticBoringLogEditableBinding[] = [
+    projectName.binding,
+    boringTitle.binding,
+    groundElevation.binding,
+    elevationDatum.binding,
+    completionDepth.binding,
+  ];
   const descriptionColumn = job.template.columns.find(
     ({ role }) => role === "material-description",
   );
@@ -458,15 +508,25 @@ export function buildSyntheticBoringLogSnapshot(
       noUnit,
       false,
     );
-    const recovery = editableField(
-      context.value,
-      identity,
-      SOURCE_MAPPED_FIELD_PATHS.sampleRecovery,
-      sample.recoveryPercent,
-      percentUnit,
-      `sample:${sample.id}`,
-      "sample-recovery",
-    );
+    const recovery =
+      sample.recoveryPercent === null
+        ? field(
+            context.value,
+            identity,
+            SOURCE_MAPPED_FIELD_PATHS.sampleRecovery,
+            null,
+            percentUnit,
+            false,
+          )
+        : editableField(
+            context.value,
+            identity,
+            SOURCE_MAPPED_FIELD_PATHS.sampleRecovery,
+            sample.recoveryPercent,
+            percentUnit,
+            `sample:${sample.id}`,
+            "sample-recovery",
+          );
     if (start === null || end === null || number === null || recovery === null) return null;
     const record = createSourceRecord({
       recordVersion: 1,
@@ -476,14 +536,14 @@ export function buildSyntheticBoringLogSnapshot(
       parentEntityIdentity: explorationIdentity,
       relatedEntityIdentity: null,
       sourceOrder: index + 1,
-      fields: [start, end, number, recovery.field],
+      fields: [start, end, number, "field" in recovery ? recovery.field : recovery],
       lookupReferences: [],
       fieldTestColumns: [],
       extensionObservations: [],
     });
     if (!record.accepted) return null;
     samples.push(record.value);
-    bindings.push(recovery.binding);
+    if ("binding" in recovery) bindings.push(recovery.binding);
   }
   const comments = [];
   for (const [index, remark] of document.remarks.entries()) {

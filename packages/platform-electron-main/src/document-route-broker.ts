@@ -11,6 +11,7 @@ export {
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_ROUTE_URL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
@@ -32,7 +33,8 @@ export const DOCUMENT_ROUTE_RESULT_LIMITS = Object.freeze({
   maximumStringUtf8Bytes: 1_048_576,
 } as const);
 
-export type DocumentRouteOperation = "getProjection" | "setDisplayValue" | "undo" | "redo";
+export type DocumentRouteOperation =
+  "getProjection" | "setDisplayValue" | "revertDisplayValue" | "undo" | "redo";
 
 export type DocumentRouteTransportRejectionCode =
   | "BOOTSTRAP_ALREADY_ISSUED"
@@ -442,6 +444,13 @@ export class DocumentRouteBroker {
     return this.#invoke("setDisplayValue", context, input);
   }
 
+  public revertDisplayValue(
+    context: unknown,
+    input: unknown,
+  ): Promise<DocumentRouteTransportResult> {
+    return this.#invoke("revertDisplayValue", context, input);
+  }
+
   public undo(context: unknown, input: unknown): Promise<DocumentRouteTransportResult> {
     return this.#invoke("undo", context, input);
   }
@@ -581,6 +590,9 @@ export class DocumentRouteBroker {
   ): Promise<DocumentSessionInvocationResult> {
     if (operation === "getProjection") return this.#session.getProjection(requestId, args);
     if (operation === "setDisplayValue") return this.#session.setDisplayValue(requestId, args);
+    if (operation === "revertDisplayValue") {
+      return this.#session.revertDisplayValue(requestId, args);
+    }
     if (operation === "undo") return this.#session.undo(requestId, args);
     return this.#session.redo(requestId, args);
   }

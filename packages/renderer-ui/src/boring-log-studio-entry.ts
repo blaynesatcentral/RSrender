@@ -1,4 +1,4 @@
-import { boringLogTextColumnSemanticId } from "@rsrender/contracts";
+import { boringLogDynamicTextCatalog, boringLogTextColumnSemanticId } from "@rsrender/contracts";
 import type {
   BoringLogSceneNode,
   BoringLogTextFrameAnchor,
@@ -33,11 +33,73 @@ type PageGuideMutation =
   | Readonly<{ readonly kind: "delete"; readonly guideId: string }>
   | Readonly<{ readonly kind: "set-locked"; readonly guideId: string; readonly locked: boolean }>;
 
+type DataLayerPointShape = "square" | "triangle" | "circle";
+
+type DataLayerLineSymbol = Readonly<{
+  readonly strokeToken: string;
+  readonly strokeWidthMpt: number;
+  readonly dashMpt: readonly number[];
+}>;
+
+type DataLayerPointSymbol = Readonly<{
+  readonly shape: DataLayerPointShape;
+  readonly sizeMpt: number;
+  readonly fillToken: string | null;
+  readonly strokeToken: string;
+  readonly strokeWidthMpt: number;
+}>;
+
+type DataLayerRangeSymbol = Readonly<{
+  readonly line: DataLayerLineSymbol;
+  readonly firstEndpoint: DataLayerPointSymbol;
+  readonly secondEndpoint: DataLayerPointSymbol;
+}>;
+
+type DataLayerProjectionLineSymbol = DataLayerLineSymbol &
+  Readonly<{ readonly strokeColor: string }>;
+
+type DataLayerProjectionPointSymbol = DataLayerPointSymbol &
+  Readonly<{ readonly fillColor: string | null; readonly strokeColor: string }>;
+
+type DataLayerSymbologyState = Readonly<{
+  readonly semanticId: string;
+  readonly layerId: string;
+  readonly label: string;
+  readonly kind: "numeric-polyline" | "numeric-range";
+  readonly source: "template-default" | "layer-override";
+  readonly visible: boolean;
+  readonly order: number;
+  readonly line: DataLayerProjectionLineSymbol | null;
+  readonly point: DataLayerProjectionPointSymbol | null;
+  readonly range: Readonly<{
+    readonly line: DataLayerProjectionLineSymbol;
+    readonly firstEndpoint: DataLayerProjectionPointSymbol;
+    readonly secondEndpoint: DataLayerProjectionPointSymbol;
+  }> | null;
+  readonly legend: Readonly<{
+    readonly visible: boolean;
+    readonly effectiveVisible: boolean;
+    readonly label: string;
+  }>;
+}>;
+
 type ColumnResizeMode = "adjacent-pair" | "push-following-columns";
 type RegionBoundary = "header-depth" | "depth-footer";
 
+type DirectManipulationPreview = Readonly<{
+  readonly frame: TextFrame;
+  readonly snap: Readonly<{
+    readonly snapXMpt: number | null;
+    readonly snapYMpt: number | null;
+    readonly snapXKind: BoringLogSnapTargetKind | null;
+    readonly snapYKind: BoringLogSnapTargetKind | null;
+  }>;
+  readonly reflow: boolean;
+}>;
+
 type TextTemplateProperty =
   | "fontFamilyId"
+  | "fontStyle"
   | "fontSizeMpt"
   | "fontWeight"
   | "lineHeightMpt"
@@ -100,7 +162,12 @@ import {
 } from "./boring-log-direct-manipulation.js";
 import { findCollisionFreeTextDuplicateOffset } from "./boring-log-authoring-placement.js";
 import {
+  boringLogAttributeTableCorpusLimits,
+  resolveBoringLogAttributeTableWindow,
+} from "./boring-log-attribute-table-window.js";
+import {
   resolveStudioContextMenuPosition,
+  resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
   studioPaneLimits,
   type StudioPaneResizeTarget,
@@ -121,7 +188,60 @@ type EditableValue = Readonly<{
     | {
         readonly kind: "display-value-override";
         readonly presentationOverrideIdentity: string;
+        readonly localOverrideIdentity: string;
+        readonly overrideRevision: number;
       };
+}>;
+
+type AttributeFieldValue = string | number | boolean | null;
+
+type AttributeField = Readonly<{
+  readonly fieldIdentity: string;
+  readonly key: string;
+  readonly label: string;
+  readonly valueType: "string" | "number" | "boolean";
+  readonly unit: string | null;
+  readonly sourceOriginal: AttributeFieldValue;
+  readonly effectiveDisplay: AttributeFieldValue;
+  readonly editability:
+    | { readonly kind: "read-only-source" }
+    | { readonly kind: "display-value-override"; readonly property: string };
+  readonly provenance: Readonly<{
+    readonly sourceOriginal: BoringLogValueProvenance | null;
+    readonly effective: BoringLogValueProvenance | null;
+  }>;
+}>;
+
+type AttributeRecord = Readonly<{
+  readonly recordIdentity: string;
+  readonly recordKind: "lithology-interval" | "sample" | "plotted-observation" | "remark";
+  readonly semanticId: string;
+  readonly boringLogIdentity: string;
+  readonly explorationIdentity: string;
+  readonly sourceEntityIdentity: string;
+  readonly depth: Readonly<{ readonly fromFt: number; readonly toFt: number }>;
+  readonly label: string;
+  readonly fields: readonly AttributeField[];
+}>;
+
+type ProviderColumnTargetRole =
+  | "interval-text-column"
+  | "lithology-pattern-column"
+  | "numeric-value-column"
+  | "point-text-column"
+  | "remarks-column";
+
+type ProviderColumnField = Readonly<{
+  readonly fieldId: string;
+  readonly label: string;
+  readonly description: string;
+  readonly valueType: "boolean" | "date" | "number" | "structured-text" | "text";
+  readonly unit: string | null;
+  readonly supportedTargetRoles: readonly ProviderColumnTargetRole[];
+  readonly availability: Readonly<{
+    readonly state: "available" | "unavailable";
+    readonly reason: string | null;
+  }>;
 }>;
 
 type StudioProjection = Readonly<{
@@ -130,13 +250,39 @@ type StudioProjection = Readonly<{
   readonly dirty: boolean;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
+  readonly dataSummary: Readonly<{
+    readonly projectName: string;
+    readonly groundElevationFt: number;
+    readonly elevationDatum: string;
+    readonly referenceStartFt: number;
+    readonly referenceEndFt: number;
+    readonly totalDepthFt: number;
+    readonly completionDepthFt: number;
+    readonly depthScaleMptPerFoot: number;
+    readonly depthIntervalFt: number;
+    readonly nValueGraphMaximum: number | null;
+  }>;
   readonly editableValues: readonly EditableValue[];
+  readonly attributeRecords: readonly AttributeRecord[];
   readonly guides: readonly PageGuide[];
+  readonly pageSetup?: Readonly<{
+    readonly paperPreset: "letter" | "a4" | "custom";
+    readonly orientation: "portrait" | "landscape";
+    readonly widthMpt: number;
+    readonly heightMpt: number;
+    readonly marginsMpt: Readonly<{
+      readonly topMpt: number;
+      readonly rightMpt: number;
+      readonly bottomMpt: number;
+      readonly leftMpt: number;
+    }>;
+  }>;
   readonly columnResizeConstraints: readonly Readonly<{
     readonly columnId: string;
     readonly minimumWidthMpt: number;
     readonly widthPinned: boolean;
   }>[];
+  readonly providerColumnCatalog: readonly ProviderColumnField[];
   readonly regionResizeConstraints: Readonly<{
     readonly minimumHeaderHeightMpt: number;
     readonly minimumDepthBodyHeightMpt: number;
@@ -165,6 +311,12 @@ type StudioProjection = Readonly<{
     readonly patternId: string;
     readonly kind: "line-hatch" | "horizontal-dash" | "dot-ring";
   }>[];
+  readonly dataLayerSymbologyStates: readonly DataLayerSymbologyState[];
+  readonly visualTokenOptions: readonly Readonly<{
+    readonly tokenId: string;
+    readonly color: string;
+    readonly label: string;
+  }>[];
   readonly textOccurrencePresentationStates: readonly Readonly<{
     readonly occurrenceNodeId: string;
     readonly semanticId: string;
@@ -184,6 +336,7 @@ type CommandResult = Readonly<{
   readonly affectedOccurrenceNodeIds?: readonly string[];
   readonly affectedBoringLogCount?: number;
   readonly mappedClassificationKey?: string;
+  readonly columnId?: string;
 }>;
 
 type TextArrangementOperation =
@@ -240,6 +393,7 @@ type LifecycleOperation =
   | "get-state"
   | "new-project"
   | "open-project"
+  | "connect-rslog"
   | "import-rslog-project-data"
   | "save-project"
   | "save-project-as"
@@ -274,6 +428,17 @@ type StudioApis = Readonly<{
       readonly materialFillColor: string | null;
       readonly patternId: string | null;
     }) => Promise<CommandResult>;
+    readonly setDataLayerSymbology: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly applyScope: "layer" | "project-default";
+      readonly layerId: string;
+      readonly visible: boolean;
+      readonly order: number;
+      readonly line: DataLayerLineSymbol | null;
+      readonly point: DataLayerPointSymbol | null;
+      readonly range: DataLayerRangeSymbol | null;
+      readonly legend: Readonly<{ readonly visible: boolean; readonly label: string }>;
+    }) => Promise<CommandResult>;
     readonly setTextOccurrenceStyle: (input: {
       readonly expectedWorkingRevision: number;
       readonly applyScope:
@@ -288,6 +453,7 @@ type StudioApis = Readonly<{
         readonly baseStyleId: string;
       }>[];
       readonly fontFamilyId: string;
+      readonly fontStyle: "normal" | "italic";
       readonly fontSizeMpt: number;
       readonly fontWeight: number;
       readonly lineHeightMpt: number;
@@ -332,16 +498,49 @@ type StudioApis = Readonly<{
       readonly expectedWorkingRevision: number;
       readonly mutation: PageGuideMutation;
     }) => Promise<CommandResult>;
+    readonly setPageSetup: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly paperPreset: "letter" | "a4" | "custom";
+      readonly orientation: "portrait" | "landscape";
+      readonly widthMpt: number;
+      readonly heightMpt: number;
+      readonly marginsMpt: Readonly<{
+        readonly topMpt: number;
+        readonly rightMpt: number;
+        readonly bottomMpt: number;
+        readonly leftMpt: number;
+      }>;
+    }) => Promise<CommandResult>;
     readonly setColumnDivider: (input: {
       readonly expectedWorkingRevision: number;
       readonly dividerAfterColumnId: string;
       readonly requestedDividerXMpt: number;
       readonly resizeMode: ColumnResizeMode;
     }) => Promise<CommandResult>;
+    readonly addProviderColumn: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly fieldId: string;
+      readonly targetRole: ProviderColumnTargetRole;
+      readonly referenceColumnId: string | null;
+      readonly side: "before" | "after";
+    }) => Promise<CommandResult>;
+    readonly setColumnHeading: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly columnId: string;
+      readonly heading: string;
+    }) => Promise<CommandResult>;
     readonly setRegionBoundary: (input: {
       readonly expectedWorkingRevision: number;
       readonly boundary: RegionBoundary;
       readonly requestedBoundaryYMpt: number;
+    }) => Promise<CommandResult>;
+    readonly setDataDepthConfiguration: (input: {
+      readonly expectedWorkingRevision: number;
+      readonly startDepthFt: number;
+      readonly totalDepthFt: number;
+      readonly intervalFt: number;
+      readonly mptPerFoot: number;
+      readonly nValueGraphMaximum: number | null;
     }) => Promise<CommandResult>;
     readonly arrangeTextOccurrences: (input: {
       readonly expectedWorkingRevision: number;
@@ -357,6 +556,7 @@ type StudioApis = Readonly<{
   };
   readonly document: {
     readonly setDisplayValue: (input: unknown) => Promise<CommandResult>;
+    readonly revertDisplayValue: (input: unknown) => Promise<CommandResult>;
     readonly undo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
     readonly redo: (input: { readonly expectedWorkingRevision: number }) => Promise<CommandResult>;
   };
@@ -410,7 +610,14 @@ function provenanceText(provenance: BoringLogValueProvenance | null): string {
   return `Effective override · ${provenance.overrideIdentity} · original ${provenance.original.sourceFieldIdentity}`;
 }
 
-function boundsText(nodes: readonly BoringLogSceneNode[]): string {
+function formatPoints(valueMpt: number): string {
+  return (valueMpt / 1_000)
+    .toFixed(2)
+    .replace(/\.00$/u, "")
+    .replace(/(\.\d)0$/u, "$1");
+}
+
+function rawBoundsText(nodes: readonly BoringLogSceneNode[]): string {
   const bounded = nodes.find((node) => node.kind === "group" || node.kind === "rect");
   if (bounded?.kind === "group" || bounded?.kind === "rect") {
     const { xMpt, yMpt, widthMpt, heightMpt } = bounded.bounds;
@@ -425,6 +632,44 @@ function boundsText(nodes: readonly BoringLogSceneNode[]): string {
     return `${text.frame.xMpt}, ${text.frame.yMpt} · ${text.frame.widthMpt} × ${text.frame.heightMpt} mpt`;
   }
   return "Vector geometry";
+}
+
+function physicalBoundsText(nodes: readonly BoringLogSceneNode[]): string {
+  const bounded = nodes.find((node) => node.kind === "group" || node.kind === "rect");
+  if (bounded?.kind === "group" || bounded?.kind === "rect") {
+    const { xMpt, yMpt, widthMpt, heightMpt } = bounded.bounds;
+    return `X ${formatPoints(xMpt)} pt · Y ${formatPoints(yMpt)} pt · ${formatPoints(widthMpt)} × ${formatPoints(heightMpt)} pt`;
+  }
+  const line = nodes.find((node) => node.kind === "line");
+  if (line?.kind === "line") {
+    return `From ${formatPoints(line.from.xMpt)}, ${formatPoints(line.from.yMpt)} pt to ${formatPoints(line.to.xMpt)}, ${formatPoints(line.to.yMpt)} pt`;
+  }
+  const text = nodes.find((node) => node.kind === "text");
+  if (text?.kind === "text") {
+    return `X ${formatPoints(text.frame.xMpt)} pt · Y ${formatPoints(text.frame.yMpt)} pt · ${formatPoints(text.frame.widthMpt)} × ${formatPoints(text.frame.heightMpt)} pt`;
+  }
+  return "Vector geometry";
+}
+
+function propertyDescription(property: EditableValue["property"]): string {
+  switch (property) {
+    case "project-name":
+      return "Project title · applies to this RSrender project";
+    case "boring-title":
+      return "Boring title · applies to the active boring";
+    case "material-description":
+      return "Material description · applies to this depth interval";
+    case "sample-recovery":
+      return "Sample recovery · percent for this sample";
+    case "remarks":
+      return "Remark text · applies to this exact remark";
+    case "lithology-pattern-style":
+      return "Hatch pattern · use Lithology appearance below";
+    case "description-column-width-mpt":
+      return "Description column width · measured in points";
+    default:
+      return `${humanize(property)} · applies to the selected project element`;
+  }
 }
 
 function sceneFromDocument(): unknown {
@@ -486,12 +731,22 @@ async function main(): Promise<void> {
   const propertyRole = element<HTMLElement>("property-role");
   const propertyNodeCount = element<HTMLElement>("property-node-count");
   const propertyContent = element<HTMLTextAreaElement>("property-content");
+  const insertDynamicText = element<HTMLButtonElement>("insert-dynamic-text");
+  const dynamicTextCatalog = element<HTMLElement>("dynamic-text-catalog");
+  const dynamicTextSearch = element<HTMLInputElement>("dynamic-text-search");
+  const dynamicTextOptions = element<HTMLElement>("dynamic-text-options");
+  const dynamicTextEmpty = element<HTMLElement>("dynamic-text-empty");
   const applyProperty = element<HTMLButtonElement>("apply-property");
   const propertyHelp = element<HTMLElement>("property-help");
   const propertyBounds = element<HTMLElement>("property-bounds");
+  const propertyScope = element<HTMLElement>("property-scope");
   const propertyProvenance = element<HTMLElement>("property-provenance");
+  const propertySourceProject = element<HTMLElement>("property-source-project");
   const propertySourceOriginal = element<HTMLElement>("property-source-original");
   const propertyEffectiveValue = element<HTMLElement>("property-effective-value");
+  const propertyOverrideState = element<HTMLElement>("property-override-state");
+  const propertyRawBounds = element<HTMLElement>("property-raw-bounds");
+  const propertyRawProvenance = element<HTMLElement>("property-raw-provenance");
   const regionResizeProperties = element<HTMLDetailsElement>("region-resize-properties");
   const regionHeight = element<HTMLInputElement>("region-height");
   const applyRegionHeight = element<HTMLButtonElement>("apply-region-height");
@@ -516,10 +771,71 @@ async function main(): Promise<void> {
   const lithologyFillScope = element<HTMLElement>("lithology-fill-scope");
   const lithologyPatternScope = element<HTMLElement>("lithology-pattern-scope");
   const lithologyAppearanceHelp = element<HTMLElement>("lithology-appearance-help");
+  const dataLayerSymbologyProperties = element<HTMLDetailsElement>(
+    "data-layer-symbology-properties",
+  );
+  const dataLayerSymbologyName = element<HTMLElement>("data-layer-symbology-name");
+  const dataLayerSymbologySource = element<HTMLElement>("data-layer-symbology-source");
+  const dataLayerSymbolPreview = element<SVGSVGElement>("data-layer-symbol-preview");
+  const dataLayerVisible = element<HTMLInputElement>("data-layer-visible");
+  const dataLayerOrder = element<HTMLInputElement>("data-layer-order");
+  const dataLayerLineColor = element<HTMLSelectElement>("data-layer-line-color");
+  const dataLayerLineWidth = element<HTMLInputElement>("data-layer-line-width");
+  const dataLayerLineStyle = element<HTMLSelectElement>("data-layer-line-style");
+  const dataLayerPointControls = element<HTMLFieldSetElement>("data-layer-point-controls");
+  const dataLayerPointShape = element<HTMLSelectElement>("data-layer-point-shape");
+  const dataLayerPointSize = element<HTMLInputElement>("data-layer-point-size");
+  const dataLayerPointFill = element<HTMLSelectElement>("data-layer-point-fill");
+  const dataLayerPointStroke = element<HTMLSelectElement>("data-layer-point-stroke");
+  const dataLayerPointStrokeWidth = element<HTMLInputElement>("data-layer-point-stroke-width");
+  const dataLayerRangeFirstControls = element<HTMLFieldSetElement>(
+    "data-layer-range-first-controls",
+  );
+  const dataLayerRangeFirstShape = element<HTMLSelectElement>("data-layer-range-first-shape");
+  const dataLayerRangeFirstSize = element<HTMLInputElement>("data-layer-range-first-size");
+  const dataLayerRangeFirstFill = element<HTMLSelectElement>("data-layer-range-first-fill");
+  const dataLayerRangeFirstStroke = element<HTMLSelectElement>("data-layer-range-first-stroke");
+  const dataLayerRangeFirstStrokeWidth = element<HTMLInputElement>(
+    "data-layer-range-first-stroke-width",
+  );
+  const dataLayerRangeSecondControls = element<HTMLFieldSetElement>(
+    "data-layer-range-second-controls",
+  );
+  const dataLayerRangeSecondShape = element<HTMLSelectElement>("data-layer-range-second-shape");
+  const dataLayerRangeSecondSize = element<HTMLInputElement>("data-layer-range-second-size");
+  const dataLayerRangeSecondFill = element<HTMLSelectElement>("data-layer-range-second-fill");
+  const dataLayerRangeSecondStroke = element<HTMLSelectElement>("data-layer-range-second-stroke");
+  const dataLayerRangeSecondStrokeWidth = element<HTMLInputElement>(
+    "data-layer-range-second-stroke-width",
+  );
+  const dataLayerLegendVisible = element<HTMLInputElement>("data-layer-legend-visible");
+  const dataLayerLegendLabel = element<HTMLInputElement>("data-layer-legend-label");
+  const applyDataLayerSymbology = element<HTMLButtonElement>("apply-data-layer-symbology");
+  const dataLayerApplyScope = document.createElement("select");
+  dataLayerApplyScope.id = "data-layer-apply-scope";
+  dataLayerApplyScope.replaceChildren(
+    ...[
+      ["layer", "This data layer in the active boring"],
+      ["project-default", "Project default across every boring"],
+    ].map(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value!;
+      option.textContent = label!;
+      return option;
+    }),
+  );
+  const dataLayerApplyScopeLabel = document.createElement("label");
+  dataLayerApplyScopeLabel.append("Apply scope", dataLayerApplyScope);
+  applyDataLayerSymbology.parentElement?.insertBefore(
+    dataLayerApplyScopeLabel,
+    applyDataLayerSymbology,
+  );
+  const dataLayerSymbologyHelp = element<HTMLElement>("data-layer-symbology-help");
   const textStyleProperties = element<HTMLDetailsElement>("text-style-properties");
   const textLayoutProperties = element<HTMLDetailsElement>("text-layout-properties");
   const textFontFamily = element<HTMLSelectElement>("text-font-family");
   const textFontSize = element<HTMLInputElement>("text-font-size");
+  const textFontStyle = element<HTMLSelectElement>("text-font-style");
   const textFontWeight = element<HTMLSelectElement>("text-font-weight");
   const textDecoration = element<HTMLSelectElement>("text-decoration");
   const textLineHeight = element<HTMLInputElement>("text-line-height");
@@ -572,6 +888,12 @@ async function main(): Promise<void> {
   const propertiesOptions = element<HTMLButtonElement>("properties-options");
   const canvasContextMenu = element<HTMLDivElement>("canvas-context-menu");
   const contextProperties = element<HTMLButtonElement>("context-properties");
+  const contextAddColumn = element<HTMLButtonElement>("context-add-column");
+  const addColumnCatalog = element<HTMLElement>("add-column-catalog");
+  const addColumnSearch = element<HTMLInputElement>("add-column-search");
+  const addColumnSide = element<HTMLSelectElement>("add-column-side");
+  const addColumnOptions = element<HTMLElement>("add-column-options");
+  const addColumnEmpty = element<HTMLElement>("add-column-empty");
   const arrangementButtons = Object.freeze({
     alignLeft: [
       element<HTMLButtonElement>("align-left"),
@@ -656,6 +978,32 @@ async function main(): Promise<void> {
   ]);
   const status = element<HTMLParagraphElement>("editor-status");
   const sceneSummary = element<HTMLElement>("scene-summary");
+  const dataProjectName = element<HTMLElement>("data-project-name");
+  const dataTopElevation = element<HTMLElement>("data-top-elevation");
+  const dataDepthRange = element<HTMLElement>("data-depth-range");
+  const dataTotalDepth = element<HTMLElement>("data-total-depth");
+  const dataDepthScale = element<HTMLElement>("data-depth-scale");
+  const dataGroundElevation = element<HTMLInputElement>("data-ground-elevation");
+  const dataElevationDatum = element<HTMLInputElement>("data-elevation-datum");
+  const dataReferenceStart = element<HTMLInputElement>("data-reference-start");
+  const dataDepthInterval = element<HTMLInputElement>("data-depth-interval");
+  const dataTotalDepthInput = element<HTMLInputElement>("data-total-depth-input");
+  const dataCompletionDepth = element<HTMLInputElement>("data-completion-depth");
+  const dataDepthScaleInput = element<HTMLInputElement>("data-depth-scale-input");
+  const dataNGraphMaximum = element<HTMLInputElement>("data-n-graph-maximum");
+  const applyDataControlsButton = element<HTMLButtonElement>("apply-data-controls");
+  const toggleAttributeTableButton = element<HTMLButtonElement>("toggle-attribute-table");
+  const attributeTableDock = element<HTMLElement>("attribute-table-dock");
+  const attributeTableSplitter = element<HTMLElement>("attribute-table-splitter");
+  const attributeTableSummary = element<HTMLOutputElement>("attribute-table-summary");
+  const attributeTableFind = element<HTMLInputElement>("attribute-table-find");
+  const attributeTableKind = element<HTMLSelectElement>("attribute-table-kind");
+  const attributeTableSelectedOnly = element<HTMLInputElement>("attribute-table-selected-only");
+  const attributeTableGoTo = element<HTMLButtonElement>("attribute-table-go-to");
+  const attributeTableViewport = element<HTMLElement>("attribute-table-viewport");
+  const attributeTableBody = element<HTMLTableSectionElement>("attribute-table-body");
+  const attributeTableEmpty = element<HTMLElement>("attribute-table-empty");
+  const attributeHoverCard = element<HTMLElement>("attribute-hover-card");
   const documentState = element<HTMLElement>("document-state");
   const documentName = element<HTMLElement>("document-name");
   const documentStateDot = element<HTMLElement>("document-state-dot");
@@ -676,6 +1024,15 @@ async function main(): Promise<void> {
   const panToolButton = element<HTMLButtonElement>("pan-tool");
   const smartSnapButton = element<HTMLButtonElement>("toggle-smart-snap");
   const gridSnapButton = element<HTMLButtonElement>("toggle-grid-snap");
+  const pagePaperPreset = element<HTMLSelectElement>("page-paper-preset");
+  const pageOrientation = element<HTMLSelectElement>("page-orientation");
+  const pageWidth = element<HTMLInputElement>("page-width");
+  const pageHeight = element<HTMLInputElement>("page-height");
+  const pageMarginTop = element<HTMLInputElement>("page-margin-top");
+  const pageMarginRight = element<HTMLInputElement>("page-margin-right");
+  const pageMarginBottom = element<HTMLInputElement>("page-margin-bottom");
+  const pageMarginLeft = element<HTMLInputElement>("page-margin-left");
+  const applyPageSetupButton = element<HTMLButtonElement>("apply-page-setup");
   const boringSelector = element<HTMLInputElement>("boring-selector");
   const boringOptions = element<HTMLDataListElement>("boring-options");
   const boringPosition = element<HTMLOutputElement>("boring-position");
@@ -732,6 +1089,25 @@ async function main(): Promise<void> {
     | undefined;
   let contentsPaneWidth: number = studioPaneLimits.contents.default;
   let propertiesPaneWidth: number = studioPaneLimits.properties.default;
+  let preferredContentsPaneWidth: number = studioPaneLimits.contents.default;
+  let preferredPropertiesPaneWidth: number = studioPaneLimits.properties.default;
+  let attributeTableHeight = 220;
+  let attributeTableResize:
+    | Readonly<{
+        readonly pointerId: number;
+        readonly startClientY: number;
+        readonly height: number;
+      }>
+    | undefined;
+  let attributeSort:
+    | Readonly<{
+        readonly key: "recordKind" | "label" | "fromFt" | "toFt";
+        readonly direction: "ascending" | "descending";
+      }>
+    | undefined;
+  let attributeActiveFieldIdentity: string | null = null;
+  let attributeHoveredSemanticId: string | null = null;
+  let attributeVirtualRenderPending = false;
   let pinchZoomAccumulator = 0;
   let directManipulationGesture:
     | {
@@ -807,6 +1183,8 @@ async function main(): Promise<void> {
   let liveReflowPreviewTimer: number | undefined;
   let liveReflowPreviewFrame: TextFrame | undefined;
   let liveReflowPreviewInFlight: Promise<void> | null = null;
+  let directManipulationPreviewAnimationFrame: number | undefined;
+  let pendingDirectManipulationPreview: DirectManipulationPreview | undefined;
   let pendingKeyboardNudge:
     | {
         readonly expectedWorkingRevision: number;
@@ -851,6 +1229,217 @@ async function main(): Promise<void> {
     return (
       studioProjection?.editableValues.find((value) => value.semanticId === semanticId) ?? null
     );
+  }
+
+  function dataLayerStateForSemanticId(semanticId: string | null): DataLayerSymbologyState | null {
+    const layerId =
+      semanticId === null ? undefined : /^data-layer:([^:]+)(?::|$)/u.exec(semanticId)?.[1];
+    if (layerId === undefined) return null;
+    return (
+      (studioProjection?.dataLayerSymbologyStates ?? []).find(
+        (candidate) => candidate.layerId === layerId,
+      ) ?? null
+    );
+  }
+
+  function replaceVisualTokenOptions(
+    select: HTMLSelectElement,
+    selectedToken: string | null,
+    allowNone: boolean,
+  ): void {
+    const options: HTMLOptionElement[] = [];
+    if (allowNone) {
+      const none = document.createElement("option");
+      none.value = "";
+      none.textContent = "No fill";
+      options.push(none);
+    }
+    for (const token of studioProjection?.visualTokenOptions ?? []) {
+      const option = document.createElement("option");
+      option.value = token.tokenId;
+      option.textContent = `${token.label} · ${token.color}`;
+      options.push(option);
+    }
+    select.replaceChildren(...options);
+    select.value = selectedToken ?? "";
+  }
+
+  function dashPreset(dashMpt: readonly number[]): "solid" | "dashed" | "dotted" | "custom" {
+    if (dashMpt.length === 0) return "solid";
+    if (dashMpt.length === 2 && dashMpt[0] === 3_000 && dashMpt[1] === 2_000) return "dashed";
+    if (dashMpt.length === 2 && dashMpt[0] === 750 && dashMpt[1] === 1_500) return "dotted";
+    return "custom";
+  }
+
+  function selectedDashMpt(state: DataLayerSymbologyState): readonly number[] {
+    switch (dataLayerLineStyle.value) {
+      case "solid":
+        return Object.freeze([]);
+      case "dashed":
+        return Object.freeze([3_000, 2_000]);
+      case "dotted":
+        return Object.freeze([750, 1_500]);
+      default:
+        return Object.freeze([...(state.line ?? state.range!.line).dashMpt]);
+    }
+  }
+
+  function visualTokenColor(tokenId: string | null): string {
+    if (tokenId === null) return "none";
+    return (
+      (studioProjection?.visualTokenOptions ?? []).find((token) => token.tokenId === tokenId)
+        ?.color ?? "#111827"
+    );
+  }
+
+  function renderDataLayerSymbolPreview(): void {
+    const state = dataLayerStateForSemanticId(selectedSemanticId);
+    dataLayerSymbolPreview.replaceChildren();
+    if (state === null) return;
+    const namespace = "http://www.w3.org/2000/svg";
+    const line = document.createElementNS(namespace, "line");
+    line.setAttribute("x1", "20");
+    line.setAttribute("x2", "200");
+    line.setAttribute("y1", "26");
+    line.setAttribute("y2", "26");
+    line.setAttribute("stroke", visualTokenColor(dataLayerLineColor.value));
+    line.setAttribute("stroke-width", String(Math.max(1, Number(dataLayerLineWidth.value))));
+    const dash = selectedDashMpt(state).map((value) => value / 1_000);
+    if (dash.length > 0) line.setAttribute("stroke-dasharray", dash.join(" "));
+    dataLayerSymbolPreview.append(line);
+    const appendPoint = (
+      x: number,
+      shape: DataLayerPointShape,
+      size: number,
+      fillToken: string | null,
+      strokeToken: string,
+      strokeWidth: number,
+    ): void => {
+      const radius = Math.max(2, Math.min(12, size / 2));
+      const point = document.createElementNS(
+        namespace,
+        shape === "circle" ? "circle" : shape === "square" ? "rect" : "polygon",
+      );
+      if (shape === "circle") {
+        point.setAttribute("cx", String(x));
+        point.setAttribute("cy", "26");
+        point.setAttribute("r", String(radius));
+      } else if (shape === "square") {
+        point.setAttribute("x", String(x - radius));
+        point.setAttribute("y", String(26 - radius));
+        point.setAttribute("width", String(radius * 2));
+        point.setAttribute("height", String(radius * 2));
+      } else {
+        point.setAttribute(
+          "points",
+          `${x},${26 - radius} ${x + radius},${26 + radius} ${x - radius},${26 + radius}`,
+        );
+      }
+      point.setAttribute("fill", visualTokenColor(fillToken));
+      point.setAttribute("stroke", visualTokenColor(strokeToken));
+      point.setAttribute("stroke-width", String(Math.max(0.5, strokeWidth)));
+      dataLayerSymbolPreview.append(point);
+    };
+    if (state.kind === "numeric-polyline") {
+      appendPoint(
+        110,
+        dataLayerPointShape.value as DataLayerPointShape,
+        Number(dataLayerPointSize.value),
+        dataLayerPointFill.value || null,
+        dataLayerPointStroke.value,
+        Number(dataLayerPointStrokeWidth.value),
+      );
+    } else {
+      appendPoint(
+        65,
+        dataLayerRangeFirstShape.value as DataLayerPointShape,
+        Number(dataLayerRangeFirstSize.value),
+        dataLayerRangeFirstFill.value || null,
+        dataLayerRangeFirstStroke.value,
+        Number(dataLayerRangeFirstStrokeWidth.value),
+      );
+      appendPoint(
+        155,
+        dataLayerRangeSecondShape.value as DataLayerPointShape,
+        Number(dataLayerRangeSecondSize.value),
+        dataLayerRangeSecondFill.value || null,
+        dataLayerRangeSecondStroke.value,
+        Number(dataLayerRangeSecondStrokeWidth.value),
+      );
+    }
+  }
+
+  function updateDataLayerSymbologyHelp(): void {
+    const state = dataLayerStateForSemanticId(selectedSemanticId);
+    if (state === null) return;
+    dataLayerSymbologyHelp.textContent =
+      dataLayerApplyScope.value === "project-default"
+        ? `${state.label} will be updated across every compatible boring in this project as one Undo step. No boring is changed if any assigned template cannot admit the symbol.`
+        : `${state.label} will change only in the active boring. Canvas, hover targets, legend, SVG, and PDF consume the same renderer-neutral symbol definition.`;
+  }
+
+  function populateDataLayerSymbology(state: DataLayerSymbologyState): void {
+    const line = state.line ?? state.range!.line;
+    dataLayerSymbologyName.textContent = `${state.label} · ${humanize(state.kind)}`;
+    dataLayerSymbologySource.textContent =
+      state.source === "layer-override" ? "Project override" : "Template default";
+    dataLayerVisible.checked = state.visible;
+    dataLayerOrder.value = String(state.order);
+    replaceVisualTokenOptions(dataLayerLineColor, line.strokeToken, false);
+    dataLayerLineWidth.value = String(line.strokeWidthMpt / 1_000);
+    const selectedDashPreset = dashPreset(line.dashMpt);
+    if (
+      selectedDashPreset === "custom" &&
+      dataLayerLineStyle.querySelector('option[value="custom"]') === null
+    ) {
+      const custom = document.createElement("option");
+      custom.value = "custom";
+      custom.textContent = "Custom (preserved)";
+      dataLayerLineStyle.append(custom);
+    }
+    dataLayerLineStyle.value = selectedDashPreset;
+    dataLayerPointControls.hidden = state.point === null;
+    dataLayerRangeFirstControls.hidden = state.range === null;
+    dataLayerRangeSecondControls.hidden = state.range === null;
+    if (state.point !== null) {
+      dataLayerPointShape.value = state.point.shape;
+      dataLayerPointSize.value = String(state.point.sizeMpt / 1_000);
+      replaceVisualTokenOptions(dataLayerPointFill, state.point.fillToken, true);
+      replaceVisualTokenOptions(dataLayerPointStroke, state.point.strokeToken, false);
+      dataLayerPointStrokeWidth.value = String(state.point.strokeWidthMpt / 1_000);
+    }
+    if (state.range !== null) {
+      const endpoints = [
+        {
+          point: state.range.firstEndpoint,
+          shape: dataLayerRangeFirstShape,
+          size: dataLayerRangeFirstSize,
+          fill: dataLayerRangeFirstFill,
+          stroke: dataLayerRangeFirstStroke,
+          strokeWidth: dataLayerRangeFirstStrokeWidth,
+        },
+        {
+          point: state.range.secondEndpoint,
+          shape: dataLayerRangeSecondShape,
+          size: dataLayerRangeSecondSize,
+          fill: dataLayerRangeSecondFill,
+          stroke: dataLayerRangeSecondStroke,
+          strokeWidth: dataLayerRangeSecondStrokeWidth,
+        },
+      ] as const;
+      for (const endpoint of endpoints) {
+        endpoint.shape.value = endpoint.point.shape;
+        endpoint.size.value = String(endpoint.point.sizeMpt / 1_000);
+        replaceVisualTokenOptions(endpoint.fill, endpoint.point.fillToken, true);
+        replaceVisualTokenOptions(endpoint.stroke, endpoint.point.strokeToken, false);
+        endpoint.strokeWidth.value = String(endpoint.point.strokeWidthMpt / 1_000);
+      }
+    }
+    dataLayerLegendVisible.checked = state.legend.visible;
+    dataLayerLegendLabel.value = state.legend.label;
+    applyDataLayerSymbology.disabled = lifecycleState?.readOnly === true;
+    updateDataLayerSymbologyHelp();
+    renderDataLayerSymbolPreview();
   }
 
   function orderedPublicationSelection(): readonly string[] {
@@ -1038,6 +1627,7 @@ async function main(): Promise<void> {
     document.body.dataset["authoritativeFileBound"] = String(next.authoritativeFileBound);
     document.body.dataset["projectStorageStatus"] = next.storageStatus;
     document.body.dataset["activeBoringLogIdentity"] = next.activeBoringLogIdentity;
+    document.body.dataset["workingRevision"] = String(next.workingRevision);
     boringOptions.replaceChildren(
       ...next.boringLogs.map((boring) => {
         const option = document.createElement("option");
@@ -1131,6 +1721,22 @@ async function main(): Promise<void> {
         result.state?.workingRevision ?? null,
         `Project saved and reopened successfully${result.state?.displayPath === null ? "." : `: ${result.state?.displayPath}`}`,
       );
+      return;
+    }
+    if (
+      result.code === "RSLOG_AUTHENTICATED" ||
+      result.code === "RSLOG_ALREADY_AUTHENTICATED" ||
+      result.code === "RSLOG_CONNECTED_SCHEMA_LEDGER_READY" ||
+      result.code === "RSLOG_LIVE_SOURCE_SCHEMAS_READY"
+    ) {
+      status.textContent =
+        result.code === "RSLOG_LIVE_SOURCE_SCHEMAS_READY"
+          ? "Connected to RSLog and captured the selected project's value-free borehole and RSGeo schemas for final live-import admission."
+          : result.code === "RSLOG_CONNECTED_SCHEMA_LEDGER_READY"
+            ? "Connected to RSLog and captured a value-free project schema ledger for the project chooser."
+            : result.code === "RSLOG_AUTHENTICATED"
+              ? "Connected to RSLog for this application session. Choose a Source Project next."
+              : "RSLog is already connected for this application session.";
       return;
     }
     if (result.code === "PROJECT_BORING_CHANGED" && result.state !== null) {
@@ -1840,7 +2446,7 @@ async function main(): Promise<void> {
     propertyBounds.textContent =
       occurrenceNodeIds.length > 1
         ? `${occurrenceNodeIds.length} independent text frames; Properties values follow the Key Element`
-        : boundsText([key]);
+        : physicalBoundsText([key]);
     selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${key.id}`;
     status.textContent = announcement;
   }
@@ -2421,6 +3027,39 @@ async function main(): Promise<void> {
     status.textContent = `Canvas preview ${Math.round(frame.xMpt)} / ${Math.round(frame.yMpt)} / ${Math.round(frame.widthMpt)} / ${Math.round(frame.heightMpt)} mpt.${snapStatus} Release to commit and reflow; Esc cancels.`;
   }
 
+  function applyPendingDirectManipulationPreview(): void {
+    directManipulationPreviewAnimationFrame = undefined;
+    const pending = pendingDirectManipulationPreview;
+    pendingDirectManipulationPreview = undefined;
+    if (pending === undefined) return;
+    previewDirectManipulationFrame(pending.frame, pending.snap);
+    if (pending.reflow) scheduleLiveReflowPreview(pending.frame);
+  }
+
+  function scheduleDirectManipulationPreview(preview: DirectManipulationPreview): void {
+    pendingDirectManipulationPreview = preview;
+    if (directManipulationPreviewAnimationFrame !== undefined) return;
+    directManipulationPreviewAnimationFrame = window.requestAnimationFrame(
+      applyPendingDirectManipulationPreview,
+    );
+  }
+
+  function flushDirectManipulationPreview(): void {
+    if (directManipulationPreviewAnimationFrame !== undefined) {
+      window.cancelAnimationFrame(directManipulationPreviewAnimationFrame);
+    }
+    directManipulationPreviewAnimationFrame = undefined;
+    applyPendingDirectManipulationPreview();
+  }
+
+  function clearDirectManipulationPreview(): void {
+    if (directManipulationPreviewAnimationFrame !== undefined) {
+      window.cancelAnimationFrame(directManipulationPreviewAnimationFrame);
+    }
+    directManipulationPreviewAnimationFrame = undefined;
+    pendingDirectManipulationPreview = undefined;
+  }
+
   function installLiveReflowPreview(
     previewScene: ResolvedBoringLogPageScene,
     occurrenceNodeId: string,
@@ -2481,10 +3120,7 @@ async function main(): Promise<void> {
     })().finally(() => {
       liveReflowPreviewInFlight = null;
       if (liveReflowPreviewFrame !== undefined && directManipulationGesture !== undefined) {
-        liveReflowPreviewTimer = window.setTimeout(() => {
-          liveReflowPreviewTimer = undefined;
-          void runLiveReflowPreview();
-        }, 80);
+        scheduleLiveReflowPreview(liveReflowPreviewFrame);
       }
     });
     liveReflowPreviewInFlight = promise;
@@ -2493,19 +3129,28 @@ async function main(): Promise<void> {
 
   function scheduleLiveReflowPreview(frame: TextFrame): void {
     liveReflowPreviewFrame = frame;
-    if (liveReflowPreviewTimer !== undefined || liveReflowPreviewInFlight !== null) return;
+    if (liveReflowPreviewTimer !== undefined) window.clearTimeout(liveReflowPreviewTimer);
+    if (liveReflowPreviewInFlight !== null) {
+      liveReflowPreviewTimer = undefined;
+      return;
+    }
     liveReflowPreviewTimer = window.setTimeout(() => {
       liveReflowPreviewTimer = undefined;
       void runLiveReflowPreview();
-    }, 80);
+    }, 180);
   }
 
   async function flushLiveReflowPreview(): Promise<void> {
     if (liveReflowPreviewTimer !== undefined) {
       window.clearTimeout(liveReflowPreviewTimer);
       liveReflowPreviewTimer = undefined;
-      await runLiveReflowPreview();
     }
+    if (liveReflowPreviewInFlight !== null) await liveReflowPreviewInFlight;
+    if (liveReflowPreviewTimer !== undefined) {
+      window.clearTimeout(liveReflowPreviewTimer);
+      liveReflowPreviewTimer = undefined;
+    }
+    if (liveReflowPreviewFrame !== undefined) await runLiveReflowPreview();
     if (liveReflowPreviewInFlight !== null) await liveReflowPreviewInFlight;
   }
 
@@ -2519,11 +3164,12 @@ async function main(): Promise<void> {
 
   function renderTree(): void {
     tree.replaceChildren();
-    const items = buildBoringLogStudioTree(scene);
+    const items = buildBoringLogStudioTree(scene, studioProjection?.dataLayerSymbologyStates ?? []);
     const visibleItems = visibleBoringLogStudioTreeItems(items, collapsedTreeItems, filter.value);
-    const sourceSemanticIds = new Set(
-      page.nodes.filter((node) => node.provenance !== null).map(({ semanticId }) => semanticId),
-    );
+    const sourceSemanticIds = new Set([
+      ...page.nodes.filter((node) => node.provenance !== null).map(({ semanticId }) => semanticId),
+      ...(studioProjection?.dataLayerSymbologyStates ?? []).map(({ semanticId }) => semanticId),
+    ]);
     const selectedSemanticIds = new Set(
       page.nodes
         .filter(({ id }) => selectedTextNodeIds.has(id))
@@ -2562,6 +3208,7 @@ async function main(): Promise<void> {
         row.setAttribute("aria-expanded", String(!collapsedTreeItems.has(item.semanticId)));
       }
       row.dataset["semanticId"] = item.semanticId;
+      row.classList.toggle("is-hidden-element", item.hidden);
       const chevron = document.createElement("span");
       chevron.className = "chevron";
       const disclosure = document.createElement("button");
@@ -2595,6 +3242,10 @@ async function main(): Promise<void> {
       selectButton.type = "button";
       selectButton.className = "tree-select";
       selectButton.dataset["commandOwned"] = "tree-select";
+      selectButton.setAttribute(
+        "aria-label",
+        item.hidden ? `${item.label}, hidden; select to edit visibility` : item.label,
+      );
       selectButton.append(icon, label);
       const exactTextNodes = page.nodes.filter(
         (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
@@ -2605,6 +3256,9 @@ async function main(): Promise<void> {
           node.kind === "group" &&
           node.role === "user-text-group" &&
           node.semanticId === item.semanticId,
+      );
+      const exactColumnFrame = page.nodes.find(
+        (node) => node.semanticId === item.semanticId && node.role === "log-column-frame",
       );
       const groupedTextNodes = (exactGroupNode?.childIds ?? [])
         .map((childId) => page.nodes.find(({ id }) => id === childId))
@@ -2647,9 +3301,25 @@ async function main(): Promise<void> {
         }
         select(
           item.semanticId,
-          exactTextNodes.length === 1 ? exactTextNodes[0]!.id : null,
+          exactColumnFrame?.id ?? (exactTextNodes.length === 1 ? exactTextNodes[0]!.id : null),
           event.shiftKey || event.ctrlKey || event.metaKey,
         );
+      });
+      const openContentsContextMenu = (clientX: number, clientY: number): void => {
+        selectButton.click();
+        openCanvasContextMenu(clientX, clientY);
+        status.textContent = `${item.label} selected from Contents; Properties is available.`;
+      };
+      row.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openContentsContextMenu(event.clientX, event.clientY);
+      });
+      selectButton.addEventListener("keydown", (event) => {
+        if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+        event.preventDefault();
+        const bounds = selectButton.getBoundingClientRect();
+        openContentsContextMenu(bounds.left + 16, bounds.top + 16);
       });
       row.append(chevron, selectButton);
       if (exactTextNodes.length === 1) {
@@ -2708,7 +3378,10 @@ async function main(): Promise<void> {
       collapsedTreeItems.clear();
       status.textContent = "All Contents groups expanded.";
     } else {
-      for (const item of buildBoringLogStudioTree(scene)) {
+      for (const item of buildBoringLogStudioTree(
+        scene,
+        studioProjection?.dataLayerSymbologyStates ?? [],
+      )) {
         if (item.hasChildren) collapsedTreeItems.add(item.semanticId);
       }
       status.textContent = "All Contents groups collapsed.";
@@ -2799,10 +3472,140 @@ async function main(): Promise<void> {
     canvasContextMenu.hidden = true;
   }
 
+  function closeAddColumnCatalog(): void {
+    addColumnCatalog.hidden = true;
+    addColumnCatalog.removeAttribute("aria-busy");
+  }
+
+  function renderAddColumnCatalog(): void {
+    const query = addColumnSearch.value.trim().toLocaleLowerCase();
+    const fields =
+      studioProjection?.providerColumnCatalog.filter((field) =>
+        query.length === 0
+          ? true
+          : [field.label, field.fieldId, field.description, field.unit ?? ""]
+              .join(" ")
+              .toLocaleLowerCase()
+              .includes(query),
+      ) ?? [];
+    addColumnOptions.replaceChildren();
+    addColumnEmpty.hidden = fields.length > 0;
+    for (const field of fields) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "add-column-option";
+      button.setAttribute("role", "option");
+      const unavailable =
+        field.availability.state !== "available" || field.supportedTargetRoles.length === 0;
+      button.disabled = unavailable;
+      button.title = unavailable
+        ? (field.availability.reason ?? "This RSLog field is not admitted for a log column.")
+        : `Add ${field.label}`;
+      const heading = document.createElement("span");
+      heading.className = "add-column-option-heading";
+      const label = document.createElement("strong");
+      label.textContent = field.label;
+      const kind = document.createElement("small");
+      kind.textContent = [field.valueType, field.unit].filter(Boolean).join(" · ");
+      heading.append(label, kind);
+      const description = document.createElement("span");
+      description.textContent = unavailable
+        ? (field.availability.reason ?? field.description)
+        : field.description;
+      button.append(heading, description);
+      button.addEventListener("click", () => void addProviderColumn(field));
+      addColumnOptions.append(button);
+    }
+  }
+
+  function openAddColumnCatalog(): void {
+    hideCanvasContextMenu();
+    if (
+      studioProjection === null ||
+      lifecycleState?.readOnly === true ||
+      !studioProjection.providerColumnCatalog.some(
+        (field) => field.availability.state === "available",
+      )
+    ) {
+      status.textContent =
+        lifecycleState?.readOnly === true
+          ? "This Log Project is read-only; columns cannot be added."
+          : "No admitted RSLog fields are available to add as columns.";
+      return;
+    }
+    addColumnSearch.value = "";
+    renderAddColumnCatalog();
+    addColumnCatalog.hidden = false;
+    addColumnSearch.focus();
+    const selected = selectedPlannedColumn();
+    status.textContent =
+      selected === undefined
+        ? "Choose an RSLog field; it will be added after the last log column."
+        : `Choose an RSLog field to add beside ${humanize(selected.columns[selected.index]!.id)}.`;
+  }
+
+  async function addProviderColumn(field: ProviderColumnField): Promise<void> {
+    const apis = studioApis();
+    if (
+      apis === null ||
+      studioProjection === null ||
+      lifecycleState?.readOnly === true ||
+      field.availability.state !== "available"
+    ) {
+      return;
+    }
+    const targetRole = field.supportedTargetRoles[0];
+    if (targetRole === undefined) {
+      status.textContent = `${field.label} has no admitted log-column presentation.`;
+      return;
+    }
+    const selected = selectedPlannedColumn();
+    const referenceColumnId = selected === undefined ? null : selected.columns[selected.index]!.id;
+    addColumnCatalog.setAttribute("aria-busy", "true");
+    for (const button of addColumnOptions.querySelectorAll<HTMLButtonElement>("button")) {
+      button.disabled = true;
+    }
+    status.textContent = `Adding ${field.label} through the structured layout command…`;
+    const result = await apis.studio.addProviderColumn({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      fieldId: field.fieldId,
+      targetRole,
+      referenceColumnId,
+      side: addColumnSide.value === "before" ? "before" : "after",
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      addColumnCatalog.removeAttribute("aria-busy");
+      renderAddColumnCatalog();
+      status.textContent = `Add Column failed: ${result.code ?? "ADD_COLUMN_UNAVAILABLE"}. The document was not changed.`;
+      return;
+    }
+    closeAddColumnCatalog();
+    const refreshed = await refreshStudioProjection(
+      result.workingRevision,
+      `${field.label} column added at revision ${result.workingRevision}; Undo will remove it.`,
+    );
+    if (refreshed && result.columnId !== undefined) select(result.columnId);
+  }
+
   function openCanvasContextMenu(clientX: number, clientY: number): void {
+    const addUnavailable =
+      studioProjection === null ||
+      lifecycleState?.readOnly === true ||
+      !studioProjection.providerColumnCatalog.some(
+        (field) => field.availability.state === "available",
+      );
+    contextAddColumn.disabled = addUnavailable;
+    contextAddColumn.title =
+      lifecycleState?.readOnly === true
+        ? "The Log Project is read-only"
+        : addUnavailable
+          ? "No admitted RSLog fields are available"
+          : selectedPlannedColumn() === undefined
+            ? "Add an RSLog field after the last log column"
+            : "Add an RSLog field beside the selected column";
     canvasContextMenu.hidden = false;
-    canvasContextMenu.style.left = "0px";
-    canvasContextMenu.style.top = "0px";
+    canvasContextMenu.dataset["left"] = "0";
+    canvasContextMenu.dataset["top"] = "0";
     const bounds = canvasContextMenu.getBoundingClientRect();
     const position = resolveStudioContextMenuPosition({
       clientX,
@@ -2812,19 +3615,28 @@ async function main(): Promise<void> {
       menuWidth: bounds.width,
       menuHeight: bounds.height,
     });
-    canvasContextMenu.style.left = `${position.left}px`;
-    canvasContextMenu.style.top = `${position.top}px`;
+    canvasContextMenu.dataset["left"] = String(position.left);
+    canvasContextMenu.dataset["top"] = String(position.top);
     contextProperties.focus();
   }
 
   function focusSelectedProperties(): void {
     hideCanvasContextMenu();
     showPropertyPanel("element");
-    propertiesScroll.focus();
+    const dataLayerState = dataLayerStateForSemanticId(selectedSemanticId);
+    if (dataLayerState !== null) {
+      dataLayerSymbologyProperties.open = true;
+      dataLayerSymbologyProperties.scrollIntoView({ block: "nearest" });
+      dataLayerLineColor.focus();
+    } else {
+      propertiesScroll.focus();
+    }
     status.textContent =
-      selectedSceneNodeId === null
-        ? "Properties opened for the selected element."
-        : `Properties opened for exact occurrence ${selectedSceneNodeId}.`;
+      dataLayerState !== null
+        ? `Graph symbology opened for ${dataLayerState.label}.`
+        : selectedSceneNodeId === null
+          ? "Properties opened for the selected element."
+          : `Properties opened for exact occurrence ${selectedSceneNodeId}.`;
   }
 
   function updateArrangementControls(): void {
@@ -3314,9 +4126,11 @@ async function main(): Promise<void> {
     showPropertyPanel("element");
     columnResizeProperties.hidden = true;
     regionResizeProperties.hidden = true;
+    dataLayerSymbologyProperties.hidden = true;
     const requestedNodes = page.nodes.filter((node) => node.semanticId === semanticId);
     const requestedRepresentative =
       (nodeId === null ? undefined : requestedNodes.find((node) => node.id === nodeId)) ??
+      requestedNodes.find((node) => node.role === "log-column-frame") ??
       requestedNodes.find((node) => node.kind === "text") ??
       requestedNodes[0];
     const exactTextNode =
@@ -3334,7 +4148,7 @@ async function main(): Promise<void> {
       if (exactTextNode !== undefined) {
         selectedTextNodeIds.add(exactTextNode.id);
         selectedSceneNodeId = exactTextNode.id;
-      } else selectedSceneNodeId = nodeId;
+      } else selectedSceneNodeId = requestedRepresentative?.id ?? nodeId;
       selectedSemanticId = semanticId;
     }
     if (additiveTextSelection && exactTextNode !== undefined && selectedTextNodeIds.size === 0) {
@@ -3347,6 +4161,7 @@ async function main(): Promise<void> {
       selectionProperties.hidden = true;
       selectionStatus.textContent = "No selection";
       status.textContent = "Selection cleared.";
+      renderAttributeTable();
       return;
     }
     if (
@@ -3358,6 +4173,7 @@ async function main(): Promise<void> {
       selectedTextNodeIds.add(requestedRepresentative.id);
     }
     const effectiveSemanticId = selectedSemanticId ?? semanticId;
+    const selectedDataLayerState = dataLayerStateForSemanticId(effectiveSemanticId);
     const nodes = page.nodes.filter((node) => node.semanticId === effectiveSemanticId);
     const representative =
       (selectedSceneNodeId === null
@@ -3368,10 +4184,30 @@ async function main(): Promise<void> {
     installSvg();
     renderTree();
     updateArrangementControls();
+    if (representative === undefined && selectedDataLayerState !== null) {
+      emptySelection.hidden = true;
+      selectionProperties.hidden = false;
+      selectionName.textContent = selectedDataLayerState.label;
+      selectionRole.textContent = "Graph data series";
+      selectionProvenance.textContent =
+        selectedDataLayerState.source === "layer-override"
+          ? "Project override"
+          : "Template default";
+      propertySemanticId.textContent = selectedDataLayerState.semanticId;
+      propertyNodeId.textContent = "No visible scene node";
+      propertyRole.textContent = "data-layer";
+      propertyNodeCount.textContent = "0";
+      dataLayerSymbologyProperties.hidden = false;
+      populateDataLayerSymbology(selectedDataLayerState);
+      selectionStatus.textContent = selectedDataLayerState.label;
+      renderAttributeTable();
+      return;
+    }
     if (representative === undefined) {
       emptySelection.hidden = false;
       selectionProperties.hidden = true;
       selectionStatus.textContent = effectiveSemanticId;
+      renderAttributeTable();
       return;
     }
     emptySelection.hidden = true;
@@ -3458,6 +4294,16 @@ async function main(): Promise<void> {
       setLithologyDefault.disabled = lifecycleState?.readOnly === true;
       lithologyAppearanceHelp.textContent = `${lithologyState.mappedClassificationKey}: interval changes affect only ${lithologyState.intervalId}. Set as default applies changed properties across all project borings. Explicit interval values remain higher precedence.`;
     }
+    dataLayerSymbologyProperties.hidden = selectedDataLayerState === null;
+    if (selectedDataLayerState !== null) {
+      selectionName.textContent = selectedDataLayerState.label;
+      selectionRole.textContent = "Graph data series";
+      selectionProvenance.textContent =
+        selectedDataLayerState.source === "layer-override"
+          ? "Project override"
+          : "Template default";
+      populateDataLayerSymbology(selectedDataLayerState);
+    }
     const textStyle =
       representative.kind === "text"
         ? scene.resources.textStyles.find(({ id }) => id === representative.styleId)
@@ -3469,6 +4315,7 @@ async function main(): Promise<void> {
       templateTextPropertyMask.clear();
       textFontFamily.value = textStyle.fontFamilyId;
       textFontSize.value = String(textStyle.fontSizeMpt / 1_000);
+      textFontStyle.value = textStyle.fontStyle ?? "normal";
       textFontWeight.value = String(textStyle.fontWeight);
       textDecoration.value = textStyle.textDecoration ?? "none";
       textLineHeight.value = String(textStyle.lineHeightMpt / 1_000);
@@ -3553,8 +4400,12 @@ async function main(): Promise<void> {
       if (!inheritedStyle && textStyleScope.value === "template-default") {
         textStyleScope.value = "occurrence";
       }
-      textStyleInheritance.textContent = inheritedStyle ? "Inherited" : "This occurrence";
-      textLayoutInheritance.textContent = inheritedLayout ? "Inherited" : "This occurrence";
+      textStyleInheritance.textContent = inheritedStyle
+        ? "Inherited from the page template"
+        : "Overridden on this occurrence";
+      textLayoutInheritance.textContent = inheritedLayout
+        ? "Inherited from the page template"
+        : "Overridden on this occurrence";
       resetTextPresentation.disabled =
         selectedSceneNodeId === null ||
         studioProjection === null ||
@@ -3564,7 +4415,9 @@ async function main(): Promise<void> {
       textStyleHelp.textContent = `${textStyleHelp.textContent} This occurrence · inherited values resolve into a project-owned template override · edits use document history.`;
       if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
     }
-    const editable = editableFor(effectiveSemanticId);
+    const isColumnHeading =
+      representative.kind === "text" && representative.role === "log-column-heading";
+    const editable = isColumnHeading ? null : editableFor(effectiveSemanticId);
     const legacyColumnWidth = editable?.property === "description-column-width-mpt";
     const effective = legacyColumnWidth
       ? (selectedColumn?.widthMpt ?? null)
@@ -3572,8 +4425,9 @@ async function main(): Promise<void> {
         ? null
         : contentValue(editable.effectiveDisplay.content);
     const sourceOriginal = editable === null ? null : contentValue(editable.sourceOriginal.content);
-    propertyContent.value =
-      effective === null
+    propertyContent.value = isColumnHeading
+      ? representative.content
+      : effective === null
         ? nodes
             .filter(
               (node): node is Extract<BoringLogSceneNode, { readonly kind: "text" }> =>
@@ -3582,19 +4436,62 @@ async function main(): Promise<void> {
             .map(({ content }) => content)
             .join("\n")
         : String(effective);
-    propertyContent.readOnly = editable === null;
-    applyProperty.disabled = editable === null;
-    propertyHelp.textContent =
-      editable === null
-        ? "This element is computed or read-only."
+    propertyContent.readOnly = editable === null && !isColumnHeading;
+    applyProperty.disabled =
+      (editable === null && !isColumnHeading) || lifecycleState?.readOnly === true;
+    insertDynamicText.disabled =
+      lifecycleState?.readOnly === true ||
+      propertyContent.readOnly ||
+      (!isColumnHeading && editable?.valueType !== "string");
+    if (insertDynamicText.disabled) {
+      dynamicTextCatalog.hidden = true;
+      insertDynamicText.setAttribute("aria-expanded", "false");
+    }
+    propertyHelp.textContent = isColumnHeading
+      ? "Log Column heading · applies to the active boring's embedded page template · changes use document history."
+      : editable === null
+        ? "This element is generated from structured project data or the embedded page template."
         : legacyColumnWidth
-          ? "Historic source-original width · edits now route through embedded-template divider history."
-          : `${humanize(editable.property)} · ${editable.valueType} · edits route through document history.`;
-    propertyBounds.textContent = boundsText([representative]);
-    propertyProvenance.textContent = provenanceText(representative.provenance);
-    propertySourceOriginal.textContent =
-      sourceOriginal === null ? "Computed" : String(sourceOriginal);
-    propertyEffectiveValue.textContent = effective === null ? "Computed" : String(effective);
+          ? "Description column width · changes use the project-owned template and document history."
+          : `${propertyDescription(editable.property)} · changes use document history.`;
+    propertyBounds.textContent = physicalBoundsText([representative]);
+    propertyRawBounds.textContent = rawBoundsText([representative]);
+    propertyRawProvenance.textContent = provenanceText(representative.provenance);
+    propertyProvenance.textContent = isColumnHeading
+      ? "The displayed heading is owned by the active boring's embedded page template. Source Data is unchanged."
+      : legacyColumnWidth
+        ? "Computed by the frozen page plan from the active boring's embedded page template."
+        : editable === null
+          ? "Generated from structured project data and the embedded page template."
+          : editable.application.kind === "display-value-override"
+            ? "Effective override displayed from a project-owned Presentation Override. Source Data remains read-only."
+            : "Source original from project data. Editing creates a project-owned Presentation Override without changing Source Data.";
+    propertySourceProject.textContent =
+      studioProjection?.dataSummary.projectName ??
+      lifecycleState?.displayName ??
+      "Current RSrender project";
+    propertyScope.textContent = isColumnHeading
+      ? "Active boring · embedded page template"
+      : editable === null
+        ? "Generated page element"
+        : (propertyDescription(editable.property).split(" · ")[1] ?? "Current project");
+    propertySourceOriginal.textContent = isColumnHeading
+      ? "Template default"
+      : sourceOriginal === null
+        ? "Computed"
+        : String(sourceOriginal);
+    propertyEffectiveValue.textContent = isColumnHeading
+      ? representative.content
+      : effective === null
+        ? "Computed"
+        : String(effective);
+    propertyOverrideState.textContent = isColumnHeading
+      ? "Embedded-template value"
+      : editable?.application.kind === "display-value-override"
+        ? "Displayed-value override"
+        : editable === null
+          ? "Not applicable"
+          : "Source original (not overridden)";
     selectionStatus.textContent = `${humanize(effectiveSemanticId)} · ${representative.id}`;
     if (selectedTextNodeIds.size > 1) {
       selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; primary ${representative.id}`;
@@ -3603,6 +4500,7 @@ async function main(): Promise<void> {
       selectedTextNodeIds.size > 1
         ? `${selectedTextNodeIds.size} exact text occurrences selected. Shift-click toggles membership; the orange occurrence is the Key Element.`
         : `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
+    renderAttributeTable();
   }
 
   function clearSelection(): void {
@@ -3616,6 +4514,7 @@ async function main(): Promise<void> {
     selectionProperties.hidden = true;
     selectionStatus.textContent = "No selection";
     status.textContent = "Selection cleared.";
+    renderAttributeTable();
   }
 
   function selectAllTextOccurrences(): void {
@@ -3637,6 +4536,570 @@ async function main(): Promise<void> {
     propertySemanticId.textContent = "Mixed selection";
     selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${key.id}`;
     status.textContent = `${textNodes.length} text occurrences selected on the active page; the orange occurrence is the Key Element.`;
+    renderAttributeTable();
+  }
+
+  function attributeKindLabel(kind: AttributeRecord["recordKind"]): string {
+    return kind === "lithology-interval"
+      ? "Stratum"
+      : kind === "plotted-observation"
+        ? "Graph"
+        : humanize(kind);
+  }
+
+  function formatAttributeValue(value: AttributeFieldValue): string {
+    return value === null
+      ? "—"
+      : typeof value === "boolean"
+        ? value
+          ? "Yes"
+          : "No"
+        : String(value);
+  }
+
+  function attributeRecordForSemanticId(semanticId: string): AttributeRecord | undefined {
+    return studioProjection?.attributeRecords.find((record) => record.semanticId === semanticId);
+  }
+
+  function hideAttributeHover(): void {
+    attributeHoverCard.hidden = true;
+    attributeHoverCard.replaceChildren();
+    setAttributeHover(null);
+  }
+
+  function showAttributeHover(record: AttributeRecord, clientX: number, clientY: number): void {
+    const title = document.createElement("strong");
+    title.textContent = `${attributeKindLabel(record.recordKind)} · ${record.label}`;
+    const depth = document.createElement("span");
+    depth.textContent = `Depth ${record.depth.fromFt}–${record.depth.toFt} ft · ${record.explorationIdentity}`;
+    const details = record.fields.map((field) => {
+      const line = document.createElement("span");
+      const displayed = formatAttributeValue(field.effectiveDisplay);
+      const source = formatAttributeValue(field.sourceOriginal);
+      const unit = field.unit === null ? "" : ` ${field.unit}`;
+      line.textContent =
+        displayed === source
+          ? `${field.label}: ${displayed}${unit} · source original`
+          : `${field.label}: ${displayed}${unit} · source ${source}${unit} · project override`;
+      return line;
+    });
+    attributeHoverCard.replaceChildren(title, depth, ...details);
+    attributeHoverCard.hidden = false;
+    const margin = 12;
+    const left = Math.min(
+      clientX + margin,
+      window.innerWidth - attributeHoverCard.offsetWidth - margin,
+    );
+    const top = Math.min(
+      clientY + margin,
+      window.innerHeight - attributeHoverCard.offsetHeight - margin,
+    );
+    attributeHoverCard.style.left = `${Math.max(margin, left)}px`;
+    attributeHoverCard.style.top = `${Math.max(margin, top)}px`;
+    setAttributeHover(record.semanticId);
+  }
+
+  function setAttributeHover(semanticId: string | null): void {
+    attributeHoveredSemanticId = semanticId;
+    if (
+      semanticId !== null &&
+      !attributeTableDock.hidden &&
+      attributeTableBody.querySelector(`[data-semantic-id="${CSS.escape(semanticId)}"]`) === null
+    ) {
+      const entries = filteredAttributeRecords().flatMap((record) =>
+        record.fields.map((field) => Object.freeze({ record, field })),
+      );
+      const matchingIndex = entries.findIndex(({ record }) => record.semanticId === semanticId);
+      if (matchingIndex >= 0) {
+        attributeTableViewport.scrollTop =
+          matchingIndex * boringLogAttributeTableCorpusLimits.rowHeightPx;
+        renderAttributeTable();
+      }
+    }
+    for (const candidate of document.querySelectorAll<HTMLElement>(
+      "#svg-page [data-semantic-id], #attribute-table-body tr",
+    )) {
+      candidate.classList.toggle(
+        "is-attribute-hover",
+        semanticId !== null && candidate.dataset["semanticId"] === semanticId,
+      );
+    }
+  }
+
+  function filteredAttributeRecords(): AttributeRecord[] {
+    if (studioProjection === null) return [];
+    const query = attributeTableFind.value.trim().toLocaleLowerCase();
+    const kind = attributeTableKind.value;
+    const records = studioProjection.attributeRecords.filter((record) => {
+      if (kind !== "all" && record.recordKind !== kind) return false;
+      if (attributeTableSelectedOnly.checked && record.semanticId !== selectedSemanticId)
+        return false;
+      if (query.length === 0) return true;
+      return [
+        record.label,
+        record.recordKind,
+        record.depth.fromFt,
+        record.depth.toFt,
+        ...record.fields.flatMap((field) => [
+          field.label,
+          field.effectiveDisplay,
+          field.sourceOriginal,
+          field.unit,
+        ]),
+      ].some((value) =>
+        String(value ?? "")
+          .toLocaleLowerCase()
+          .includes(query),
+      );
+    });
+    if (attributeSort === undefined) return [...records];
+    const direction = attributeSort.direction === "ascending" ? 1 : -1;
+    return [...records].sort((left, right) => {
+      const leftValue =
+        attributeSort!.key === "fromFt" || attributeSort!.key === "toFt"
+          ? left.depth[attributeSort!.key]
+          : left[attributeSort!.key];
+      const rightValue =
+        attributeSort!.key === "fromFt" || attributeSort!.key === "toFt"
+          ? right.depth[attributeSort!.key]
+          : right[attributeSort!.key];
+      return (
+        String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true }) *
+        direction
+      );
+    });
+  }
+
+  async function commitAttributeCell(
+    record: AttributeRecord,
+    field: AttributeField,
+    raw: string,
+  ): Promise<void> {
+    if (
+      studioProjection === null ||
+      field.editability.kind !== "display-value-override" ||
+      lifecycleState?.readOnly === true
+    ) {
+      return;
+    }
+    const editableProperty = field.editability.property;
+    const editable = studioProjection.editableValues.find(
+      (candidate) =>
+        candidate.semanticId === record.semanticId && candidate.property === editableProperty,
+    );
+    if (editable === undefined) {
+      status.textContent = "This table cell is not connected to an admitted project property.";
+      return;
+    }
+    const replacement = replacementContent(editable, raw);
+    if (replacement === null) {
+      status.textContent = `Enter a valid ${editable.valueType} value for ${field.label}.`;
+      return;
+    }
+    const apis = studioApis();
+    if (apis === null) return;
+    const expectedWorkingRevision = studioProjection.workingRevision;
+    status.textContent = `Applying ${field.label} from Attribute Table…`;
+    const result = await apis.document.setDisplayValue({
+      expectedWorkingRevision,
+      localOverrideIdentity: `urn:rsrender:bld-048:local-override:${editable.sourceFieldIdentity}`,
+      targetSourceFieldIdentity: editable.sourceFieldIdentity,
+      expectedSourceValueDigest: editable.sourceBaselineValueDigest,
+      expectedSourceValueType: editable.sourceOriginal.valueType,
+      expectedSourceUnit: editable.sourceOriginal.unit,
+      replacementContent: replacement,
+      replacementUnit: editable.unit,
+      reason: "Edited in RSrender Attribute Table",
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Attribute edit rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+      return;
+    }
+    await refreshStudioProjection(
+      result.workingRevision,
+      `${field.label} applied from Attribute Table at revision ${result.workingRevision}.`,
+    );
+  }
+
+  async function revertAttributeCell(
+    record: AttributeRecord,
+    field: AttributeField,
+  ): Promise<void> {
+    if (
+      studioProjection === null ||
+      field.editability.kind !== "display-value-override" ||
+      field.provenance.effective?.provenanceClass !== "effective-override" ||
+      lifecycleState?.readOnly === true
+    ) {
+      return;
+    }
+    const editableProperty = field.editability.property;
+    const editable = studioProjection.editableValues.find(
+      (candidate) =>
+        candidate.semanticId === record.semanticId && candidate.property === editableProperty,
+    );
+    if (editable === undefined) {
+      status.textContent = "This table cell is not connected to an admitted project property.";
+      return;
+    }
+    if (editable.application.kind !== "display-value-override") {
+      status.textContent = "This table cell no longer has an effective project override.";
+      return;
+    }
+    const apis = studioApis();
+    if (apis === null) return;
+    const expectedWorkingRevision = studioProjection.workingRevision;
+    status.textContent = `Reverting ${field.label} to its source value…`;
+    const result = await apis.document.revertDisplayValue({
+      expectedWorkingRevision,
+      localOverrideIdentity: editable.application.localOverrideIdentity,
+      targetSourceFieldIdentity: editable.sourceFieldIdentity,
+      expectedOverrideRevision: editable.application.overrideRevision,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Attribute revert rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+      return;
+    }
+    await refreshStudioProjection(
+      result.workingRevision,
+      `${field.label} reverted to its source value at revision ${result.workingRevision}.`,
+    );
+  }
+
+  function beginAttributeCellEdit(
+    cell: HTMLTableCellElement,
+    record: AttributeRecord,
+    field: AttributeField,
+  ): void {
+    if (
+      field.editability.kind !== "display-value-override" ||
+      lifecycleState?.readOnly === true ||
+      cell.querySelector("input") !== null
+    ) {
+      return;
+    }
+    const input = document.createElement("input");
+    input.type = field.valueType === "number" ? "number" : "text";
+    input.value = formatAttributeValue(field.effectiveDisplay);
+    input.setAttribute("aria-label", `Edit ${field.label} for ${record.label}`);
+    cell.replaceChildren(input);
+    input.focus();
+    input.select();
+    const cancel = (): void => {
+      cell.textContent = formatAttributeValue(field.effectiveDisplay);
+      cell.focus();
+    };
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancel();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        void commitAttributeCell(record, field, input.value);
+      }
+    });
+    input.addEventListener("blur", () => {
+      if (cell.contains(input)) cancel();
+    });
+  }
+
+  function renderAttributeTable(): void {
+    if (studioProjection === null) return;
+    const records = filteredAttributeRecords();
+    const attributeRows = records.flatMap((record) =>
+      record.fields.map((field) => Object.freeze({ record, field })),
+    );
+    const virtualWindow = resolveBoringLogAttributeTableWindow({
+      totalRows: attributeRows.length,
+      scrollTopPx: attributeTableViewport.scrollTop,
+      viewportHeightPx: attributeTableViewport.clientHeight,
+    });
+    const { virtualized, startIndex, endIndex } = virtualWindow;
+    const rows: HTMLTableRowElement[] = [];
+    const appendSpacer = (height: number): void => {
+      if (height <= 0) return;
+      const spacer = document.createElement("tr");
+      spacer.className = "attribute-table-virtual-spacer";
+      spacer.setAttribute("aria-hidden", "true");
+      const cell = document.createElement("td");
+      cell.colSpan = 8;
+      cell.style.height = `${height}px`;
+      spacer.append(cell);
+      rows.push(spacer);
+    };
+    appendSpacer(virtualWindow.topSpacerPx);
+    for (let rowIndex = startIndex; rowIndex < endIndex; rowIndex += 1) {
+      const entry = attributeRows[rowIndex];
+      if (entry !== undefined) {
+        const { record, field } = entry;
+        const row = document.createElement("tr");
+        row.dataset["recordIdentity"] = record.recordIdentity;
+        row.dataset["semanticId"] = record.semanticId;
+        row.dataset["fieldIdentity"] = field.fieldIdentity;
+        row.dataset["rowIndex"] = String(rowIndex);
+        row.setAttribute("aria-selected", String(record.semanticId === selectedSemanticId));
+        row.classList.toggle(
+          "is-attribute-hover",
+          record.semanticId === attributeHoveredSemanticId,
+        );
+        row.tabIndex = field.fieldIdentity === attributeActiveFieldIdentity ? 0 : -1;
+        const values = [
+          attributeKindLabel(record.recordKind),
+          record.label,
+          record.depth.fromFt,
+          record.depth.toFt,
+          field.label,
+          formatAttributeValue(field.effectiveDisplay),
+          field.unit ?? "—",
+          field.sourceOriginal === field.effectiveDisplay ? "Source original" : "Project override",
+        ];
+        values.forEach((value, index) => {
+          const cell = document.createElement("td");
+          cell.textContent = String(value);
+          cell.title = String(value);
+          if (index === 5 && field.editability.kind === "display-value-override") {
+            cell.classList.add("is-editable");
+            cell.tabIndex = 0;
+            cell.title = `${String(value)} — double-click or press Enter to edit`;
+            cell.addEventListener("dblclick", () => beginAttributeCellEdit(cell, record, field));
+            cell.addEventListener("keydown", (event) => {
+              if (event.key === "Enter") beginAttributeCellEdit(cell, record, field);
+            });
+            if (field.provenance.effective?.provenanceClass === "effective-override") {
+              const revertButton = document.createElement("button");
+              revertButton.type = "button";
+              revertButton.className = "attribute-table-revert";
+              revertButton.textContent = "Revert";
+              revertButton.title = `Remove the ${field.label} override and restore the source value`;
+              revertButton.setAttribute("aria-label", `Revert ${field.label} for ${record.label}`);
+              revertButton.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void revertAttributeCell(record, field);
+              });
+              cell.append(revertButton);
+            }
+          }
+          row.append(cell);
+        });
+        row.addEventListener("click", (event) => {
+          const restoreEditableFocus =
+            event.target instanceof Element &&
+            event.target.closest<HTMLTableCellElement>("td.is-editable") !== null;
+          attributeActiveFieldIdentity = field.fieldIdentity;
+          select(record.semanticId);
+          if (restoreEditableFocus) {
+            const replacementRow = [
+              ...attributeTableBody.querySelectorAll<HTMLTableRowElement>("tr"),
+            ].find((candidate) => candidate.dataset["fieldIdentity"] === field.fieldIdentity);
+            replacementRow?.querySelector<HTMLTableCellElement>("td.is-editable")?.focus();
+          }
+        });
+        row.addEventListener("mouseenter", (event) =>
+          showAttributeHover(record, event.clientX, event.clientY),
+        );
+        row.addEventListener("mousemove", (event) =>
+          showAttributeHover(record, event.clientX, event.clientY),
+        );
+        row.addEventListener("mouseleave", hideAttributeHover);
+        rows.push(row);
+      }
+    }
+    appendSpacer(virtualWindow.bottomSpacerPx);
+    attributeTableBody.replaceChildren(...rows);
+    attributeTableEmpty.hidden = attributeRows.length > 0;
+    const visibleSummary = virtualized ? ` · rows ${startIndex + 1}–${endIndex} visible` : "";
+    attributeTableSummary.textContent = `${records.length} record${records.length === 1 ? "" : "s"} · ${attributeRows.length} attribute${attributeRows.length === 1 ? "" : "s"}${visibleSummary}`;
+    attributeTableViewport.dataset["virtualized"] = String(virtualized);
+    attributeTableViewport.dataset["renderedRows"] = String(virtualWindow.renderedRows);
+    attributeTableGoTo.disabled = !attributeRows.some(
+      ({ field }) => field.fieldIdentity === attributeActiveFieldIdentity,
+    );
+  }
+
+  function goToActiveAttributeRecord(): void {
+    if (studioProjection === null || attributeActiveFieldIdentity === null) return;
+    const entries = filteredAttributeRecords().flatMap((record) =>
+      record.fields.map((field) => Object.freeze({ record, field })),
+    );
+    const matchingIndex = entries.findIndex(
+      ({ field }) => field.fieldIdentity === attributeActiveFieldIdentity,
+    );
+    const entry = entries[matchingIndex];
+    if (entry === undefined || matchingIndex < 0) {
+      attributeTableGoTo.disabled = true;
+      status.textContent = "The active Attribute Table row is outside the current filters.";
+      return;
+    }
+    attributeTableViewport.scrollTop =
+      matchingIndex * boringLogAttributeTableCorpusLimits.rowHeightPx;
+    select(entry.record.semanticId);
+    renderAttributeTable();
+    const row = [...attributeTableBody.querySelectorAll<HTMLTableRowElement>("tr")].find(
+      (candidate) => candidate.dataset["fieldIdentity"] === entry.field.fieldIdentity,
+    );
+    row?.focus();
+    row?.scrollIntoView({ block: "nearest" });
+    const sceneOccurrence = pageHost.querySelector<SVGElement>(
+      `[data-semantic-id="${CSS.escape(entry.record.semanticId)}"].scene-node`,
+    );
+    sceneOccurrence?.scrollIntoView({ block: "center", inline: "center" });
+    status.textContent = `${entry.record.label} revealed in the Attribute Table and Canvas.`;
+  }
+
+  function setAttributeTableOpen(open: boolean): void {
+    attributeTableDock.hidden = !open;
+    toggleAttributeTableButton.setAttribute("aria-pressed", String(open));
+    toggleAttributeTableButton.classList.toggle("is-active", open);
+    if (open) {
+      renderAttributeTable();
+      attributeTableFind.focus();
+      status.textContent = "Attribute Table opened for the active Boring Log.";
+    } else {
+      status.textContent = "Attribute Table closed.";
+    }
+  }
+
+  function renderDataSummary(): void {
+    if (studioProjection === null) return;
+    const summary = studioProjection.dataSummary;
+    dataProjectName.textContent = summary.projectName;
+    dataTopElevation.textContent = `${summary.groundElevationFt} ft · ${summary.elevationDatum}`;
+    dataDepthRange.textContent = `${summary.referenceStartFt}–${summary.referenceEndFt} ft below ground`;
+    dataTotalDepth.textContent =
+      summary.totalDepthFt === summary.completionDepthFt
+        ? `${summary.totalDepthFt} ft`
+        : `${summary.totalDepthFt} ft total · ${summary.completionDepthFt} ft completed`;
+    dataDepthScale.textContent = `${formatPoints(summary.depthScaleMptPerFoot)} pt/ft · ${summary.depthIntervalFt} ft interval`;
+    dataGroundElevation.value = String(summary.groundElevationFt);
+    dataElevationDatum.value = summary.elevationDatum;
+    dataReferenceStart.value = String(summary.referenceStartFt);
+    dataDepthInterval.value = String(summary.depthIntervalFt);
+    dataTotalDepthInput.value = String(summary.totalDepthFt);
+    dataCompletionDepth.value = String(summary.completionDepthFt);
+    dataDepthScaleInput.value = String(summary.depthScaleMptPerFoot);
+    dataNGraphMaximum.value =
+      summary.nValueGraphMaximum === null ? "" : String(summary.nValueGraphMaximum);
+    dataNGraphMaximum.disabled = summary.nValueGraphMaximum === null;
+  }
+
+  function currentPageSetup(): NonNullable<StudioProjection["pageSetup"]> {
+    if (studioProjection?.pageSetup !== undefined) return studioProjection.pageSetup;
+    const plannedPage = scene.pagePlan.pages.find(({ pageId }) => pageId === page.pageId);
+    const header = plannedPage?.regions.find(({ role }) => role === "header");
+    const footer = plannedPage?.regions.find(({ role }) => role === "footer");
+    const leftMpt = header?.xMpt ?? 0;
+    const rightMpt = Math.max(
+      0,
+      page.widthMpt - ((header?.xMpt ?? 0) + (header?.widthMpt ?? page.widthMpt)),
+    );
+    const topMpt = header?.yMpt ?? 0;
+    const bottomMpt = Math.max(
+      0,
+      page.heightMpt - ((footer?.yMpt ?? 0) + (footer?.heightMpt ?? page.heightMpt)),
+    );
+    const paperPreset =
+      (page.widthMpt === 612_000 && page.heightMpt === 792_000) ||
+      (page.widthMpt === 792_000 && page.heightMpt === 612_000)
+        ? "letter"
+        : (page.widthMpt === 595_276 && page.heightMpt === 841_890) ||
+            (page.widthMpt === 841_890 && page.heightMpt === 595_276)
+          ? "a4"
+          : "custom";
+    return Object.freeze({
+      paperPreset,
+      orientation: page.widthMpt > page.heightMpt ? "landscape" : "portrait",
+      widthMpt: page.widthMpt,
+      heightMpt: page.heightMpt,
+      marginsMpt: Object.freeze({ topMpt, rightMpt, bottomMpt, leftMpt }),
+    });
+  }
+
+  function renderPageSetup(): void {
+    const setup = currentPageSetup();
+    pagePaperPreset.value = setup.paperPreset;
+    pageOrientation.value = setup.orientation;
+    pageWidth.value = String(setup.widthMpt / 1_000);
+    pageHeight.value = String(setup.heightMpt / 1_000);
+    pageMarginTop.value = String(setup.marginsMpt.topMpt / 1_000);
+    pageMarginRight.value = String(setup.marginsMpt.rightMpt / 1_000);
+    pageMarginBottom.value = String(setup.marginsMpt.bottomMpt / 1_000);
+    pageMarginLeft.value = String(setup.marginsMpt.leftMpt / 1_000);
+    const custom = setup.paperPreset === "custom";
+    pageWidth.readOnly = !custom;
+    pageHeight.readOnly = !custom;
+  }
+
+  function applyPresetDimensions(applyPresetMargins = false): void {
+    const preset = pagePaperPreset.value;
+    const orientation = pageOrientation.value === "landscape" ? "landscape" : "portrait";
+    const dimensions =
+      preset === "letter"
+        ? { widthMpt: 612_000, heightMpt: 792_000 }
+        : preset === "a4"
+          ? { widthMpt: 595_276, heightMpt: 841_890 }
+          : null;
+    pageWidth.readOnly = dimensions !== null;
+    pageHeight.readOnly = dimensions !== null;
+    if (dimensions !== null) {
+      pageWidth.value = String(
+        (orientation === "portrait" ? dimensions.widthMpt : dimensions.heightMpt) / 1_000,
+      );
+      pageHeight.value = String(
+        (orientation === "portrait" ? dimensions.heightMpt : dimensions.widthMpt) / 1_000,
+      );
+      if (applyPresetMargins) {
+        pageMarginLeft.value = preset === "a4" ? "15" : "24";
+        pageMarginRight.value = preset === "a4" ? "15" : "24";
+      }
+    }
+  }
+
+  async function applyPageSetup(): Promise<void> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null || lifecycleState?.readOnly === true) {
+      status.textContent = "Page Setup is unavailable for this Log Project.";
+      return;
+    }
+    const toMpt = (control: HTMLInputElement): number => Math.round(Number(control.value) * 1_000);
+    const paperPreset: "letter" | "a4" | "custom" =
+      pagePaperPreset.value === "letter" || pagePaperPreset.value === "a4"
+        ? pagePaperPreset.value
+        : "custom";
+    const input = {
+      expectedWorkingRevision: studioProjection.workingRevision,
+      paperPreset,
+      orientation:
+        pageOrientation.value === "landscape" ? ("landscape" as const) : ("portrait" as const),
+      widthMpt: toMpt(pageWidth),
+      heightMpt: toMpt(pageHeight),
+      marginsMpt: {
+        topMpt: toMpt(pageMarginTop),
+        rightMpt: toMpt(pageMarginRight),
+        bottomMpt: toMpt(pageMarginBottom),
+        leftMpt: toMpt(pageMarginLeft),
+      },
+    };
+    if (
+      !Number.isSafeInteger(input.widthMpt) ||
+      !Number.isSafeInteger(input.heightMpt) ||
+      Object.values(input.marginsMpt).some((value) => !Number.isSafeInteger(value) || value < 0)
+    ) {
+      status.textContent = "Page Setup requires valid nonnegative point values.";
+      return;
+    }
+    applyPageSetupButton.disabled = true;
+    const result = await apis.studio.setPageSetup(input);
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Page Setup failed: ${result.code ?? "PAGE_SETUP_UNAVAILABLE"}. The document was not changed.`;
+      applyPageSetupButton.disabled = false;
+      return;
+    }
+    await refreshStudioProjection(
+      result.workingRevision,
+      `Page Setup applied at revision ${result.workingRevision}; ${result.pageCount ?? 1} physical page${result.pageCount === 1 ? "" : "s"} preserve the fixed depth scale.`,
+    );
+    applyPageSetupButton.disabled = false;
   }
 
   async function refreshStudioProjection(
@@ -3651,6 +5114,9 @@ async function main(): Promise<void> {
       return false;
     }
     studioProjection = result.projection;
+    renderDataSummary();
+    renderPageSetup();
+    renderAttributeTable();
     scene = result.projection.scene;
     page = scene.pages[0]!;
     renderDiagnostics();
@@ -3714,6 +5180,24 @@ async function main(): Promise<void> {
     }
     const value = Number(raw);
     if (!Number.isFinite(value)) return null;
+    if (
+      [
+        "total-depth-ft",
+        "completion-depth-ft",
+        "reference-start-depth-ft",
+        "depth-interval-ft",
+      ].includes(editable.property) &&
+      value < 0
+    ) {
+      return null;
+    }
+    if (editable.property === "depth-interval-ft" && value <= 0) return null;
+    if (
+      editable.property === "depth-scale-mpt-per-foot" &&
+      (!Number.isSafeInteger(value) || value <= 0)
+    ) {
+      return null;
+    }
     if (editable.property === "sample-recovery" && (value < 0 || value > 100)) return null;
     if (
       editable.property === "description-column-width-mpt" &&
@@ -3724,6 +5208,90 @@ async function main(): Promise<void> {
     return value === 0
       ? { kind: "zero", value: 0, originalRepresentation: raw }
       : { kind: "value", value, originalRepresentation: raw };
+  }
+
+  async function applyDataControls(): Promise<void> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null) return;
+    const edits: readonly Readonly<{ property: string; raw: string }>[] = [
+      { property: "ground-elevation-ft", raw: dataGroundElevation.value },
+      { property: "elevation-datum", raw: dataElevationDatum.value },
+      { property: "completion-depth-ft", raw: dataCompletionDepth.value },
+    ];
+    const prepared = edits.map((edit) => {
+      const editable = studioProjection!.editableValues.find(
+        (candidate) => candidate.property === edit.property,
+      );
+      if (editable === undefined) return null;
+      const replacement = replacementContent(editable, edit.raw);
+      return replacement === null ? null : { editable, replacement };
+    });
+    if (prepared.some((value) => value === null)) {
+      status.textContent = "Enter valid bounded Data values before applying.";
+      return;
+    }
+    applyDataControlsButton.disabled = true;
+    let expectedWorkingRevision = studioProjection.workingRevision;
+    for (const candidate of prepared) {
+      if (candidate === null) continue;
+      const current = contentValue(candidate.editable.effectiveDisplay.content);
+      const replacementValue =
+        candidate.replacement.kind === "value" || candidate.replacement.kind === "zero"
+          ? candidate.replacement.value
+          : candidate.replacement.kind === "empty-string"
+            ? ""
+            : null;
+      if (current === replacementValue) continue;
+      status.textContent = `Applying ${humanize(candidate.editable.property)}…`;
+      const result = await apis.document.setDisplayValue({
+        expectedWorkingRevision,
+        localOverrideIdentity: `urn:rsrender:bld-047:local-override:${candidate.editable.sourceFieldIdentity}`,
+        targetSourceFieldIdentity: candidate.editable.sourceFieldIdentity,
+        expectedSourceValueDigest: candidate.editable.sourceBaselineValueDigest,
+        expectedSourceValueType: candidate.editable.sourceOriginal.valueType,
+        expectedSourceUnit: candidate.editable.sourceOriginal.unit,
+        replacementContent: candidate.replacement,
+        replacementUnit: candidate.editable.unit,
+        reason: "Edited in RSrender Boring Log Data controls",
+      });
+      if (!result.accepted || result.workingRevision === undefined) {
+        status.textContent = `Data edit rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+        applyDataControlsButton.disabled = lifecycleState?.readOnly === true;
+        return;
+      }
+      expectedWorkingRevision = result.workingRevision;
+      const refreshed = await refreshStudioProjection(
+        expectedWorkingRevision,
+        `${humanize(candidate.editable.property)} applied at revision ${expectedWorkingRevision}.`,
+      );
+      if (!refreshed) return;
+      if (lifecycleState?.readOnly === true) return;
+    }
+    const depthResult = await apis.studio.setDataDepthConfiguration({
+      expectedWorkingRevision,
+      startDepthFt: Number(dataReferenceStart.value),
+      totalDepthFt: Number(dataTotalDepthInput.value),
+      intervalFt: Number(dataDepthInterval.value),
+      mptPerFoot: Number(dataDepthScaleInput.value),
+      nValueGraphMaximum:
+        studioProjection.dataSummary.nValueGraphMaximum === null
+          ? null
+          : Number(dataNGraphMaximum.value),
+    });
+    if (!depthResult.accepted || depthResult.workingRevision === undefined) {
+      applyDataControlsButton.disabled = lifecycleState?.readOnly === true;
+      status.textContent = `Depth configuration rejected${depthResult.code === undefined ? "." : `: ${depthResult.code}`}`;
+      return;
+    }
+    expectedWorkingRevision = depthResult.workingRevision;
+    const depthRefreshed = await refreshStudioProjection(
+      expectedWorkingRevision,
+      `Depth configuration applied at revision ${expectedWorkingRevision}.`,
+    );
+    if (!depthRefreshed) return;
+    applyDataControlsButton.disabled = lifecycleState?.readOnly === true;
+    await refreshLifecycleStateSilently();
+    status.textContent = `Data controls applied at revision ${expectedWorkingRevision}.`;
   }
 
   async function applySelectedLithologyAppearance(
@@ -3788,10 +5356,179 @@ async function main(): Promise<void> {
     lithologyFillColor.focus();
   }
 
+  async function applySelectedDataLayerSymbology(): Promise<void> {
+    const apis = studioApis();
+    const state = dataLayerStateForSemanticId(selectedSemanticId);
+    if (apis === null || studioProjection === null || state === null) {
+      status.textContent = "Select a graph line, point, or range before editing symbology.";
+      return;
+    }
+    const order = Number(dataLayerOrder.value);
+    const lineWidthMpt = Math.round(Number(dataLayerLineWidth.value) * 1_000);
+    const legendLabel = dataLayerLegendLabel.value.trim();
+    const admittedTokens = new Set(
+      (studioProjection.visualTokenOptions ?? []).map(({ tokenId }) => tokenId),
+    );
+    const validToken = (value: string | null, nullable = false): boolean =>
+      (nullable && value === null) || (value !== null && admittedTokens.has(value));
+    const validMpt = (value: number, minimum: number, maximum: number): boolean =>
+      Number.isSafeInteger(value) && value >= minimum && value <= maximum;
+    if (
+      !Number.isSafeInteger(order) ||
+      order < 0 ||
+      order > 255 ||
+      !validMpt(lineWidthMpt, 100, 12_000) ||
+      !validToken(dataLayerLineColor.value) ||
+      legendLabel.length < 1 ||
+      legendLabel.length > 256
+    ) {
+      status.textContent =
+        "Enter a drawing order, line width, color, and legend label within the shown limits.";
+      return;
+    }
+    const pointFromControls = (
+      controls: Readonly<{
+        readonly shape: HTMLSelectElement;
+        readonly size: HTMLInputElement;
+        readonly fill: HTMLSelectElement;
+        readonly stroke: HTMLSelectElement;
+        readonly strokeWidth: HTMLInputElement;
+      }>,
+    ): DataLayerPointSymbol | null => {
+      const shape = controls.shape.value as DataLayerPointShape;
+      const sizeMpt = Math.round(Number(controls.size.value) * 1_000);
+      const fillToken = controls.fill.value || null;
+      const strokeWidthMpt = Math.round(Number(controls.strokeWidth.value) * 1_000);
+      if (
+        !["square", "triangle", "circle"].includes(shape) ||
+        !validMpt(sizeMpt, 1_000, 24_000) ||
+        !validToken(fillToken, true) ||
+        !validToken(controls.stroke.value) ||
+        !validMpt(strokeWidthMpt, 100, 12_000)
+      ) {
+        return null;
+      }
+      return Object.freeze({
+        shape,
+        sizeMpt,
+        fillToken,
+        strokeToken: controls.stroke.value,
+        strokeWidthMpt,
+      });
+    };
+    const line = Object.freeze({
+      strokeToken: dataLayerLineColor.value,
+      strokeWidthMpt: lineWidthMpt,
+      dashMpt: selectedDashMpt(state),
+    });
+    let point: DataLayerPointSymbol | null = null;
+    let range: DataLayerRangeSymbol | null = null;
+    if (state.kind === "numeric-polyline") {
+      point = pointFromControls({
+        shape: dataLayerPointShape,
+        size: dataLayerPointSize,
+        fill: dataLayerPointFill,
+        stroke: dataLayerPointStroke,
+        strokeWidth: dataLayerPointStrokeWidth,
+      });
+      if (point === null) {
+        status.textContent = "Enter a valid point shape, size, fill, outline, and outline width.";
+        return;
+      }
+    } else {
+      const firstEndpoint = pointFromControls({
+        shape: dataLayerRangeFirstShape,
+        size: dataLayerRangeFirstSize,
+        fill: dataLayerRangeFirstFill,
+        stroke: dataLayerRangeFirstStroke,
+        strokeWidth: dataLayerRangeFirstStrokeWidth,
+      });
+      const secondEndpoint = pointFromControls({
+        shape: dataLayerRangeSecondShape,
+        size: dataLayerRangeSecondSize,
+        fill: dataLayerRangeSecondFill,
+        stroke: dataLayerRangeSecondStroke,
+        strokeWidth: dataLayerRangeSecondStrokeWidth,
+      });
+      if (firstEndpoint === null || secondEndpoint === null) {
+        status.textContent =
+          "Enter valid shapes, sizes, fills, and outlines for both range endpoints.";
+        return;
+      }
+      range = Object.freeze({ line, firstEndpoint, secondEndpoint });
+    }
+    applyDataLayerSymbology.disabled = true;
+    status.textContent = `Applying ${state.label} graph and legend symbology…`;
+    const result = await apis.studio.setDataLayerSymbology({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      applyScope: dataLayerApplyScope.value as "layer" | "project-default",
+      layerId: state.layerId,
+      visible: dataLayerVisible.checked,
+      order,
+      line: state.kind === "numeric-polyline" ? line : null,
+      point,
+      range,
+      legend: Object.freeze({
+        visible: dataLayerLegendVisible.checked,
+        label: legendLabel,
+      }),
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      applyDataLayerSymbology.disabled = lifecycleState?.readOnly === true;
+      status.textContent = `Graph symbology rejected${result.code === undefined ? "." : `: ${humanize(result.code)}`}`;
+      return;
+    }
+    const refreshed = await refreshStudioProjection(
+      result.workingRevision,
+      dataLayerApplyScope.value === "project-default"
+        ? `${state.label} project default applied across ${result.affectedBoringLogCount ?? 0} boring logs at revision ${result.workingRevision}; Undo restores all of them together.`
+        : `${state.label} graph and legend symbology applied to the active boring at revision ${result.workingRevision}; Undo restores both.`,
+    );
+    if (refreshed) await refreshLifecycleStateSilently();
+    applyDataLayerSymbology.focus();
+  }
+
   async function applySelectedProperty(): Promise<void> {
     const apis = studioApis();
-    const editable = selectedSemanticId === null ? null : editableFor(selectedSemanticId);
-    if (apis === null || editable === null || studioProjection === null) return;
+    if (apis === null || selectedSemanticId === null || studioProjection === null) return;
+    const selectedNode =
+      (selectedSceneNodeId === null
+        ? undefined
+        : page.nodes.find(({ id }) => id === selectedSceneNodeId)) ??
+      page.nodes.find(
+        ({ semanticId, role, kind }) =>
+          semanticId === selectedSemanticId && role === "log-column-heading" && kind === "text",
+      );
+    if (selectedNode?.kind === "text" && selectedNode.role === "log-column-heading") {
+      const heading = propertyContent.value.trim();
+      if (heading.length < 1 || heading.length > 80) {
+        status.textContent = "Column heading must contain 1 through 80 characters.";
+        propertyContent.focus();
+        return;
+      }
+      applyProperty.disabled = true;
+      status.textContent = "Applying Log Column heading…";
+      const result = await apis.studio.setColumnHeading({
+        expectedWorkingRevision: studioProjection.workingRevision,
+        columnId: selectedSemanticId,
+        heading,
+      });
+      if (!result.accepted || result.workingRevision === undefined) {
+        applyProperty.disabled = false;
+        status.textContent = `Column heading rejected${result.code === undefined ? "." : `: ${result.code}`}`;
+        propertyContent.focus();
+        return;
+      }
+      const refreshed = await refreshStudioProjection(
+        result.workingRevision,
+        `${humanize(selectedSemanticId)} heading applied at revision ${result.workingRevision}.`,
+      );
+      if (refreshed) await refreshLifecycleStateSilently();
+      propertyContent.focus();
+      return;
+    }
+    const editable = editableFor(selectedSemanticId);
+    if (editable === null) return;
     const replacement = replacementContent(editable, propertyContent.value);
     if (replacement === null) {
       status.textContent =
@@ -3837,6 +5574,55 @@ async function main(): Promise<void> {
     );
     if (refreshed) await refreshLifecycleStateSilently();
     propertyContent.focus();
+  }
+
+  function renderDynamicTextOptions(): void {
+    const query = dynamicTextSearch.value.trim().toLocaleLowerCase("en-US");
+    const matches = boringLogDynamicTextCatalog.definitions.filter((definition) =>
+      [definition.identifier, definition.label, definition.description, definition.category]
+        .join(" ")
+        .toLocaleLowerCase("en-US")
+        .includes(query),
+    );
+    dynamicTextOptions.replaceChildren(
+      ...matches.map((definition) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.role = "menuitem";
+        button.dataset["commandOwned"] = "true";
+        const token = document.createElement("code");
+        token.textContent = `@${definition.identifier}`;
+        const label = document.createElement("strong");
+        label.textContent = definition.label;
+        const detail = document.createElement("small");
+        detail.textContent = `${definition.category} · ${definition.description}`;
+        button.append(token, label, detail);
+        button.addEventListener("click", () => {
+          if (insertDynamicText.disabled || propertyContent.readOnly) return;
+          const start = propertyContent.selectionStart ?? propertyContent.value.length;
+          const end = propertyContent.selectionEnd ?? start;
+          const authoredToken = `@${definition.identifier}`;
+          propertyContent.setRangeText(authoredToken, start, end, "end");
+          dynamicTextCatalog.hidden = true;
+          insertDynamicText.setAttribute("aria-expanded", "false");
+          status.textContent = `${authoredToken} staged. Apply property commits one Undo entry.`;
+          propertyContent.focus();
+        });
+        return button;
+      }),
+    );
+    dynamicTextEmpty.hidden = matches.length !== 0;
+  }
+
+  function toggleDynamicTextCatalog(): void {
+    if (insertDynamicText.disabled) return;
+    dynamicTextCatalog.hidden = !dynamicTextCatalog.hidden;
+    insertDynamicText.setAttribute("aria-expanded", String(!dynamicTextCatalog.hidden));
+    if (!dynamicTextCatalog.hidden) {
+      dynamicTextSearch.value = "";
+      renderDynamicTextOptions();
+      dynamicTextSearch.focus();
+    }
   }
 
   async function applySelectedTextStyle(
@@ -3916,6 +5702,7 @@ async function main(): Promise<void> {
       return false;
     }
     const fontSizeMpt = Math.round(Number(textFontSize.value) * 1_000);
+    const fontStyle = textFontStyle.value as "normal" | "italic";
     const fontWeight = Number(textFontWeight.value);
     const lineHeightMpt = Math.round(Number(textLineHeight.value) * 1_000);
     const letterSpacingMpt = Math.round(Number(textLetterSpacing.value) * 1_000);
@@ -3946,6 +5733,7 @@ async function main(): Promise<void> {
       fontSizeMpt < 4_000 ||
       fontSizeMpt > 48_000 ||
       ![400, 700].includes(fontWeight) ||
+      !["normal", "italic"].includes(fontStyle) ||
       !Number.isSafeInteger(lineHeightMpt) ||
       lineHeightMpt < fontSizeMpt ||
       lineHeightMpt > 72_000 ||
@@ -4016,6 +5804,7 @@ async function main(): Promise<void> {
       baseStyleId: node.styleId,
       targets,
       fontFamilyId: textFontFamily.value,
+      fontStyle,
       fontSizeMpt,
       fontWeight,
       lineHeightMpt,
@@ -4235,16 +6024,36 @@ async function main(): Promise<void> {
     requestedPropertiesWidth: number,
     resizeTarget: StudioPaneResizeTarget,
   ): void {
+    if (resizeTarget === "contents") {
+      preferredContentsPaneWidth = Math.min(
+        studioPaneLimits.contents.maximum,
+        Math.max(studioPaneLimits.contents.minimum, Math.round(requestedContentsWidth)),
+      );
+    } else if (resizeTarget === "properties") {
+      preferredPropertiesPaneWidth = Math.min(
+        studioPaneLimits.properties.maximum,
+        Math.max(studioPaneLimits.properties.minimum, Math.round(requestedPropertiesWidth)),
+      );
+    }
+    const effectiveViewportWidth = resolveStudioEffectiveViewportWidth({
+      innerWidth: window.innerWidth,
+      devicePixelRatio: window.devicePixelRatio,
+      availableScreenWidth: window.screen.availWidth,
+    });
+    const containingWidth =
+      workspace.parentElement?.clientWidth ?? document.documentElement.clientWidth;
+    const effectiveWorkspaceWidth = Math.min(containingWidth, effectiveViewportWidth);
+    workspace.dataset["effectiveWidth"] = String(Math.max(1, effectiveWorkspaceWidth));
     const resolved = resolveStudioPaneWidths({
-      workspaceWidth: workspace.clientWidth,
-      requestedContentsWidth,
-      requestedPropertiesWidth,
+      workspaceWidth: effectiveWorkspaceWidth,
+      requestedContentsWidth: preferredContentsPaneWidth,
+      requestedPropertiesWidth: preferredPropertiesPaneWidth,
       resizeTarget,
     });
     contentsPaneWidth = resolved.contentsWidth;
     propertiesPaneWidth = resolved.propertiesWidth;
-    workspace.style.setProperty("--contents-pane-width", `${resolved.contentsWidth}px`);
-    workspace.style.setProperty("--properties-pane-width", `${resolved.propertiesWidth}px`);
+    workspace.dataset["contentsWidth"] = String(resolved.contentsWidth);
+    workspace.dataset["propertiesWidth"] = String(resolved.propertiesWidth);
     contentsSplitter.setAttribute("aria-valuenow", String(resolved.contentsWidth));
     propertiesSplitter.setAttribute("aria-valuenow", String(resolved.propertiesWidth));
     canvasStage.dataset["viewportWidth"] = String(resolved.canvasWidth);
@@ -4485,8 +6294,11 @@ async function main(): Promise<void> {
       pageHeightMpt: page.heightMpt,
       bypass: event.altKey,
     });
-    previewDirectManipulationFrame(snapped.frame, snapped);
-    if (gesture.handle !== "move") scheduleLiveReflowPreview(snapped.frame);
+    scheduleDirectManipulationPreview({
+      frame: snapped.frame,
+      snap: snapped,
+      reflow: gesture.handle !== "move",
+    });
     event.preventDefault();
   }
 
@@ -4501,6 +6313,7 @@ async function main(): Promise<void> {
     if (gesture === undefined) return;
     releaseDirectManipulationCapture(gesture.pointerId);
     directManipulationGesture = undefined;
+    clearDirectManipulationPreview();
     clearLiveReflowPreview();
     suppressCanvasClick = true;
     installSvg();
@@ -4511,6 +6324,7 @@ async function main(): Promise<void> {
   async function finishDirectManipulation(event: PointerEvent): Promise<void> {
     const gesture = directManipulationGesture;
     if (gesture === undefined || gesture.pointerId !== event.pointerId) return;
+    flushDirectManipulationPreview();
     releaseDirectManipulationCapture(gesture.pointerId);
     await flushLiveReflowPreview();
     directManipulationGesture = undefined;
@@ -4677,6 +6491,21 @@ async function main(): Promise<void> {
       );
     }
   });
+  const updateGraphAttributeHover = (event: MouseEvent): void => {
+    if (directManipulationGesture !== undefined) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const semanticId = target.closest<SVGElement>("[data-semantic-id]")?.dataset["semanticId"];
+    const record = semanticId === undefined ? undefined : attributeRecordForSemanticId(semanticId);
+    if (record === undefined) {
+      if (!attributeHoverCard.hidden) hideAttributeHover();
+      return;
+    }
+    showAttributeHover(record, event.clientX, event.clientY);
+  };
+  pageHost.addEventListener("pointermove", updateGraphAttributeHover);
+  pageHost.addEventListener("mousemove", updateGraphAttributeHover);
+  pageHost.addEventListener("pointerleave", hideAttributeHover);
   pageHost.addEventListener("contextmenu", (event) => {
     if (interactionMode !== "select") return;
     const target = event.target;
@@ -4693,6 +6522,13 @@ async function main(): Promise<void> {
     if (!canvasContextMenu.hidden && !canvasContextMenu.contains(event.target as Node)) {
       hideCanvasContextMenu();
     }
+  });
+  addColumnSearch.addEventListener("input", renderAddColumnCatalog);
+  addColumnCatalog.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeAddColumnCatalog();
+    contextAddColumn.focus();
   });
   horizontalRuler.addEventListener("pointerdown", (event) =>
     beginPageGuideGesture(event, "vertical", null),
@@ -4828,6 +6664,16 @@ async function main(): Promise<void> {
     }
   };
   boringSelector.addEventListener("change", () => void chooseBoringFromSelector());
+  pagePaperPreset.addEventListener("change", () => applyPresetDimensions(true));
+  pageOrientation.addEventListener("change", () => {
+    if (pagePaperPreset.value === "custom") {
+      const width = pageWidth.value;
+      pageWidth.value = pageHeight.value;
+      pageHeight.value = width;
+    } else {
+      applyPresetDimensions();
+    }
+  });
   textFrameAnchor.addEventListener("change", () => {
     const widthMpt = Math.round(Number(textFrameWidth.value) * 1_000);
     const heightMpt = Math.round(Number(textFrameHeight.value) * 1_000);
@@ -4843,6 +6689,8 @@ async function main(): Promise<void> {
     status.textContent = `Frame anchor changed to ${humanize(currentTextFrameAnchor)}; frame bounds are unchanged until Apply.`;
   });
   const commandRegistry: Readonly<Record<string, () => void>> = Object.freeze({
+    "apply-data-controls": () => void applyDataControls(),
+    "apply-page-setup": () => void applyPageSetup(),
     "ribbon-tab-home": () => activateRibbonTab("home"),
     "ribbon-tab-layout": () => activateRibbonTab("layout"),
     "ribbon-tab-data": () => activateRibbonTab("data"),
@@ -4851,6 +6699,7 @@ async function main(): Promise<void> {
     "select-page": () => select("page-root"),
     "new-project": () => void invokeLifecycle("new-project"),
     "open-project": () => void invokeLifecycle("open-project"),
+    "connect-rslog": () => void invokeLifecycle("connect-rslog"),
     "import-rslog-project-data": () => void invokeLifecycle("import-rslog-project-data"),
     "save-project": () => void invokeLifecycle("save-project"),
     "save-project-as": () => void invokeLifecycle("save-project-as"),
@@ -4912,6 +6761,10 @@ async function main(): Promise<void> {
     "send-back": () => void mutateSelectedText({ kind: "reorder", placement: "back" }, "ribbon"),
     "inspect-samples": () => select("column-sample"),
     "inspect-track": () => select("column-data-track"),
+    "toggle-attribute-table": () =>
+      setAttributeTableOpen(attributeTableDock.hasAttribute("hidden")),
+    "attribute-table-go-to": goToActiveAttributeRecord,
+    "close-attribute-table": () => setAttributeTableOpen(false),
     "validate-document": () => void validateDocument(),
     "show-diagnostics": showDiagnostics,
     "publication-select-all": () => {
@@ -4946,6 +6799,8 @@ async function main(): Promise<void> {
     "property-tab-element": () => showPropertyPanel("element"),
     "property-tab-diagnostics": showDiagnostics,
     "context-properties": focusSelectedProperties,
+    "context-add-column": openAddColumnCatalog,
+    "close-add-column": closeAddColumnCatalog,
     "context-copy-selection": () => copySelectedText("context-menu"),
     "context-cut-selection": () => void cutSelectedText("context-menu"),
     "context-paste-selection": () => pasteCopiedText("context-menu"),
@@ -5012,9 +6867,11 @@ async function main(): Promise<void> {
       void mutateSelectedText({ kind: "reorder", placement: "front" }, "context-menu"),
     "context-send-back": () =>
       void mutateSelectedText({ kind: "reorder", placement: "back" }, "context-menu"),
+    "insert-dynamic-text": toggleDynamicTextCatalog,
     "apply-property": () => void applySelectedProperty(),
     "apply-lithology-interval": () => void applySelectedLithologyAppearance("interval"),
     "set-lithology-default": () => void applySelectedLithologyAppearance("classification-default"),
+    "apply-data-layer-symbology": () => void applySelectedDataLayerSymbology(),
     "apply-column-width": () => {
       const requestedWidthMpt = Math.round(Number(columnWidth.value) * 1_000);
       void applySelectedColumnWidthMpt(requestedWidthMpt);
@@ -5039,6 +6896,131 @@ async function main(): Promise<void> {
     }
   }
   document.body.dataset["ownedCommandCount"] = String(Object.keys(commandRegistry).length);
+  dynamicTextSearch.addEventListener("input", renderDynamicTextOptions);
+  const resetAndRenderAttributeTable = (): void => {
+    attributeTableViewport.scrollTop = 0;
+    renderAttributeTable();
+  };
+  attributeTableFind.addEventListener("input", resetAndRenderAttributeTable);
+  attributeTableFind.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const first = attributeTableBody.querySelector<HTMLTableRowElement>("tr[data-field-identity]");
+    if (first === null) return;
+    event.preventDefault();
+    attributeActiveFieldIdentity = first.dataset["fieldIdentity"] ?? null;
+    goToActiveAttributeRecord();
+  });
+  attributeTableKind.addEventListener("change", resetAndRenderAttributeTable);
+  attributeTableSelectedOnly.addEventListener("change", resetAndRenderAttributeTable);
+  for (const heading of document.querySelectorAll<HTMLElement>("[data-attribute-sort]")) {
+    heading.addEventListener("click", () => {
+      const key = heading.dataset["attributeSort"] as "recordKind" | "label" | "fromFt" | "toFt";
+      attributeSort = Object.freeze({
+        key,
+        direction:
+          attributeSort?.key === key && attributeSort.direction === "ascending"
+            ? "descending"
+            : "ascending",
+      });
+      for (const candidate of document.querySelectorAll<HTMLElement>("[data-attribute-sort]")) {
+        candidate.removeAttribute("aria-sort");
+      }
+      heading.setAttribute("aria-sort", attributeSort.direction);
+      resetAndRenderAttributeTable();
+    });
+  }
+  attributeTableViewport.addEventListener(
+    "scroll",
+    () => {
+      if (
+        attributeVirtualRenderPending ||
+        attributeTableBody.querySelector("input") !== null ||
+        attributeTableViewport.dataset["virtualized"] !== "true"
+      ) {
+        return;
+      }
+      attributeVirtualRenderPending = true;
+      requestAnimationFrame(() => {
+        attributeVirtualRenderPending = false;
+        renderAttributeTable();
+      });
+    },
+    { passive: true },
+  );
+  attributeTableViewport.addEventListener("keydown", (event) => {
+    if (!event.key.startsWith("Arrow")) return;
+    const entries = filteredAttributeRecords().flatMap((record) =>
+      record.fields.map((field) => Object.freeze({ record, field })),
+    );
+    if (entries.length === 0) return;
+    const current = event.target instanceof HTMLElement ? event.target.closest("tr") : null;
+    const currentIndex =
+      current instanceof HTMLTableRowElement ? Number(current.dataset["rowIndex"] ?? -1) : -1;
+    const nextIndex =
+      event.key === "ArrowDown"
+        ? Math.min(entries.length - 1, currentIndex + 1)
+        : event.key === "ArrowUp"
+          ? Math.max(0, currentIndex - 1)
+          : currentIndex;
+    if (nextIndex === currentIndex || nextIndex < 0) return;
+    event.preventDefault();
+    const entry = entries[nextIndex]!;
+    attributeActiveFieldIdentity = entry.field.fieldIdentity;
+    attributeTableViewport.scrollTop = nextIndex * boringLogAttributeTableCorpusLimits.rowHeightPx;
+    renderAttributeTable();
+    const next = [...attributeTableBody.querySelectorAll<HTMLTableRowElement>("tr")].find(
+      (row) => row.dataset["rowIndex"] === String(nextIndex),
+    );
+    next?.focus();
+    next?.scrollIntoView({ block: "nearest" });
+  });
+  const applyAttributeTableHeight = (height: number): void => {
+    attributeTableHeight = Math.round(
+      Math.max(120, Math.min(Math.min(420, window.innerHeight * 0.42), height)),
+    );
+    attributeTableDock.dataset["height"] = String(attributeTableHeight);
+    attributeTableDock.style.height = `${attributeTableHeight}px`;
+    attributeTableSplitter.setAttribute("aria-valuenow", String(attributeTableHeight));
+  };
+  attributeTableSplitter.addEventListener("pointerdown", (event) => {
+    attributeTableResize = Object.freeze({
+      pointerId: event.pointerId,
+      startClientY: event.clientY,
+      height: attributeTableHeight,
+    });
+    attributeTableSplitter.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  attributeTableSplitter.addEventListener("pointermove", (event) => {
+    if (attributeTableResize?.pointerId !== event.pointerId) return;
+    applyAttributeTableHeight(
+      attributeTableResize.height + attributeTableResize.startClientY - event.clientY,
+    );
+  });
+  const finishAttributeTableResize = (event: PointerEvent): void => {
+    if (attributeTableResize?.pointerId !== event.pointerId) return;
+    attributeTableResize = undefined;
+    if (attributeTableSplitter.hasPointerCapture(event.pointerId)) {
+      attributeTableSplitter.releasePointerCapture(event.pointerId);
+    }
+  };
+  attributeTableSplitter.addEventListener("pointerup", finishAttributeTableResize);
+  attributeTableSplitter.addEventListener("pointercancel", finishAttributeTableResize);
+  attributeTableSplitter.addEventListener("keydown", (event) => {
+    const next =
+      event.key === "ArrowUp"
+        ? attributeTableHeight + 16
+        : event.key === "ArrowDown"
+          ? attributeTableHeight - 16
+          : event.key === "Home"
+            ? 120
+            : event.key === "End"
+              ? 420
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    applyAttributeTableHeight(next);
+  });
   textOverflowPolicy.addEventListener("change", () => {
     textMinimumFontSize.disabled = textOverflowPolicy.value !== "shrink-to-minimum";
   });
@@ -5070,6 +7052,7 @@ async function main(): Promise<void> {
     if (textStyleScope.value === "template-default") updateTextStyleScopeHelp();
   };
   textFontFamily.addEventListener("change", () => markTemplateProperties("fontFamilyId"));
+  textFontStyle.addEventListener("change", () => markTemplateProperties("fontStyle"));
   textFontSize.addEventListener("input", () =>
     markTemplateProperties("fontSizeMpt", "lineHeightMpt"),
   );
@@ -5091,9 +7074,33 @@ async function main(): Promise<void> {
     textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
     textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
   });
+  for (const control of [
+    dataLayerLineColor,
+    dataLayerLineWidth,
+    dataLayerLineStyle,
+    dataLayerPointShape,
+    dataLayerPointSize,
+    dataLayerPointFill,
+    dataLayerPointStroke,
+    dataLayerPointStrokeWidth,
+    dataLayerRangeFirstShape,
+    dataLayerRangeFirstSize,
+    dataLayerRangeFirstFill,
+    dataLayerRangeFirstStroke,
+    dataLayerRangeFirstStrokeWidth,
+    dataLayerRangeSecondShape,
+    dataLayerRangeSecondSize,
+    dataLayerRangeSecondFill,
+    dataLayerRangeSecondStroke,
+    dataLayerRangeSecondStrokeWidth,
+  ]) {
+    control.addEventListener("input", renderDataLayerSymbolPreview);
+    control.addEventListener("change", renderDataLayerSymbolPreview);
+  }
+  dataLayerApplyScope.addEventListener("change", updateDataLayerSymbologyHelp);
   window.addEventListener("resize", () => {
     hideCanvasContextMenu();
-    applyPaneWidths(contentsPaneWidth, propertiesPaneWidth, "viewport");
+    applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
   });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && pendingKeyboardNudge !== undefined) {
@@ -5241,7 +7248,7 @@ async function main(): Promise<void> {
   });
 
   installSvg();
-  applyPaneWidths(contentsPaneWidth, propertiesPaneWidth, "viewport");
+  applyPaneWidths(preferredContentsPaneWidth, preferredPropertiesPaneWidth, "viewport");
   renderTree();
   renderDiagnostics();
   updateContentsOptions();
@@ -5250,6 +7257,9 @@ async function main(): Promise<void> {
   sceneSummary.textContent = `${page.nodes.length} vector nodes · ${page.semanticOrder.length} semantic elements · ${scene.diagnostics.length} diagnostics`;
   sceneSummary.textContent = `${scene.pages.length} page${scene.pages.length === 1 ? "" : "s"} - ${scene.pages.reduce((total, scenePage) => total + scenePage.nodes.length, 0)} vector nodes - ${scene.diagnostics.length} diagnostics`;
   status.textContent = "Structured boring log scene rendered as semantic SVG.";
+  renderDataSummary();
+  renderPageSetup();
+  renderAttributeTable();
   if (studioProjection === null) {
     await refreshStudioProjection(
       null,

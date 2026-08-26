@@ -10,8 +10,10 @@ export type { BoringLogTextAuthorityResult } from "./boring-log-text-authority.j
 export {
   boringLogPublicationProjectionRevision,
   projectBoringLogSceneForPublication,
+  rsrenderSansPublicationFontProjection,
 } from "./boring-log-publication-projection.js";
 export type {
+  BoringLogPublicationFontProjectionInput,
   BoringLogPublicationProjection,
   BoringLogPublicationProjectionManifest,
   BoringLogPublicationProjectionResult,

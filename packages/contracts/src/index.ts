@@ -7,6 +7,7 @@ export { canonicalizeJson, canonicalJsonUtf8Bytes } from "./canonical-json.js";
 export type { CanonicalJsonPrimitive, CanonicalJsonValue } from "./canonical-json.js";
 export { ContractPrimitiveError } from "./contract-primitive-error.js";
 export type { ContractPrimitiveErrorCode } from "./contract-primitive-error.js";
+export { isWellFormedUnicode } from "./unicode.js";
 export { defineOpaqueIdentityCodec, parseOpaqueIdentity } from "./identity.js";
 export type { OpaqueIdentity, OpaqueIdentityCodec } from "./identity.js";
 export {
@@ -30,6 +31,7 @@ export {
   resolvedBoringLogPageSceneSchemaVersion,
   validateBoringLogLayoutJobInput,
   validateBoringLogPagePlan,
+  validateBoringLogTemplateInput,
   validateResolvedBoringLogPageScene,
 } from "./boring-log-render-contract.js";
 export type {
@@ -37,9 +39,15 @@ export type {
   BoringLogColumnInput,
   BoringLogDataAxisInput,
   BoringLogDataLayerInput,
+  BoringLogDataLayerSymbologyOverrideInput,
+  BoringLogDataLineSymbolInput,
+  BoringLogDataPointShape,
+  BoringLogDataPointSymbolInput,
+  BoringLogDataRangeSymbolInput,
   BoringLogDepthRange,
   BoringLogDepthTransformInput,
   BoringLogDocumentInput,
+  BoringLogDynamicTextContextInput,
   BoringLogEffectiveOverrideProvenance,
   BoringLogLayoutJobInput,
   BoringLogLegendInput,
@@ -56,6 +64,10 @@ export type {
   BoringLogPlannedColumn,
   BoringLogPlannedPage,
   BoringLogPlannedRegion,
+  BoringLogProviderAuthoringBindingInput,
+  BoringLogProviderAuthoringRecordScope,
+  BoringLogProviderAuthoringTargetRole,
+  BoringLogProviderAuthoringValueType,
   BoringLogRenderContractRejectionCode,
   BoringLogRenderContractResult,
   BoringLogRenderDiagnostic,
@@ -140,6 +152,25 @@ export type {
   FontRightsDispositionSet,
   FontSourceClass,
 } from "./font-catalog-contract.js";
+export {
+  fontProjectionBindingSchemaVersion,
+  resolveExactFontProjectionFace,
+  rsrenderSansFontProjectionBindings,
+  rsrenderSansPublicationFontResources,
+  rsrenderFontProjectionBindings,
+  rsrenderPublicationFontResources,
+  validateFontProjectionBindingCatalog,
+  validateFontProjectionFaceResources,
+} from "./font-projection-binding-contract.js";
+export type {
+  ExactFontProjectionFaceResolution,
+  FontProjectionBindingCatalog,
+  FontProjectionBindingCatalogResult,
+  FontProjectionBindingRejectionCode,
+  FontProjectionFaceBinding,
+  FontProjectionFaceResource,
+  FontProjectionFamilyBinding,
+} from "./font-projection-binding-contract.js";
 export {
   assertContractSchemaParity,
   contractManifestsAgree,
@@ -244,6 +275,44 @@ export {
 } from "./history-core-contract.js";
 
 export {
+  dynamicTextCatalogSchemaVersion,
+  dynamicTextContractRevision,
+  dynamicTextMaximumCatalogEntries,
+  dynamicTextMaximumIdentifierLength,
+  dynamicTextMaximumSourceLengthUtf16,
+  dynamicTextMaximumTokenOccurrences,
+  isDynamicTextVariableIdentifier,
+  parseDynamicTextTemplate,
+  resolveDynamicText,
+  validateDynamicTextCatalog,
+  validateDynamicTextResolution,
+} from "./dynamic-text-contract.js";
+
+export {
+  boringLogDynamicTextCatalog,
+  boringLogDynamicTextCatalogRevision,
+} from "./boring-log-dynamic-text-catalog.js";
+export type {
+  DynamicTextAuthoredProvenance,
+  DynamicTextCatalog,
+  DynamicTextContractRejectionCode,
+  DynamicTextContractResult,
+  DynamicTextEffectiveOverrideProvenance,
+  DynamicTextEffectiveProvenance,
+  DynamicTextExampleProvenance,
+  DynamicTextMissingValuePolicy,
+  DynamicTextOriginalProvenance,
+  DynamicTextResolution,
+  DynamicTextResolutionDiagnostic,
+  DynamicTextResolvedOccurrence,
+  DynamicTextToken,
+  DynamicTextValueFact,
+  DynamicTextValueKind,
+  DynamicTextVariableDefinition,
+  DynamicTextVariableValue,
+} from "./dynamic-text-contract.js";
+
+export {
   createProjectDomainEffect,
   decodeProjectDomainEffect,
   encodeProjectDomainEffect,
@@ -273,6 +342,7 @@ export {
   overrideRenderDatasetEventKind,
   overrideRenderDatasetProjectionKind,
   overrideRenderDatasetQueryKind,
+  revertDisplayValueOverrideCommandId,
   setDisplayValueOverrideCommandId,
 } from "./override-render-dataset-application-contract.js";
 export type {
@@ -306,6 +376,7 @@ export type {
   OverrideStateProjection,
   OverrideValueType,
   SetDisplayValueOverrideCommand,
+  RevertDisplayValueOverrideCommand,
 } from "./override-render-dataset-application-contract.js";
 export type {
   CanonicalAggregateBytes,

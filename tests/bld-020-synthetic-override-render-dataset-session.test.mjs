@@ -102,6 +102,7 @@ test("synthetic session bootstrap returns one least-capable frozen BLD-019 facad
   assert.equal(session.ownerGeneration, ownerGeneration);
   assert.deepEqual(Reflect.ownKeys(session.service), [
     "setDisplayValue",
+    "revertDisplayValue",
     "undo",
     "redo",
     "getProjection",

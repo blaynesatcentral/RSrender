@@ -5,7 +5,11 @@ import {
   type ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
 
-import { projectBoringLogSceneForPublication } from "./boring-log-publication-projection.js";
+import {
+  projectBoringLogSceneForPublication,
+  rsrenderSansPublicationFontProjection,
+  type BoringLogPublicationFontProjectionInput,
+} from "./boring-log-publication-projection.js";
 
 export const boringLogPublicationPackageProjectionRevision =
   "bld-044-layout-host-publication-package-v1" as const;
@@ -74,6 +78,7 @@ export interface BoringLogPublicationPackageProjection {
   readonly documentTitle: string;
   readonly svgMarkup: string;
   readonly html: string;
+  readonly fontFaceCss: string;
 }
 
 export type BoringLogPublicationPackageProjectionResult =
@@ -88,7 +93,8 @@ export type BoringLogPublicationPackageProjectionResult =
         | "BORING_LOG_PUBLICATION_SCENE_SET_DUPLICATE"
         | "BORING_LOG_PUBLICATION_SCENE_SET_SCENE_REJECTED"
         | "BORING_LOG_PUBLICATION_SCENE_SET_PAGE_REJECTED"
-        | "BORING_LOG_PUBLICATION_SCENE_SET_DOM_COLLISION";
+        | "BORING_LOG_PUBLICATION_SCENE_SET_DOM_COLLISION"
+        | "BORING_LOG_PUBLICATION_SCENE_SET_FONT_BINDING_REJECTED";
     };
 
 type DataRecord = Readonly<Record<string, unknown>>;
@@ -288,6 +294,7 @@ function parseSceneSet(input: unknown):
 
 export function projectBoringLogSceneSetForPublication(
   input: unknown,
+  fontProjectionInput: BoringLogPublicationFontProjectionInput = rsrenderSansPublicationFontProjection,
 ): BoringLogPublicationPackageProjectionResult {
   const parsed = parseSceneSet(input);
   if (!parsed.accepted) return rejected(parsed.code);
@@ -297,6 +304,7 @@ export function projectBoringLogSceneSetForPublication(
   const svgPages: string[] = [];
   const pageMarkup: string[] = [];
   const pageRules: string[] = [];
+  const fontFaceRules = new Set<string>();
   for (const [entryIndex, entry] of parsed.value.entries.entries()) {
     const sceneDigest = sha256CanonicalJson(entry.scene);
     entryManifests.push(
@@ -314,10 +322,14 @@ export function projectBoringLogSceneSetForPublication(
     for (const [pagePlanIndex, plannedPage] of entry.scene.pagePlan.pages.entries()) {
       const isolated = pageScene(entry.scene, pagePlanIndex);
       if (isolated === null) return rejected("BORING_LOG_PUBLICATION_SCENE_SET_PAGE_REJECTED");
-      const projected = projectBoringLogSceneForPublication(isolated);
+      const projected = projectBoringLogSceneForPublication(isolated, fontProjectionInput);
       if (!projected.accepted) {
+        if (projected.code === "BORING_LOG_PUBLICATION_FONT_BINDING_REJECTED") {
+          return rejected("BORING_LOG_PUBLICATION_SCENE_SET_FONT_BINDING_REJECTED");
+        }
         return rejected("BORING_LOG_PUBLICATION_SCENE_SET_PAGE_REJECTED");
       }
+      fontFaceRules.add(projected.projection.fontFaceCss);
       const publicationPageIndex = pageManifests.length;
       const namespace = `rsrender-entry-${String(entryIndex + 1).padStart(2, "0")}-page-${String(pagePlanIndex + 1).padStart(3, "0")}`;
       const cssPageName = `rsrender_page_${String(publicationPageIndex + 1).padStart(4, "0")}`;
@@ -380,7 +392,8 @@ export function projectBoringLogSceneSetForPublication(
   const projectionDigest = sha256CanonicalJson(manifest);
   const documentTitle = `RSrender Log Set | ${entryManifests.length} Boring Logs | ${pageManifests.length} Pages | Projection ${projectionDigest}`;
   const svgMarkup = svgPages.join("");
-  const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-aggregate-digest" content="${escapedAttribute(aggregateDigest)}"><meta name="rsrender-projection-digest" content="${escapedAttribute(projectionDigest)}"><title>${escapedText(documentTitle)}</title><style>@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-regular.ttf') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('rsrender-layout://publication/arial-bold.ttf') format('truetype');font-style:normal;font-weight:700}${pageRules.join("")}html,body{margin:0;padding:0;background:#fff}.publication-page{overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pageMarkup.join("")}</body></html>`;
+  const fontFaceCss = [...fontFaceRules].join("");
+  const html = `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'"><meta name="rsrender-aggregate-digest" content="${escapedAttribute(aggregateDigest)}"><meta name="rsrender-projection-digest" content="${escapedAttribute(projectionDigest)}"><title>${escapedText(documentTitle)}</title><style>${fontFaceCss}${pageRules.join("")}html,body{margin:0;padding:0;background:#fff}.publication-page{overflow:hidden;break-after:page;page-break-after:always}.publication-page:last-child{break-after:auto;page-break-after:auto}.publication-page svg{display:block;width:100%;height:100%}text,tspan{white-space:pre}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>${pageMarkup.join("")}</body></html>`;
   return Object.freeze({
     accepted: true,
     projection: Object.freeze({
@@ -390,6 +403,7 @@ export function projectBoringLogSceneSetForPublication(
       documentTitle,
       svgMarkup,
       html,
+      fontFaceCss,
     }),
   });
 }

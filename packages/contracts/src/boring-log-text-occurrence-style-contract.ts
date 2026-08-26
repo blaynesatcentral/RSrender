@@ -120,6 +120,10 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       typeof value["style"] === "object" &&
       value["style"] !== null &&
       Object.hasOwn(value["style"], "textDecoration");
+    const hasFontStyle =
+      typeof value["style"] === "object" &&
+      value["style"] !== null &&
+      Object.hasOwn(value["style"], "fontStyle");
     const hasLetterSpacing =
       typeof value["style"] === "object" &&
       value["style"] !== null &&
@@ -134,6 +138,7 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       Object.hasOwn(value["style"], "paragraphSpacingMpt");
     const style = record(value["style"], [
       "fontFamilyId",
+      ...(hasFontStyle ? ["fontStyle"] : []),
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
@@ -145,6 +150,7 @@ export function validateBoringLogTextOccurrenceStyleOverride(
     ]);
     if (
       !Number.isSafeInteger(style["fontWeight"]) ||
+      (hasFontStyle && !["normal", "italic"].includes(String(style["fontStyle"]))) ||
       (style["fontWeight"] as number) < 1 ||
       (style["fontWeight"] as number) > 1_000 ||
       (hasLetterSpacing && !Number.isSafeInteger(style["letterSpacingMpt"])) ||
@@ -173,6 +179,7 @@ export function validateBoringLogTextOccurrenceStyleOverride(
       baseStyleId: text(value["baseStyleId"]),
       style: Object.freeze({
         fontFamilyId: text(style["fontFamilyId"]),
+        ...(hasFontStyle ? { fontStyle: style["fontStyle"] as "normal" | "italic" } : {}),
         fontSizeMpt: positiveMpt(style["fontSizeMpt"]),
         fontWeight: style["fontWeight"] as number,
         lineHeightMpt: positiveMpt(style["lineHeightMpt"]),

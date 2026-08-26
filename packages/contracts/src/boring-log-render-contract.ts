@@ -1,8 +1,14 @@
+import { resolveDynamicText, validateDynamicTextResolution } from "./dynamic-text-contract.js";
 import { isMpt } from "./physical-length.js";
 import { isSha256Digest } from "./sha256.js";
 import { isWellFormedUnicode } from "./unicode.js";
 import type { Mpt } from "./physical-length.js";
 import type { Sha256Digest } from "./sha256.js";
+import type {
+  DynamicTextCatalog,
+  DynamicTextResolution,
+  DynamicTextVariableValue,
+} from "./dynamic-text-contract.js";
 
 export const boringLogRenderContractVersion = 1 as const;
 export const boringLogRenderContractRevision = "bld-043-lithology-appearance-v1" as const;
@@ -86,6 +92,8 @@ export type BoringLogValueProvenance =
 export interface BoringLogTextStyleInput {
   readonly id: string;
   readonly fontFamilyId: string;
+  /** Absent only in legacy resources, where normal is the exact default. */
+  readonly fontStyle?: "normal" | "italic";
   readonly fontSizeMpt: Mpt;
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
@@ -151,6 +159,8 @@ export interface BoringLogColumnInput {
   readonly role: string;
   readonly xMpt: Mpt;
   readonly widthMpt: Mpt;
+  /** Optional template-owned heading; absent in legacy templates and resolves to the role default. */
+  readonly heading?: string;
 }
 
 export interface BoringLogPageGuideInput {
@@ -196,6 +206,49 @@ export interface BoringLogTemplateBindingInput {
   readonly styleId: string;
 }
 
+export type BoringLogProviderAuthoringTargetRole =
+  | "data-track-event"
+  | "data-track-polyline"
+  | "interval-text-column"
+  | "lithology-pattern-column"
+  | "numeric-value-column"
+  | "point-text-column"
+  | "remarks-column";
+
+export type BoringLogProviderAuthoringRecordScope =
+  "boring-method" | "comment" | "field-test" | "sample" | "stratum";
+
+export type BoringLogProviderAuthoringValueType =
+  "boolean" | "date" | "number" | "structured-text" | "text";
+
+/** Exact provider binding retained separately from the renderer path/style binding. */
+export interface BoringLogProviderAuthoringBindingInput {
+  readonly elementId: string;
+  readonly contractVersion: 1;
+  readonly providerId: string;
+  readonly catalogRevision: string;
+  readonly fieldId: string;
+  readonly targetRole: BoringLogProviderAuthoringTargetRole;
+  readonly root: "render-dataset";
+  readonly recordScope: BoringLogProviderAuthoringRecordScope;
+  readonly sourcePath: string;
+  readonly cardinality: "one-per-record";
+  readonly valueType: BoringLogProviderAuthoringValueType;
+  readonly unit: string | null;
+  readonly depth: {
+    readonly kind: "interval" | "point";
+    readonly fromPath: string;
+    readonly toPath: string | null;
+  };
+  readonly provenance: {
+    readonly sourceClass: "provider-source";
+    readonly providerId: string;
+    readonly mappingRevision: string;
+    readonly sourceOriginalRetained: true;
+    readonly effectiveOverrideSeparate: true;
+  };
+}
+
 export interface BoringLogLithologyAppearanceInput {
   /** Null deliberately inherits the next authority in the appearance cascade. */
   readonly materialFillToken: string | null;
@@ -217,6 +270,42 @@ export interface BoringLogLithologyIntervalAppearanceOverrideInput extends Borin
   readonly overrideRevision: number;
 }
 
+export type BoringLogDataPointShape = "square" | "triangle" | "circle";
+
+export interface BoringLogDataLineSymbolInput {
+  readonly strokeToken: string;
+  readonly strokeWidthMpt: Mpt;
+  readonly dashMpt: readonly Mpt[];
+}
+
+export interface BoringLogDataPointSymbolInput {
+  readonly shape: BoringLogDataPointShape;
+  readonly sizeMpt: Mpt;
+  readonly fillToken: string | null;
+  readonly strokeToken: string;
+  readonly strokeWidthMpt: Mpt;
+}
+
+export interface BoringLogDataRangeSymbolInput {
+  readonly line: BoringLogDataLineSymbolInput;
+  readonly firstEndpoint: BoringLogDataPointSymbolInput;
+  readonly secondEndpoint: BoringLogDataPointSymbolInput;
+}
+
+/** Complete project-owned presentation replacement for one structured Data Layer. */
+export interface BoringLogDataLayerSymbologyOverrideInput {
+  readonly layerId: string;
+  readonly kind: "numeric-polyline" | "numeric-range";
+  readonly visible: boolean;
+  readonly order: number;
+  readonly line: BoringLogDataLineSymbolInput | null;
+  readonly point: BoringLogDataPointSymbolInput | null;
+  readonly range: BoringLogDataRangeSymbolInput | null;
+  readonly legend: Readonly<{ readonly visible: boolean; readonly label: string }>;
+  readonly overrideIdentity: string;
+  readonly overrideRevision: number;
+}
+
 export interface BoringLogTemplateInput {
   readonly schemaVersion: "rsrender.boring-log-mvp-template.v1";
   readonly templateId: string;
@@ -226,6 +315,15 @@ export interface BoringLogTemplateInput {
     readonly widthMpt: Mpt;
     readonly heightMpt: Mpt;
     readonly orientation: "portrait" | "landscape";
+    /** Optional for legacy templates; authored Page Setup persists exact physical values. */
+    readonly paperPreset?: "letter" | "a4" | "custom";
+    /** Portable template margins. Printer nonprinting areas are never stored here. */
+    readonly marginsMpt?: {
+      readonly topMpt: Mpt;
+      readonly rightMpt: Mpt;
+      readonly bottomMpt: Mpt;
+      readonly leftMpt: Mpt;
+    };
   };
   readonly regions: readonly BoringLogTemplateRegionInput[];
   readonly depthTransform: BoringLogDepthTransformInput;
@@ -247,10 +345,14 @@ export interface BoringLogTemplateInput {
   readonly lithologyClassificationAppearanceDefaults?: readonly BoringLogLithologyClassificationAppearanceDefaultInput[];
   /** Exact interval appearance replacements. Each property may independently inherit. */
   readonly lithologyIntervalAppearanceOverrides?: readonly BoringLogLithologyIntervalAppearanceOverrideInput[];
+  /** Renderer-neutral graph/legend presentation replacements keyed by exact layer identity. */
+  readonly dataLayerSymbologyOverrides?: readonly BoringLogDataLayerSymbologyOverrideInput[];
   /** Nonprinting layout guides. Absent in legacy v1 templates. */
   readonly guides?: readonly BoringLogPageGuideInput[];
   readonly hierarchy: BoringLogTemplateHierarchyNode;
   readonly bindings: readonly BoringLogTemplateBindingInput[];
+  /** Exact catalog bindings for author-created source-backed elements. */
+  readonly providerAuthoringBindings?: readonly BoringLogProviderAuthoringBindingInput[];
   readonly visualTokens: Readonly<Record<string, string>>;
 }
 
@@ -336,7 +438,7 @@ export interface BoringLogSampleInput {
   readonly label: string;
   readonly depthFt: number;
   readonly symbol: string;
-  readonly recoveryPercent: number;
+  readonly recoveryPercent: number | null;
   readonly blowIncrements: readonly {
     readonly blows: number;
     readonly penetrationInches: number;
@@ -367,12 +469,13 @@ export interface BoringLogApprovalInput {
 }
 
 export interface BoringLogDocumentInput {
-  readonly schemaVersion: "rsrender.boring-log-mvp-fixture.v1";
+  readonly schemaVersion:
+    "rsrender.boring-log-mvp-fixture.v1" | "rsrender.boring-log-source-document.v1";
   readonly fixtureId: string;
   readonly fixtureRevision: number;
-  readonly evidenceClass: "synthetic-coverage-only";
-  readonly representativeClaimAllowed: false;
-  readonly publicationEligibility: "example-dataset-only";
+  readonly evidenceClass: "synthetic-coverage-only" | "source-project-data";
+  readonly representativeClaimAllowed: boolean;
+  readonly publicationEligibility: "example-dataset-only" | "source-project-data";
   readonly identity: Readonly<Record<"boringLogId" | "explorationId" | "pageId", string>>;
   readonly metadata: BoringLogMetadataInput;
   readonly referenceDepthRange: BoringLogDepthRange;
@@ -400,6 +503,14 @@ export interface BoringLogLayoutJobInput {
   readonly templateDigest: Sha256Digest;
   readonly document: BoringLogDocumentInput;
   readonly template: BoringLogTemplateInput;
+  /** Optional exact text-element bindings resolved before any Layout Host measurement. */
+  readonly dynamicText?: BoringLogDynamicTextContextInput;
+}
+
+export interface BoringLogDynamicTextContextInput {
+  readonly catalog: DynamicTextCatalog;
+  readonly values: readonly DynamicTextVariableValue[];
+  readonly elementIds: readonly string[];
 }
 
 export interface BoringLogPlannedRegion extends MptRect {
@@ -412,6 +523,8 @@ export interface BoringLogPlannedColumn {
   readonly role: string;
   readonly xMpt: Mpt;
   readonly widthMpt: Mpt;
+  /** Optional template-owned heading; absent in legacy plans and resolves to the role default. */
+  readonly heading?: string;
 }
 
 export interface BoringLogPlannedPage {
@@ -444,6 +557,8 @@ export interface BoringLogTextMeasurementRequest {
   readonly sourceStartUtf16: number;
   readonly sourceEndUtf16: number;
   readonly fontFamilyId: string;
+  /** Absent only in legacy resources, where normal is the exact default. */
+  readonly fontStyle?: "normal" | "italic";
   readonly fontSizeMpt: Mpt;
   readonly fontWeight: number;
   readonly lineHeightMpt: Mpt;
@@ -456,6 +571,8 @@ export interface BoringLogTextMeasurementRequest {
   readonly wrapPolicy: "word-v1" | "no-wrap";
   readonly overflowPolicy: "clip-with-diagnostic" | "shrink-to-minimum";
   readonly minimumFontSizeMpt: Mpt;
+  /** Authored token source and substitution provenance; `text` is its exact measurementText. */
+  readonly dynamicTextResolution?: DynamicTextResolution;
 }
 
 export interface BoringLogResolvedTextLine {
@@ -813,6 +930,82 @@ function validateLithologyAppearance(input: unknown, fields: readonly string[]):
   return appearance;
 }
 
+function validateDataLineSymbol(input: unknown): DataRecord {
+  const symbol = record(input, ["strokeToken", "strokeWidthMpt", "dashMpt"]);
+  textValue(symbol["strokeToken"]);
+  const width = mpt(symbol["strokeWidthMpt"]);
+  const dash = array(symbol["dashMpt"]);
+  if (
+    width < 100 ||
+    width > 12_000 ||
+    dash.length > 8 ||
+    dash.length % 2 !== 0 ||
+    dash.some((entry) => mpt(entry) <= 0 || mpt(entry) > 72_000)
+  ) {
+    fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+  return symbol;
+}
+
+function validateDataPointSymbol(input: unknown): DataRecord {
+  const symbol = record(input, ["shape", "sizeMpt", "fillToken", "strokeToken", "strokeWidthMpt"]);
+  if (!["square", "triangle", "circle"].includes(textValue(symbol["shape"]))) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  const size = mpt(symbol["sizeMpt"]);
+  const width = mpt(symbol["strokeWidthMpt"]);
+  if (size < 1_000 || size > 24_000 || width < 100 || width > 12_000) {
+    fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+  }
+  nullableText(symbol["fillToken"]);
+  textValue(symbol["strokeToken"]);
+  return symbol;
+}
+
+function validateDataLayerSymbologyOverride(input: unknown): DataRecord {
+  const override = record(input, [
+    "layerId",
+    "kind",
+    "visible",
+    "order",
+    "line",
+    "point",
+    "range",
+    "legend",
+    "overrideIdentity",
+    "overrideRevision",
+  ]);
+  textValue(override["layerId"]);
+  const kind = textValue(override["kind"]);
+  if (!["numeric-polyline", "numeric-range"].includes(kind)) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  if (typeof override["visible"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  const order = nonnegativeInteger(override["order"]);
+  if (order > 255) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  if (kind === "numeric-polyline") {
+    validateDataLineSymbol(override["line"]);
+    validateDataPointSymbol(override["point"]);
+    if (override["range"] !== null) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  } else {
+    if (override["line"] !== null || override["point"] !== null) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+    const range = record(override["range"], ["line", "firstEndpoint", "secondEndpoint"]);
+    validateDataLineSymbol(range["line"]);
+    validateDataPointSymbol(range["firstEndpoint"]);
+    validateDataPointSymbol(range["secondEndpoint"]);
+  }
+  const legend = record(override["legend"], ["visible", "label"]);
+  if (typeof legend["visible"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  if (textValue(legend["label"]).length > 256) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  textValue(override["overrideIdentity"]);
+  if (nonnegativeInteger(override["overrideRevision"]) < 1) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  return override;
+}
+
 function assertNoForbiddenRaster(input: unknown): void {
   if (Array.isArray(input)) {
     for (const child of input) assertNoForbiddenRaster(child);
@@ -858,6 +1051,86 @@ function validateTemplateHierarchy(input: unknown, ids: string[], leafIds: strin
   }
 }
 
+function validateProviderAuthoringBinding(input: unknown): DataRecord {
+  const value = record(input, [
+    "elementId",
+    "contractVersion",
+    "providerId",
+    "catalogRevision",
+    "fieldId",
+    "targetRole",
+    "root",
+    "recordScope",
+    "sourcePath",
+    "cardinality",
+    "valueType",
+    "unit",
+    "depth",
+    "provenance",
+  ]);
+  textValue(value["elementId"]);
+  literal(value["contractVersion"], 1);
+  const providerId = textValue(value["providerId"]);
+  const catalogRevision = textValue(value["catalogRevision"]);
+  textValue(value["fieldId"]);
+  if (
+    ![
+      "data-track-event",
+      "data-track-polyline",
+      "interval-text-column",
+      "lithology-pattern-column",
+      "numeric-value-column",
+      "point-text-column",
+      "remarks-column",
+    ].includes(textValue(value["targetRole"]))
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  literal(value["root"], "render-dataset");
+  if (
+    !["boring-method", "comment", "field-test", "sample", "stratum"].includes(
+      textValue(value["recordScope"]),
+    )
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  textValue(value["sourcePath"]);
+  literal(value["cardinality"], "one-per-record");
+  if (
+    !["boolean", "date", "number", "structured-text", "text"].includes(
+      textValue(value["valueType"]),
+    )
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  nullableText(value["unit"]);
+  const depth = record(value["depth"], ["kind", "fromPath", "toPath"]);
+  const depthKind = textValue(depth["kind"]);
+  if (!["interval", "point"].includes(depthKind)) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  textValue(depth["fromPath"]);
+  const toPath = nullableText(depth["toPath"]);
+  if ((depthKind === "point" && toPath !== null) || (depthKind === "interval" && toPath === null)) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  const provenance = record(value["provenance"], [
+    "sourceClass",
+    "providerId",
+    "mappingRevision",
+    "sourceOriginalRetained",
+    "effectiveOverrideSeparate",
+  ]);
+  literal(provenance["sourceClass"], "provider-source");
+  if (
+    textValue(provenance["providerId"]) !== providerId ||
+    textValue(provenance["mappingRevision"]) !== catalogRevision ||
+    provenance["sourceOriginalRetained"] !== true ||
+    provenance["effectiveOverrideSeparate"] !== true
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  return value;
+}
+
 function validateTemplate(input: unknown): void {
   const hasOccurrenceLayouts =
     typeof input === "object" &&
@@ -889,11 +1162,21 @@ function validateTemplate(input: unknown): void {
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "lithologyIntervalAppearanceOverrides");
+  const hasDataLayerSymbologyOverrides =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "dataLayerSymbologyOverrides");
   const hasPagination =
     typeof input === "object" &&
     input !== null &&
     !Array.isArray(input) &&
     Object.hasOwn(input, "pagination");
+  const hasProviderAuthoringBindings =
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    Object.hasOwn(input, "providerAuthoringBindings");
   const value = record(input, [
     "schemaVersion",
     "templateId",
@@ -913,21 +1196,60 @@ function validateTemplate(input: unknown): void {
       ? ["lithologyClassificationAppearanceDefaults"]
       : []),
     ...(hasLithologyIntervalAppearanceOverrides ? ["lithologyIntervalAppearanceOverrides"] : []),
+    ...(hasDataLayerSymbologyOverrides ? ["dataLayerSymbologyOverrides"] : []),
     ...(hasGuides ? ["guides"] : []),
     "hierarchy",
     "bindings",
+    ...(hasProviderAuthoringBindings ? ["providerAuthoringBindings"] : []),
     "visualTokens",
   ]);
   literal(value["schemaVersion"], "rsrender.boring-log-mvp-template.v1");
   textValue(value["templateId"]);
   nonnegativeInteger(value["templateRevision"]);
   literal(value["physicalUnits"], "mpt");
-  const page = record(value["page"], ["widthMpt", "heightMpt", "orientation"]);
+  const pageInput = value["page"];
+  const hasPaperPreset =
+    typeof pageInput === "object" &&
+    pageInput !== null &&
+    !Array.isArray(pageInput) &&
+    Object.hasOwn(pageInput, "paperPreset");
+  const hasMargins =
+    typeof pageInput === "object" &&
+    pageInput !== null &&
+    !Array.isArray(pageInput) &&
+    Object.hasOwn(pageInput, "marginsMpt");
+  const page = record(pageInput, [
+    "widthMpt",
+    "heightMpt",
+    "orientation",
+    ...(hasPaperPreset ? ["paperPreset"] : []),
+    ...(hasMargins ? ["marginsMpt"] : []),
+  ]);
   const pageWidth = mpt(page["widthMpt"]);
   const pageHeight = mpt(page["heightMpt"]);
   if (pageWidth <= 0 || pageHeight <= 0) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
   if (!["portrait", "landscape"].includes(textValue(page["orientation"]))) {
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  if (hasPaperPreset && !["letter", "a4", "custom"].includes(textValue(page["paperPreset"]))) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
+  if (hasMargins) {
+    const margins = record(page["marginsMpt"], ["topMpt", "rightMpt", "bottomMpt", "leftMpt"]);
+    const top = mpt(margins["topMpt"]);
+    const right = mpt(margins["rightMpt"]);
+    const bottom = mpt(margins["bottomMpt"]);
+    const left = mpt(margins["leftMpt"]);
+    if (
+      top < 0 ||
+      right < 0 ||
+      bottom < 0 ||
+      left < 0 ||
+      top + bottom >= pageHeight ||
+      left + right >= pageWidth
+    ) {
+      fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
+    }
   }
   const regionIds: string[] = [];
   for (const regionInput of array(value["regions"])) {
@@ -991,9 +1313,24 @@ function validateTemplate(input: unknown): void {
   const columnIds: string[] = [];
   let priorEdge: number | undefined;
   for (const columnInput of array(value["columns"])) {
-    const column = record(columnInput, ["id", "role", "xMpt", "widthMpt"]);
+    const hasHeading =
+      typeof columnInput === "object" &&
+      columnInput !== null &&
+      !Array.isArray(columnInput) &&
+      Object.hasOwn(columnInput, "heading");
+    const column = record(columnInput, [
+      "id",
+      "role",
+      "xMpt",
+      "widthMpt",
+      ...(hasHeading ? ["heading"] : []),
+    ]);
     columnIds.push(textValue(column["id"]));
     textValue(column["role"]);
+    if (hasHeading) {
+      const heading = textValue(column["heading"]);
+      if (heading.length > 512) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     const x = mpt(column["xMpt"]);
     const width = mpt(column["widthMpt"]);
     if (width <= 0 || x < 0 || x + width > pageWidth) fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
@@ -1022,6 +1359,7 @@ function validateTemplate(input: unknown): void {
   unique(guideCoordinates);
   const styleIds: string[] = [];
   for (const styleInput of array(value["styles"])) {
+    const hasFontStyle = Object.hasOwn(styleInput as object, "fontStyle");
     const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
     const hasLetterSpacing = Object.hasOwn(styleInput as object, "letterSpacingMpt");
     const hasWordSpacing = Object.hasOwn(styleInput as object, "wordSpacingMpt");
@@ -1029,6 +1367,7 @@ function validateTemplate(input: unknown): void {
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
+      ...(hasFontStyle ? ["fontStyle"] : []),
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
@@ -1040,6 +1379,8 @@ function validateTemplate(input: unknown): void {
     ]);
     styleIds.push(textValue(style["id"]));
     textValue(style["fontFamilyId"]);
+    if (hasFontStyle && !["normal", "italic"].includes(textValue(style["fontStyle"])))
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     if (mpt(style["fontSizeMpt"]) <= 0 || mpt(style["lineHeightMpt"]) <= 0) {
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
@@ -1245,6 +1586,15 @@ function validateTemplate(input: unknown): void {
     );
   }
   unique(intervalOverrideKeys);
+  const dataLayerOverrideIds: string[] = [];
+  for (const overrideInput of hasDataLayerSymbologyOverrides
+    ? array(value["dataLayerSymbologyOverrides"])
+    : []) {
+    const override = validateDataLayerSymbologyOverride(overrideInput);
+    dataLayerOverrideIds.push(override["layerId"] as string);
+  }
+  if (dataLayerOverrideIds.length > 64) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  unique(dataLayerOverrideIds);
   const hierarchyIds: string[] = [];
   const leafIds: string[] = [];
   validateTemplateHierarchy(value["hierarchy"], hierarchyIds, leafIds);
@@ -1276,6 +1626,21 @@ function validateTemplate(input: unknown): void {
       fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
   }
   unique(occurrenceBindingIds);
+  const providerBindingElementIds: string[] = [];
+  for (const providerInput of hasProviderAuthoringBindings
+    ? array(value["providerAuthoringBindings"])
+    : []) {
+    const providerBinding = validateProviderAuthoringBinding(providerInput);
+    const elementId = providerBinding["elementId"] as string;
+    if (!semanticIds.has(elementId)) fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    const rendererBinding = (value["bindings"] as readonly DataRecord[]).find(
+      (candidate) =>
+        candidate["elementId"] === elementId && candidate["path"] === providerBinding["sourcePath"],
+    );
+    if (rendererBinding === undefined) fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+    providerBindingElementIds.push(elementId);
+  }
+  unique(providerBindingElementIds);
   validateStringMap(value["visualTokens"]);
   assertNoForbiddenRaster(value);
 }
@@ -1299,12 +1664,32 @@ function validateDocument(input: unknown): void {
     "notes",
     "approval",
   ]);
-  literal(value["schemaVersion"], "rsrender.boring-log-mvp-fixture.v1");
+  const schemaVersion = textValue(value["schemaVersion"]);
+  if (
+    schemaVersion !== "rsrender.boring-log-mvp-fixture.v1" &&
+    schemaVersion !== "rsrender.boring-log-source-document.v1"
+  ) {
+    fail("BORING_LOG_CONTRACT_UNSUPPORTED_VERSION");
+  }
   textValue(value["fixtureId"]);
   nonnegativeInteger(value["fixtureRevision"]);
-  literal(value["evidenceClass"], "synthetic-coverage-only");
-  literal(value["representativeClaimAllowed"], false);
-  literal(value["publicationEligibility"], "example-dataset-only");
+  const evidenceClass = textValue(value["evidenceClass"]);
+  const representativeClaimAllowed = value["representativeClaimAllowed"];
+  const publicationEligibility = textValue(value["publicationEligibility"]);
+  const isSynthetic = schemaVersion === "rsrender.boring-log-mvp-fixture.v1";
+  if (
+    typeof representativeClaimAllowed !== "boolean" ||
+    (isSynthetic &&
+      (evidenceClass !== "synthetic-coverage-only" ||
+        representativeClaimAllowed !== false ||
+        publicationEligibility !== "example-dataset-only")) ||
+    (!isSynthetic &&
+      (evidenceClass !== "source-project-data" ||
+        representativeClaimAllowed !== true ||
+        publicationEligibility !== "source-project-data"))
+  ) {
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  }
   const identity = record(value["identity"], ["boringLogId", "explorationId", "pageId"]);
   for (const item of Object.values(identity)) textValue(item);
   const metadata = record(value["metadata"], [
@@ -1388,7 +1773,7 @@ function validateDocument(input: unknown): void {
     intervalIds.push(textValue(interval["id"]));
     const from = finite(interval["depthFromFt"]);
     const to = finite(interval["depthToFt"]);
-    if (from !== previousEnd || to <= from || to > totalDepth)
+    if (from < previousEnd || to <= from || to > totalDepth)
       fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
     previousEnd = to;
     textValue(interval["classification"]);
@@ -1408,7 +1793,6 @@ function validateDocument(input: unknown): void {
     validateProvenance(interval["provenance"]);
   }
   unique(intervalIds);
-  if (previousEnd !== totalDepth) fail("BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE");
   const sampleIds: string[] = [];
   let previousSampleDepth = -Infinity;
   for (const sampleInput of array(value["samples"])) {
@@ -1430,10 +1814,12 @@ function validateDocument(input: unknown): void {
     if (depth < 0 || depth > totalDepth || depth < previousSampleDepth)
       fail("BORING_LOG_CONTRACT_INVALID_ORDER");
     previousSampleDepth = depth;
-    const recovery = finite(sample["recoveryPercent"]);
-    if (recovery < 0 || recovery > 100) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    if (sample["recoveryPercent"] !== null) {
+      const recovery = finite(sample["recoveryPercent"]);
+      if (recovery < 0 || recovery > 100) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
     const increments = array(sample["blowIncrements"]);
-    if (increments.length < 1 || increments.length > 3) {
+    if (increments.length > 4) {
       fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
     for (const incrementInput of increments) {
@@ -1445,11 +1831,8 @@ function validateDocument(input: unknown): void {
       }
     }
     if (typeof sample["refusal"] !== "boolean") fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-    if (sample["nValue"] === null) {
-      if (sample["refusal"] !== true) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
-    } else {
+    if (sample["nValue"] !== null) {
       nonnegativeInteger(sample["nValue"]);
-      if (sample["refusal"] !== false) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     }
     validateProvenance(sample["provenance"]);
   }
@@ -1641,9 +2024,24 @@ function validatePagePlanUnchecked(input: unknown): void {
     const columnIds: string[] = [];
     let priorEdge: number | undefined;
     for (const columnInput of array(page["columns"])) {
-      const column = record(columnInput, ["id", "role", "xMpt", "widthMpt"]);
+      const hasHeading =
+        typeof columnInput === "object" &&
+        columnInput !== null &&
+        !Array.isArray(columnInput) &&
+        Object.hasOwn(columnInput, "heading");
+      const column = record(columnInput, [
+        "id",
+        "role",
+        "xMpt",
+        "widthMpt",
+        ...(hasHeading ? ["heading"] : []),
+      ]);
       columnIds.push(textValue(column["id"]));
       textValue(column["role"]);
+      if (hasHeading) {
+        const heading = textValue(column["heading"]);
+        if (heading.length > 512) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      }
       const x = mpt(column["xMpt"]);
       const columnWidth = mpt(column["widthMpt"]);
       if (columnWidth <= 0 || x < 0 || x + columnWidth > width)
@@ -1667,12 +2065,16 @@ function validatePagePlanUnchecked(input: unknown): void {
 }
 
 function validateTextRequest(input: unknown): void {
+  const hasFontStyle =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "fontStyle");
   const hasLetterSpacing =
     typeof input === "object" && input !== null && Object.hasOwn(input, "letterSpacingMpt");
   const hasWordSpacing =
     typeof input === "object" && input !== null && Object.hasOwn(input, "wordSpacingMpt");
   const hasParagraphSpacing =
     typeof input === "object" && input !== null && Object.hasOwn(input, "paragraphSpacingMpt");
+  const hasDynamicTextResolution =
+    typeof input === "object" && input !== null && Object.hasOwn(input, "dynamicTextResolution");
   const value = record(input, [
     "measurementId",
     "text",
@@ -1680,6 +2082,7 @@ function validateTextRequest(input: unknown): void {
     "sourceStartUtf16",
     "sourceEndUtf16",
     "fontFamilyId",
+    ...(hasFontStyle ? ["fontStyle"] : []),
     "fontSizeMpt",
     "fontWeight",
     "lineHeightMpt",
@@ -1692,6 +2095,7 @@ function validateTextRequest(input: unknown): void {
     "wrapPolicy",
     "overflowPolicy",
     "minimumFontSizeMpt",
+    ...(hasDynamicTextResolution ? ["dynamicTextResolution"] : []),
   ]);
   textValue(value["measurementId"]);
   const content = textValue(value["text"], true);
@@ -1700,6 +2104,8 @@ function validateTextRequest(input: unknown): void {
   const end = nonnegativeInteger(value["sourceEndUtf16"]);
   if (end < start || end - start !== content.length) fail("BORING_LOG_CONTRACT_INVALID_ORDER");
   textValue(value["fontFamilyId"]);
+  if (hasFontStyle && !["normal", "italic"].includes(textValue(value["fontStyle"])))
+    fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   if (
     mpt(value["fontSizeMpt"]) <= 0 ||
     mpt(value["lineHeightMpt"]) <= 0 ||
@@ -1722,6 +2128,12 @@ function validateTextRequest(input: unknown): void {
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
   if (!["clip-with-diagnostic", "shrink-to-minimum"].includes(textValue(value["overflowPolicy"])))
     fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+  if (hasDynamicTextResolution) {
+    const resolution = validateDynamicTextResolution(value["dynamicTextResolution"]);
+    if (!resolution.accepted || resolution.value.measurementText !== content) {
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+    }
+  }
 }
 
 function validateTextResult(input: unknown): void {
@@ -2016,6 +2428,7 @@ function validateSceneUnchecked(input: unknown): void {
   validateStringMap(resources["visualTokens"]);
   const styleIds: string[] = [];
   for (const styleInput of array(resources["textStyles"])) {
+    const hasFontStyle = Object.hasOwn(styleInput as object, "fontStyle");
     const hasTextDecoration = Object.hasOwn(styleInput as object, "textDecoration");
     const hasLetterSpacing = Object.hasOwn(styleInput as object, "letterSpacingMpt");
     const hasWordSpacing = Object.hasOwn(styleInput as object, "wordSpacingMpt");
@@ -2023,6 +2436,7 @@ function validateSceneUnchecked(input: unknown): void {
     const style = record(styleInput, [
       "id",
       "fontFamilyId",
+      ...(hasFontStyle ? ["fontStyle"] : []),
       "fontSizeMpt",
       "fontWeight",
       "lineHeightMpt",
@@ -2034,6 +2448,8 @@ function validateSceneUnchecked(input: unknown): void {
     ]);
     styleIds.push(textValue(style["id"]));
     textValue(style["fontFamilyId"]);
+    if (hasFontStyle && !["normal", "italic"].includes(textValue(style["fontStyle"])))
+      fail("BORING_LOG_CONTRACT_WRONG_TYPE");
     if (mpt(style["fontSizeMpt"]) <= 0 || mpt(style["lineHeightMpt"]) <= 0) {
       fail("BORING_LOG_CONTRACT_INVALID_GEOMETRY");
     }
@@ -2215,11 +2631,23 @@ function validate<Value>(
   }
 }
 
+/** Strictly validates and detaches a renderer-neutral boring-log template. */
+export function validateBoringLogTemplateInput(
+  input: unknown,
+): BoringLogRenderContractResult<BoringLogTemplateInput> {
+  return validate(input, validateTemplate);
+}
+
 /** Strictly validates and detaches a structured boring-log layout job. */
 export function validateBoringLogLayoutJobInput(
   input: unknown,
 ): BoringLogRenderContractResult<BoringLogLayoutJobInput> {
   return validate(input, (candidate) => {
+    const hasDynamicText =
+      typeof candidate === "object" &&
+      candidate !== null &&
+      !Array.isArray(candidate) &&
+      Object.hasOwn(candidate, "dynamicText");
     const value = record(candidate, [
       "contractVersion",
       "schemaVersion",
@@ -2230,6 +2658,7 @@ export function validateBoringLogLayoutJobInput(
       "templateDigest",
       "document",
       "template",
+      ...(hasDynamicText ? ["dynamicText"] : []),
     ]);
     if (value["contractVersion"] !== boringLogRenderContractVersion) {
       fail("BORING_LOG_CONTRACT_UNSUPPORTED_VERSION");
@@ -2244,6 +2673,20 @@ export function validateBoringLogLayoutJobInput(
     }
     validateDocument(value["document"]);
     validateTemplate(value["template"]);
+    if (hasDynamicText) {
+      const dynamicText = record(value["dynamicText"], ["catalog", "values", "elementIds"]);
+      const context = resolveDynamicText("", dynamicText["catalog"], dynamicText["values"]);
+      if (!context.accepted) fail("BORING_LOG_CONTRACT_WRONG_TYPE");
+      const elementIds = array(dynamicText["elementIds"]).map((elementId) => textValue(elementId));
+      if (
+        elementIds.length < 1 ||
+        elementIds.length > 256 ||
+        elementIds.some((elementId) => !elementId.startsWith("node:"))
+      ) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+      unique(elementIds);
+    }
     const document = value["document"] as DataRecord;
     const template = value["template"] as DataRecord;
     const documentRange = document["referenceDepthRange"] as DataRecord;
@@ -2288,6 +2731,32 @@ export function validateBoringLogLayoutJobInput(
         (patternId !== null && !vectorPatternIds.has(patternId as string))
       ) {
         fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+    }
+    const documentLayers = (document["dataTrack"] as DataRecord)["layers"] as readonly DataRecord[];
+    for (const override of (template["dataLayerSymbologyOverrides"] as
+      readonly DataRecord[] | undefined) ?? []) {
+      const layer = documentLayers.find((candidate) => candidate["id"] === override["layerId"]);
+      if (layer === undefined || layer["kind"] !== override["kind"]) {
+        fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+      }
+      const symbols = [override["line"], override["point"]];
+      const range = override["range"] as DataRecord | null;
+      if (range !== null) {
+        symbols.push(range["line"], range["firstEndpoint"], range["secondEndpoint"]);
+      }
+      for (const symbol of symbols) {
+        if (symbol === null) continue;
+        const candidate = symbol as DataRecord;
+        for (const token of [candidate["strokeToken"], candidate["fillToken"]]) {
+          if (
+            token !== undefined &&
+            token !== null &&
+            !Object.hasOwn(visualTokens, token as PropertyKey)
+          ) {
+            fail("BORING_LOG_CONTRACT_BROKEN_REFERENCE");
+          }
+        }
       }
     }
     const boringLogIdentity = (document["identity"] as DataRecord)["boringLogId"];

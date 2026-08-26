@@ -1,0 +1,152 @@
+{
+  "schema": "rsrender.bld052.coordinate-usability-triage.v1",
+  "ticket": "BLD-052 / GitHub #95",
+  "syntheticDataOnly": true,
+  "coordinateOnly": true,
+  "sourceDigestPolicy": {
+    "required": true,
+    "requiredKeys": ["driver", "actionFile"],
+    "declaredProductionDigests": "validated-format-and-recorded"
+  },
+  "completedSyntheticPass": {
+    "workflow": "synthetic-coordinate-qualification",
+    "persona": "general-operator",
+    "result": "PASS",
+    "actionCount": 35,
+    "completedAtUtc": "2026-08-25T03:49:33.1081018Z",
+    "executableSha256": "sha256:bab31519ee1bc5b490caf7844e2b1dbcd4f7bb49a13039103952ab381c02ade4",
+    "driverSha256": "sha256:6a94d8c649cf95b99f2172cd7e682ee86ba19a8c70731941adf367b0eab39932",
+    "actionFileSha256": "sha256:bcfcba9ab896859a91be4d0740fdd7de3cfce84aa327b7c4a8bc8a4e29fb12e6",
+    "coveredOperations": [
+      "launch",
+      "focus",
+      "click",
+      "rightclick",
+      "drag",
+      "scroll",
+      "key",
+      "type",
+      "screenshot",
+      "wait",
+      "close"
+    ],
+    "visualChecks": [
+      "Home, Layout, Data, Review, and Publish tabs selected",
+      "structured Data values visible in one unclipped control row",
+      "compact context menu opened on the selected canvas item",
+      "Contents and Properties splitters both moved",
+      "Properties stayed fully inside the 125 percent DPI viewport",
+      "Undo, Redo, Save, and Publish routes received coordinate input"
+    ],
+    "cleanup": "launched RSrender process exited; no unrelated process targeted"
+  },
+  "additionalQualificationPasses": [
+    {
+      "workflow": "data-depth-configuration",
+      "persona": "geotechnical-editor",
+      "result": "PASS",
+      "actionCount": 27,
+      "completedAtUtc": "2026-08-25T04:11:44.6062730Z",
+      "driverSha256": "sha256:acf36347586a2fb0fb510dc7826b1e8320ebc78d8bc52d787eb6d37c40db14e9",
+      "actionFileSha256": "sha256:a59585a90e143b46a176b111116c3db2d6adb0f25c13209781906e8143d16af9",
+      "validatedOutcomes": [
+        "Data ribbon panned to the exact depth controls",
+        "Scale changed from 12025 to 10000 mpt per foot",
+        "Apply recomposed the structured page and marked the project dirty",
+        "Ctrl+Z restored 12025 and the original page geometry",
+        "Ctrl+Y restored 10000 and the edited page geometry"
+      ],
+      "cleanup": "launched RSrender process exited; no unrelated process targeted"
+    }
+  ],
+  "personas": [
+    {
+      "id": "first-time",
+      "status": "covered",
+      "evidence": "launch, focus, Data-tab navigation, visible structured log"
+    },
+    {
+      "id": "geotechnical-editor",
+      "status": "covered",
+      "evidence": "Contents/canvas selection plus Data value edit, Apply, Undo, and Redo exercised through the packaged surface"
+    },
+    {
+      "id": "power-user",
+      "status": "partial",
+      "evidence": "double-click, context menu, splitter drag, scroll",
+      "gap": "multi-step publish/history workflow needs a dedicated pass"
+    },
+    {
+      "id": "touchpad",
+      "status": "not-covered",
+      "evidence": "coordinate driver does not claim touchpad gesture emulation",
+      "gap": "two-finger zoom/scroll requires physical or approved gesture harness"
+    },
+    {
+      "id": "keyboard-accessibility",
+      "status": "partial",
+      "evidence": "CTRL+A, Unicode typing, and Escape exercised",
+      "gap": "focus order, announcements, and full keyboard navigation remain open"
+    },
+    {
+      "id": "constrained-viewport",
+      "status": "covered",
+      "evidence": "fresh 125 percent DPI packaged pass kept both panes visible and independently resized both splitters"
+    },
+    {
+      "id": "persistence-import-export",
+      "status": "not-covered",
+      "evidence": "not exercised in this coordinate-only pass",
+      "gap": "save/load, RSLog import, multi-boring package PDF workflow remains open"
+    },
+    {
+      "id": "error-recovery",
+      "status": "partial",
+      "evidence": "context-menu dismissal with Escape and bounded cleanup",
+      "gap": "recoverable import/export and validation errors remain open"
+    }
+  ],
+  "findings": [
+    {
+      "id": "BLD052-F-001",
+      "title": "DPI Properties clipping",
+      "severity": "medium",
+      "status": "resolved",
+      "reproSteps": [
+        "Open the packaged RSrender synthetic boring-log project",
+        "Resize to a constrained or high-DPI viewport",
+        "Open Layout and select a canvas or Contents item",
+        "Inspect the Properties pane and its dropdown controls"
+      ],
+      "observed": "Inspector labels and dropdown values can clip or exceed their visible bounds instead of wrapping or scaling to the pane.",
+      "resolution": "The renderer derives an effective CSS viewport from native size and DPR, clamps pane widths to that viewport, and retains readable word wrapping. Fresh pass 04 showed the full Inspector before and after a successful Properties splitter drag at 125 percent DPI."
+    },
+    {
+      "id": "BLD052-F-002",
+      "title": "Data em dashes",
+      "severity": "medium",
+      "status": "resolved",
+      "reproSteps": [
+        "Open the packaged RSrender synthetic boring-log project",
+        "Select the Data tab",
+        "Inspect Project, Top elevation, Depth range, Total/completed, and Vertical scale"
+      ],
+      "observed": "The Data ribbon displays em dashes for project values even though the structured boring-log page visibly contains project and depth data.",
+      "resolution": "Initial projection now populates the Data summary unconditionally. Fresh pass 04 displayed Project, Top elevation, datum, and depth controls; the controls use one horizontally pannable row rather than a clipped second row."
+    },
+    {
+      "id": "BLD052-F-003",
+      "title": "High-DPI modifier chords were no-ops",
+      "severity": "high",
+      "status": "resolved",
+      "reproSteps": [
+        "Use the coordinate driver at 125 percent Windows scaling",
+        "Focus and edit a numeric Data control through window-message input",
+        "Send Ctrl+Z or Ctrl+Y through the original high-DPI fallback",
+        "Compare the visible value and page geometry"
+      ],
+      "observed": "Plain high-DPI key and text input worked, but direct modifier WM_KEY messages did not populate Chromium modifier state, so Ctrl+Z and Ctrl+Y were no-ops.",
+      "resolution": "The driver now attaches the target input queue, supplies bounded modifier keyboard state and scan-code lParams, restores state in finally, and detaches. Fresh pass 06 visibly applied 10000, undid to 12025, and redid to 10000."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "executable": "C:/frv/RSRender/.tmp/bld-048-graph-hover-fresh-7/out/RSrender-win32-x64/RSrender.exe",
+  "arguments": [],
+  "workflow": "graph-origin-attribute-hover",
+  "persona": "geotechnical-reviewer",
+  "actions": [
+    { "op": "launch", "label": "launch" },
+    { "op": "focus", "label": "focused" },
+    { "op": "wait", "milliseconds": 10000, "label": "initial-settle" },
+    { "op": "click", "x": 423, "y": 108, "label": "data-tab" },
+    { "op": "wait", "milliseconds": 500, "label": "data-settle" },
+    { "op": "click", "x": 423, "y": 170, "label": "open-attribute-table" },
+    { "op": "wait", "milliseconds": 500, "label": "table-settle" },
+    { "op": "move", "x": 792, "y": 491, "label": "hover-n-value-sample-01" },
+    { "op": "wait", "milliseconds": 750, "label": "hover-settle" },
+    { "op": "screenshot", "label": "graph-origin-hover" },
+    { "op": "close", "label": "close" }
+  ]
+}

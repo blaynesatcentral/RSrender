@@ -125,9 +125,15 @@ test("closed command codec derives its canonical replay fingerprint and excludes
   }
 });
 
-test("least-capable service facade has exactly four frozen own data-function keys", async () => {
+test("least-capable service facade has exactly five frozen own data-function keys", async () => {
   const service = makeService();
-  assert.deepEqual(Reflect.ownKeys(service), ["setDisplayValue", "undo", "redo", "getProjection"]);
+  assert.deepEqual(Reflect.ownKeys(service), [
+    "setDisplayValue",
+    "revertDisplayValue",
+    "undo",
+    "redo",
+    "getProjection",
+  ]);
   assert.equal(Object.getPrototypeOf(service), Object.prototype);
   assert.equal(Object.isFrozen(service), true);
   for (const key of Reflect.ownKeys(service)) {

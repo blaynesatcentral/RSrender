@@ -436,7 +436,7 @@ test("close during an admitted operation drops the late result without undoing a
   assert.deepEqual(await pending, { accepted: false, code: "DOCUMENT_SESSION_CLOSED" });
 });
 
-test("generated preload exposes only four frozen methods and sanitizes real route results", async () => {
+test("generated preload exposes only five frozen methods and sanitizes real route results", async () => {
   const route = await routed();
   let exposed;
   let vmContext;
@@ -480,6 +480,7 @@ test("generated preload exposes only four frozen methods and sanitizes real rout
   assert.deepEqual(Object.keys(exposed.document), [
     "getProjection",
     "setDisplayValue",
+    "revertDisplayValue",
     "undo",
     "redo",
   ]);

@@ -55,6 +55,12 @@ test("BLD-025 projects the validated scene into ordered semantic vector SVG", ()
   assert.match(result.markup, /data-node-role="material-description-interval"/u);
   assert.match(result.markup, /data-node-role="sample-n-value"/u);
   assert.match(result.markup, /data-node-role="data-polyline"/u);
+  assert.match(result.markup, /class="scene-data-hit-target"[^>]+fill="transparent"/u);
+  assert.match(
+    result.markup,
+    /data-node-id="node:data-layer:[^"]+"[^>]+class="scene-data-hit-target"/u,
+  );
+  assert.match(result.markup, /data-node-role="data-range-hit-target"/u);
   assert.match(
     result.markup,
     /id="node:data-layer:layer-moisture:line"[^>]*stroke-dasharray="3000 2000"/u,
@@ -129,7 +135,11 @@ test("BLD-025 browser authority contains no raster, ambient transport, or inline
     readFile(new URL("../packages/renderer-ui/src/boring-log-studio.css", import.meta.url), "utf8"),
   ]);
   assert.doesNotMatch(entry, /\b(?:fetch|XMLHttpRequest|WebSocket|localStorage|sessionStorage)\b/u);
-  assert.doesNotMatch(entry, /\.style\b|setAttribute\(["']style/u);
+  assert.deepEqual(
+    [...new Set([...entry.matchAll(/\.style\.([a-z]+)/gu)].map((match) => match[1]))].sort(),
+    ["height", "left", "top"],
+  );
+  assert.doesNotMatch(entry, /\.style\.cssText|setAttribute\(["']style/u);
   assert.doesNotMatch(
     entry,
     /(?:createElement\(["']canvas|toDataURL|drawImage|\.png\b|\.jpe?g\b)/iu,

@@ -2,7 +2,7 @@
   "schema": "rsrender.bld007.enforcement-evidence.v0",
   "ticket": "BLD-007 / GitHub #51",
   "generatedAtUtc": "2026-08-14T00:00:00.000Z",
-  "result": "PASS",
+  "result": "FAIL",
   "acceptanceRowResult": "BLOCKED",
   "scope": "continuous enforcement of the prior BLD-001 internal-only admission",
   "acceptanceTrace": [
@@ -14,20 +14,20 @@
   "cleanRuns": {
     "repetitions": 2,
     "deterministic": true,
-    "result": "PASS",
+    "result": "FAIL",
     "artifactDigests": {
-      "spdx": "sha256:9f846453bd449504329bd1577df0bf27f900aefe1d100e79b09934313ec732fd",
-      "custody": "sha256:5cce2daef99e0ef4441b01e713e76268cb6e083b016030fe0c8dd997e5e3a679",
+      "spdx": "sha256:7564772f50febfeb7393052bcd48d19eaa7df09f96beb14e37bc05ee5032768f",
+      "custody": "sha256:b0663e12a0aeef1cdde047d5b9318dac6dfda1e003ac6c5709f6436efa20ab42",
       "assets": "sha256:cf1903cdb540a4cfd4082ebb676d3f3f68aa2e7de62d52d0015ca40c69f2876b",
       "notices": "sha256:aa3598f708a52469ef107374babac68817ed1311ff999e3b311f07d502a8e275"
     },
     "identityCount": 156,
-    "dependencyEdgeCount": 232,
+    "dependencyEdgeCount": 233,
     "assetCount": 0
   },
   "baseline": {
     "bld001ProductionLockSha256": "d88d3e88092ec275d5757592531b5fb57a912c593abb836663007d602064c1af",
-    "implementationTopologyLockSha256": "3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
+    "implementationTopologyLockSha256": "a8095b34770c83e97ced0dc3631ba04ed29f0ca7251820293b76e447c660be49",
     "implementationTopologyAuthority": "BLD-001 immutable external admission plus reviewed entries in the BLD-007 workspace-topology approval record",
     "admittedExternalIdentityCount": 156,
     "observedExternalIdentityCount": 156,
@@ -44,6 +44,9 @@
         "BLD007_DEPENDENCY_UNAPPROVED",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
@@ -62,6 +65,21 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
         },
         {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
@@ -86,6 +104,9 @@
         "BLD007_DEPENDENCY_VERSION_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
@@ -116,6 +137,21 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
           "subject": "topology-approval-authority",
           "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
@@ -136,6 +172,9 @@
         "BLD007_DEPENDENCY_INTEGRITY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
@@ -154,6 +193,21 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
         },
         {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
@@ -176,6 +230,9 @@
         "BLD007_DEPENDENCY_SOURCE_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
@@ -194,6 +251,21 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
         },
         {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
@@ -215,6 +287,9 @@
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
@@ -228,6 +303,21 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
         },
         {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
@@ -251,7 +341,12 @@
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_LICENSE_MISSING"
+        "BLD007_LICENSE_MISSING",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -278,6 +373,31 @@
           "code": "BLD007_LICENSE_MISSING",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "The admitted artifact has no license declaration; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -291,7 +411,12 @@
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_LICENSE_UNKNOWN"
+        "BLD007_LICENSE_UNKNOWN",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -318,6 +443,31 @@
           "code": "BLD007_LICENSE_UNKNOWN",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "The license is outside the exact BLD-001 admitted set; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -331,7 +481,12 @@
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_LICENSE_PROHIBITED"
+        "BLD007_LICENSE_PROHIBITED",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -358,6 +513,31 @@
           "code": "BLD007_LICENSE_PROHIBITED",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "A prohibited license classification entered the graph; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -370,7 +550,13 @@
         "BLD007_ADMISSION_DIGEST_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_NOTICE_OBLIGATION_MISSING"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_NOTICE_OBLIGATION_MISSING",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -389,9 +575,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_NOTICE_OBLIGATION_MISSING",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "The admitted notice obligation is absent; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -403,7 +619,13 @@
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_NOTICE_TEXT_MISSING"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_NOTICE_TEXT_MISSING",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -417,9 +639,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_NOTICE_TEXT_MISSING",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "No exact retained or explicitly authorized internal-custody license text exists; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -431,8 +683,14 @@
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
         "BLD007_NOTICE_TEXT_MISSING",
-        "BLD007_NOTICE_TEXT_MISSING"
+        "BLD007_NOTICE_TEXT_MISSING",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -446,6 +704,16 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_NOTICE_TEXT_MISSING",
           "subject": "node_modules/electron/dist/LICENSE",
           "consequence": "A packaged-runtime notice is absent; build and distribution stop."
@@ -454,6 +722,26 @@
           "code": "BLD007_NOTICE_TEXT_MISSING",
           "subject": "node_modules/electron/dist/LICENSES.chromium.html",
           "consequence": "A packaged-runtime notice is absent; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -464,7 +752,13 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_LIFECYCLE_SCRIPT_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_LIFECYCLE_SCRIPT_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -473,9 +767,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
           "code": "BLD007_LIFECYCLE_SCRIPT_DRIFT",
           "subject": "esbuild@0.28.1",
           "consequence": "The one admitted install lifecycle command drifted; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -487,7 +811,13 @@
       "observedCodes": [
         "BLD007_ADMISSION_DIGEST_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_SOURCE_PROVENANCE_MISSING"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_SOURCE_PROVENANCE_MISSING",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -501,9 +831,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_SOURCE_PROVENANCE_MISSING",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "The exact artifact lacks its prior admission or source/hash provenance; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -515,7 +875,13 @@
       "observedCodes": [
         "BLD007_ADMISSION_DIGEST_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_SOURCE_PROVENANCE_MISSING"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_SOURCE_PROVENANCE_MISSING",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -529,9 +895,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_SOURCE_PROVENANCE_MISSING",
           "subject": "@electron-internal/extract-zip@1.0.5",
           "consequence": "The exact artifact lacks its prior admission or source/hash provenance; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -544,6 +940,9 @@
         "BLD007_DEPENDENCY_GRAPH_UNRESOLVED",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
@@ -563,6 +962,21 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
         },
         {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
@@ -587,13 +1001,55 @@
       "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
       "result": "FAIL",
       "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
           "subject": "packages/application:name",
           "consequence": "Workspace manifest and lock metadata disagree; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -603,13 +1059,55 @@
       "expectedCode": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
       "result": "FAIL",
       "observedCodes": [
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
         "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
           "subject": "BLD-009 / GitHub #53:evidence",
           "consequence": "A closed topology approval evidence file is missing or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -620,7 +1118,13 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_TOOLCHAIN_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -629,9 +1133,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
           "code": "BLD007_TOOLCHAIN_DRIFT",
           "subject": "nodeArchive",
           "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -646,7 +1180,12 @@
         "BLD007_DEPENDENCY_UNAPPROVED",
         "BLD007_GENERATED_INVENTORY_DRIFT",
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_GENERATED_INVENTORY_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -678,6 +1217,31 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "spdx",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -687,13 +1251,49 @@
       "expectedCode": "BLD007_TOOLCHAIN_DRIFT",
       "result": "FAIL",
       "observedCodes": [
-        "BLD007_TOOLCHAIN_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
         {
           "code": "BLD007_TOOLCHAIN_DRIFT",
           "subject": "npm-runtime",
           "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -703,13 +1303,55 @@
       "expectedCode": "BLD007_GENERATED_INVENTORY_DRIFT",
       "result": "FAIL",
       "observedCodes": [
-        "BLD007_GENERATED_INVENTORY_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "notices",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -720,7 +1362,13 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_TOOLCHAIN_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -729,9 +1377,39 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
           "code": "BLD007_TOOLCHAIN_DRIFT",
           "subject": "electronExe",
           "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -742,7 +1420,14 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_UNDECLARED_ASSET"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_UNDECLARED_ASSET",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -751,9 +1436,44 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_UNDECLARED_ASSET",
           "subject": "fixture.pdf#symlink",
           "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -764,7 +1484,14 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_UNDECLARED_ASSET"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_UNDECLARED_ASSET",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -773,9 +1500,44 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_UNDECLARED_ASSET",
           "subject": "packages/renderer-ui/dist/unapproved-font.woff2",
           "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -786,7 +1548,14 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_GENERATED_INVENTORY_DRIFT",
-        "BLD007_UNDECLARED_ASSET"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_UNDECLARED_ASSET",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -795,9 +1564,44 @@
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
         },
         {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
           "code": "BLD007_UNDECLARED_ASSET",
           "subject": "packages/renderer-ui/src/assets/bld007-undeclared.svg",
           "consequence": "BLD-001 admitted an empty production asset inventory; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -809,7 +1613,13 @@
       "observedCodes": [
         "BLD007_ADMISSION_DIGEST_DRIFT",
         "BLD007_ADMISSION_STATE_INVALID",
-        "BLD007_GENERATED_INVENTORY_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -826,6 +1636,36 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "custody",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -836,7 +1676,13 @@
       "result": "FAIL",
       "observedCodes": [
         "BLD007_AUTHORITY_DIGEST_DRIFT",
-        "BLD007_GENERATED_INVENTORY_DRIFT"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
         {
@@ -848,6 +1694,36 @@
           "code": "BLD007_GENERATED_INVENTORY_DRIFT",
           "subject": "custody",
           "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_NODE_VERSION_MISMATCH",
+          "subject": "node-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
@@ -857,21 +1733,57 @@
       "expectedCode": "BLD007_NODE_VERSION_MISMATCH",
       "result": "FAIL",
       "observedCodes": [
-        "BLD007_NODE_VERSION_MISMATCH"
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_GENERATED_INVENTORY_DRIFT",
+        "BLD007_NODE_VERSION_MISMATCH",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_TOOLCHAIN_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+        "BLD007_WORKSPACE_TOPOLOGY_DRIFT"
       ],
       "observedDiagnostics": [
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "custody",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
+        {
+          "code": "BLD007_GENERATED_INVENTORY_DRIFT",
+          "subject": "spdx",
+          "consequence": "A deterministic SBOM, source/hash, license/notice, or asset inventory drifted from the BLD-007 baseline; build and distribution stop."
+        },
         {
           "code": "BLD007_NODE_VERSION_MISMATCH",
           "subject": "node-runtime",
           "consequence": "The qualifying enforcement runtime is not the admitted Node version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "esbuildTarball",
+          "consequence": "An exact admitted runtime, archive, or native tool byte is absent or changed; build and distribution stop."
+        },
+        {
+          "code": "BLD007_TOOLCHAIN_DRIFT",
+          "subject": "npm-runtime",
+          "consequence": "The qualifying enforcement runtime is not the admitted npm version; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "topology-approval-authority",
+          "consequence": "The current topology lacks a closed build-ticket evidence reference; build and distribution stop."
+        },
+        {
+          "code": "BLD007_WORKSPACE_TOPOLOGY_DRIFT",
+          "subject": "unrecorded-workspace-topology",
+          "consequence": "The raw lock or owned workspace edges differ from the reviewed topology approval; build and distribution stop."
         }
       ],
       "expectedFailureObserved": true
     }
   ],
   "sourceDigests": {
-    "package.json": "sha256:d55126447e3d4dfa05141b773f927712e53bd874b56e6927041e38cd80416bf4",
-    "package-lock.json": "sha256:3e1b7e0e8c573a22fe42f06f858ba4dae788681e1bd6bc46cf687ae718fc559b",
+    "package.json": "sha256:cacbcc58c35af5ed50377a786f3a85526ec9537916e269aa4777881889c24ba6",
+    "package-lock.json": "sha256:a8095b34770c83e97ced0dc3631ba04ed29f0ca7251820293b76e447c660be49",
     "docs/governance/bld-001-authority-approval-packet.md": "sha256:4f5cda9216ef10ba2a65bb6a53b9a874e12a7f9d505c5e99a3aa19630b7fe815",
     "docs/governance/bld-001-internal-dependency-admission.json": "sha256:52b01884a18e0cad1cdb92cb64279bacf7982088b41500e2a79b3f0322f9834a",
     "docs/governance/bld-007-workspace-topology-approvals.json": "sha256:1a01e0d76c093344029dbebb51218dd3d51c351a6bd4f184ee5537ea59498b40",
@@ -883,7 +1795,7 @@
   },
   "environment": {
     "profile": "EP-PURE bounded enforcement harness",
-    "node": "24.18.1",
+    "node": "22.20.0",
     "npm": "11.16.0",
     "platform": "Windows-sanitized",
     "architecture": "x64"

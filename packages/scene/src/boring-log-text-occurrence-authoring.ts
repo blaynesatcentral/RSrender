@@ -93,6 +93,7 @@ function templateTextRejected(
 
 const templateTextProperties: readonly BoringLogTemplateTextProperty[] = Object.freeze([
   "fontFamilyId",
+  "fontStyle",
   "fontSizeMpt",
   "fontWeight",
   "lineHeightMpt",
@@ -102,6 +103,9 @@ const templateTextProperties: readonly BoringLogTemplateTextProperty[] = Object.
   "color",
   "textDecoration",
 ]);
+const requiredTemplateTextProperties = templateTextProperties.filter(
+  (property) => property !== "fontStyle",
+);
 
 export function applyBoringLogTemplateTextStyleProperties(
   jobInput: unknown,
@@ -117,7 +121,7 @@ export function applyBoringLogTemplateTextStyleProperties(
     Reflect.ownKeys(styleInput).some(
       (key) => typeof key !== "string" || !templateTextProperties.includes(key as never),
     ) ||
-    templateTextProperties.some((property) => !Object.hasOwn(styleInput, property))
+    requiredTemplateTextProperties.some((property) => !Object.hasOwn(styleInput, property))
   ) {
     return templateTextRejected("BORING_LOG_TEMPLATE_TEXT_STYLE_REJECTED");
   }

@@ -37,6 +37,7 @@ export async function runLithologyAppearanceQualification({ record = false } = {
     ],
   });
   const lithology = run.result.lithologyAppearance;
+  const columnHeading = run.result.columnHeading;
   if (
     run.result.schema !== "rsrender.bld043.lithology-appearance-probe.v1" ||
     run.result.result !== "PASS" ||
@@ -52,6 +53,10 @@ export async function runLithologyAppearanceQualification({ record = false } = {
     lithology?.defaultUndo?.state?.materialFillApplication !== "source" ||
     lithology?.defaultRedo?.state?.effectiveMaterialFillColor !== "#a16207" ||
     lithology?.overrideAfterDefault?.paintedFill !== "#7f1d1d" ||
+    columnHeading?.before?.content !== "MATERIAL DESCRIPTION" ||
+    columnHeading?.applied?.content !== "STRATUM DESCRIPTION" ||
+    columnHeading?.undo?.content !== "MATERIAL DESCRIPTION" ||
+    columnHeading?.redo?.content !== "STRATUM DESCRIPTION" ||
     run.result.publication?.result !== "EXPORT_VERIFIED_SUCCESS" ||
     run.result.persistence?.saved?.code !== "PROJECT_SAVE_VERIFIED"
   ) {
@@ -78,7 +83,9 @@ export async function runLithologyAppearanceQualification({ record = false } = {
   if (
     fillColor(first, firstDefault) !== "#a16207" ||
     fillColor(second, secondDefault) !== "#a16207" ||
-    fillColor(second, secondOverride) !== "#7f1d1d"
+    fillColor(second, secondOverride) !== "#7f1d1d" ||
+    second?.template.columns.find(({ id }) => id === "column-description")?.heading !==
+      "STRATUM DESCRIPTION"
   ) {
     throw new Error("BLD043_REOPENED_APPEARANCE_INVALID");
   }
@@ -95,6 +102,9 @@ export async function runLithologyAppearanceQualification({ record = false } = {
       firstDefaultColor: fillColor(first, firstDefault),
       secondDefaultColor: fillColor(second, secondDefault),
       secondIntervalOverrideColor: fillColor(second, secondOverride),
+      secondDescriptionColumnHeading: second?.template.columns.find(
+        ({ id }) => id === "column-description",
+      )?.heading,
     }),
     pdf: Object.freeze({
       relativePath: path.relative(root, pdfPath).replaceAll("\\", "/"),
@@ -110,6 +120,9 @@ export async function runLithologyAppearanceQualification({ record = false } = {
       explicitIntervalOverrideWins: true,
       saveReopenRetainsAppearanceAuthority: true,
       sameScenePdfExportAfterAppearanceAuthoring: true,
+      columnHeadingEditingUndoRedo: true,
+      saveReopenRetainsColumnHeading: true,
+      sameScenePdfExportAfterColumnHeadingAuthoring: true,
     }),
   });
   const canonical = `${canonicalizeJson(evidence)}\n`;

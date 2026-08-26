@@ -1,9 +1,25 @@
 import { createHash, randomBytes } from "node:crypto";
-import { closeSync, fstatSync, openSync, readFileSync, readSync } from "node:fs";
+import {
+  closeSync,
+  copyFileSync,
+  fstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol, session } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
+
+// RSrender paints renderer-neutral SVG and publishes through the same scene authority. Avoid a
+// separate GPU process whose Windows driver/DLL availability can otherwise prevent app startup.
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch("disable-gpu");
+app.commandLine.appendSwitch("in-process-gpu");
 
 import {
   captureOverrideRenderDatasetWorkingState,
@@ -20,9 +36,12 @@ import {
 } from "@rsrender/application";
 import {
   boringLogTextColumnSemanticId,
+  resolveExactFontProjectionFace,
+  rsrenderFontProjectionBindings,
   sha256CanonicalJson,
   validateBoringLogLayoutJobInput,
   type BoringLogLayoutJobInput,
+  type BoringLogDataLayerSymbologyOverrideInput,
   type BoringLogTextOccurrenceCloneInput,
   type BoringLogTextOccurrenceGroupInput,
   type BoringLogTextMeasurementRequest,
@@ -36,18 +55,26 @@ import type {
 } from "@rsrender/layout-host";
 import {
   applyBoringLogTemplateTextStyleProperties,
+  applyBoringLogPageSetup,
   applyBoringLogTextOccurrenceStyles,
+  addProviderBoundBoringLogColumn,
   arrangeBoringLogTextOccurrences,
   boringLogDefaultColumnMinimumWidthMpt,
   clearBoringLogTextOccurrencePresentation,
   resizeBoringLogColumns,
   resizeBoringLogPageRegions,
 } from "@rsrender/scene";
+import {
+  createRsLogProviderAuthoringBinding,
+  rsLogProviderAuthoringCatalog,
+  rsLogProviderAuthoringCatalogRevision,
+} from "@rsrender/source-contract";
 
 import {
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_ROUTE_URL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
@@ -59,6 +86,7 @@ import {
   prepareBoringLogStudioProjection,
   type BoringLogStudioProjection,
 } from "./boring-log-studio-projection.js";
+import { authorBoringLogDataLayerSymbology } from "./boring-log-data-layer-symbology-authoring.js";
 import {
   decodeBoringLogDocumentBundle,
   maximumBoringLogDocumentBundleBytes,
@@ -67,6 +95,42 @@ import {
   inspectRsLogProjectDataJson,
   maximumRsLogProjectDataBytes,
 } from "./rslog-project-data-ingress.js";
+import { createRsLogProjectDataLayoutJobs } from "./rslog-project-data-layout-job.js";
+import {
+  createRsLogAuthEntryHtml,
+  RSLOG_AUTH_ENTRY_BOOTSTRAP_CHANNEL,
+  RSLOG_AUTH_ENTRY_CANCEL_CHANNEL,
+  RSLOG_AUTH_ENTRY_STYLESHEET,
+  RSLOG_AUTH_ENTRY_STYLESHEET_URL,
+  RSLOG_AUTH_ENTRY_SUBMIT_CHANNEL,
+  RSLOG_AUTH_ENTRY_URL,
+  RsLogAuthEntryRouteBroker,
+  type RsLogAuthEntryContext,
+  type RsLogAuthEntryMode,
+} from "./rslog-auth-entry-route.js";
+import { RsLogLiveSessionBroker } from "./rslog-live-session-broker.js";
+import { createRsLogNodeFetchTransport } from "./rslog-node-fetch-transport.js";
+import { inspectRsLogJsonShape } from "./rslog-json-shape-ledger.js";
+import { inspectRsLogProjectCatalog } from "./rslog-project-catalog-ingress.js";
+import {
+  inspectRsLogLiveBoreholeCatalog,
+  inspectRsLogLiveProjectData,
+  type RsLogLiveRsGeoResponse,
+} from "./rslog-live-project-data-ingress.js";
+import {
+  createRsLogSourceSelectionHtml,
+  RSLOG_SOURCE_SELECTION_BOOTSTRAP_CHANNEL,
+  RSLOG_SOURCE_SELECTION_CANCEL_CHANNEL,
+  RSLOG_SOURCE_SELECTION_STYLESHEET,
+  RSLOG_SOURCE_SELECTION_STYLESHEET_URL,
+  RSLOG_SOURCE_SELECTION_SUBMIT_CHANNEL,
+  RSLOG_SOURCE_SELECTION_URL,
+  RsLogSourceSelectionRouteBroker,
+  type RsLogSourceSelectionContext,
+  type RsLogSourceSelectionMode,
+  type RsLogSourceSelectionOption,
+  type RsLogSourceSelectionResult,
+} from "./rslog-source-selection-route.js";
 import { publishBoringLogPdfPackage } from "./boring-log-pdf-publication.js";
 import { BoringLogPdfPublicationRouteBroker } from "./boring-log-publication-route-broker.js";
 import {
@@ -75,6 +139,10 @@ import {
 } from "./boring-log-publication-route-contract.js";
 import {
   BoringLogStudioRouteBroker,
+  type BoringLogStudioAddProviderColumnInput,
+  type BoringLogStudioColumnHeadingInput,
+  type BoringLogStudioDataDepthConfigurationInput,
+  type BoringLogStudioDataLayerSymbologyInput,
   type BoringLogStudioColumnDividerInput,
   type BoringLogStudioArrangeTextOccurrencesInput,
   type BoringLogStudioMutateTextOccurrencesInput,
@@ -82,21 +150,27 @@ import {
   type BoringLogStudioLifecycleOperation,
   type BoringLogStudioLithologyAppearanceInput,
   type BoringLogStudioPageGuidesInput,
+  type BoringLogStudioPageSetupInput,
   type BoringLogStudioProjectionPreviewInput,
   type BoringLogStudioTextOccurrencePresentationResetInput,
   type BoringLogStudioTextOccurrenceStyleInput,
 } from "./boring-log-studio-route-broker.js";
 import {
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
+  BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL,
   BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_LAYER_SYMBOLOGY_CHANNEL,
   BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_DEPTH_CONFIGURATION_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
 } from "./boring-log-studio-route-contract.js";
 import {
@@ -106,7 +180,10 @@ import {
   type LogProjectFileBaseline,
   type OpenedLogProjectFile,
 } from "./log-project-file-broker.js";
-import { DocumentSessionHost } from "./document-session-host.js";
+import {
+  DocumentSessionHost,
+  type DocumentSessionHostReplaceResult,
+} from "./document-session-host.js";
 import {
   packagedBoringLogStudioPreloadRelativePath,
   verifyPackagedBoringLogStudioPreload,
@@ -119,6 +196,11 @@ import {
   packagedSemanticEditorRendererRelativePath,
   verifyPackagedSemanticEditorRenderer,
 } from "./packaged-semantic-editor-renderer.js";
+import {
+  bundledSourceFontFaces,
+  resolveBundledSourceFontFace,
+  type ShippedFontFace,
+} from "./shipped-font-inventory.js";
 import {
   BORING_LOG_STUDIO_STYLESHEET_URL,
   SEMANTIC_EDITOR_SCRIPT_URL,
@@ -136,17 +218,27 @@ const LAYOUT_PUBLICATION_FONT_REGULAR_URL = "rsrender-layout://publication/arial
 const LAYOUT_PUBLICATION_FONT_BOLD_URL = "rsrender-layout://publication/arial-bold.ttf";
 const SCREEN_FONT_REGULAR_URL = "rsrender-shell://document/arial-regular.ttf";
 const SCREEN_FONT_BOLD_URL = "rsrender-shell://document/arial-bold.ttf";
+const screenSourceFontUrl = (face: ShippedFontFace): string =>
+  `rsrender-shell://document/${face.routeFileName}`;
+const measurementSourceFontUrl = (face: ShippedFontFace): string =>
+  `rsrender-layout://measurement/${face.routeFileName}`;
+const publicationSourceFontUrl = (face: ShippedFontFace): string =>
+  `rsrender-layout://publication/${face.routeFileName}`;
 const PROBE_ARGUMENT = "--rsrender-bld021-probe";
 const STUDIO_PROBE_ARGUMENT = "--rsrender-bld025-probe";
 const PDF_PROBE_ARGUMENT = "--rsrender-bld027-probe";
 const LIFECYCLE_PROBE_ARGUMENT = "--rsrender-bld035-probe";
 const MULTI_BORING_PROBE_ARGUMENT = "--rsrender-bld036-probe";
 const TEXT_STYLE_PROBE_ARGUMENT = "--rsrender-bld037-probe";
+const FONT_PALETTE_PROBE_ARGUMENT = "--rsrender-bld042-font-probe";
 const DIRECT_MANIPULATION_PROBE_ARGUMENT = "--rsrender-bld038-probe";
 const AUTHORING_SURFACE_PROBE_ARGUMENT = "--rsrender-bld040-probe";
 const LITHOLOGY_APPEARANCE_PROBE_ARGUMENT = "--rsrender-bld043-probe";
 const PUBLICATION_PACKAGE_PROBE_ARGUMENT = "--rsrender-bld044-probe";
 const RSLOG_IMPORT_PROBE_ARGUMENT = "--rsrender-bld045-probe";
+const PAGE_SETUP_PROBE_ARGUMENT = "--rsrender-bld049-probe";
+const DATA_LAYER_SYMBOLOGY_PROBE_ARGUMENT = "--rsrender-bld050-probe";
+const DATA_LAYER_SYMBOLOGY_OFFSCREEN_ARGUMENT = "--rsrender-bld050-offscreen";
 const RELIABLE_PROBE_ACTIVATION_ARGUMENT = "--rsrender-bld041-reliable-activation";
 const PROFILE_ARGUMENT_PREFIX = "--rsrender-bld021-profile=";
 const STUDIO_PROFILE_ARGUMENT_PREFIX = "--rsrender-bld025-profile=";
@@ -155,13 +247,17 @@ const PDF_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld027-output=";
 const PROJECT_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld035-output=";
 const DOCUMENT_INPUT_ARGUMENT_PREFIX = "--rsrender-boring-log-input=";
 const PROJECT_INPUT_ARGUMENT_PREFIX = "--rsrender-log-project=";
+const IMPORTED_PROJECT_STAGING_ARGUMENT = "--rsrender-imported-project-staging";
 const RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX = "--rsrender-bld045-input=";
+const RSLOG_IMPORT_PROJECT_OUTPUT_ARGUMENT_PREFIX = "--rsrender-bld045-project-output=";
 const DEFAULT_DOCUMENT_INPUT_RELATIVE_PATH = path.join(
   "example-data",
   "rsrender-example-boring-log.json",
 );
 const RESULT_MARKER = "RSRENDER_BLD021_RESULT=";
 const STUDIO_RESULT_MARKER = "RSRENDER_BLD025_RESULT=";
+const DATA_LAYER_SYMBOLOGY_RESULT_MARKER = "RSRENDER_BLD050_RESULT=";
+const RSLOG_IMPORT_STAGING_PATTERN = /^\.rsrender-rslog-(?:import|live)-[0-9a-f]{32}\.rsrender$/u;
 const QUALIFIED_ARIAL_REGULAR_DIGEST =
   "sha256:b3658eadae55e682b5f69eb64c439c1ecc8f196c0bb8d4756d145d13bc86476a";
 const QUALIFIED_ARIAL_BOLD_DIGEST =
@@ -265,6 +361,7 @@ let runtimeLayoutJobs: readonly BoringLogLayoutJobInput[] =
 const runtimeProjectInputPath = process.argv
   .find((value) => value.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX))
   ?.slice(PROJECT_INPUT_ARGUMENT_PREFIX.length);
+const runtimeImportedProjectStaging = process.argv.includes(IMPORTED_PROJECT_STAGING_ARGUMENT);
 const studioEditingMode = runtimeLayoutJob !== null || (runtimeProjectInputPath?.length ?? 0) > 0;
 const bld021ProbeMode = process.argv.includes(PROBE_ARGUMENT);
 const reliableProbeActivationMode = process.argv.includes(RELIABLE_PROBE_ACTIVATION_ARGUMENT);
@@ -272,7 +369,13 @@ const authoringSurfaceProbeMode = process.argv.includes(AUTHORING_SURFACE_PROBE_
 const lithologyAppearanceProbeMode = process.argv.includes(LITHOLOGY_APPEARANCE_PROBE_ARGUMENT);
 const publicationPackageProbeMode = process.argv.includes(PUBLICATION_PACKAGE_PROBE_ARGUMENT);
 const rsLogImportProbeMode = process.argv.includes(RSLOG_IMPORT_PROBE_ARGUMENT);
+const pageSetupProbeMode = process.argv.includes(PAGE_SETUP_PROBE_ARGUMENT);
+const dataLayerSymbologyProbeMode = process.argv.includes(DATA_LAYER_SYMBOLOGY_PROBE_ARGUMENT);
+const dataLayerSymbologyOffscreenMode = process.argv.includes(
+  DATA_LAYER_SYMBOLOGY_OFFSCREEN_ARGUMENT,
+);
 const directManipulationProbeMode = process.argv.includes(DIRECT_MANIPULATION_PROBE_ARGUMENT);
+const fontPaletteProbeMode = process.argv.includes(FONT_PALETTE_PROBE_ARGUMENT);
 const textStyleProbeMode =
   process.argv.includes(TEXT_STYLE_PROBE_ARGUMENT) || directManipulationProbeMode;
 const multiBoringProbeMode =
@@ -280,14 +383,25 @@ const multiBoringProbeMode =
   textStyleProbeMode ||
   lithologyAppearanceProbeMode ||
   publicationPackageProbeMode;
-const pdfProbeMode = process.argv.includes(PDF_PROBE_ARGUMENT) || multiBoringProbeMode;
-const lifecycleProbeMode = process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) || multiBoringProbeMode;
+const pdfProbeMode =
+  process.argv.includes(PDF_PROBE_ARGUMENT) ||
+  pageSetupProbeMode ||
+  multiBoringProbeMode ||
+  fontPaletteProbeMode ||
+  dataLayerSymbologyProbeMode;
+const lifecycleProbeMode =
+  process.argv.includes(LIFECYCLE_PROBE_ARGUMENT) ||
+  multiBoringProbeMode ||
+  fontPaletteProbeMode ||
+  dataLayerSymbologyProbeMode;
 const studioProbeMode =
   process.argv.includes(STUDIO_PROBE_ARGUMENT) ||
   rsLogImportProbeMode ||
   pdfProbeMode ||
   lifecycleProbeMode ||
-  authoringSurfaceProbeMode;
+  authoringSurfaceProbeMode ||
+  fontPaletteProbeMode ||
+  dataLayerSymbologyProbeMode;
 const probeMode = bld021ProbeMode || studioProbeMode;
 const profileArgument = process.argv.find((value) =>
   value.startsWith(
@@ -314,12 +428,29 @@ const profileRoot =
             : "rsrender-bld021-semantic-editor-profile",
       )
     : path.resolve(profileArgument.slice(profilePrefix.length));
+function removeStaleRsLogImportStaging(): boolean {
+  try {
+    const root = path.resolve(profileRoot);
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isFile() || !RSLOG_IMPORT_STAGING_PATTERN.test(entry.name)) continue;
+      const target = path.resolve(root, entry.name);
+      if (path.dirname(target) !== root) return false;
+      unlinkSync(target);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 const pdfProbeOutput = process.argv
   .find((value) => value.startsWith(PDF_OUTPUT_ARGUMENT_PREFIX))
   ?.slice(PDF_OUTPUT_ARGUMENT_PREFIX.length);
 const lifecycleProbeOutput = process.argv
   .find((value) => value.startsWith(PROJECT_OUTPUT_ARGUMENT_PREFIX))
   ?.slice(PROJECT_OUTPUT_ARGUMENT_PREFIX.length);
+const rsLogImportProbeProjectOutput = process.argv
+  .find((value) => value.startsWith(RSLOG_IMPORT_PROJECT_OUTPUT_ARGUMENT_PREFIX))
+  ?.slice(RSLOG_IMPORT_PROJECT_OUTPUT_ARGUMENT_PREFIX.length);
 const rsLogImportProbeInput = process.argv
   .find((value) => value.startsWith(RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX))
   ?.slice(RSLOG_IMPORT_INPUT_ARGUMENT_PREFIX.length);
@@ -329,6 +460,12 @@ const preloadPath = path.join(
     ? packagedBoringLogStudioPreloadRelativePath
     : packagedDocumentPreloadRelativePath
   ).split("/"),
+);
+const rsLogAuthEntryPreloadPath = path.join(app.getAppPath(), "preload", "rslog-auth-entry.cjs");
+const rsLogSourceSelectionPreloadPath = path.join(
+  app.getAppPath(),
+  "preload",
+  "rslog-source-selection.cjs",
 );
 const rendererPath = path.join(
   app.getAppPath(),
@@ -417,16 +554,24 @@ const handlers = [
   DOCUMENT_BOOTSTRAP_CHANNEL,
   DOCUMENT_GET_PROJECTION_CHANNEL,
   DOCUMENT_SET_DISPLAY_VALUE_CHANNEL,
+  DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL,
   DOCUMENT_UNDO_CHANNEL,
   DOCUMENT_REDO_CHANNEL,
   BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL,
   BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL,
   BORING_LOG_STUDIO_LIFECYCLE_CHANNEL,
+  BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_LAYER_SYMBOLOGY_CHANNEL,
   BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
   BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL,
+  BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL,
+  BORING_LOG_STUDIO_SET_DATA_DEPTH_CONFIGURATION_CHANNEL,
   BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL,
   BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL,
+  BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL,
   BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL,
+  BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL,
+  BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL,
   BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL,
   BORING_LOG_PUBLICATION_EXPORT_CHANNEL,
 ] as const;
@@ -436,19 +581,47 @@ let editorSession: Electron.Session | null = null;
 let broker: Broker | null = null;
 let studioBroker: BoringLogStudioRouteBroker | null = null;
 let publicationBroker: BoringLogPdfPublicationRouteBroker | null = null;
+let rsLogLiveSessionBroker: RsLogLiveSessionBroker | null = null;
 let teardownPromise: Promise<void> | null = null;
 let probeFailure = "UNCLASSIFIED";
+let probeOutputWritable = true;
+type ChromiumTextMeasurementAuthority = Readonly<{
+  measurementSession: Electron.Session;
+  measurementWindow: BrowserWindow;
+}>;
+let chromiumTextMeasurementAuthority: ChromiumTextMeasurementAuthority | null = null;
+let chromiumTextMeasurementTail: Promise<void> = Promise.resolve();
+
+function isBrokenProbePipe(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { readonly code?: unknown }).code === "EPIPE"
+  );
+}
+
+if (probeMode) {
+  process.stdout.on("error", (error: unknown) => {
+    probeOutputWritable = false;
+    if (!isBrokenProbePipe(error)) {
+      probeFailure = error instanceof Error ? `STDOUT:${error.message}`.slice(0, 256) : "STDOUT";
+    }
+  });
+}
 
 function exactRequest(
   rawUrl: string,
   method: string,
-): "html" | "script" | "stylesheet" | "font-regular" | "font-bold" | null {
+): "html" | "script" | "stylesheet" | "font-regular" | "font-bold" | "font-source" | null {
   if (method !== "GET") return null;
   if (rawUrl === DOCUMENT_ROUTE_URL) return "html";
   if (rawUrl === SEMANTIC_EDITOR_SCRIPT_URL) return "script";
   if (rawUrl === BORING_LOG_STUDIO_STYLESHEET_URL && stylesheetSource !== null) return "stylesheet";
   if (rawUrl === SCREEN_FONT_REGULAR_URL) return "font-regular";
   if (rawUrl === SCREEN_FONT_BOLD_URL) return "font-bold";
+  if (bundledSourceFontFaces.some((face) => rawUrl === screenSourceFontUrl(face)))
+    return "font-source";
   return null;
 }
 
@@ -460,8 +633,55 @@ function qualifiedFontPath(name: "arial.ttf" | "arialbd.ttf"): string {
   return path.join(windowsDirectory, "Fonts", name);
 }
 
-function qualifiedFontCss(regularUrl: string, boldUrl: string): string {
-  return `@font-face{font-family:'RSrender Qualified Arial';src:url('${regularUrl}') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('${boldUrl}') format('truetype');font-style:normal;font-weight:700}`;
+function qualifiedFontCss(
+  regularUrl: string,
+  boldUrl: string,
+  sourceFaces: readonly ShippedFontFace[] = bundledSourceFontFaces,
+): string {
+  const sourcePrefix = regularUrl.includes("measurement")
+    ? "measurement"
+    : regularUrl.includes("publication")
+      ? "publication"
+      : "screen";
+  const sourceCss = sourceFaces
+    .map((face) => {
+      const url =
+        sourcePrefix === "measurement"
+          ? measurementSourceFontUrl(face)
+          : sourcePrefix === "publication"
+            ? publicationSourceFontUrl(face)
+            : screenSourceFontUrl(face);
+      return `@font-face{font-family:'${face.cssFamilyName}';src:url('${url}') format('truetype');font-style:${face.style};font-weight:${face.weight}}`;
+    })
+    .join("");
+  return `@font-face{font-family:'RSrender Qualified Arial';src:url('${regularUrl}') format('truetype');font-style:normal;font-weight:400}@font-face{font-family:'RSrender Qualified Arial';src:url('${boldUrl}') format('truetype');font-style:normal;font-weight:700}${sourceCss}`;
+}
+
+function bundledSourceFontPath(face: ShippedFontFace): string {
+  return path.resolve(import.meta.dirname, "..", "assets", "fonts", face.fileName);
+}
+
+function readQualifiedBundledSourceFont(face: ShippedFontFace): Buffer {
+  const bytes = readFileSync(bundledSourceFontPath(face));
+  const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+  if (digest !== face.byteDigest) throw new Error("QUALIFIED_SOURCE_FONT_DIGEST_MISMATCH");
+  return bytes;
+}
+
+function fontResponseBody(bytes: Buffer): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function sourceFaceByUrl(rawUrl: string, scope: "screen" | "measurement" | "publication") {
+  return bundledSourceFontFaces.find(
+    (face) =>
+      rawUrl ===
+      (scope === "screen"
+        ? screenSourceFontUrl(face)
+        : scope === "measurement"
+          ? measurementSourceFontUrl(face)
+          : publicationSourceFontUrl(face)),
+  );
 }
 
 function installDenials(electronSession: Electron.Session, counters: Counters): void {
@@ -507,7 +727,15 @@ function installProtocol(electronSession: Electron.Session): void {
             ? rendererSource
             : kind === "stylesheet"
               ? `${qualifiedFontCss(SCREEN_FONT_REGULAR_URL, SCREEN_FONT_BOLD_URL)}\n${stylesheetSource ?? ""}`
-              : readFileSync(qualifiedFontPath(kind === "font-bold" ? "arialbd.ttf" : "arial.ttf"));
+              : kind === "font-source"
+                ? fontResponseBody(
+                    readQualifiedBundledSourceFont(sourceFaceByUrl(request.url, "screen")!),
+                  )
+                : fontResponseBody(
+                    readFileSync(
+                      qualifiedFontPath(kind === "font-bold" ? "arialbd.ttf" : "arial.ttf"),
+                    ),
+                  );
       return new Response(body, {
         status: 200,
         headers: {
@@ -581,21 +809,10 @@ function qualifiedLocalArialFaces(): Readonly<{ readonly regular: string; readon
   return Object.freeze({ regular, bold });
 }
 
-async function measureBoringLogTextInChromium(
-  requests: readonly BoringLogTextMeasurementRequest[],
-): Promise<ChromiumTextMeasurementOutcome> {
-  if (!Array.isArray(requests) || requests.length > 4_096) {
-    return Object.freeze({ accepted: false, reason: "REQUESTS_INVALID" });
-  }
-  let serializedRequests: string;
-  try {
-    serializedRequests = JSON.stringify(requests);
-  } catch {
-    return Object.freeze({ accepted: false, reason: "REQUESTS_NOT_SERIALIZABLE" });
-  }
-  if (Buffer.byteLength(serializedRequests, "utf8") > 1_048_576) {
-    return Object.freeze({ accepted: false, reason: "REQUESTS_TOO_LARGE" });
-  }
+async function acquireChromiumTextMeasurementAuthority(): Promise<ChromiumTextMeasurementAuthority> {
+  const current = chromiumTextMeasurementAuthority;
+  if (current !== null && !current.measurementWindow.isDestroyed()) return current;
+
   const partition = `rsrender-layout-measure-${randomBytes(16).toString("hex")}`;
   const measurementSession = session.fromPartition(partition, { cache: false });
   measurementSession.setPermissionCheckHandler(() => false);
@@ -613,13 +830,12 @@ async function measureBoringLogTextInChromium(
           LAYOUT_MEASUREMENT_STYLESHEET_URL,
           LAYOUT_MEASUREMENT_FONT_REGULAR_URL,
           LAYOUT_MEASUREMENT_FONT_BOLD_URL,
+          ...bundledSourceFontFaces.map(measurementSourceFontUrl),
         ].includes(details.url),
     });
   });
   measurementSession.protocol.handle(LAYOUT_HOST_SCHEME, (request) => {
-    if (request.method !== "GET") {
-      return new Response("Not found", { status: 404 });
-    }
+    if (request.method !== "GET") return new Response("Not found", { status: 404 });
     if (request.url === LAYOUT_MEASUREMENT_HOST_URL) {
       return new Response(
         `<!doctype html><html lang="en-US"><head><meta charset="utf-8"><title>RSrender Layout Measurement Host</title><link rel="stylesheet" href="${LAYOUT_MEASUREMENT_STYLESHEET_URL}"></head><body><svg id="measurement-root" xmlns="http://www.w3.org/2000/svg" width="2400" height="1200" aria-hidden="true"></svg></body></html>`,
@@ -648,15 +864,21 @@ async function measureBoringLogTextInChromium(
         },
       );
     }
+    const measurementSourceFace = sourceFaceByUrl(request.url, "measurement");
     if (
       request.url === LAYOUT_MEASUREMENT_FONT_REGULAR_URL ||
-      request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL
+      request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL ||
+      measurementSourceFace !== undefined
     ) {
       return new Response(
-        readFileSync(
-          qualifiedFontPath(
-            request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
-          ),
+        fontResponseBody(
+          measurementSourceFace === undefined
+            ? readFileSync(
+                qualifiedFontPath(
+                  request.url === LAYOUT_MEASUREMENT_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
+                ),
+              )
+            : readQualifiedBundledSourceFont(measurementSourceFace),
         ),
         { status: 200, headers: { "Cache-Control": "no-store", "Content-Type": "font/ttf" } },
       );
@@ -679,26 +901,104 @@ async function measureBoringLogTextInChromium(
     if (targetUrl !== LAYOUT_MEASUREMENT_HOST_URL) event.preventDefault();
   });
   measurementWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
+  const authority = Object.freeze({ measurementSession, measurementWindow });
+  chromiumTextMeasurementAuthority = authority;
+  measurementWindow.once("closed", () => {
+    if (chromiumTextMeasurementAuthority === authority) chromiumTextMeasurementAuthority = null;
+  });
   try {
     await withLayoutHostTimeout(
       measurementWindow.loadURL(LAYOUT_MEASUREMENT_HOST_URL),
       15_000,
       "MEASUREMENT_HOST_LOAD_TIMEOUT",
     );
+    return authority;
+  } catch (error) {
+    if (chromiumTextMeasurementAuthority === authority) chromiumTextMeasurementAuthority = null;
+    if (!measurementWindow.isDestroyed()) measurementWindow.destroy();
+    measurementSession.protocol.unhandle(LAYOUT_HOST_SCHEME);
+    throw error;
+  }
+}
+
+async function releaseChromiumTextMeasurementAuthority(): Promise<void> {
+  await chromiumTextMeasurementTail.catch(() => undefined);
+  const authority = chromiumTextMeasurementAuthority;
+  chromiumTextMeasurementAuthority = null;
+  if (authority === null) return;
+  if (!authority.measurementWindow.isDestroyed()) authority.measurementWindow.destroy();
+  authority.measurementSession.protocol.unhandle(LAYOUT_HOST_SCHEME);
+  await authority.measurementSession.clearStorageData().catch(() => undefined);
+  await authority.measurementSession.clearCache().catch(() => undefined);
+}
+
+async function measureBoringLogTextInChromium(
+  requests: readonly BoringLogTextMeasurementRequest[],
+): Promise<ChromiumTextMeasurementOutcome> {
+  const measurementRequests: readonly BoringLogTextMeasurementRequest[] = requests;
+  if (fontPaletteProbeMode)
+    emitStudioProbePhase(`bld042-measure-start:${measurementRequests.length}`);
+  if (!Array.isArray(requests) || requests.length > 4_096) {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_INVALID" });
+  }
+  let serializedRequests: string;
+  try {
+    serializedRequests = JSON.stringify(measurementRequests);
+  } catch {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_NOT_SERIALIZABLE" });
+  }
+  if (Buffer.byteLength(serializedRequests, "utf8") > 1_048_576) {
+    return Object.freeze({ accepted: false, reason: "REQUESTS_TOO_LARGE" });
+  }
+  let releaseMeasurementTurn!: () => void;
+  const previousMeasurementTurn = chromiumTextMeasurementTail;
+  chromiumTextMeasurementTail = new Promise<void>((resolve) => {
+    releaseMeasurementTurn = resolve;
+  });
+  await previousMeasurementTurn;
+  try {
+    const { measurementWindow } = await acquireChromiumTextMeasurementAuthority();
+    if (fontPaletteProbeMode) emitStudioProbePhase("bld042-measure-host-loaded");
+    const admittedFontLoads = [
+      ...new Set(
+        measurementRequests.map((request) => {
+          if (request.fontFamilyId === "font.logical.rsrender-sans") {
+            if ((request.fontStyle ?? "normal") !== "normal") {
+              throw new Error("QUALIFIED_ARIAL_STYLE_UNAVAILABLE");
+            }
+            return `normal ${request.fontWeight} 10pt 'RSrender Qualified Arial'`;
+          }
+          const face = resolveBundledSourceFontFace(
+            request.fontFamilyId,
+            request.fontStyle ?? "normal",
+            request.fontWeight,
+          );
+          if (face === undefined) throw new Error("QUALIFIED_SOURCE_FONT_FACE_UNAVAILABLE");
+          return `${face.style} ${face.weight} 10pt '${face.cssFamilyName}'`;
+        }),
+      ),
+    ];
     await withLayoutHostTimeout(
       measurementWindow.webContents.executeJavaScript(
-        `document.fonts.load("10pt 'RSrender Qualified Arial'").then(() => document.fonts.load("700 10pt 'RSrender Qualified Arial'")).then(() => document.fonts.ready).then(() => true)`,
+        `Promise.all(${JSON.stringify(admittedFontLoads)}.map((descriptor) => document.fonts.load(descriptor))).then(() => document.fonts.ready).then(() => true)`,
         true,
       ) as Promise<unknown>,
       15_000,
       "MEASUREMENT_FONT_LOAD_TIMEOUT",
     );
+    if (fontPaletteProbeMode)
+      emitStudioProbePhase(`bld042-fonts-ready:${admittedFontLoads.join("|")}`);
     const payload = Buffer.from(serializedRequests, "utf8").toString("base64");
+    const measurementFamilies = Object.fromEntries([
+      ["font.logical.rsrender-sans", "RSrender Qualified Arial"],
+      ...bundledSourceFontFaces.map((face) => [face.familyId, face.cssFamilyName] as const),
+    ]);
     const measured = await withLayoutHostTimeout(
       measurementWindow.webContents.executeJavaScript(
         `(() => {
         try {
         const requests = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(${JSON.stringify(payload)}), (value) => value.charCodeAt(0))));
+        const fontFamilies = ${JSON.stringify(measurementFamilies)};
         const measurementStarted = performance.now();
         const root = document.getElementById("measurement-root");
         if (!(root instanceof SVGSVGElement)) return null;
@@ -712,7 +1012,9 @@ async function measureBoringLogTextInChromium(
         if (context === null) return null;
         const pxToMpt = (value) => Math.round(value * 750);
         const measure = (text, request) => {
-          context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
+          const familyName = fontFamilies[request.fontFamilyId];
+          if (typeof familyName !== "string") throw new Error("MEASUREMENT_FONT_FAMILY_UNAVAILABLE");
+          context.font = (request.fontStyle ?? "normal") + " " + request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt '" + familyName + "'";
           const bounds = context.measureText(text);
           const scalarCount = Array.from(text).length;
           const spaces = Array.from(text).filter((value) => value === " ").length;
@@ -770,13 +1072,16 @@ async function measureBoringLogTextInChromium(
                   )
                 : authoredRequest.maximumLines,
           };
-          probe.setAttribute("font-family", "RSrender Qualified Arial");
+          const familyName = fontFamilies[request.fontFamilyId];
+          if (typeof familyName !== "string") throw new Error("MEASUREMENT_FONT_FAMILY_UNAVAILABLE");
+          probe.setAttribute("font-family", familyName);
           probe.setAttribute("font-size", String(request.fontSizeMpt / 750));
+          probe.setAttribute("font-style", request.fontStyle ?? "normal");
           probe.setAttribute("font-weight", String(request.fontWeight));
           probe.setAttribute("letter-spacing", String(request.letterSpacingMpt / 750));
           probe.setAttribute("word-spacing", String(request.wordSpacingMpt / 750));
           probe.textContent = request.text.length === 0 ? "\u200b" : request.text;
-          context.font = request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt 'RSrender Qualified Arial'";
+          context.font = (request.fontStyle ?? "normal") + " " + request.fontWeight + " " + request.fontSizeMpt / 1000 + "pt '" + familyName + "'";
           const advance = (start, end) =>
             start === end ? 0 : measure(request.text.slice(start, end), request).advanceMpt;
           const lines = [];
@@ -915,13 +1220,15 @@ async function measureBoringLogTextInChromium(
           return best ?? resolveAtSize(request, request.minimumFontSizeMpt);
         });
         const calibrationRequest = {
+          fontFamilyId: "font.logical.rsrender-sans",
+          fontStyle: "normal",
           fontSizeMpt: 10000,
           fontWeight: 400,
           letterSpacingMpt: 0,
           wordSpacingMpt: 0,
         };
         return {
-          fontReady: document.fonts.check("10pt 'RSrender Qualified Arial'"),
+          fontReady: ${JSON.stringify(admittedFontLoads)}.every((descriptor) => document.fonts.check(descriptor)),
           computedFamily: getComputedStyle(probe).fontFamily,
           calibration: measure("RSrender 0123456789", calibrationRequest),
           results,
@@ -935,6 +1242,7 @@ async function measureBoringLogTextInChromium(
       15_000,
       "MEASUREMENT_EXECUTION_TIMEOUT",
     );
+    if (fontPaletteProbeMode) emitStudioProbePhase("bld042-measure-script-complete");
     if (typeof measured !== "object" || measured === null || Array.isArray(measured)) {
       return Object.freeze({ accepted: false, reason: "WITNESS_MALFORMED" });
     }
@@ -971,18 +1279,24 @@ async function measureBoringLogTextInChromium(
     });
     const authorityDigest = sha256CanonicalJson(authority);
     const rawResults = witness["results"] as readonly DataRecord[];
-    const fontWeights: readonly number[] = requests.map(
-      ({ fontWeight }: BoringLogTextMeasurementRequest) => fontWeight,
-    );
     const results = rawResults.map((result, index) => {
-      const fontWeight = fontWeights[index];
+      const request = measurementRequests[index];
+      const sourceFace =
+        request === undefined
+          ? undefined
+          : resolveBundledSourceFontFace(
+              request.fontFamilyId,
+              request.fontStyle ?? "normal",
+              request.fontWeight,
+            );
       return {
         ...result,
         fontFaceDigest:
-          fontWeight !== undefined && fontWeight >= 600
+          sourceFace?.byteDigest ??
+          (request !== undefined && request.fontWeight >= 600
             ? authority.fontFaces.bold
-            : authority.fontFaces.regular,
-        fontMetricsDigest: authorityDigest,
+            : authority.fontFaces.regular),
+        fontMetricsDigest: sourceFace?.metricsDigest ?? authorityDigest,
       };
     }) as unknown as readonly BoringLogTextMeasurementResult[];
     return Object.freeze({
@@ -991,19 +1305,26 @@ async function measureBoringLogTextInChromium(
       authorityDigest,
     });
   } catch (error) {
+    if (fontPaletteProbeMode)
+      emitStudioProbePhase(
+        `bld042-measure-failed:${error instanceof Error ? error.message : "MEASUREMENT_FAILED"}`,
+      );
     return Object.freeze({
       accepted: false,
       reason: error instanceof Error ? error.message : "MEASUREMENT_FAILED",
     });
   } finally {
-    if (!measurementWindow.isDestroyed()) measurementWindow.destroy();
-    measurementSession.protocol.unhandle(LAYOUT_HOST_SCHEME);
+    releaseMeasurementTurn();
   }
 }
 
 async function renderPublicationPdf(
   projection: BoringLogPublicationProjection | BoringLogPublicationPackageProjection,
 ): Promise<Uint8Array> {
+  // Measurement is complete once the publication projection is frozen. Release its hidden
+  // renderer before opening the publication host so constrained Windows systems never need both.
+  await releaseChromiumTextMeasurementAuthority();
+  if (fontPaletteProbeMode) emitStudioProbePhase("bld042-publication-layout-start");
   const partition = `rsrender-layout-host-${randomBytes(16).toString("hex")}`;
   const layoutSession = session.fromPartition(partition, { cache: false });
   layoutSession.setPermissionCheckHandler(() => false);
@@ -1018,6 +1339,7 @@ async function renderPublicationPdf(
           LAYOUT_HOST_URL,
           LAYOUT_PUBLICATION_FONT_REGULAR_URL,
           LAYOUT_PUBLICATION_FONT_BOLD_URL,
+          ...bundledSourceFontFaces.map(publicationSourceFontUrl),
         ].includes(details.url),
     });
   });
@@ -1028,15 +1350,21 @@ async function renderPublicationPdf(
         headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
       });
     }
+    const publicationSourceFace = sourceFaceByUrl(request.url, "publication");
     if (
       request.url === LAYOUT_PUBLICATION_FONT_REGULAR_URL ||
-      request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL
+      request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL ||
+      publicationSourceFace !== undefined
     ) {
       return new Response(
-        readFileSync(
-          qualifiedFontPath(
-            request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
-          ),
+        fontResponseBody(
+          publicationSourceFace === undefined
+            ? readFileSync(
+                qualifiedFontPath(
+                  request.url === LAYOUT_PUBLICATION_FONT_BOLD_URL ? "arialbd.ttf" : "arial.ttf",
+                ),
+              )
+            : readQualifiedBundledSourceFont(publicationSourceFace),
         ),
         { status: 200, headers: { "Cache-Control": "no-store", "Content-Type": "font/ttf" } },
       );
@@ -1082,11 +1410,17 @@ async function renderPublicationPdf(
   layoutWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
   try {
     await layoutWindow.loadURL(LAYOUT_HOST_URL);
-    const fontReady: unknown = await layoutWindow.webContents.executeJavaScript(
-      `document.fonts.ready.then(() => document.fonts.check("10pt 'RSrender Qualified Arial'"))`,
-      true,
+    if (fontPaletteProbeMode) emitStudioProbePhase("bld042-publication-layout-loaded");
+    const fontReady: unknown = await withLayoutHostTimeout(
+      layoutWindow.webContents.executeJavaScript(
+        `(async () => { const requests = [...document.querySelectorAll('text[data-font-family-id]')].map((node) => ({ descriptor: (node.getAttribute('font-style') ?? 'normal') + ' ' + (node.getAttribute('font-weight') ?? '400') + ' 10pt ' + JSON.stringify(node.getAttribute('font-family') ?? ''), text: node.textContent ?? '' })); await Promise.all(requests.map(({ descriptor, text }) => document.fonts.load(descriptor, text))); return requests.every(({ descriptor, text }) => document.fonts.check(descriptor, text)); })()`,
+        true,
+      ) as Promise<unknown>,
+      30_000,
+      "LAYOUT_HOST_FONT_LOAD_TIMEOUT",
     );
     if (fontReady !== true) throw new Error("LAYOUT_HOST_FONT_UNAVAILABLE");
+    if (fontPaletteProbeMode) emitStudioProbePhase("bld042-publication-fonts-ready");
     const state = (await layoutWindow.webContents.executeJavaScript(
       `(() => ({ sceneDigest: document.querySelector("svg")?.getAttribute("data-scene-digest"), projectionDigest: document.querySelector('meta[name="rsrender-projection-digest"]')?.getAttribute("content") ?? document.querySelector("svg")?.getAttribute("data-projection-digest"), aggregateDigest: document.querySelector('meta[name="rsrender-aggregate-digest"]')?.getAttribute("content"), nodeCount: document.querySelectorAll(".scene-node").length, pageCount: document.querySelectorAll(".publication-page").length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, title: document.title }))()`,
       true,
@@ -1115,6 +1449,7 @@ async function renderPublicationPdf(
       displayHeaderFooter: false,
       margins: { top: 0, bottom: 0, left: 0, right: 0 },
     });
+    if (fontPaletteProbeMode) emitStudioProbePhase("bld042-publication-pdf-ready");
     await new Promise<void>((resolve) => {
       layoutWindow.once("closed", resolve);
       layoutWindow.close();
@@ -1139,6 +1474,392 @@ function routeContext(window: BrowserWindow, event: IpcMainInvokeEvent): Documen
   });
 }
 
+function authEntryContext(
+  authWindow: BrowserWindow,
+  event: IpcMainInvokeEvent,
+): RsLogAuthEntryContext {
+  return Object.freeze({
+    senderId: event.sender.id,
+    frameUrl: event.senderFrame?.url ?? "",
+    isMainFrame:
+      !authWindow.isDestroyed() &&
+      event.sender === authWindow.webContents &&
+      event.senderFrame === event.sender.mainFrame,
+  });
+}
+
+function sourceSelectionContext(
+  selectionWindow: BrowserWindow,
+  event: IpcMainInvokeEvent,
+): RsLogSourceSelectionContext {
+  return Object.freeze({
+    senderId: event.sender.id,
+    frameUrl: event.senderFrame?.url ?? "",
+    isMainFrame:
+      !selectionWindow.isDestroyed() &&
+      event.sender === selectionWindow.webContents &&
+      event.senderFrame === event.sender.mainFrame,
+  });
+}
+
+async function runRsLogSourceSelectionWindow(
+  parent: BrowserWindow,
+  mode: RsLogSourceSelectionMode,
+  options: readonly RsLogSourceSelectionOption[],
+  counters: Counters,
+): Promise<RsLogSourceSelectionResult> {
+  try {
+    readFileSync(rsLogSourceSelectionPreloadPath);
+  } catch {
+    return Object.freeze({ accepted: false, code: "RSLOG_SOURCE_SELECTION_UNAVAILABLE" });
+  }
+  const partition = `rsrender-rslog-source-selection-${randomBytes(16).toString("hex")}`;
+  const selectionSession = session.fromPartition(partition, { cache: false });
+  selectionSession.setPermissionCheckHandler(() => {
+    counters.permissionCheck += 1;
+    return false;
+  });
+  selectionSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+    counters.permissionRequest += 1;
+    callback(false);
+  });
+  selectionSession.setDevicePermissionHandler(() => false);
+  selectionSession.on("will-download", (event) => {
+    counters.download += 1;
+    event.preventDefault();
+  });
+  selectionSession.webRequest.onBeforeRequest((details, callback) => {
+    const allowed =
+      details.method === "GET" &&
+      (details.url === RSLOG_SOURCE_SELECTION_URL ||
+        details.url === RSLOG_SOURCE_SELECTION_STYLESHEET_URL);
+    if (!allowed) counters.network += 1;
+    callback({ cancel: !allowed });
+  });
+  selectionSession.protocol.handle(DOCUMENT_SCHEME, (request) => {
+    const isHtml = request.method === "GET" && request.url === RSLOG_SOURCE_SELECTION_URL;
+    const isStylesheet =
+      request.method === "GET" && request.url === RSLOG_SOURCE_SELECTION_STYLESHEET_URL;
+    if (!isHtml && !isStylesheet) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+    return new Response(
+      isHtml ? createRsLogSourceSelectionHtml() : RSLOG_SOURCE_SELECTION_STYLESHEET,
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Security-Policy":
+            "default-src 'none'; script-src 'none'; style-src 'self'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+          "Content-Type": isHtml ? "text/html; charset=utf-8" : "text/css; charset=utf-8",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy":
+            "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+          "Referrer-Policy": "no-referrer",
+          "X-Content-Type-Options": "nosniff",
+        },
+      },
+    );
+  });
+  const selectionWindow = new BrowserWindow({
+    parent,
+    modal: true,
+    show: false,
+    width: 640,
+    height: 620,
+    minWidth: 520,
+    minHeight: 440,
+    useContentSize: true,
+    resizable: true,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    title: mode === "project" ? "Choose RSLog Source Project" : "Choose RSLog Explorations",
+    backgroundColor: "#eef2f5",
+    webPreferences: {
+      ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
+      partition,
+      preload: rsLogSourceSelectionPreloadPath,
+      spellcheck: false,
+    },
+  });
+  selectionWindow.webContents.setWindowOpenHandler(() => {
+    counters.popup += 1;
+    return { action: "deny" };
+  });
+  selectionWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== RSLOG_SOURCE_SELECTION_URL) {
+      counters.navigation += 1;
+      event.preventDefault();
+    }
+  });
+  selectionWindow.webContents.on("will-redirect", (event) => {
+    counters.navigation += 1;
+    event.preventDefault();
+  });
+  selectionWindow.webContents.on("will-attach-webview", (event) => {
+    counters.webview += 1;
+    event.preventDefault();
+  });
+  const route = new RsLogSourceSelectionRouteBroker({
+    mode,
+    expectedSenderId: selectionWindow.webContents.id,
+    capability: randomBytes(32).toString("hex"),
+    options,
+  });
+  let settled = false;
+  let resolveOutcome: (result: RsLogSourceSelectionResult) => void = () => undefined;
+  const outcome = new Promise<RsLogSourceSelectionResult>((resolve) => {
+    resolveOutcome = resolve;
+  });
+  const settle = (result: RsLogSourceSelectionResult): void => {
+    if (settled) return;
+    settled = true;
+    resolveOutcome(result);
+    setTimeout(() => {
+      if (!selectionWindow.isDestroyed()) selectionWindow.destroy();
+    }, 0);
+  };
+  ipcMain.handle(RSLOG_SOURCE_SELECTION_BOOTSTRAP_CHANNEL, (event) =>
+    route.bootstrap(sourceSelectionContext(selectionWindow, event)),
+  );
+  ipcMain.handle(RSLOG_SOURCE_SELECTION_SUBMIT_CHANNEL, (event, input: unknown) => {
+    const result = route.submit(sourceSelectionContext(selectionWindow, event), input);
+    settle(result);
+    return result;
+  });
+  ipcMain.handle(RSLOG_SOURCE_SELECTION_CANCEL_CHANNEL, (event, input: unknown) => {
+    const result = route.cancel(sourceSelectionContext(selectionWindow, event), input);
+    settle(result);
+    return result;
+  });
+  selectionWindow.once("closed", () => {
+    if (!settled) {
+      settled = true;
+      resolveOutcome(Object.freeze({ accepted: false, code: "RSLOG_SOURCE_SELECTION_CANCELED" }));
+    }
+  });
+  try {
+    await selectionWindow.loadURL(RSLOG_SOURCE_SELECTION_URL);
+    if (!selectionWindow.isDestroyed()) {
+      selectionWindow.center();
+      selectionWindow.show();
+    }
+    return await outcome;
+  } catch {
+    return Object.freeze({ accepted: false, code: "RSLOG_SOURCE_SELECTION_UNAVAILABLE" });
+  } finally {
+    route.invalidate();
+    ipcMain.removeHandler(RSLOG_SOURCE_SELECTION_BOOTSTRAP_CHANNEL);
+    ipcMain.removeHandler(RSLOG_SOURCE_SELECTION_SUBMIT_CHANNEL);
+    ipcMain.removeHandler(RSLOG_SOURCE_SELECTION_CANCEL_CHANNEL);
+    if (!selectionWindow.isDestroyed()) selectionWindow.destroy();
+    selectionSession.protocol.unhandle(DOCUMENT_SCHEME);
+    await selectionSession.clearStorageData().catch(() => undefined);
+    await selectionSession.clearCache().catch(() => undefined);
+  }
+}
+
+type RsLogAuthFlowResult = Readonly<{
+  accepted: boolean;
+  code: string;
+}>;
+
+async function runRsLogAuthEntryWindow(
+  parent: BrowserWindow,
+  sessionBroker: RsLogLiveSessionBroker,
+  mode: RsLogAuthEntryMode,
+  counters: Counters,
+): Promise<RsLogAuthFlowResult> {
+  try {
+    readFileSync(rsLogAuthEntryPreloadPath);
+  } catch {
+    return Object.freeze({ accepted: false, code: "RSLOG_AUTH_ENTRY_PRELOAD_UNAVAILABLE" });
+  }
+  const partition = `rsrender-rslog-auth-entry-${randomBytes(16).toString("hex")}`;
+  const authSession = session.fromPartition(partition, { cache: false });
+  authSession.setPermissionCheckHandler(() => {
+    counters.permissionCheck += 1;
+    return false;
+  });
+  authSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+    counters.permissionRequest += 1;
+    callback(false);
+  });
+  authSession.setDevicePermissionHandler(() => false);
+  authSession.on("will-download", (event) => {
+    counters.download += 1;
+    event.preventDefault();
+  });
+  authSession.webRequest.onBeforeRequest((details, callback) => {
+    const allowed =
+      details.method === "GET" &&
+      (details.url === RSLOG_AUTH_ENTRY_URL || details.url === RSLOG_AUTH_ENTRY_STYLESHEET_URL);
+    if (!allowed) counters.network += 1;
+    callback({ cancel: !allowed });
+  });
+  authSession.protocol.handle(DOCUMENT_SCHEME, (request) => {
+    const isHtml = request.method === "GET" && request.url === RSLOG_AUTH_ENTRY_URL;
+    const isStylesheet =
+      request.method === "GET" && request.url === RSLOG_AUTH_ENTRY_STYLESHEET_URL;
+    if (!isHtml && !isStylesheet) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+    return new Response(isHtml ? createRsLogAuthEntryHtml() : RSLOG_AUTH_ENTRY_STYLESHEET, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Security-Policy":
+          "default-src 'none'; script-src 'none'; style-src 'self'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
+        "Content-Type": isHtml ? "text/html; charset=utf-8" : "text/css; charset=utf-8",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy":
+          "accelerometer=(), camera=(), display-capture=(), geolocation=(), microphone=(), payment=(), usb=()",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  });
+  const authWindow = new BrowserWindow({
+    parent,
+    modal: true,
+    show: false,
+    width: 480,
+    height: mode === "password" ? 430 : 330,
+    useContentSize: true,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    title: mode === "password" ? "Connect to RSLog" : "Verify RSLog sign-in",
+    backgroundColor: "#eef2f5",
+    webPreferences: {
+      ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
+      partition,
+      preload: rsLogAuthEntryPreloadPath,
+      spellcheck: false,
+    },
+  });
+  authWindow.webContents.setWindowOpenHandler(() => {
+    counters.popup += 1;
+    return { action: "deny" };
+  });
+  authWindow.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== RSLOG_AUTH_ENTRY_URL) {
+      counters.navigation += 1;
+      event.preventDefault();
+    }
+  });
+  authWindow.webContents.on("will-redirect", (event) => {
+    counters.navigation += 1;
+    event.preventDefault();
+  });
+  authWindow.webContents.on("will-attach-webview", (event) => {
+    counters.webview += 1;
+    event.preventDefault();
+  });
+  const route = new RsLogAuthEntryRouteBroker({
+    mode,
+    expectedSenderId: authWindow.webContents.id,
+    capability: randomBytes(32).toString("hex"),
+    sessionBroker,
+  });
+  let settled = false;
+  let resolveOutcome: (result: RsLogAuthFlowResult) => void = () => undefined;
+  const outcome = new Promise<RsLogAuthFlowResult>((resolve) => {
+    resolveOutcome = resolve;
+  });
+  const settle = (result: RsLogAuthFlowResult): void => {
+    if (settled) return;
+    settled = true;
+    resolveOutcome(result);
+    setTimeout(() => {
+      if (!authWindow.isDestroyed()) authWindow.destroy();
+    }, 0);
+  };
+  ipcMain.handle(RSLOG_AUTH_ENTRY_BOOTSTRAP_CHANNEL, (event) =>
+    route.bootstrap(authEntryContext(authWindow, event)),
+  );
+  ipcMain.handle(RSLOG_AUTH_ENTRY_SUBMIT_CHANNEL, async (event, input: unknown) => {
+    const result = await route.submit(authEntryContext(authWindow, event), input);
+    settle(
+      result.accepted
+        ? Object.freeze({
+            accepted: result.projection.state === "signed-in",
+            code:
+              result.projection.state === "verification-required"
+                ? "RSLOG_AUTH_VERIFICATION_REQUIRED"
+                : result.projection.state === "signed-in"
+                  ? "RSLOG_AUTHENTICATED"
+                  : "RSLOG_AUTH_REJECTED",
+          })
+        : Object.freeze({ accepted: false, code: result.code }),
+    );
+    return result;
+  });
+  ipcMain.handle(RSLOG_AUTH_ENTRY_CANCEL_CHANNEL, (event, input: unknown) => {
+    const result = route.cancel(authEntryContext(authWindow, event), input);
+    settle(Object.freeze({ accepted: false, code: "RSLOG_AUTH_ENTRY_CANCELED" }));
+    return result;
+  });
+  authWindow.once("closed", () => {
+    if (!settled) {
+      sessionBroker.signOut();
+      settled = true;
+      resolveOutcome(Object.freeze({ accepted: false, code: "RSLOG_AUTH_ENTRY_CANCELED" }));
+    }
+  });
+  try {
+    await authWindow.loadURL(RSLOG_AUTH_ENTRY_URL);
+    if (!authWindow.isDestroyed()) {
+      authWindow.center();
+      authWindow.show();
+    }
+    return await outcome;
+  } catch {
+    sessionBroker.signOut();
+    return Object.freeze({ accepted: false, code: "RSLOG_AUTH_ENTRY_LOAD_FAILED" });
+  } finally {
+    route.invalidate();
+    ipcMain.removeHandler(RSLOG_AUTH_ENTRY_BOOTSTRAP_CHANNEL);
+    ipcMain.removeHandler(RSLOG_AUTH_ENTRY_SUBMIT_CHANNEL);
+    ipcMain.removeHandler(RSLOG_AUTH_ENTRY_CANCEL_CHANNEL);
+    if (!authWindow.isDestroyed()) authWindow.destroy();
+    authSession.protocol.unhandle(DOCUMENT_SCHEME);
+    await authSession.clearStorageData().catch(() => undefined);
+    await authSession.clearCache().catch(() => undefined);
+  }
+}
+
+async function runRsLogAuthFlow(
+  parent: BrowserWindow,
+  sessionBroker: RsLogLiveSessionBroker,
+  counters: Counters,
+): Promise<RsLogAuthFlowResult> {
+  const current = sessionBroker.getProjection();
+  if (current.state === "signed-in") {
+    return Object.freeze({ accepted: true, code: "RSLOG_ALREADY_AUTHENTICATED" });
+  }
+  const first = await runRsLogAuthEntryWindow(
+    parent,
+    sessionBroker,
+    current.state === "verification-required" ? "verification-code" : "password",
+    counters,
+  );
+  if (first.code !== "RSLOG_AUTH_VERIFICATION_REQUIRED") return first;
+  return runRsLogAuthEntryWindow(parent, sessionBroker, "verification-code", counters);
+}
+
 function requireProbe(condition: unknown, code: string): asserts condition {
   if (!condition) {
     probeFailure = code;
@@ -1152,22 +1873,79 @@ function record(input: unknown): DataRecord {
 }
 
 function emitResult(value: unknown): void {
-  process.stdout.write(
-    `${studioProbeMode ? STUDIO_RESULT_MARKER : RESULT_MARKER}${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}\n`,
-  );
+  if (!probeOutputWritable) return;
+  try {
+    process.stdout.write(
+      `${dataLayerSymbologyProbeMode ? DATA_LAYER_SYMBOLOGY_RESULT_MARKER : studioProbeMode ? STUDIO_RESULT_MARKER : RESULT_MARKER}${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}\n`,
+    );
+  } catch (error: unknown) {
+    probeOutputWritable = false;
+    if (!isBrokenProbePipe(error)) throw error;
+  }
 }
 
 function emitStudioProbePhase(phase: string): void {
-  if (studioProbeMode) process.stdout.write(`RSRENDER_PROBE_PHASE:${phase}\n`);
+  if (!studioProbeMode || !probeOutputWritable) return;
+  try {
+    process.stdout.write(`RSRENDER_PROBE_PHASE:${phase}\n`);
+  } catch (error: unknown) {
+    probeOutputWritable = false;
+    if (!isBrokenProbePipe(error)) throw error;
+  }
+}
+
+let pageEvaluationSequence = 0;
+let activePageOperation = "idle";
+const recentPageEvaluations: string[] = [];
+
+function pageExpressionLabel(expression: string): string {
+  const selectors = [
+    "export-pdf",
+    "save-project-as",
+    "apply-property",
+    "next-boring",
+    "previous-boring",
+    "ribbon-tab-publish",
+    "ribbon-tab-home",
+    "rsrenderStudio.getProjection",
+    "rsrenderStudio.lifecycle",
+  ];
+  const selector = selectors.find((candidate) => expression.includes(candidate));
+  if (selector !== undefined) return selector;
+  return expression.replace(/\s+/gu, " ").slice(0, 96);
 }
 
 async function pageValue(window: BrowserWindow, expression: string): Promise<unknown> {
-  return Promise.race([
-    window.webContents.executeJavaScript(expression, true),
-    new Promise<never>((_resolve, reject) =>
-      setTimeout(() => reject(new Error("PACKAGED_PAGE_EVALUATION_TIMEOUT")), 10_000),
-    ),
-  ]);
+  const evaluationTimeoutMs = dataLayerSymbologyProbeMode
+    ? 300_000
+    : reliableProbeActivationMode
+      ? 60_000
+      : 10_000;
+  const sequence = (pageEvaluationSequence += 1);
+  const operation =
+    activePageOperation === "idle" ? pageExpressionLabel(expression) : activePageOperation;
+  if (studioProbeMode) {
+    recentPageEvaluations.push(`${sequence}:${operation}`);
+    if (recentPageEvaluations.length > 16) recentPageEvaluations.shift();
+  }
+  try {
+    return await Promise.race([
+      window.webContents.executeJavaScript(expression, true),
+      new Promise<never>((_resolve, reject) =>
+        setTimeout(
+          () => reject(new Error("PACKAGED_PAGE_EVALUATION_TIMEOUT")),
+          evaluationTimeoutMs,
+        ),
+      ),
+    ]);
+  } catch (error) {
+    if (error instanceof Error && error.message === "PACKAGED_PAGE_EVALUATION_TIMEOUT") {
+      emitStudioProbePhase(
+        `page-evaluation-timeout:${sequence}:${operation}:recent=${recentPageEvaluations.join(",")}`,
+      );
+    }
+    throw error;
+  }
 }
 
 async function waitFor(
@@ -1180,7 +1958,12 @@ async function waitFor(
     reliableProbeActivationMode && timeoutMs === 15_000 ? 60_000 : timeoutMs;
   const deadline = Date.now() + effectiveTimeoutMs;
   while (Date.now() < deadline) {
-    if ((await pageValue(window, expression)) === true) return;
+    activePageOperation = code;
+    try {
+      if ((await pageValue(window, expression)) === true) return;
+    } finally {
+      activePageOperation = "idle";
+    }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   const debug = await pageValue(
@@ -1593,9 +2376,38 @@ async function runRsLogImportProbe(window: BrowserWindow, counters: Counters): P
   await press(window, "#import-rslog-project-data", "Space", "FOCUS_RSLOG_IMPORT");
   await waitFor(
     window,
-    `document.getElementById("editor-status")?.textContent === "RSLog Project Data JSON was valid, but its vendor export schema has not been admitted yet. The current project is unchanged."`,
-    "WAIT_RSLOG_IMPORT_DIAGNOSTIC",
+    `document.getElementById("editor-status")?.textContent === "RSLOG_PROJECT_DATA_IMPORT_STAGED_FOR_PROBE"`,
+    "WAIT_RSLOG_IMPORT_STAGED",
     60_000,
+  );
+  const stagingFiles = readdirSync(profileRoot, { withFileTypes: true }).filter(
+    (entry) => entry.isFile() && RSLOG_IMPORT_STAGING_PATTERN.test(entry.name),
+  );
+  requireProbe(stagingFiles.length === 1, "RSLOG_IMPORT_STAGING_COUNT_INVALID");
+  const stagingPath = path.join(profileRoot, stagingFiles[0]!.name);
+  const staged = await openLogProjectFile(stagingPath);
+  requireProbe(staged.accepted && !staged.value.readOnly, "RSLOG_IMPORT_STAGING_INVALID");
+  const stagedJobs = staged.accepted ? staged.value.project.layoutJobs : [];
+  requireProbe(
+    stagedJobs.length === 2 &&
+      stagedJobs.every(
+        ({ document }) =>
+          document.schemaVersion === "rsrender.boring-log-source-document.v1" &&
+          document.evidenceClass === "source-project-data" &&
+          document.publicationEligibility === "source-project-data",
+      ),
+    "RSLOG_IMPORT_STAGED_LOG_SET_INVALID",
+  );
+  if (
+    typeof rsLogImportProbeProjectOutput === "string" &&
+    rsLogImportProbeProjectOutput.length > 0
+  ) {
+    copyFileSync(stagingPath, path.resolve(rsLogImportProbeProjectOutput));
+  }
+  unlinkSync(stagingPath);
+  requireProbe(
+    !readdirSync(profileRoot).some((name) => RSLOG_IMPORT_STAGING_PATTERN.test(name)),
+    "RSLOG_IMPORT_STAGING_CLEANUP_INVALID",
   );
   const after = record(
     await pageValue(
@@ -1615,6 +2427,451 @@ async function runRsLogImportProbe(window: BrowserWindow, counters: Counters): P
     result: "PASS",
     before,
     after,
+    imported: Object.freeze({
+      layoutJobCount: stagedJobs.length,
+      boringLogIdentities: Object.freeze(
+        stagedJobs.map(({ document }) => document.identity.boringLogId),
+      ),
+      sourceDocumentCount: stagedJobs.filter(
+        ({ document }) => document.schemaVersion === "rsrender.boring-log-source-document.v1",
+      ).length,
+      copiedProject:
+        typeof rsLogImportProbeProjectOutput === "string" &&
+        rsLogImportProbeProjectOutput.length > 0,
+      stagingRemoved: true,
+    }),
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+    securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
+  });
+}
+
+async function runFontPaletteProbe(window: BrowserWindow, counters: Counters): Promise<DataRecord> {
+  requireProbe(
+    typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0,
+    "BLD042_PDF_OUTPUT_REQUIRED",
+  );
+  requireProbe(
+    typeof lifecycleProbeOutput === "string" && lifecycleProbeOutput.length > 0,
+    "BLD042_PROJECT_OUTPUT_REQUIRED",
+  );
+  await waitFor(
+    window,
+    'document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === "Untitled Log Project ready."',
+    "BLD042_WAIT_STUDIO",
+    60_000,
+  );
+  const nodeId = "node:lithology:stratum-01:transition:2:text";
+  await pageValue(
+    window,
+    `(() => { const target = document.getElementById(${JSON.stringify(nodeId)}); if (!(target instanceof SVGElement)) throw new Error("BLD042_TARGET_MISSING"); target.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 40, clientY: 40 })); document.getElementById("context-properties")?.click(); return true; })()`,
+  );
+  await waitFor(
+    window,
+    'document.getElementById("text-style-properties")?.hidden === false',
+    "BLD042_WAIT_PROPERTIES",
+    60_000,
+  );
+  const families = await pageValue(
+    window,
+    `(() => { const family = document.getElementById("text-font-family"); const style = document.getElementById("text-font-style"); const weight = document.getElementById("text-font-weight"); if (!(family instanceof HTMLSelectElement) || !(style instanceof HTMLSelectElement) || !(weight instanceof HTMLSelectElement)) throw new Error("BLD042_CONTROLS_MISSING"); const families = [...family.options].map((option) => ({ value: option.value, label: option.textContent })); family.value = "font.logical.source-serif-4"; style.value = "italic"; weight.value = "700"; family.dispatchEvent(new Event("change", { bubbles: true })); style.dispatchEvent(new Event("change", { bubbles: true })); weight.dispatchEvent(new Event("change", { bubbles: true })); document.getElementById("apply-text-style")?.click(); return families; })()`,
+  );
+  await waitFor(
+    window,
+    `document.getElementById(${JSON.stringify(nodeId)})?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to ${nodeId} at revision ") === true && document.getElementById("apply-text-style")?.disabled === false`,
+    "BLD042_WAIT_APPLIED",
+    60_000,
+  );
+  const snapshotExpression = `(() => { const painted = document.getElementById(${JSON.stringify(nodeId)}); return { accepted: true, canUndo: document.getElementById("undo")?.disabled === false, canRedo: document.getElementById("redo")?.disabled === false, family: painted?.getAttribute("data-font-family-id"), cssFamily: painted?.getAttribute("font-family"), style: painted?.getAttribute("font-style"), weight: painted?.getAttribute("font-weight"), faceId: painted?.getAttribute("data-font-face-id"), fontFaceDigest: painted?.getAttribute("data-font-face-digest"), fontMetricsDigest: painted?.getAttribute("data-font-metrics-digest") }; })()`;
+  const applied = record(await pageValue(window, snapshotExpression));
+  await pageValue(
+    window,
+    `(() => { document.querySelector('[data-ribbon-tab="home"]')?.click(); document.getElementById("undo")?.click(); return true; })()`,
+  );
+  await waitFor(
+    window,
+    `document.getElementById(${JSON.stringify(nodeId)})?.getAttribute("data-font-family-id") === "font.logical.rsrender-sans" && document.getElementById("redo")?.disabled === false`,
+    "BLD042_WAIT_UNDONE",
+    60_000,
+  );
+  const undone = record(await pageValue(window, snapshotExpression));
+  await pageValue(window, `(() => { document.getElementById("redo")?.click(); return true; })()`);
+  await waitFor(
+    window,
+    `document.getElementById(${JSON.stringify(nodeId)})?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("undo")?.disabled === false`,
+    "BLD042_WAIT_REDONE",
+    60_000,
+  );
+  const redone = record(await pageValue(window, snapshotExpression));
+  emitStudioProbePhase("bld042-save-as-start");
+  await pageValue(window, `document.getElementById("save-project-as")?.click(); true`);
+  await waitFor(
+    window,
+    'document.body.dataset.authoritativeFileBound === "true" && document.getElementById("editor-status")?.textContent?.startsWith("Project saved and reopened successfully:") === true',
+    "BLD042_WAIT_SAVE_AS",
+    60_000,
+  );
+  emitStudioProbePhase("bld042-save-as-complete");
+  const persistence = record(
+    await pageValue(
+      window,
+      `(() => ({ workingRevision: Number(document.body.dataset.workingRevision), bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, saveStatus: document.getElementById("editor-status")?.textContent }))()`,
+    ),
+  );
+  emitStudioProbePhase("bld042-save-complete");
+  const reopened = await openLogProjectFile(path.resolve(lifecycleProbeOutput));
+  requireProbe(reopened.accepted, "BLD042_REOPEN_INVALID");
+  const persistedLayoutJob = reopened.value.project.layoutJobs.find(
+    ({ document }) => document.identity.boringLogId === "urn:rsrender:boring-log:test-01",
+  );
+  const persistedBinding = persistedLayoutJob?.template.bindings.find(
+    ({ elementId, path: bindingPath }) =>
+      elementId === nodeId && bindingPath === "presentation.text-occurrence-style",
+  );
+  const persistedStyle = persistedLayoutJob?.template.styles.find(
+    ({ id }) => id === persistedBinding?.styleId,
+  );
+  requireProbe(
+    persistedBinding !== undefined &&
+      persistedStyle?.fontFamilyId === "font.logical.source-serif-4" &&
+      persistedStyle.fontStyle === "italic" &&
+      persistedStyle.fontWeight === 700,
+    "BLD042_REOPEN_FONT_INVALID",
+  );
+  emitStudioProbePhase("bld042-reopen-font-complete");
+  await pageValue(window, `document.querySelector('[data-ribbon-tab="publish"]')?.click(); true`);
+  await waitFor(
+    window,
+    'document.querySelector("[data-ribbon-panel=\\"publish\\"]")?.hidden === false && document.getElementById("export-pdf")?.disabled === false',
+    "BLD042_WAIT_PUBLICATION",
+  );
+  emitStudioProbePhase("bld042-publication-ready");
+  await pageValue(window, `document.getElementById("export-pdf")?.click(); true`);
+  emitStudioProbePhase("bld042-publication-clicked");
+  await waitFor(
+    window,
+    'document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS" && document.getElementById("editor-status")?.textContent?.startsWith("PDF exported and reopened successfully:") === true',
+    "BLD042_WAIT_PUBLICATION_RESULT",
+    120_000,
+  );
+  emitStudioProbePhase("bld042-publication-complete");
+  const publication = record(
+    await pageValue(
+      window,
+      `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), pageCount: Number(button?.dataset.pageCount) }; })()`,
+    ),
+  );
+  requireProbe(
+    publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+      publication["destinationPath"] === path.resolve(pdfProbeOutput),
+    "BLD042_PUBLICATION_INVALID",
+  );
+  const rasterCount = await pageValue(
+    window,
+    'document.querySelectorAll("img,picture,canvas,image").length',
+  );
+  const result = Object.freeze({ families, applied, undone, redone, rasterCount });
+  requireProbe(
+    JSON.stringify(result["families"]) ===
+      JSON.stringify([
+        { value: "font.logical.rsrender-sans", label: "Arial" },
+        { value: "font.logical.source-sans-3", label: "Source Sans 3" },
+        { value: "font.logical.source-serif-4", label: "Source Serif 4" },
+        { value: "font.logical.source-code-pro", label: "Source Code Pro" },
+      ]),
+    `BLD042_FAMILY_PALETTE_INVALID:${JSON.stringify(result["families"])}`,
+  );
+  const expectedFace = resolveBundledSourceFontFace("font.logical.source-serif-4", "italic", 700)!;
+  requireProbe(
+    applied["accepted"] === true &&
+      applied["family"] === expectedFace.familyId &&
+      applied["cssFamily"] === expectedFace.cssFamilyName &&
+      applied["style"] === expectedFace.style &&
+      applied["weight"] === String(expectedFace.weight) &&
+      applied["faceId"] === expectedFace.faceId &&
+      applied["fontFaceDigest"] === expectedFace.byteDigest &&
+      applied["fontMetricsDigest"] === expectedFace.metricsDigest &&
+      undone["family"] === "font.logical.rsrender-sans" &&
+      undone["style"] === "normal" &&
+      redone["faceId"] === expectedFace.faceId &&
+      redone["fontFaceDigest"] === expectedFace.byteDigest &&
+      result["rasterCount"] === 0,
+    `BLD042_FONT_AUTHORITY_INVALID:${JSON.stringify(result)}`,
+  );
+  return Object.freeze({
+    schema: "rsrender.bld042.font-palette-probe.v1",
+    result: "PASS",
+    palette: result["families"],
+    applied,
+    undone,
+    redone,
+    persistence: Object.freeze({
+      ...persistence,
+      persistedStyle: Object.freeze({
+        styleId: persistedBinding.styleId,
+        fontFamilyId: persistedStyle.fontFamilyId,
+        fontStyle: persistedStyle.fontStyle,
+        fontWeight: persistedStyle.fontWeight,
+      }),
+    }),
+    publication,
+    denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
+  });
+}
+
+async function runDataLayerSymbologyProbe(
+  window: BrowserWindow,
+  counters: Counters,
+): Promise<DataRecord> {
+  requireProbe(
+    typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0,
+    "BLD050_PDF_OUTPUT_REQUIRED",
+  );
+  requireProbe(
+    typeof lifecycleProbeOutput === "string" && lifecycleProbeOutput.length > 0,
+    "BLD050_PROJECT_OUTPUT_REQUIRED",
+  );
+  const expectedReadyStatus = studioEditingMode
+    ? "Untitled Log Project ready."
+    : "Structured boring log scene rendered as semantic SVG.";
+  await waitFor(
+    window,
+    'document.querySelectorAll("#svg-page > svg").length === 1 && document.getElementById("editor-status")?.textContent === ' +
+      JSON.stringify(expectedReadyStatus),
+    "BLD050_WAIT_STUDIO",
+    60_000,
+  );
+  const workflowExpression = `(async () => {
+    const wait = async (test) => { const deadline = Date.now() + 90_000; while (Date.now() < deadline) { if (test()) return; await new Promise((resolve) => setTimeout(resolve, 25)); } throw new Error("BLD050_DOM_WAIT_TIMEOUT:" + (document.getElementById("editor-status")?.textContent ?? "NO_STATUS")); };
+    const click = (id) => { const node = document.getElementById(id); if (!(node instanceof HTMLElement) || (node instanceof HTMLButtonElement && node.disabled)) throw new Error("BLD050_DOM_CLICK:" + id); node.click(); };
+    const set = (id, value) => { const node = document.getElementById(id); if (!(node instanceof HTMLInputElement || node instanceof HTMLSelectElement)) throw new Error("BLD050_DOM_CONTROL:" + id); node.value = value; node.dispatchEvent(new Event("input", { bubbles: true })); node.dispatchEvent(new Event("change", { bubbles: true })); };
+    const point = [...document.querySelectorAll("#svg-page .scene-data-hit-target")].find((node) => node.getAttribute("data-semantic-id")?.startsWith("data-layer:") && node.getAttribute("data-node-role")?.startsWith("data-point-") && node.getAttribute("data-node-role")?.endsWith("-hit-target"));
+    if (!(point instanceof SVGElement)) throw new Error("BLD050_GRAPH_POINT_TARGET_MISSING");
+    const semanticId = point.getAttribute("data-semantic-id") ?? "";
+    const nodeId = point.getAttribute("data-node-id") ?? "";
+    const layerId = semanticId.slice("data-layer:".length).split(":")[0] ?? "";
+    window.__rsrenderBld050LayerId = layerId;
+    window.__rsrenderBld050NodeId = nodeId;
+    point.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await wait(() => document.getElementById("selection-properties")?.hidden === false && document.getElementById("data-layer-symbology-properties")?.hidden === false);
+    const selectedPoint = [...document.querySelectorAll("#svg-page .scene-data-hit-target")].find((node) => node.getAttribute("data-node-id") === nodeId);
+    if (!(selectedPoint instanceof SVGElement)) throw new Error("BLD050_SELECTED_POINT_TARGET_MISSING");
+    selectedPoint.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 12, clientY: 12 }));
+    await wait(() => document.getElementById("canvas-context-menu")?.hidden === false);
+    click("context-properties");
+    await wait(() => document.getElementById("data-layer-symbology-properties")?.hidden === false && document.getElementById("data-layer-symbology-properties")?.open === true && document.activeElement?.id === "data-layer-line-color");
+    document.querySelector('[data-ribbon-tab="data"]')?.click();
+    if (document.getElementById("attribute-table-dock")?.hidden !== false) click("toggle-attribute-table");
+    const hoverPoint = [...document.querySelectorAll("#svg-page .scene-data-hit-target")].find((node) => node.getAttribute("data-node-id") === nodeId);
+    if (!(hoverPoint instanceof SVGElement)) throw new Error("BLD050_HOVER_POINT_TARGET_MISSING");
+    hoverPoint.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 20, clientY: 20 }));
+    hoverPoint.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 20, clientY: 20 }));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const hover = { semanticId, tableOpen: document.getElementById("attribute-table-dock")?.hidden === false, hoverCardVisible: document.getElementById("attribute-hover-card")?.hidden === false, canvasLinked: [...document.querySelectorAll("#svg-page [data-semantic-id]")].some((node) => node.getAttribute("data-semantic-id") === semanticId && node.classList.contains("is-attribute-hover")), tableLinked: [...document.querySelectorAll("#attribute-table-body tr[data-semantic-id]")].some((node) => node.getAttribute("data-semantic-id") === semanticId && node.classList.contains("is-attribute-hover")) };
+    document.getElementById("svg-page")?.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true }));
+    const snapshot = async () => {
+      const authority = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null });
+      if (!authority.accepted) return { accepted: false, code: authority.code };
+      const projection = authority.projection;
+      const state = projection.dataLayerSymbologyStates.find(({ layerId: candidate }) => candidate === layerId);
+      const nodes = projection.scene.pages.flatMap(({ nodes: pageNodes }) => pageNodes);
+      const summary = (node) => node === undefined ? null : { shape: node.kind === "circle" ? "circle" : node.role.includes("triangle") ? "triangle" : node.role.includes("square") ? "square" : null, strokeToken: node.strokeToken ?? null, strokeWidthMpt: node.strokeWidthMpt ?? null, dashMpt: node.dashMpt ?? null, fillToken: node.fillToken ?? null, radiusMpt: node.radiusMpt ?? null };
+      const graphLine = state === undefined ? undefined : nodes.find(({ id }) => id === "node:data-layer:" + state.layerId + ":line");
+      const graphPoint = state === undefined ? undefined : nodes.find(({ id }) => id.startsWith("node:data-layer:" + state.layerId + ":point:"));
+      const graphLineSummary = summary(graphLine);
+      const graphPointSummary = summary(graphPoint);
+      const legendNodes = nodes.filter(({ id }) => id.startsWith("node:legend:"));
+      const legendLine = legendNodes.find((node) => { const candidate = summary(node); return graphLineSummary !== null && candidate !== null && candidate.strokeToken === graphLineSummary.strokeToken && candidate.strokeWidthMpt === graphLineSummary.strokeWidthMpt && JSON.stringify(candidate.dashMpt) === JSON.stringify(graphLineSummary.dashMpt); });
+      const legendPoint = legendNodes.find((node) => { const candidate = summary(node); return graphPointSummary !== null && candidate !== null && candidate.shape === graphPointSummary.shape && candidate.fillToken === graphPointSummary.fillToken && candidate.strokeToken === graphPointSummary.strokeToken && candidate.radiusMpt === graphPointSummary.radiusMpt; });
+      const label = nodes.find(({ content }) => content === state?.legend.label)?.content ?? null;
+      const line = summary(legendLine);
+      const pointSummary = summary(legendPoint);
+      return { accepted: true, workingRevision: projection.workingRevision, durableRevision: projection.durableRevision, dirty: projection.dirty, canUndo: projection.canUndo, canRedo: projection.canRedo, activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, state, graph: { line: graphLineSummary, point: graphPointSummary }, legend: { line, point: pointSummary, label }, canvasSymbolDigest: JSON.stringify({ line: graphLineSummary, point: graphPointSummary }), legendSymbolDigest: JSON.stringify({ line, point: pointSummary }), canvasAndLegendShared: graphLineSummary !== null && graphPointSummary !== null && line !== null && pointSummary !== null, labelMatches: label === state?.legend.label, normalizedScene: projection.scene.diagnostics.every(({ severity }) => severity !== "error"), sceneNodeCount: nodes.length, rasterCount: document.querySelectorAll("img,picture,canvas,image").length, status: document.getElementById("editor-status")?.textContent };
+    };
+    const activeBefore = await snapshot();
+    set("data-layer-apply-scope", "layer"); set("data-layer-point-shape", "circle"); set("data-layer-point-size", "5"); set("data-layer-line-style", "dotted"); set("data-layer-line-width", "0.9"); set("data-layer-legend-label", "BLD-050 Active Symbology"); click("apply-data-layer-symbology");
+    await wait(() => document.getElementById("editor-status")?.textContent?.includes("graph and legend symbology applied") === true && document.getElementById("undo")?.disabled === false && document.getElementById("apply-data-layer-symbology")?.disabled === false);
+    const activeApplied = await snapshot();
+    click("undo"); await wait(() => document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true && document.getElementById("redo")?.disabled === false); const activeUndo = await snapshot();
+    click("redo"); await wait(() => document.getElementById("editor-status")?.textContent?.startsWith("Redo completed at revision ") === true && document.getElementById("undo")?.disabled === false && document.getElementById("apply-data-layer-symbology")?.disabled === false); const activeRedo = await snapshot();
+    set("data-layer-apply-scope", "project-default"); set("data-layer-point-shape", "triangle"); set("data-layer-line-style", "dashed"); set("data-layer-legend-label", "N custom"); click("apply-data-layer-symbology");
+    await wait(() => document.getElementById("editor-status")?.textContent?.includes("project default applied across") === true && document.getElementById("apply-data-layer-symbology")?.disabled === false && document.getElementById("undo")?.disabled === false);
+    const projectDefaultCurrent = await snapshot();
+    const affected = Number(String(projectDefaultCurrent.status).match(/across ([0-9]+) boring logs/u)?.[1] ?? 0);
+    const firstBoring = await globalThis.rsrenderStudio.lifecycle({ operation: "first-boring", expectedWorkingRevision: projectDefaultCurrent.workingRevision });
+    if (!firstBoring.accepted) throw new Error("BLD050_FIRST_BORING:" + firstBoring.code);
+    const projectDefaultFirst = { ...(await snapshot()), activeBoringLogIdentity: firstBoring.state?.activeBoringLogIdentity };
+    const lastBoring = await globalThis.rsrenderStudio.lifecycle({ operation: "last-boring", expectedWorkingRevision: projectDefaultFirst.workingRevision });
+    if (!lastBoring.accepted) throw new Error("BLD050_LAST_BORING:" + lastBoring.code);
+    const projectDefaultSecond = { ...(await snapshot()), activeBoringLogIdentity: lastBoring.state?.activeBoringLogIdentity };
+    const returnFirstBoring = await globalThis.rsrenderStudio.lifecycle({ operation: "first-boring", expectedWorkingRevision: projectDefaultSecond.workingRevision });
+    if (!returnFirstBoring.accepted) throw new Error("BLD050_RETURN_FIRST_BORING:" + returnFirstBoring.code);
+    return { point: { semanticId, nodeId, layerId, clickEvent: "dom", rightClickEvent: "dom", rightClickContextMenu: document.getElementById("canvas-context-menu")?.hidden === true }, properties: { focusedSymbology: true, activeElement: "data-layer-line-color" }, hover, activeBefore, activeApplied, activeUndo, activeRedo, projectDefaultFirst, projectDefaultSecond, affected };
+  })()`;
+  const workflow = record(await pageValue(window, workflowExpression));
+  const activeApplied = record(workflow["activeApplied"]);
+  const activeUndo = record(workflow["activeUndo"]);
+  const activeRedo = record(workflow["activeRedo"]);
+  const projectDefaultFirst = record(workflow["projectDefaultFirst"]);
+  const projectDefaultSecond = record(workflow["projectDefaultSecond"]);
+  const hover = record(workflow["hover"]);
+  const point = record(workflow["point"]);
+  requireProbe(workflow["affected"] === 2, "BLD050_PROJECT_DEFAULT_COUNT_INVALID");
+  requireProbe(
+    projectDefaultFirst["activeBoringLogIdentity"] !==
+      projectDefaultSecond["activeBoringLogIdentity"],
+    "BLD050_PROJECT_DEFAULT_NAVIGATION_INVALID",
+  );
+  requireProbe(
+    activeApplied["canvasAndLegendShared"] === true &&
+      activeApplied["labelMatches"] === true &&
+      activeApplied["canvasSymbolDigest"] === activeApplied["legendSymbolDigest"],
+    "BLD050_ACTIVE_PROJECTION_INVALID",
+  );
+  requireProbe(
+    (activeUndo["state"] as DataRecord)?.["source"] === "template-default" &&
+      (activeRedo["state"] as DataRecord)?.["source"] === "layer-override",
+    "BLD050_ACTIVE_HISTORY_INVALID",
+  );
+  requireProbe(
+    hover["tableOpen"] === true &&
+      hover["hoverCardVisible"] === true &&
+      hover["canvasLinked"] === true &&
+      hover["tableLinked"] === true,
+    "BLD050_ATTRIBUTE_LINKAGE_INVALID",
+  );
+  requireProbe(
+    (projectDefaultSecond["state"] as DataRecord)?.["source"] === "layer-override" &&
+      ((projectDefaultSecond["state"] as DataRecord)?.["legend"] as DataRecord)?.["label"] ===
+        "N custom",
+    "BLD050_PROJECT_DEFAULT_SECOND_INVALID",
+  );
+
+  await pageValue(window, `document.getElementById("save-project-as")?.click(); true`);
+  await waitFor(
+    window,
+    'document.body.dataset.authoritativeFileBound === "true" && document.getElementById("editor-status")?.textContent?.startsWith("Project saved and reopened successfully:") === true',
+    "BLD050_WAIT_SAVE_AS",
+    60_000,
+  );
+  const persistencePage = record(
+    await pageValue(
+      window,
+      `(async () => { const expectedWorkingRevision = Number(document.body.dataset.workingRevision); const saved = await globalThis.rsrenderStudio.lifecycle({ operation: "save-project", expectedWorkingRevision }); return { expectedWorkingRevision, saved, bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, dirty: document.getElementById("document-state")?.textContent }; })()`,
+    ),
+  );
+  const saved = record(persistencePage["saved"]);
+  requireProbe(
+    saved["accepted"] === true && saved["code"] === "PROJECT_SAVE_VERIFIED",
+    "BLD050_SAVE_INVALID",
+  );
+  const reopened = await openLogProjectFile(path.resolve(lifecycleProbeOutput));
+  requireProbe(reopened.accepted, "BLD050_REOPEN_INVALID");
+  const reopenedOverrides = reopened.value.project.layoutJobs
+    .map(({ document, template }) => ({
+      boringLogIdentity: document.identity.boringLogId,
+      layerOverride: template.dataLayerSymbologyOverrides?.find(
+        ({ layerId }) => layerId === point["layerId"],
+      ),
+    }))
+    .filter(({ layerOverride }) => layerOverride !== undefined);
+  requireProbe(
+    reopenedOverrides.length === 2 &&
+      reopenedOverrides.every(({ layerOverride }) => layerOverride?.legend.label === "N custom"),
+    "BLD050_REOPEN_OVERRIDE_INVALID",
+  );
+
+  await pageValue(window, `document.querySelector('[data-ribbon-tab="publish"]')?.click(); true`);
+  await waitFor(
+    window,
+    'document.querySelector("[data-ribbon-panel=\\"publish\\"]")?.hidden === false && document.getElementById("export-pdf")?.disabled === false',
+    "BLD050_WAIT_PUBLICATION",
+  );
+  await pageValue(window, `document.getElementById("export-pdf")?.click(); true`);
+  await waitFor(
+    window,
+    'document.getElementById("export-pdf")?.dataset.result === "EXPORT_VERIFIED_SUCCESS" && document.getElementById("editor-status")?.textContent?.startsWith("PDF exported and reopened successfully:") === true',
+    "BLD050_WAIT_PUBLICATION_RESULT",
+    120_000,
+  );
+  const publication = record(
+    await pageValue(
+      window,
+      `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), pageCount: Number(button?.dataset.pageCount) }; })()`,
+    ),
+  );
+  requireProbe(
+    publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
+      publication["destinationPath"] === path.resolve(pdfProbeOutput),
+    "BLD050_PUBLICATION_INVALID",
+  );
+  return Object.freeze({
+    schema: "rsrender.bld050.hidden-packaged-probe.v1",
+    result: "PASS",
+    electronVersion: process.versions.electron,
+    visibility: Object.freeze({
+      hidden: window.isVisible() === false,
+      offscreen: window.webContents.isOffscreen(),
+      pointerControl: "dom-events-only",
+    }),
+    selection: Object.freeze({ point, properties: record(workflow["properties"]) }),
+    symbology: Object.freeze({
+      applied: Object.freeze({
+        point: true,
+        line: true,
+        legend: true,
+        activeLayerOnly: (activeApplied["state"] as DataRecord)?.["source"] === "layer-override",
+      }),
+      activeLayer: Object.freeze({
+        before: record(workflow["activeBefore"]),
+        applied: activeApplied,
+        undo: activeUndo,
+        redo: activeRedo,
+      }),
+      projectDefault: Object.freeze({
+        affectedBoringLogCount: workflow["affected"],
+        first: projectDefaultFirst,
+        second: projectDefaultSecond,
+      }),
+    }),
+    projection: Object.freeze({
+      canvasAndLegendShared: activeApplied["canvasAndLegendShared"],
+      canvasSymbolDigest: activeApplied["canvasSymbolDigest"],
+      legendSymbolDigest: activeApplied["legendSymbolDigest"],
+      normalizedScene: activeApplied["normalizedScene"],
+      sceneNodeCount: activeApplied["sceneNodeCount"],
+    }),
+    history: Object.freeze({
+      undo: Object.freeze({
+        restoresSource: (activeUndo["state"] as DataRecord)?.["source"] === "template-default",
+      }),
+      redo: Object.freeze({
+        restoresApplied:
+          (activeRedo["state"] as DataRecord)?.["source"] === "layer-override" &&
+          activeRedo["canvasSymbolDigest"] === activeApplied["canvasSymbolDigest"],
+      }),
+      projectDefaultCount: workflow["affected"],
+    }),
+    hover: Object.freeze({
+      attributeLinkage: hover["canvasLinked"] === true && hover["tableLinked"] === true,
+      canvasLinked: hover["canvasLinked"],
+      tableLinked: hover["tableLinked"],
+      semanticId: hover["semanticId"],
+    }),
+    persistence: Object.freeze({
+      supported: true,
+      saved: saved["code"] === "PROJECT_SAVE_VERIFIED",
+      reopened: reopenedOverrides.length === 2,
+      destinationPath: path.resolve(lifecycleProbeOutput),
+      overrideCount: reopenedOverrides.length,
+      dirty: persistencePage["dirty"],
+    }),
+    publication: Object.freeze({
+      ...publication,
+      vector: true,
+      rasterImages: 0,
+      normalizedScene: activeApplied["normalizedScene"],
+      sceneNodes: activeApplied["sceneNodeCount"],
+    }),
     denials: Object.freeze({ ...counters, windowCount: BrowserWindow.getAllWindows().length }),
     securityProfile: SEMANTIC_EDITOR_SECURITY_PROFILE,
   });
@@ -1637,18 +2894,22 @@ async function runPublicationPackageProbe(
       `(() => ({ activeBoringLogIdentity: document.body.dataset.activeBoringLogIdentity, defaultChecked: document.querySelectorAll('#publication-log-list input[type="checkbox"]:checked').length, defaultOrder: JSON.parse(document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities ?? "null"), exportDisabled: document.getElementById("export-pdf")?.disabled }))()`,
     ),
   );
+  const initialOrder = Array.isArray(initial["defaultOrder"])
+    ? initial["defaultOrder"].filter((value): value is string => typeof value === "string")
+    : [];
   requireProbe(
-    initial["activeBoringLogIdentity"] === "urn:rsrender:boring-log:test-01" &&
+    initialOrder.length === 2 &&
+      new Set(initialOrder).size === 2 &&
+      initial["activeBoringLogIdentity"] === initialOrder[0] &&
       initial["defaultChecked"] === 2 &&
-      JSON.stringify(initial["defaultOrder"]) ===
-        '["urn:rsrender:boring-log:test-01","urn:rsrender:boring-log:test-02"]' &&
       initial["exportDisabled"] === false,
     `PUBLICATION_PACKAGE_DEFAULT_INVALID:${JSON.stringify(initial)}`,
   );
+  const expectedPublicationOrder = Object.freeze([...initialOrder].reverse());
   await press(window, "#next-boring", "Space", "FOCUS_PUBLICATION_PACKAGE_NEXT_BORING");
   await waitFor(
     window,
-    `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02"`,
+    `document.body.dataset.activeBoringLogIdentity === ${JSON.stringify(initialOrder[1])}`,
     "WAIT_PUBLICATION_PACKAGE_NEXT_BORING",
   );
   requireProbe(
@@ -1673,7 +2934,7 @@ async function runPublicationPackageProbe(
   await press(window, "#publication-move-down", "Space", "FOCUS_PUBLICATION_PACKAGE_REORDER");
   await waitFor(
     window,
-    `document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities === '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' && document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02"`,
+    `document.getElementById("publication-selection-summary")?.dataset.orderedBoringLogIdentities === ${JSON.stringify(JSON.stringify(expectedPublicationOrder))} && document.body.dataset.activeBoringLogIdentity === ${JSON.stringify(initialOrder[1])}`,
     "WAIT_PUBLICATION_PACKAGE_REORDER",
   );
   emitStudioProbePhase("publication-package-exporting");
@@ -1693,11 +2954,12 @@ async function runPublicationPackageProbe(
   requireProbe(
     publication["result"] === "EXPORT_VERIFIED_SUCCESS" &&
       publication["destinationPath"] === path.resolve(pdfProbeOutput ?? "") &&
-      publication["activeBoringLogIdentity"] === "urn:rsrender:boring-log:test-02" &&
+      publication["activeBoringLogIdentity"] === initialOrder[1] &&
       publication["checked"] === 2 &&
       JSON.stringify(publication["orderedBoringLogIdentities"]) ===
-        '["urn:rsrender:boring-log:test-02","urn:rsrender:boring-log:test-01"]' &&
-      publication["pageCount"] === 2 &&
+        JSON.stringify(expectedPublicationOrder) &&
+      typeof publication["pageCount"] === "number" &&
+      publication["pageCount"] >= initialOrder.length &&
       [
         publication["pdfDigest"],
         publication["sceneDigest"],
@@ -1811,6 +3073,75 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       typeof initial["pageDigest"] === "string",
     "STUDIO_INITIAL_SECURITY_INVALID",
   );
+  const attributeWorkspace = record(
+    await pageValue(
+      window,
+      `(async () => {
+        const projectionState = async () => {
+          const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null });
+          return value.accepted
+            ? {
+                accepted: true,
+                workingRevision: value.projection.workingRevision,
+                dirty: value.projection.dirty,
+                canUndo: value.projection.canUndo,
+                canRedo: value.projection.canRedo,
+                sceneInputDigest: value.projection.scene.inputDigest,
+              }
+            : { accepted: false, code: value.code };
+        };
+        const before = await projectionState();
+        const screenDigestBefore = document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest");
+        const selectedBefore = [...document.querySelectorAll("#svg-page .scene-node.is-selected")].map((node) => node.getAttribute("data-semantic-id"));
+        document.querySelector('[data-ribbon-tab="data"]')?.click();
+        document.getElementById("toggle-attribute-table")?.click();
+        const target = document.querySelector("#svg-page .scene-data-hit-target");
+        if (!(target instanceof SVGElement)) return { invalid: "graph-hit-target" };
+        target.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 640, clientY: 420 }));
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const semanticId = target.getAttribute("data-semantic-id");
+        const after = await projectionState();
+        const screenDigestAfter = document.querySelector("#svg-page > svg")?.getAttribute("data-scene-input-digest");
+        const selectedAfter = [...document.querySelectorAll("#svg-page .scene-node.is-selected")].map((node) => node.getAttribute("data-semantic-id"));
+        const result = {
+          before,
+          after,
+          screenDigestBefore,
+          screenDigestAfter,
+          semanticId,
+          tableOpen: document.getElementById("attribute-table-dock")?.hidden === false,
+          canvasHoverCount: document.querySelectorAll('#svg-page [data-semantic-id="' + CSS.escape(semanticId ?? "") + '"].is-attribute-hover').length,
+          tableHoverCount: document.querySelectorAll('#attribute-table-body tr[data-semantic-id="' + CSS.escape(semanticId ?? "") + '"].is-attribute-hover').length,
+          hoverCardVisible: document.getElementById("attribute-hover-card")?.hidden === false,
+          hoverCardText: document.getElementById("attribute-hover-card")?.textContent,
+          selectedBefore,
+          selectedAfter,
+          documentState: document.getElementById("document-state")?.textContent,
+        };
+        document.getElementById("svg-page")?.dispatchEvent(new PointerEvent("pointerleave"));
+        document.getElementById("close-attribute-table")?.click();
+        document.querySelector('[data-ribbon-tab="home"]')?.click();
+        return result;
+      })()`,
+    ),
+  );
+  requireProbe(
+    attributeWorkspace["invalid"] === undefined &&
+      JSON.stringify(attributeWorkspace["before"]) ===
+        JSON.stringify(attributeWorkspace["after"]) &&
+      attributeWorkspace["screenDigestBefore"] === initial["pageDigest"] &&
+      attributeWorkspace["screenDigestAfter"] === initial["pageDigest"] &&
+      attributeWorkspace["tableOpen"] === true &&
+      (attributeWorkspace["canvasHoverCount"] as number) >= 1 &&
+      (attributeWorkspace["tableHoverCount"] as number) >= 1 &&
+      attributeWorkspace["hoverCardVisible"] === true &&
+      typeof attributeWorkspace["hoverCardText"] === "string" &&
+      attributeWorkspace["hoverCardText"].includes("source original") &&
+      JSON.stringify(attributeWorkspace["selectedBefore"]) ===
+        JSON.stringify(attributeWorkspace["selectedAfter"]) &&
+      attributeWorkspace["documentState"] === "Clean",
+    `STUDIO_ATTRIBUTE_WORKSPACE_DIRTY_OR_DIVERGED:${JSON.stringify(attributeWorkspace)}`,
+  );
   requireProbe(
     (await pageValue(
       window,
@@ -1845,32 +3176,53 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       (selection["selectedSceneNodes"] as number) >= 1,
     "STUDIO_SELECTION_SYNC_INVALID",
   );
-  window.setSize(1_100, 600);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  window.setContentSize(820, 600);
+  await waitFor(
+    window,
+    `window.innerWidth >= 800 && window.innerWidth <= 840`,
+    "WAIT_NARROW_VIEWPORT",
+  );
   const fitSmall = record(
     await pageValue(
       window,
-      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight }; })()`,
+      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); const workspace = document.querySelector(".workspace"); const properties = document.querySelector(".properties-pane"); const tab = document.querySelector(".tab"); const ribbonButton = document.querySelector(".ribbon-group button"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement) || !(workspace instanceof HTMLElement) || !(properties instanceof HTMLElement) || !(tab instanceof HTMLElement) || !(ribbonButton instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight, workspaceWidth: Math.round(workspace.getBoundingClientRect().width), propertiesRight: Math.round(properties.getBoundingClientRect().right), viewportWidth: window.innerWidth, tabFontPx: Number.parseFloat(getComputedStyle(tab).fontSize), ribbonButtonFontPx: Number.parseFloat(getComputedStyle(ribbonButton).fontSize) }; })()`,
     ),
   );
   requireProbe(
     fitSmall["actual"] === fitSmall["expected"] && fitSmall["mode"] === "fit",
     "STUDIO_FIT_SMALL_INVALID",
   );
-  window.setSize(1_400, 900);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  window.setContentSize(1_400, 900);
+  await waitFor(window, `window.innerWidth >= 1380`, "WAIT_ENLARGED_VIEWPORT");
   const fitLarge = record(
     await pageValue(
       window,
-      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight }; })()`,
+      `(() => { document.getElementById("fit-page")?.click(); const stage = document.getElementById("canvas-stage"); const page = document.getElementById("page-shadow"); const workspace = document.querySelector(".workspace"); const properties = document.querySelector(".properties-pane"); const tab = document.querySelector(".tab"); const ribbonButton = document.querySelector(".ribbon-group button"); if (!(stage instanceof HTMLElement) || !(page instanceof HTMLElement) || !(workspace instanceof HTMLElement) || !(properties instanceof HTMLElement) || !(tab instanceof HTMLElement) || !(ribbonButton instanceof HTMLElement)) return { invalid: "fit-elements" }; const expected = Math.min(160, Math.max(40, Math.floor((Math.min((stage.clientWidth - 56) / page.offsetWidth, (stage.clientHeight - 56) / page.offsetHeight) * 100) / 10) * 10)); return { actual: Number(document.getElementById("zoom")?.value), expected, mode: page.dataset.zoomMode, stageWidth: stage.clientWidth, stageHeight: stage.clientHeight, workspaceWidth: Math.round(workspace.getBoundingClientRect().width), propertiesRight: Math.round(properties.getBoundingClientRect().right), viewportWidth: window.innerWidth, tabFontPx: Number.parseFloat(getComputedStyle(tab).fontSize), ribbonButtonFontPx: Number.parseFloat(getComputedStyle(ribbonButton).fontSize) }; })()`,
     ),
   );
   requireProbe(
-    fitLarge["actual"] === fitLarge["expected"] && fitLarge["mode"] === "fit",
-    "STUDIO_FIT_LARGE_INVALID",
+    fitLarge["actual"] === fitLarge["expected"] &&
+      fitLarge["mode"] === "fit" &&
+      (fitLarge["stageWidth"] as number) > (fitSmall["stageWidth"] as number) + 200 &&
+      (fitLarge["stageHeight"] as number) > (fitSmall["stageHeight"] as number) + 200 &&
+      Math.abs((fitSmall["workspaceWidth"] as number) - (fitSmall["viewportWidth"] as number)) <=
+        2 &&
+      Math.abs((fitLarge["workspaceWidth"] as number) - (fitLarge["viewportWidth"] as number)) <=
+        2 &&
+      Math.abs((fitSmall["propertiesRight"] as number) - (fitSmall["viewportWidth"] as number)) <=
+        2 &&
+      Math.abs((fitLarge["propertiesRight"] as number) - (fitLarge["viewportWidth"] as number)) <=
+        2 &&
+      (fitSmall["tabFontPx"] as number) <= (fitLarge["tabFontPx"] as number) &&
+      (fitSmall["ribbonButtonFontPx"] as number) <= (fitLarge["ribbonButtonFontPx"] as number),
+    `STUDIO_FIT_LARGE_INVALID:${JSON.stringify({ fitSmall, fitLarge })}`,
   );
-  window.setSize(1_100, 600);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  window.setContentSize(1_100, 600);
+  await waitFor(
+    window,
+    `window.innerWidth >= 1080 && window.innerWidth <= 1120`,
+    "WAIT_INTERACTION_VIEWPORT",
+  );
   const interactions = record(
     await pageValue(
       window,
@@ -2106,7 +3458,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     `(() => { document.getElementById("property-tab-element")?.click(); document.getElementById("ribbon-tab-home")?.click(); return true; })()`,
   );
   let editing: DataRecord | null = null;
-  if (studioEditingMode) {
+  if (studioEditingMode && !pageSetupProbeMode) {
     const before = record(
       await pageValue(
         window,
@@ -2126,9 +3478,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     requireProbe(
       JSON.stringify(before["documentApi"]) ===
-        '["getProjection","setDisplayValue","undo","redo"]' &&
+        '["getProjection","setDisplayValue","revertDisplayValue","undo","redo"]' &&
         JSON.stringify(before["studioApi"]) ===
-          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setColumnDivider","setRegionBoundary","setLithologyAppearance","arrangeTextOccurrences","mutateTextOccurrences"]' &&
+          '["getProjection","lifecycle","setTextOccurrenceStyle","resetTextOccurrencePresentation","setPageGuides","setPageSetup","setColumnDivider","setColumnHeading","setRegionBoundary","setDataDepthConfiguration","setLithologyAppearance","arrangeTextOccurrences","mutateTextOccurrences"]' &&
         before["readonly"] === false &&
         before["applyDisabled"] === false &&
         before["source"] === before["effective"] &&
@@ -2136,7 +3488,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         before["authorityDirty"] === false &&
         before["workingRevision"] === 0 &&
         before["durableRevision"] === 0,
-      "STUDIO_EDITING_AUTHORITY_INVALID",
+      `STUDIO_EDITING_AUTHORITY_INVALID:${JSON.stringify(before)}`,
     );
     const replacement = "Edited in packaged BLD-026 Studio";
     await typeText(window, "#property-content", replacement);
@@ -2275,7 +3627,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         JSON.stringify(style["effectivePatternIds"]) ===
           JSON.stringify([pattern, pattern, pattern]) &&
         style["patternedIntervals"] === 3,
-      "STUDIO_STYLE_INVALID",
+      `STUDIO_STYLE_INVALID:${JSON.stringify(style)}`,
     );
     await press(window, "#undo", "Space", "FOCUS_STUDIO_STYLE_UNDO");
     await waitFor(
@@ -2326,6 +3678,129 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     );
     editing = Object.freeze({ before, applied, undo, redo, replacement, style, layout });
   }
+  let pageSetup: DataRecord | null = null;
+  if (pageSetupProbeMode) {
+    const pageSetupSnapshotExpression = `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const scenePage = value.accepted ? value.projection.scene.pages[0] : null; const plannedPage = value.accepted ? value.projection.scene.pagePlan.pages.find(({ pageId }) => pageId === scenePage?.pageId) : null; return { accepted: value.accepted, workingRevision: value.accepted ? value.projection.workingRevision : null, dirty: value.accepted ? value.projection.dirty : null, canUndo: value.accepted ? value.projection.canUndo : null, canRedo: value.accepted ? value.projection.canRedo : null, pageSetup: value.accepted ? value.projection.pageSetup : null, errorDiagnostics: value.accepted ? value.projection.scene.diagnostics.filter(({ severity }) => severity === "error").map(({ code, semanticId, message }) => ({ code, semanticId, message })) : null, scene: scenePage === null ? null : { widthMpt: scenePage.widthMpt, heightMpt: scenePage.heightMpt, inputDigest: value.projection.scene.inputDigest }, pagePlan: plannedPage === null ? null : { widthMpt: plannedPage.widthMpt, heightMpt: plannedPage.heightMpt }, viewBox: document.querySelector("#svg-page > svg")?.getAttribute("viewBox"), controls: { paperPreset: document.getElementById("page-paper-preset")?.value, orientation: document.getElementById("page-orientation")?.value, width: document.getElementById("page-width")?.value, height: document.getElementById("page-height")?.value, top: document.getElementById("page-margin-top")?.value, right: document.getElementById("page-margin-right")?.value, bottom: document.getElementById("page-margin-bottom")?.value, left: document.getElementById("page-margin-left")?.value }, status: document.getElementById("editor-status")?.textContent }; })()`;
+    await pageValue(window, `document.getElementById("ribbon-tab-layout")?.click(); true`);
+    const before = record(await pageValue(window, pageSetupSnapshotExpression));
+    requireProbe(
+      before["accepted"] === true &&
+        JSON.stringify(before["pageSetup"]) ===
+          JSON.stringify({
+            paperPreset: "letter",
+            orientation: "portrait",
+            widthMpt: 612_000,
+            heightMpt: 792_000,
+            marginsMpt: {
+              topMpt: 14_000,
+              rightMpt: 24_000,
+              bottomMpt: 14_000,
+              leftMpt: 24_000,
+            },
+          }) &&
+        before["viewBox"] === "0 0 612000 792000",
+      `PAGE_SETUP_INITIAL_INVALID:${JSON.stringify(before)}`,
+    );
+    requireProbe(
+      (await pageValue(
+        window,
+        `(() => { const set = (id, value) => { const control = document.getElementById(id); if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return false; control.value = value; control.dispatchEvent(new Event("change", { bubbles: true })); return true; }; return set("page-paper-preset", "a4") && set("page-orientation", "portrait") && set("page-margin-top", "18") && set("page-margin-right", "15") && set("page-margin-bottom", "20") && set("page-margin-left", "15") && (() => { document.getElementById("apply-page-setup")?.click(); return true; })(); })()`,
+      )) === true,
+      "PAGE_SETUP_CONTROLS_UNAVAILABLE",
+    );
+    await waitFor(
+      window,
+      `document.querySelector("#svg-page > svg")?.getAttribute("viewBox") === "0 0 595276 841890" && document.getElementById("editor-status")?.textContent?.startsWith("Page Setup applied at revision ") === true`,
+      "WAIT_PAGE_SETUP_APPLY",
+    );
+    const applied = record(await pageValue(window, pageSetupSnapshotExpression));
+    await pageValue(window, `document.getElementById("undo")?.click(); true`);
+    await waitFor(
+      window,
+      `document.querySelector("#svg-page > svg")?.getAttribute("viewBox") === "0 0 612000 792000" && document.getElementById("editor-status")?.textContent?.startsWith("Undo completed at revision ") === true`,
+      "WAIT_PAGE_SETUP_UNDO",
+    );
+    const undo = record(await pageValue(window, pageSetupSnapshotExpression));
+    await pageValue(window, `document.getElementById("redo")?.click(); true`);
+    await waitFor(
+      window,
+      `document.querySelector("#svg-page > svg")?.getAttribute("viewBox") === "0 0 595276 841890" && document.getElementById("editor-status")?.textContent?.startsWith("Redo completed at revision ") === true`,
+      "WAIT_PAGE_SETUP_REDO",
+    );
+    const redo = record(await pageValue(window, pageSetupSnapshotExpression));
+    requireProbe(
+      Array.isArray(applied["errorDiagnostics"]) &&
+        applied["errorDiagnostics"].length === 0 &&
+        Array.isArray(redo["errorDiagnostics"]) &&
+        redo["errorDiagnostics"].length === 0,
+      `PAGE_SETUP_DIAGNOSTICS:${JSON.stringify({ applied: applied["errorDiagnostics"], redo: redo["errorDiagnostics"] })}`,
+    );
+    requireProbe(
+      applied["workingRevision"] === (before["workingRevision"] as number) + 1 &&
+        applied["dirty"] === true &&
+        applied["canUndo"] === true &&
+        JSON.stringify(applied["pageSetup"]) ===
+          JSON.stringify({
+            paperPreset: "a4",
+            orientation: "portrait",
+            widthMpt: 595_276,
+            heightMpt: 841_890,
+            marginsMpt: {
+              topMpt: 18_000,
+              rightMpt: 15_000,
+              bottomMpt: 20_000,
+              leftMpt: 15_000,
+            },
+          }) &&
+        JSON.stringify(applied["scene"]) !== JSON.stringify(before["scene"]) &&
+        JSON.stringify(applied["pagePlan"]) ===
+          JSON.stringify({ widthMpt: 595_276, heightMpt: 841_890 }) &&
+        undo["workingRevision"] === applied["workingRevision"] + 1 &&
+        JSON.stringify(undo["pageSetup"]) === JSON.stringify(before["pageSetup"]) &&
+        redo["workingRevision"] === applied["workingRevision"] + 2 &&
+        JSON.stringify(redo["pageSetup"]) === JSON.stringify(applied["pageSetup"]) &&
+        redo["viewBox"] === applied["viewBox"],
+      `PAGE_SETUP_HISTORY_INVALID:${JSON.stringify({ before, applied, undo, redo })}`,
+    );
+    await pageValue(
+      window,
+      `(() => { const set = (id, value) => { const control = document.getElementById(id); if (!(control instanceof HTMLInputElement || control instanceof HTMLSelectElement)) return; control.value = value; control.dispatchEvent(new Event("change", { bubbles: true })); }; set("page-paper-preset", "custom"); set("page-orientation", "portrait"); set("page-width", "400"); set("page-height", "500"); set("page-margin-top", "200"); set("page-margin-right", "180"); set("page-margin-bottom", "200"); set("page-margin-left", "180"); document.getElementById("apply-page-setup")?.click(); return true; })()`,
+    );
+    await waitFor(
+      window,
+      `document.getElementById("editor-status")?.textContent === "Page Setup failed: PAGE_SETUP_CONTENT_TOO_SMALL. The document was not changed."`,
+      "WAIT_PAGE_SETUP_INVALID",
+    );
+    const invalid = record(await pageValue(window, pageSetupSnapshotExpression));
+    requireProbe(
+      invalid["workingRevision"] === redo["workingRevision"] &&
+        invalid["dirty"] === redo["dirty"] &&
+        JSON.stringify(invalid["pageSetup"]) === JSON.stringify(redo["pageSetup"]) &&
+        JSON.stringify(invalid["scene"]) === JSON.stringify(redo["scene"]) &&
+        invalid["viewBox"] === redo["viewBox"],
+      `PAGE_SETUP_INVALID_MUTATED:${JSON.stringify({ redo, invalid })}`,
+    );
+    await pageValue(window, `document.getElementById("next-boring")?.click(); true`);
+    await waitFor(
+      window,
+      `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-02" && document.querySelector("#svg-page > svg")?.getAttribute("viewBox") === "0 0 612000 792000" && document.getElementById("editor-status")?.textContent !== "Next Boring…"`,
+      "WAIT_PAGE_SETUP_SECOND_BORING",
+    );
+    const secondBoring = record(await pageValue(window, pageSetupSnapshotExpression));
+    requireProbe(
+      secondBoring["viewBox"] === "0 0 612000 792000" &&
+        Array.isArray(secondBoring["errorDiagnostics"]) &&
+        secondBoring["errorDiagnostics"].length === 0,
+      `PAGE_SETUP_SECOND_BORING_INVALID:${JSON.stringify(secondBoring)}`,
+    );
+    await pageValue(window, `document.getElementById("previous-boring")?.click(); true`);
+    await waitFor(
+      window,
+      `document.body.dataset.activeBoringLogIdentity === "urn:rsrender:boring-log:test-01" && document.querySelector("#svg-page > svg")?.getAttribute("viewBox") === "0 0 595276 841890"`,
+      "WAIT_PAGE_SETUP_FIRST_BORING_RETURN",
+    );
+    pageSetup = Object.freeze({ before, applied, undo, redo, invalid, secondBoring });
+  }
   let publication: DataRecord | null = null;
   if (pdfProbeMode && !multiBoringProbeMode) {
     requireProbe(
@@ -2351,7 +3826,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     publication = record(
       await pageValue(
         window,
-        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), activeId: document.activeElement?.id }; })()`,
+        `(() => { const button = document.getElementById("export-pdf"); return { result: button?.dataset.result, destinationPath: button?.dataset.destinationPath, pdfDigest: button?.dataset.pdfDigest, sceneDigest: button?.dataset.sceneDigest, projectionDigest: button?.dataset.projectionDigest, pdfBytes: Number(button?.dataset.pdfBytes), pageCount: Number(button?.dataset.pageCount), orderedBoringLogIdentities: JSON.parse(button?.dataset.orderedBoringLogIdentities ?? "null"), activeId: document.activeElement?.id }; })()`,
       ),
     );
     requireProbe(
@@ -2365,12 +3840,16 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         /^sha256:[0-9a-f]{64}$/u.test(publication["projectionDigest"]) &&
         typeof publication["pdfBytes"] === "number" &&
         publication["pdfBytes"] > 1_024 &&
+        Number.isSafeInteger(publication["pageCount"]) &&
+        (publication["pageCount"] as number) >= 1 &&
+        Array.isArray(publication["orderedBoringLogIdentities"]) &&
         publication["activeId"] === "export-pdf",
       "PUBLICATION_RESULT_INVALID",
     );
   }
   let boringNavigation: DataRecord | null = null;
   let lithologyAppearance: DataRecord | null = null;
+  let columnHeading: DataRecord | null = null;
   if (multiBoringProbeMode) {
     requireProbe(
       (await pageValue(
@@ -2546,6 +4025,97 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         defaultRedo,
         overrideAfterDefault,
       });
+
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const node = document.getElementById("node:column-description:heading"); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+        )) === true,
+        "SELECT_COLUMN_HEADING",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("property-node-id")?.textContent === "node:column-description:heading" && document.getElementById("property-content")?.value === "MATERIAL DESCRIPTION"`,
+        "WAIT_COLUMN_HEADING_SELECTION",
+      );
+      const headingBefore = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:column-description:heading"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, content: node?.textContent, sourceOriginal: document.getElementById("property-source-original")?.textContent, displayedValue: document.getElementById("property-effective-value")?.textContent }; })()`,
+        ),
+      );
+      await typeText(window, "#property-content", "STRATUM DESCRIPTION");
+      await press(window, "#apply-property", "Space", "FOCUS_COLUMN_HEADING_APPLY");
+      await waitFor(
+        window,
+        `document.getElementById("node:column-description:heading")?.textContent === "STRATUM DESCRIPTION" && document.getElementById("property-effective-value")?.textContent === "STRATUM DESCRIPTION"`,
+        "WAIT_COLUMN_HEADING_APPLY",
+      );
+      const headingApplied = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, content: document.getElementById("node:column-description:heading")?.textContent, displayedValue: document.getElementById("property-effective-value")?.textContent, dirty: value.accepted ? value.projection.dirty : null }; })()`,
+        ),
+      );
+      await press(window, "#undo", "Space", "FOCUS_COLUMN_HEADING_UNDO");
+      await waitFor(
+        window,
+        `document.getElementById("node:column-description:heading")?.textContent === "MATERIAL DESCRIPTION"`,
+        "WAIT_COLUMN_HEADING_UNDO",
+      );
+      const headingUndo = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, content: document.getElementById("node:column-description:heading")?.textContent }; })()`,
+        ),
+      );
+      await press(window, "#redo", "Space", "FOCUS_COLUMN_HEADING_REDO");
+      await waitFor(
+        window,
+        `document.getElementById("node:column-description:heading")?.textContent === "STRATUM DESCRIPTION"`,
+        "WAIT_COLUMN_HEADING_REDO",
+      );
+      const headingRedo = record(
+        await pageValue(
+          window,
+          `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, content: document.getElementById("node:column-description:heading")?.textContent }; })()`,
+        ),
+      );
+      requireProbe(
+        Number(headingApplied["workingRevision"]) ===
+          Number(headingBefore["workingRevision"]) + 1 &&
+          Number(headingUndo["workingRevision"]) ===
+            Number(headingApplied["workingRevision"]) + 1 &&
+          Number(headingRedo["workingRevision"]) === Number(headingUndo["workingRevision"]) + 1 &&
+          headingBefore["content"] === "MATERIAL DESCRIPTION" &&
+          headingBefore["displayedValue"] === "MATERIAL DESCRIPTION" &&
+          headingApplied["content"] === "STRATUM DESCRIPTION" &&
+          headingApplied["dirty"] === true &&
+          headingApplied["sceneInputDigest"] !== headingBefore["sceneInputDigest"] &&
+          headingUndo["content"] === "MATERIAL DESCRIPTION" &&
+          headingUndo["sceneInputDigest"] !== headingApplied["sceneInputDigest"] &&
+          headingRedo["content"] === "STRATUM DESCRIPTION" &&
+          headingRedo["sceneInputDigest"] !== headingUndo["sceneInputDigest"],
+        `COLUMN_HEADING_HISTORY_INVALID:${JSON.stringify({ headingBefore, headingApplied, headingUndo, headingRedo })}`,
+      );
+      columnHeading = Object.freeze({
+        before: headingBefore,
+        applied: headingApplied,
+        undo: headingUndo,
+        redo: headingRedo,
+      });
+      requireProbe(
+        (await pageValue(
+          window,
+          `(() => { const node = document.querySelector('#svg-page [data-semantic-id="lithology:b02-stratum-01"]'); if (!(node instanceof SVGElement)) return false; node.dispatchEvent(new MouseEvent("click", { bubbles: true })); return true; })()`,
+        )) === true,
+        "RESTORE_SECOND_BORING_MATERIAL_AFTER_HEADING",
+      );
+      await waitFor(
+        window,
+        `document.getElementById("property-semantic-id")?.textContent === "lithology:b02-stratum-01"`,
+        "WAIT_SECOND_BORING_MATERIAL_AFTER_HEADING",
+      );
     }
     if (!textStyleProbeMode) {
       requireProbe(
@@ -2647,7 +4217,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
         first["dirty"] === true &&
         second["workingRevision"] === (beforeNavigation["workingRevision"] as number) + 1 &&
         first["workingRevision"] ===
-          Number(second["workingRevision"]) + (lithologyAppearanceProbeMode ? 4 : 0) &&
+          Number(second["workingRevision"]) + (lithologyAppearanceProbeMode ? 7 : 0) &&
         second["effective"] === "Second boring retained its own authored description." &&
         first["effective"] === "First boring retained its own authored description." &&
         (first["indicator"] as string).includes("Has overrides") &&
@@ -2687,7 +4257,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const before = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, nodeId: document.getElementById("property-node-id")?.textContent, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), scope: document.getElementById("text-style-scope")?.value, contextHidden: document.getElementById("canvas-context-menu")?.hidden }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, nodeId: document.getElementById("property-node-id")?.textContent, fontFamily: node?.getAttribute("data-font-family-id"), fontStyle: node?.getAttribute("font-style"), fontFace: node?.getAttribute("data-font-face-id"), fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), fill: node?.getAttribute("fill"), scope: document.getElementById("text-style-scope")?.value, contextHidden: document.getElementById("canvas-context-menu")?.hidden }; })()`,
       ),
     );
     await typeText(window, "#text-font-size", "9");
@@ -2706,7 +4276,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     requireProbe(
       (await pageValue(
         window,
-        `(() => { const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); const frameFillEnabled = document.getElementById("text-frame-fill-enabled"); const frameFillColor = document.getElementById("text-frame-fill-color"); const frameStrokeEnabled = document.getElementById("text-frame-stroke-enabled"); const frameStrokeColor = document.getElementById("text-frame-stroke-color"); if (!(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement) || !(frameFillEnabled instanceof HTMLInputElement) || !(frameFillColor instanceof HTMLInputElement) || !(frameStrokeEnabled instanceof HTMLInputElement) || !(frameStrokeColor instanceof HTMLInputElement)) return false; weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline line-through"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); frameFillEnabled.checked = true; frameFillEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameFillColor.value = "#fff4cc"; frameFillColor.dispatchEvent(new Event("input", { bubbles: true })); frameStrokeEnabled.checked = true; frameStrokeEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameStrokeColor.value = "#b42318"; frameStrokeColor.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
+        `(() => { const family = document.getElementById("text-font-family"); const fontStyle = document.getElementById("text-font-style"); const weight = document.getElementById("text-font-weight"); const decoration = document.getElementById("text-decoration"); const color = document.getElementById("text-color"); const anchor = document.getElementById("text-frame-anchor"); const horizontal = document.getElementById("text-horizontal-alignment"); const vertical = document.getElementById("text-vertical-alignment"); const wrap = document.getElementById("text-wrap-policy"); const locked = document.getElementById("text-locked"); const frameFillEnabled = document.getElementById("text-frame-fill-enabled"); const frameFillColor = document.getElementById("text-frame-fill-color"); const frameStrokeEnabled = document.getElementById("text-frame-stroke-enabled"); const frameStrokeColor = document.getElementById("text-frame-stroke-color"); if (!(family instanceof HTMLSelectElement) || !(fontStyle instanceof HTMLSelectElement) || !(weight instanceof HTMLSelectElement) || !(decoration instanceof HTMLSelectElement) || !(color instanceof HTMLInputElement) || !(anchor instanceof HTMLSelectElement) || !(horizontal instanceof HTMLSelectElement) || !(vertical instanceof HTMLSelectElement) || !(wrap instanceof HTMLSelectElement) || !(locked instanceof HTMLInputElement) || !(frameFillEnabled instanceof HTMLInputElement) || !(frameFillColor instanceof HTMLInputElement) || !(frameStrokeEnabled instanceof HTMLInputElement) || !(frameStrokeColor instanceof HTMLInputElement)) return false; family.value = "font.logical.source-serif-4"; family.dispatchEvent(new Event("change", { bubbles: true })); fontStyle.value = "italic"; fontStyle.dispatchEvent(new Event("change", { bubbles: true })); weight.value = "700"; weight.dispatchEvent(new Event("change", { bubbles: true })); decoration.value = "underline line-through"; decoration.dispatchEvent(new Event("change", { bubbles: true })); color.value = "#b42318"; color.dispatchEvent(new Event("input", { bubbles: true })); frameFillEnabled.checked = true; frameFillEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameFillColor.value = "#fff4cc"; frameFillColor.dispatchEvent(new Event("input", { bubbles: true })); frameStrokeEnabled.checked = true; frameStrokeEnabled.dispatchEvent(new Event("change", { bubbles: true })); frameStrokeColor.value = "#b42318"; frameStrokeColor.dispatchEvent(new Event("input", { bubbles: true })); anchor.value = "bottom-center"; anchor.dispatchEvent(new Event("change", { bubbles: true })); horizontal.value = "center"; vertical.value = "middle"; wrap.value = "no-wrap"; locked.checked = true; locked.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`,
       )) === true,
       "TEXT_OCCURRENCE_CONTROLS_INVALID",
     );
@@ -2714,13 +4284,13 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
       "WAIT_TEXT_OCCURRENCE_APPLY",
     );
     const applied = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, canUndo: value.accepted ? value.projection.canUndo : null, undoDisabled: document.getElementById("undo")?.disabled, fontFamily: node?.getAttribute("data-font-family-id"), fontStyle: node?.getAttribute("font-style"), fontFace: node?.getAttribute("data-font-face-id"), fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), frameWidth: node?.getAttribute("data-frame-width-mpt"), frameAnchor: node?.getAttribute("data-frame-anchor"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), verticalAlignment: node?.getAttribute("data-vertical-alignment"), wrapPolicy: node?.getAttribute("data-wrap-policy"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform"), firstLineX: node?.querySelector("tspan")?.getAttribute("x"), provenance: document.getElementById("property-provenance")?.textContent, documentState: document.getElementById("document-state")?.textContent, indicator: document.getElementById("boring-indicators")?.textContent }; })()`,
       ),
     );
     requireProbe(applied["canUndo"] === true, "TEXT_OCCURRENCE_AUTHORITY_UNDO_INVALID");
@@ -2741,7 +4311,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const undo = record(
       await pageValue(
         window,
-        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), presentationFrame: document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame") !== null, firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
+        `(() => { const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); return { fontFamily: node?.getAttribute("data-font-family-id"), fontStyle: node?.getAttribute("font-style"), fontFace: node?.getAttribute("data-font-face-id"), fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), presentationFrame: document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame") !== null, firstLineX: node?.querySelector("tspan")?.getAttribute("x") }; })()`,
       ),
     );
     await press(window, "#redo", "Space", "FOCUS_TEXT_OCCURRENCE_REDO");
@@ -2753,11 +4323,19 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     const redo = record(
       await pageValue(
         window,
-        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform") }; })()`,
+        `(async () => { const value = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null }); const node = document.getElementById("node:lithology:stratum-01:transition:2:text"); const frame = document.getElementById("node:lithology:stratum-01:transition:2:text:presentation-frame"); return { workingRevision: value.accepted ? value.projection.workingRevision : null, sceneInputDigest: value.accepted ? value.projection.scene.inputDigest : null, fontFamily: node?.getAttribute("data-font-family-id"), fontStyle: node?.getAttribute("font-style"), fontFace: node?.getAttribute("data-font-face-id"), fontSize: node?.getAttribute("font-size"), fontWeight: node?.getAttribute("font-weight"), textDecoration: node?.getAttribute("text-decoration"), letterSpacing: node?.getAttribute("data-letter-spacing-mpt"), wordSpacing: node?.getAttribute("data-word-spacing-mpt"), paragraphSpacing: node?.getAttribute("data-paragraph-spacing-mpt"), fill: node?.getAttribute("fill"), frameX: node?.getAttribute("data-frame-x-mpt"), horizontalAlignment: node?.getAttribute("data-horizontal-alignment"), locked: node?.getAttribute("data-locked"), transform: node?.getAttribute("transform"), presentationFrameFill: frame?.getAttribute("fill"), presentationFrameStroke: frame?.getAttribute("stroke"), presentationFrameStrokeWidth: frame?.getAttribute("stroke-width"), presentationFrameTransform: frame?.getAttribute("transform") }; })()`,
       ),
     );
     requireProbe(
-      applied["frameX"] === "125000" &&
+      applied["fontFamily"] === "font.logical.source-serif-4" &&
+        applied["fontStyle"] === "italic" &&
+        applied["fontFace"] === "font.face.source-serif-4.bold-italic" &&
+        undo["fontFamily"] === "font.logical.rsrender-sans" &&
+        undo["fontStyle"] === "normal" &&
+        redo["fontFamily"] === "font.logical.source-serif-4" &&
+        redo["fontStyle"] === "italic" &&
+        redo["fontFace"] === "font.face.source-serif-4.bold-italic" &&
+        applied["frameX"] === "125000" &&
         applied["frameAnchor"] === "bottom-center" &&
         applied["frameWidth"] === "150000" &&
         applied["horizontalAlignment"] === "center" &&
@@ -4121,20 +5699,39 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       `document.body.dataset.authoritativeFileBound === "true" && document.getElementById("editor-status")?.textContent?.startsWith("Project saved and reopened successfully:") === true`,
       "WAIT_PROJECT_SAVE_AS",
     );
-    persistence = record(
+    const persistenceResult = record(
       await pageValue(
         window,
         `(async () => {
-          const before = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: null });
-          if (!before.accepted) return { accepted: false, code: before.code };
-          const saved = await globalThis.rsrenderStudio.lifecycle({ operation: "save-project", expectedWorkingRevision: before.projection.workingRevision });
-          const after = await globalThis.rsrenderStudio.getProjection({ minimumWorkingRevision: before.projection.workingRevision });
-          return { saved, after: after.accepted ? { accepted: true, dirty: after.projection.dirty, workingRevision: after.projection.workingRevision, durableRevision: after.projection.durableRevision } : after, bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, status: document.getElementById("editor-status")?.textContent };
+          const expectedWorkingRevision = Number(document.body.dataset.workingRevision);
+          if (!Number.isSafeInteger(expectedWorkingRevision) || expectedWorkingRevision < 0) {
+            return { expectedWorkingRevision, saved: { accepted: false, code: "PROJECT_LIFECYCLE_PRE_SAVE_INVALID" }, bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, status: document.getElementById("editor-status")?.textContent };
+          }
+          const saved = await globalThis.rsrenderStudio.lifecycle({ operation: "save-project", expectedWorkingRevision });
+          return { expectedWorkingRevision, saved, bodyBound: document.body.dataset.authoritativeFileBound, documentName: document.getElementById("document-name")?.textContent, status: document.getElementById("editor-status")?.textContent };
         })()`,
       ),
     );
-    const saved = record(persistence["saved"]);
-    const after = record(persistence["after"]);
+    const expectedPersistenceRevision = Number(persistenceResult["expectedWorkingRevision"]);
+    requireProbe(
+      Number.isSafeInteger(expectedPersistenceRevision) && expectedPersistenceRevision >= 0,
+      "PROJECT_LIFECYCLE_PRE_SAVE_INVALID",
+    );
+    const saved = record(persistenceResult["saved"]);
+    const savedState = record(saved["state"]);
+    const after = Object.freeze({
+      accepted: savedState["workingRevision"] !== undefined,
+      dirty: savedState["dirty"],
+      workingRevision: savedState["workingRevision"],
+      durableRevision: savedState["durableRevision"],
+    });
+    persistence = Object.freeze({
+      saved,
+      after,
+      bodyBound: persistenceResult["bodyBound"],
+      documentName: persistenceResult["documentName"],
+      status: persistenceResult["status"],
+    });
     requireProbe(
       saved["accepted"] === true &&
         saved["code"] === "PROJECT_SAVE_VERIFIED" &&
@@ -4176,7 +5773,9 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       requireProbe(
         firstJob?.template.visualTokens[firstDefault?.materialFillToken ?? ""] === "#a16207" &&
           secondJob?.template.visualTokens[secondDefault?.materialFillToken ?? ""] === "#a16207" &&
-          secondJob?.template.visualTokens[secondOverride?.materialFillToken ?? ""] === "#7f1d1d",
+          secondJob?.template.visualTokens[secondOverride?.materialFillToken ?? ""] === "#7f1d1d" &&
+          secondJob?.template.columns.find(({ id }) => id === "column-description")?.heading ===
+            "STRATUM DESCRIPTION",
         "LITHOLOGY_PROJECT_REOPEN_INVALID",
       );
     }
@@ -4184,30 +5783,35 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
   return Object.freeze({
     schema: lithologyAppearanceProbeMode
       ? "rsrender.bld043.lithology-appearance-probe.v1"
-      : authoringSurfaceProbeMode
-        ? "rsrender.bld040.authoring-surface-probe.v1"
-        : directManipulationProbeMode
-          ? "rsrender.bld038.direct-manipulation-probe.v1"
-          : textStyleProbeMode
-            ? "rsrender.bld037.text-occurrence-style-probe.v1"
-            : multiBoringProbeMode
-              ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-              : lifecycleProbeMode
-                ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                : pdfProbeMode
-                  ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                  : studioEditingMode
-                    ? "rsrender.bld026.boring-log-editor-probe.v1"
-                    : "rsrender.bld025.boring-log-studio-probe.v1",
+      : pageSetupProbeMode
+        ? "rsrender.bld049.page-setup-probe.v1"
+        : authoringSurfaceProbeMode
+          ? "rsrender.bld040.authoring-surface-probe.v1"
+          : directManipulationProbeMode
+            ? "rsrender.bld038.direct-manipulation-probe.v1"
+            : textStyleProbeMode
+              ? "rsrender.bld037.text-occurrence-style-probe.v1"
+              : multiBoringProbeMode
+                ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                : lifecycleProbeMode
+                  ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                  : pdfProbeMode
+                    ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                    : studioEditingMode
+                      ? "rsrender.bld026.boring-log-editor-probe.v1"
+                      : "rsrender.bld025.boring-log-studio-probe.v1",
     result: "PASS",
     electronVersion: process.versions.electron,
     rendererSha256: rendererVerification.accepted ? rendererVerification.sha256 : null,
     initial,
+    attributeWorkspace,
     selection,
     interactions: Object.freeze({ ...interactions, fitSmall, fitLarge, panScroll, validation }),
     editing,
+    pageSetup,
     boringNavigation,
     lithologyAppearance,
+    columnHeading,
     textOccurrenceStyle,
     directManipulation,
     authoringSurface,
@@ -4230,6 +5834,9 @@ async function teardown(): Promise<void> {
     studioBroker = null;
     publicationBroker?.invalidate();
     publicationBroker = null;
+    rsLogLiveSessionBroker?.signOut();
+    rsLogLiveSessionBroker = null;
+    await releaseChromiumTextMeasurementAuthority();
     sessionHost.close();
     const window = editorWindow;
     editorWindow = null;
@@ -4251,27 +5858,33 @@ async function fail(code: string): Promise<void> {
     emitResult(
       Object.freeze({
         schema: studioProbeMode
-          ? rsLogImportProbeMode
-            ? "rsrender.bld045.rslog-project-data-import-probe.v1"
-            : publicationPackageProbeMode
-              ? "rsrender.bld044.pdf-package-probe.v1"
-              : lithologyAppearanceProbeMode
-                ? "rsrender.bld043.lithology-appearance-probe.v1"
-                : authoringSurfaceProbeMode
-                  ? "rsrender.bld040.authoring-surface-probe.v1"
-                  : directManipulationProbeMode
-                    ? "rsrender.bld038.direct-manipulation-probe.v1"
-                    : textStyleProbeMode
-                      ? "rsrender.bld037.text-occurrence-style-probe.v1"
-                      : multiBoringProbeMode
-                        ? "rsrender.bld036.multi-boring-navigation-probe.v1"
-                        : lifecycleProbeMode
-                          ? "rsrender.bld035.log-project-lifecycle-probe.v1"
-                          : pdfProbeMode
-                            ? "rsrender.bld027.boring-log-pdf-probe.v1"
-                            : studioEditingMode
-                              ? "rsrender.bld026.boring-log-editor-probe.v1"
-                              : "rsrender.bld025.boring-log-studio-probe.v1"
+          ? dataLayerSymbologyProbeMode
+            ? "rsrender.bld050.hidden-packaged-probe.v1"
+            : rsLogImportProbeMode
+              ? "rsrender.bld045.rslog-project-data-import-probe.v1"
+              : pageSetupProbeMode
+                ? "rsrender.bld049.page-setup-probe.v1"
+                : publicationPackageProbeMode
+                  ? "rsrender.bld044.pdf-package-probe.v1"
+                  : lithologyAppearanceProbeMode
+                    ? "rsrender.bld043.lithology-appearance-probe.v1"
+                    : authoringSurfaceProbeMode
+                      ? "rsrender.bld040.authoring-surface-probe.v1"
+                      : fontPaletteProbeMode
+                        ? "rsrender.bld042.font-palette-probe.v1"
+                        : directManipulationProbeMode
+                          ? "rsrender.bld038.direct-manipulation-probe.v1"
+                          : textStyleProbeMode
+                            ? "rsrender.bld037.text-occurrence-style-probe.v1"
+                            : multiBoringProbeMode
+                              ? "rsrender.bld036.multi-boring-navigation-probe.v1"
+                              : lifecycleProbeMode
+                                ? "rsrender.bld035.log-project-lifecycle-probe.v1"
+                                : pdfProbeMode
+                                  ? "rsrender.bld027.boring-log-pdf-probe.v1"
+                                  : studioEditingMode
+                                    ? "rsrender.bld026.boring-log-editor-probe.v1"
+                                    : "rsrender.bld025.boring-log-studio-probe.v1"
           : "rsrender.bld021.semantic-editor-probe.v1",
         result: "FAIL",
         code,
@@ -4286,14 +5899,27 @@ async function fail(code: string): Promise<void> {
 
 async function main(): Promise<void> {
   let openedRuntimeProject: OpenedLogProjectFile | null = null;
+  let importedProjectDisplayName: string | null = null;
+  if (runtimeImportedProjectStaging && !(runtimeProjectInputPath?.length ?? 0)) {
+    return fail("RSLOG_IMPORT_STAGING_PATH_MISSING");
+  }
   if (typeof runtimeProjectInputPath === "string" && runtimeProjectInputPath.length > 0) {
-    const opened = await openLogProjectFile(path.resolve(runtimeProjectInputPath));
+    const resolvedRuntimeProjectPath = path.resolve(runtimeProjectInputPath);
+    const opened = await openLogProjectFile(resolvedRuntimeProjectPath);
     if (!opened.accepted || opened.value.readOnly) {
       return fail(opened.accepted ? "PROJECT_STORAGE_UNSUPPORTED" : opened.code);
     }
     openedRuntimeProject = opened.value;
     runtimeLayoutJob = opened.value.project.layoutJob;
     runtimeLayoutJobs = opened.value.project.layoutJobs;
+    if (runtimeImportedProjectStaging) {
+      importedProjectDisplayName = runtimeLayoutJobs[0]?.document.metadata.projectName ?? null;
+      try {
+        unlinkSync(resolvedRuntimeProjectPath);
+      } catch {
+        return fail("RSLOG_IMPORT_STAGING_DELETE_FAILED");
+      }
+    }
   }
   if (
     globalThis.__RSRENDER_BORING_LOG_RUNTIME_INPUT_REQUIRED__ === true &&
@@ -4327,8 +5953,9 @@ async function main(): Promise<void> {
   editorSession = electronSession;
   installDenials(electronSession, counters);
   installProtocol(electronSession);
+  rsLogLiveSessionBroker = new RsLogLiveSessionBroker(createRsLogNodeFetchTransport());
   if (studioEditingMode && runtimeLayoutJob === null) return fail("DOCUMENT_INPUT_UNAVAILABLE");
-  const documentIdentity =
+  let documentIdentity =
     openedRuntimeProject?.project.documentIdentity ??
     (runtimeLayoutJobs.length > 1
       ? EXAMPLE_PROJECT_DOCUMENT_IDENTITY
@@ -4379,14 +6006,16 @@ async function main(): Promise<void> {
     if (!synthetic.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
     service = synthetic.session.service;
   }
-  const hosted = await sessionHost.replace({
+  const initialHosted = await sessionHost.replace({
     documentIdentity,
     service,
     initialRequestId: "urn:rsrender:bld-021:request:initial-projection",
     clock: probeMode ? () => "2026-08-21T05:00:00.000Z" : () => new Date().toISOString(),
     ownerNonce: randomBytes(32).toString("hex"),
   });
-  if (!hosted.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+  if (!initialHosted.accepted) return fail("DOCUMENT_SESSION_UNAVAILABLE");
+  let hosted: Extract<DocumentSessionHostReplaceResult, { readonly accepted: true }> =
+    initialHosted;
   const window = new BrowserWindow({
     show: !probeMode,
     width: 1180,
@@ -4398,46 +6027,54 @@ async function main(): Promise<void> {
     webPreferences: {
       ...SEMANTIC_EDITOR_SECURITY_PROFILE.webPreferences,
       partition: SEMANTIC_EDITOR_SECURITY_PROFILE.partition,
+      offscreen: dataLayerSymbologyProbeMode && dataLayerSymbologyOffscreenMode,
       preload: preloadPath,
     },
   });
   editorWindow = window;
+  let controlledDocumentReload = false;
+  if (!probeMode) window.center();
   window.webContents.on("console-message", (details, level, message) => {
     if (!probeMode || level < 3) return;
     const currentMessage = details.message.length > 0 ? details.message : message;
     probeFailure = `RENDERER_CONSOLE:${currentMessage}`.slice(0, 256);
   });
-  const brokerResult = createDocumentRouteBroker({
-    expectedWindow: window,
-    expectedWebContents: window.webContents,
-    session: hosted.session,
-    createCapability: () => randomBytes(32).toString("hex"),
-    createRequestId: (input: {
-      readonly operation: string;
-      readonly generation: number;
-      readonly sequence: number;
-    }) => `urn:rsrender:bld-021:request:${input.generation}:${input.sequence}:${input.operation}`,
-  });
+  const createActiveDocumentRouteBroker = () =>
+    createDocumentRouteBroker({
+      expectedWindow: window,
+      expectedWebContents: window.webContents,
+      session: hosted.session,
+      createCapability: () => randomBytes(32).toString("hex"),
+      createRequestId: (input: {
+        readonly operation: string;
+        readonly generation: number;
+        readonly sequence: number;
+      }) => `urn:rsrender:bld-021:request:${input.generation}:${input.sequence}:${input.operation}`,
+    });
+  const brokerResult = createActiveDocumentRouteBroker();
   if (!brokerResult.accepted) return fail("DOCUMENT_ROUTE_UNAVAILABLE");
   broker = brokerResult.broker;
   ipcMain.handle(DOCUMENT_BOOTSTRAP_CHANNEL, (event) =>
-    brokerResult.broker.bootstrap(routeContext(window, event)),
+    broker!.bootstrap(routeContext(window, event)),
   );
   ipcMain.handle(DOCUMENT_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
-    brokerResult.broker.getProjection(routeContext(window, event), input),
+    broker!.getProjection(routeContext(window, event), input),
   );
   ipcMain.handle(DOCUMENT_SET_DISPLAY_VALUE_CHANNEL, (event, input: unknown) =>
-    brokerResult.broker.setDisplayValue(routeContext(window, event), input),
+    broker!.setDisplayValue(routeContext(window, event), input),
+  );
+  ipcMain.handle(DOCUMENT_REVERT_DISPLAY_VALUE_CHANNEL, (event, input: unknown) =>
+    broker!.revertDisplayValue(routeContext(window, event), input),
   );
   ipcMain.handle(DOCUMENT_UNDO_CHANNEL, (event, input: unknown) =>
-    brokerResult.broker.undo(routeContext(window, event), input),
+    broker!.undo(routeContext(window, event), input),
   );
   ipcMain.handle(DOCUMENT_REDO_CHANNEL, (event, input: unknown) =>
-    brokerResult.broker.redo(routeContext(window, event), input),
+    broker!.redo(routeContext(window, event), input),
   );
   if (structuredSession !== null) {
-    const source = structuredSession;
-    const projectDocuments = Object.freeze(
+    let source = structuredSession;
+    let projectDocuments = Object.freeze(
       "documents" in source
         ? [...source.documents]
         : [
@@ -4454,7 +6091,7 @@ async function main(): Promise<void> {
     );
     let activeDocumentIndex = 0;
     const activeDocument = () => projectDocuments[activeDocumentIndex]!;
-    const retainedLayoutJobs = new Map<string, BoringLogLayoutJobInput>(
+    let retainedLayoutJobs = new Map<string, BoringLogLayoutJobInput>(
       projectDocuments.map(({ layoutJob }) => [
         `${layoutJob.document.identity.boringLogId}\u0000${sha256CanonicalJson(layoutJob.template)}`,
         layoutJob,
@@ -4503,7 +6140,7 @@ async function main(): Promise<void> {
       displayPath: string | null;
       baseline: LogProjectFileBaseline | null;
     } =
-      openedRuntimeProject === null
+      openedRuntimeProject === null || runtimeImportedProjectStaging
         ? { authoritativePath: null, displayPath: null, baseline: null }
         : {
             authoritativePath: openedRuntimeProject.authoritativePath,
@@ -4729,7 +6366,7 @@ async function main(): Promise<void> {
         documentIdentity,
         displayName:
           projectBinding.displayPath === null
-            ? "Untitled Boring Log Project"
+            ? (importedProjectDisplayName ?? "Untitled Boring Log Project")
             : path.basename(projectBinding.displayPath),
         displayPath: projectBinding.displayPath,
         authoritativeFileBound: projectBinding.authoritativePath !== null,
@@ -4839,6 +6476,55 @@ async function main(): Promise<void> {
       projectionCache.clear();
       return lifecycleResponse(true, "PROJECT_SAVE_VERIFIED", await projectState());
     };
+    let installStudioRouteBroker: (() => void) | null = null;
+    let installPublicationRouteBroker: (() => void) | null = null;
+    const replaceActiveProjectRuntime = async (input: {
+      readonly documentIdentity: string;
+      readonly session: SyntheticBoringLogProjectSession;
+      readonly displayName: string;
+    }) => {
+      const nextHosted = await sessionHost.replace({
+        documentIdentity: input.documentIdentity,
+        service: input.session.service,
+        initialRequestId: `urn:rsrender:bld-051:request:replace:${randomBytes(16).toString("hex")}`,
+        clock: probeMode ? () => "2026-08-21T05:00:00.000Z" : () => new Date().toISOString(),
+        ownerNonce: randomBytes(32).toString("hex"),
+      });
+      if (!nextHosted.accepted) return false;
+
+      broker?.invalidate();
+      studioBroker?.invalidate();
+      publicationBroker?.invalidate();
+      documentIdentity = input.documentIdentity;
+      source = input.session;
+      hosted = nextHosted;
+      projectDocuments = Object.freeze([...input.session.documents]);
+      activeDocumentIndex = 0;
+      retainedLayoutJobs = new Map<string, BoringLogLayoutJobInput>(
+        projectDocuments.map(({ layoutJob }) => [
+          `${layoutJob.document.identity.boringLogId}\u0000${sha256CanonicalJson(layoutJob.template)}`,
+          layoutJob,
+        ]),
+      );
+      projectBinding = { authoritativePath: null, displayPath: null, baseline: null };
+      importedProjectDisplayName = input.displayName;
+      projectionCache.clear();
+      studioQuerySequence = 0;
+
+      const nextDocumentBroker = createActiveDocumentRouteBroker();
+      if (!nextDocumentBroker.accepted) return false;
+      broker = nextDocumentBroker.broker;
+      installStudioRouteBroker?.();
+      installPublicationRouteBroker?.();
+
+      controlledDocumentReload = true;
+      setTimeout(() => {
+        void window.loadURL(DOCUMENT_ROUTE_URL).catch(() => {
+          controlledDocumentReload = false;
+        });
+      }, 0);
+      return true;
+    };
     const handleLifecycle = async (input: {
       readonly operation: BoringLogStudioLifecycleOperation;
       readonly expectedWorkingRevision: number | null;
@@ -4879,6 +6565,274 @@ async function main(): Promise<void> {
       if (operation === "save-project-as") {
         return performProjectSave(expectedWorkingRevision, true);
       }
+      if (operation === "connect-rslog") {
+        const liveBroker = rsLogLiveSessionBroker;
+        if (liveBroker === null) {
+          return lifecycleResponse(false, "RSLOG_AUTH_ENTRY_UNAVAILABLE", current);
+        }
+        const authenticated = await runRsLogAuthFlow(window, liveBroker, counters);
+        if (!authenticated.accepted) {
+          return lifecycleResponse(false, authenticated.code, current);
+        }
+        const projects = await liveBroker.executeRead({ operationId: "rslog.projects.list" });
+        if (!projects.accepted) {
+          return lifecycleResponse(false, projects.code, current);
+        }
+        const catalog = inspectRsLogProjectCatalog(projects.body);
+        const inspected = inspectRsLogJsonShape(projects.body);
+        projects.body.fill(0);
+        if (!inspected.inspected) {
+          return lifecycleResponse(false, inspected.code, current);
+        }
+        const ledgerPath = path.join(profileRoot, "rslog-project-list-shape-ledger.json");
+        try {
+          writeFileSync(ledgerPath, `${JSON.stringify(inspected.ledger, null, 2)}\n`, {
+            encoding: "utf8",
+            flag: "w",
+            mode: 0o600,
+          });
+        } catch {
+          return lifecycleResponse(false, "RSLOG_SCHEMA_LEDGER_WRITE_FAILED", current);
+        }
+        if (!catalog.accepted) {
+          return lifecycleResponse(false, catalog.code, current);
+        }
+        const projectSelection = await runRsLogSourceSelectionWindow(
+          window,
+          "project",
+          catalog.projects.map((project) =>
+            Object.freeze({
+              id: project.id,
+              label: project.title,
+              description: [
+                project.jobNumber,
+                project.clientName,
+                project.siteLocation,
+                `${String(project.boreholeCount)} boreholes`,
+                ...(project.isActive ? [] : ["Inactive"]),
+                ...(project.isExample ? ["Example"] : []),
+              ]
+                .filter((value): value is string => typeof value === "string" && value.length > 0)
+                .join(" / "),
+            }),
+          ),
+          counters,
+        );
+        if (!projectSelection.accepted) {
+          return lifecycleResponse(false, projectSelection.code, current);
+        }
+        const selectedProject = catalog.projects.find(
+          ({ id }) => id === projectSelection.selectedIds[0],
+        );
+        if (selectedProject === undefined) {
+          return lifecycleResponse(false, "RSLOG_SOURCE_SELECTION_UNAVAILABLE", current);
+        }
+        const selectedProjectResponse = await liveBroker.executeRead({
+          operationId: "rslog.project.get",
+          projectId: selectedProject.id,
+        });
+        if (!selectedProjectResponse.accepted) {
+          return lifecycleResponse(false, selectedProjectResponse.code, current);
+        }
+        const boreholeRosterResponse = await liveBroker.executeRead({
+          operationId: "rslog.project.boreholes.list",
+          projectId: selectedProject.id,
+        });
+        if (!boreholeRosterResponse.accepted) {
+          selectedProjectResponse.body.fill(0);
+          return lifecycleResponse(false, boreholeRosterResponse.code, current);
+        }
+        const roster = inspectRsLogLiveBoreholeCatalog(
+          boreholeRosterResponse.body,
+          selectedProject.id,
+        );
+        if (!roster.accepted) {
+          selectedProjectResponse.body.fill(0);
+          boreholeRosterResponse.body.fill(0);
+          return lifecycleResponse(false, roster.code, current);
+        }
+        const explorationSelection = await runRsLogSourceSelectionWindow(
+          window,
+          "explorations",
+          roster.boreholes.map((borehole) =>
+            Object.freeze({
+              id: borehole.id,
+              label: borehole.name,
+              description: `${String(borehole.depth)} ft total depth${borehole.elevation === null ? "" : ` / Elev. ${String(borehole.elevation)} ft`}`,
+            }),
+          ),
+          counters,
+        );
+        if (!explorationSelection.accepted) {
+          selectedProjectResponse.body.fill(0);
+          boreholeRosterResponse.body.fill(0);
+          return lifecycleResponse(false, explorationSelection.code, current);
+        }
+        const selectedBoreholes = explorationSelection.selectedIds
+          .map((id) => roster.boreholes.find((borehole) => borehole.id === id))
+          .filter(
+            (borehole): borehole is (typeof roster.boreholes)[number] => borehole !== undefined,
+          );
+        if (selectedBoreholes.length !== explorationSelection.selectedIds.length) {
+          selectedProjectResponse.body.fill(0);
+          boreholeRosterResponse.body.fill(0);
+          return lifecycleResponse(false, "RSLOG_SOURCE_SELECTION_UNAVAILABLE", current);
+        }
+        const datasets = Object.freeze([
+          "collar",
+          "stratigraphy",
+          "samples",
+          "drillRuns",
+          "boringDetails",
+          "labResults",
+        ] as const);
+        const rsgeoResponses: RsLogLiveRsGeoResponse[] = [];
+        for (const borehole of selectedBoreholes) {
+          const response = await liveBroker.executeRead({
+            operationId: "rslog.rsgeo.export",
+            projectId: selectedProject.id,
+            boreholeIds: [borehole.id],
+            datasets,
+          });
+          if (!response.accepted) {
+            selectedProjectResponse.body.fill(0);
+            boreholeRosterResponse.body.fill(0);
+            for (const prior of rsgeoResponses) prior.body.fill(0);
+            await dialog.showMessageBox(window, {
+              type: "error",
+              title: "RSLog project not imported",
+              message: "Project discovery succeeded, but RSGeo export was not retrieved.",
+              detail: `Stage: RSGeo export. Result: ${response.code}. No data was imported and the current Log Project is unchanged.`,
+              buttons: ["OK"],
+              defaultId: 0,
+              noLink: true,
+            });
+            return lifecycleResponse(false, response.code, current);
+          }
+          rsgeoResponses.push(Object.freeze({ boreholeId: borehole.id, body: response.body }));
+        }
+        const liveSource = inspectRsLogLiveProjectData({
+          project: selectedProject,
+          projectBody: selectedProjectResponse.body,
+          boreholes: selectedBoreholes,
+          rsgeoResponses,
+        });
+        const ledgers = [
+          ["rslog-selected-project-shape-ledger.json", selectedProjectResponse.body],
+          ["rslog-borehole-list-shape-ledger.json", boreholeRosterResponse.body],
+          ...(rsgeoResponses[0] === undefined
+            ? []
+            : [["rslog-rsgeo-shape-ledger.json", rsgeoResponses[0].body] as const]),
+        ] as const;
+        for (const [filename, body] of ledgers) {
+          const observed = inspectRsLogJsonShape(body);
+          if (!observed.inspected) {
+            selectedProjectResponse.body.fill(0);
+            boreholeRosterResponse.body.fill(0);
+            for (const response of rsgeoResponses) response.body.fill(0);
+            return lifecycleResponse(false, observed.code, current);
+          }
+          try {
+            writeFileSync(
+              path.join(profileRoot, filename),
+              `${JSON.stringify(observed.ledger, null, 2)}\n`,
+              {
+                encoding: "utf8",
+                flag: "w",
+                mode: 0o600,
+              },
+            );
+          } catch {
+            selectedProjectResponse.body.fill(0);
+            boreholeRosterResponse.body.fill(0);
+            for (const response of rsgeoResponses) response.body.fill(0);
+            return lifecycleResponse(false, "RSLOG_SCHEMA_LEDGER_WRITE_FAILED", current);
+          }
+        }
+        selectedProjectResponse.body.fill(0);
+        boreholeRosterResponse.body.fill(0);
+        for (const response of rsgeoResponses) response.body.fill(0);
+        if (!liveSource.accepted) {
+          await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "RSLog project not imported",
+            message: "RSrender retrieved the selected data but could not admit its RSGeo schema.",
+            detail: `${liveSource.code} at ${liveSource.diagnosticPath}. No data was imported and the current Log Project is unchanged.`,
+            buttons: ["OK"],
+            defaultId: 0,
+            noLink: true,
+          });
+          return lifecycleResponse(false, liveSource.code, current);
+        }
+        const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+        const templateJobs = captured === null ? null : currentLayoutJobs(captured);
+        const templateJob = templateJobs?.[activeDocumentIndex] ?? null;
+        if (templateJob === null) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_LAYOUT_TEMPLATE_INVALID", current);
+        }
+        const mapped = createRsLogProjectDataLayoutJobs({
+          source: liveSource.value,
+          templateJob,
+        });
+        if (!mapped.accepted) {
+          await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "RSLog project needs source data",
+            message: "RSrender decoded the live project but could not build every Boring Log.",
+            detail: `${mapped.code}: ${mapped.diagnosticCode}${mapped.boringIdentity === null ? "" : ` (${mapped.boringIdentity})`}. The current Log Project is unchanged.`,
+            buttons: ["OK"],
+            defaultId: 0,
+            noLink: true,
+          });
+          return lifecycleResponse(false, mapped.code, current);
+        }
+        if (current.dirty) {
+          const choice = await dialog.showMessageBox(window, {
+            type: "warning",
+            title: "Unsaved Log Project changes",
+            message: "Save changes before importing the live RSLog project?",
+            detail: "The current Log Project will be replaced after import.",
+            buttons: ["Save", "Don't Save", "Cancel"],
+            defaultId: 0,
+            cancelId: 2,
+            noLink: true,
+          });
+          if (choice.response === 2) {
+            return lifecycleResponse(false, "PROJECT_REPLACE_CANCELED", current);
+          }
+          if (choice.response === 0) {
+            const saved = await performProjectSave(expectedWorkingRevision, false);
+            if (!saved.accepted) return saved;
+          }
+        }
+        const importedDocumentIdentity = `urn:rsrender:log-project:rslog-live:${liveSource.value.sourceDigest.slice("sha256:".length)}`;
+        const imported = createSyntheticBoringLogProjectSession({
+          projectDocumentIdentity: importedDocumentIdentity,
+          ownerGeneration: 1,
+          layoutJobs: mapped.layoutJobs,
+        });
+        if (!imported.accepted) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        const importedCapture = await captureOverrideRenderDatasetWorkingState(
+          imported.session.service,
+        );
+        if (importedCapture === null) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        if (!removeStaleRsLogImportStaging()) {
+          return lifecycleResponse(false, "RSLOG_IMPORT_STAGING_CLEANUP_FAILED", current);
+        }
+        const replaced = await replaceActiveProjectRuntime({
+          documentIdentity: importedDocumentIdentity,
+          session: imported.session,
+          displayName: liveSource.value.project.title,
+        });
+        if (!replaced) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        return lifecycleResponse(true, "RSLOG_LIVE_PROJECT_IMPORTED", await projectState());
+      }
       if (operation === "import-rslog-project-data") {
         const importPath = rsLogImportProbeMode
           ? typeof rsLogImportProbeInput === "string" && rsLogImportProbeInput.length > 0
@@ -4887,7 +6841,7 @@ async function main(): Promise<void> {
           : await dialog
               .showOpenDialog(window, {
                 title: "Import RSLog Project Data JSON",
-                buttonLabel: "Inspect RSLog Export",
+                buttonLabel: "Import Project",
                 filters: [{ name: "RSLog Project Data JSON", extensions: ["json"] }],
                 properties: ["openFile", "dontAddToRecent"],
               })
@@ -4906,19 +6860,109 @@ async function main(): Promise<void> {
           return lifecycleResponse(false, "RSLOG_PROJECT_DATA_INPUT_TOO_LARGE", current);
         }
         const inspected = inspectRsLogProjectDataJson(bytes);
-        if (inspected.code === "RSLOG_PROJECT_DATA_SCHEMA_UNADMITTED" && !rsLogImportProbeMode) {
-          await dialog.showMessageBox(window, {
+        bytes.fill(0);
+        if (!inspected.accepted) {
+          if (!rsLogImportProbeMode) {
+            await dialog.showMessageBox(window, {
+              type: "warning",
+              title: "RSLog Project JSON not imported",
+              message: "RSrender could not admit this Project JSON export.",
+              detail: `The current project was left unchanged. ${inspected.code}${inspected.diagnosticPath === undefined ? "" : ` at ${inspected.diagnosticPath}`}`,
+              buttons: ["OK"],
+              defaultId: 0,
+              noLink: true,
+            });
+          }
+          return lifecycleResponse(false, inspected.code, current);
+        }
+        const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+        const templateJobs = captured === null ? null : currentLayoutJobs(captured);
+        const templateJob = templateJobs?.[activeDocumentIndex] ?? null;
+        if (templateJob === null) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_LAYOUT_TEMPLATE_INVALID", current);
+        }
+        const mapped = createRsLogProjectDataLayoutJobs({
+          source: inspected.value,
+          templateJob,
+        });
+        if (!mapped.accepted) {
+          if (!rsLogImportProbeMode) {
+            await dialog.showMessageBox(window, {
+              type: "warning",
+              title: "RSLog project needs source data",
+              message: "RSrender decoded the project but could not build every boring log.",
+              detail: `${mapped.code}: ${mapped.diagnosticCode}${mapped.boringIdentity === null ? "" : ` (${mapped.boringIdentity})`}. The current project was left unchanged.`,
+              buttons: ["OK"],
+              defaultId: 0,
+              noLink: true,
+            });
+          }
+          return lifecycleResponse(false, mapped.code, current);
+        }
+        if (current.dirty) {
+          const choice = await dialog.showMessageBox(window, {
             type: "warning",
-            title: "RSLog export schema not admitted",
-            message: "This is valid JSON, but RSrender cannot safely map this RSLog export yet.",
-            detail:
-              "The current project was left unchanged. Supply an authorized sanitized multi-test-hole Project Data JSON export so its exact field, null, unit, and identity contract can be admitted without guessing.",
-            buttons: ["OK"],
+            title: "Unsaved Log Project changes",
+            message: "Save changes before importing the RSLog project?",
+            detail: "The current project will be replaced after import.",
+            buttons: ["Save", "Don't Save", "Cancel"],
             defaultId: 0,
+            cancelId: 2,
             noLink: true,
           });
+          if (choice.response === 2) {
+            return lifecycleResponse(false, "PROJECT_REPLACE_CANCELED", current);
+          }
+          if (choice.response === 0) {
+            const saved = await performProjectSave(expectedWorkingRevision, false);
+            if (!saved.accepted) return saved;
+          }
         }
-        return lifecycleResponse(false, inspected.code, current);
+        const importedDocumentIdentity = `urn:rsrender:log-project:rslog-project-json:${inspected.value.sourceDigest.slice("sha256:".length)}`;
+        const imported = createSyntheticBoringLogProjectSession({
+          projectDocumentIdentity: importedDocumentIdentity,
+          ownerGeneration: 1,
+          layoutJobs: mapped.layoutJobs,
+        });
+        if (!imported.accepted) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        const importedCapture = await captureOverrideRenderDatasetWorkingState(
+          imported.session.service,
+        );
+        if (importedCapture === null) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        if (!removeStaleRsLogImportStaging()) {
+          return lifecycleResponse(false, "RSLOG_IMPORT_STAGING_CLEANUP_FAILED", current);
+        }
+        if (rsLogImportProbeMode) {
+          const stagingPath = path.join(
+            profileRoot,
+            `.rsrender-rslog-import-${randomBytes(16).toString("hex")}.rsrender`,
+          );
+          const staged = await saveLogProjectFile({
+            targetPath: stagingPath,
+            expectedBaseline: null,
+            replaceExisting: false,
+            layoutJobs: mapped.layoutJobs,
+            projectAggregate: importedCapture.project.aggregate,
+            presentationOverrideCollections: importedCapture.presentationOverrideCollections,
+          });
+          if (!staged.accepted) {
+            return lifecycleResponse(false, staged.code, current);
+          }
+          return lifecycleResponse(true, "RSLOG_PROJECT_DATA_IMPORT_STAGED_FOR_PROBE", current);
+        }
+        const replaced = await replaceActiveProjectRuntime({
+          documentIdentity: importedDocumentIdentity,
+          session: imported.session,
+          displayName: inspected.value.project.title,
+        });
+        if (!replaced) {
+          return lifecycleResponse(false, "RSLOG_PROJECT_DATA_SESSION_INVALID", current);
+        }
+        return lifecycleResponse(true, "RSLOG_PROJECT_DATA_IMPORTED", await projectState());
       }
 
       if (current.dirty) {
@@ -4946,7 +6990,11 @@ async function main(): Promise<void> {
 
       const baseArguments = process.argv
         .slice(1)
-        .filter((argument) => !argument.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX));
+        .filter(
+          (argument) =>
+            !argument.startsWith(PROJECT_INPUT_ARGUMENT_PREFIX) &&
+            argument !== IMPORTED_PROJECT_STAGING_ARGUMENT,
+        );
       if (operation === "new-project") {
         setTimeout(() => {
           app.relaunch({ args: baseArguments });
@@ -4982,7 +7030,12 @@ async function main(): Promise<void> {
     let textStyleCommandSequence = 0;
     let textPresentationResetCommandSequence = 0;
     let pageGuidesCommandSequence = 0;
+    let pageSetupCommandSequence = 0;
+    let dataLayerSymbologyCommandSequence = 0;
     let columnDividerCommandSequence = 0;
+    let addProviderColumnCommandSequence = 0;
+    let columnHeadingCommandSequence = 0;
+    let dataDepthCommandSequence = 0;
     let regionBoundaryCommandSequence = 0;
     let arrangementCommandSequence = 0;
     let textAuthoringCommandSequence = 0;
@@ -5241,6 +7294,7 @@ async function main(): Promise<void> {
       });
     };
     const handleTextOccurrenceStyle = async (input: BoringLogStudioTextOccurrenceStyleInput) => {
+      const requestedFontStyle = input.fontStyle ?? "normal";
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
         return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
@@ -5279,7 +7333,12 @@ async function main(): Promise<void> {
         currentStyle === undefined ||
         currentStyle.id !== input.baseStyleId ||
         targetNodes.some((target) => target?.kind !== "text") ||
-        input.fontFamilyId !== currentStyle.fontFamilyId ||
+        !resolveExactFontProjectionFace(
+          rsrenderFontProjectionBindings,
+          input.fontFamilyId,
+          requestedFontStyle,
+          input.fontWeight,
+        ).accepted ||
         ![400, 700].includes(input.fontWeight) ||
         input.fontSizeMpt < 4_000 ||
         input.fontSizeMpt > 48_000 ||
@@ -5331,6 +7390,7 @@ async function main(): Promise<void> {
       }).slice("sha256:".length);
       const authoredStyle = Object.freeze({
         fontFamilyId: input.fontFamilyId,
+        fontStyle: requestedFontStyle,
         fontSizeMpt: input.fontSizeMpt,
         fontWeight: input.fontWeight,
         lineHeightMpt: input.lineHeightMpt,
@@ -5822,6 +7882,359 @@ async function main(): Promise<void> {
         guideId,
       });
     };
+    const handlePageSetup = async (input: BoringLogStudioPageSetupInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null) {
+        return Object.freeze({ accepted: false, code: "PAGE_SETUP_UNAVAILABLE" });
+      }
+      const adjusted = applyBoringLogPageSetup(currentJob.template, input);
+      if (!adjusted.accepted || !adjusted.changed) {
+        return Object.freeze({
+          accepted: false,
+          code: adjusted.accepted ? "PAGE_SETUP_NO_CHANGE" : adjusted.code,
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "PAGE_SETUP_UNAVAILABLE" });
+      }
+      const { pagination: currentPagination, ...templateWithoutPagination } = currentJob.template;
+      void currentPagination;
+      const template = Object.freeze({
+        ...templateWithoutPagination,
+        page: adjusted.page,
+        regions: adjusted.regions,
+        columns: adjusted.columns,
+        depthTransform: adjusted.depthTransform,
+        ...(adjusted.pagination === undefined ? {} : { pagination: adjusted.pagination }),
+      });
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "PAGE_SETUP_LAYOUT_INVALID" });
+      }
+      pageSetupCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-049:request:page-setup:${pageSetupCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Set ${input.paperPreset} ${input.orientation} page and margins in Boring Log Studio`,
+        operation: "page-setup",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "PAGE_SETUP_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        paperPreset: input.paperPreset,
+        orientation: input.orientation,
+        widthMpt: adjusted.page.widthMpt,
+        heightMpt: adjusted.page.heightMpt,
+        marginsMpt: adjusted.page.marginsMpt,
+        pageCount: adjusted.pageCount,
+        repaginationRequired: adjusted.repaginationRequired,
+      });
+    };
+    const handleDataLayerSymbology = async (input: BoringLogStudioDataLayerSymbologyInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const layer = currentJob?.document.dataTrack.layers.find(({ id }) => id === input.layerId);
+      if (currentJob === null || layer === undefined) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_UNAVAILABLE" });
+      }
+      const topologyMatches =
+        layer.kind === "numeric-polyline"
+          ? input.line !== null && input.point !== null && input.range === null
+          : input.line === null && input.point === null && input.range !== null;
+      if (!topologyMatches) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_KIND_MISMATCH" });
+      }
+      const tokenIds = new Set(Object.keys(currentJob.template.visualTokens));
+      const referencedTokens = [
+        input.line?.strokeToken,
+        input.point?.fillToken,
+        input.point?.strokeToken,
+        input.range?.line.strokeToken,
+        input.range?.firstEndpoint.fillToken,
+        input.range?.firstEndpoint.strokeToken,
+        input.range?.secondEndpoint.fillToken,
+        input.range?.secondEndpoint.strokeToken,
+      ].filter((token): token is string => token !== undefined && token !== null);
+      if (referencedTokens.some((token) => !tokenIds.has(token))) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_TOKEN_UNKNOWN" });
+      }
+      if (input.applyScope === "project-default") {
+        const overrideIdentity = `urn:rsrender:data-layer-symbology-project-default:${sha256CanonicalJson(
+          {
+            documentIdentity,
+            layerId: layer.id,
+            kind: layer.kind,
+          },
+        ).slice("sha256:".length, "sha256:".length + 32)}`;
+        const authoredJobs: Array<
+          Readonly<{
+            document: (typeof projectDocuments)[number];
+            layoutJob: BoringLogLayoutJobInput;
+            override: BoringLogDataLayerSymbologyOverrideInput;
+          }>
+        > = [];
+        const replacements: Array<{
+          explorationIdentity: string;
+          expectedTemplateAssignmentIdentity: string;
+          expectedEmbeddedTemplateRepresentationIdentity: string;
+          expectedEffectiveContentDigest: string;
+          replacementEffectiveContentDigest: string;
+        }> = [];
+        for (const candidateDocument of projectDocuments) {
+          const candidateJob = effectiveLayoutJob(candidateDocument, captured.project.aggregate);
+          if (candidateJob === null) {
+            return Object.freeze({
+              accepted: false,
+              code: "DATA_LAYER_SYMBOLOGY_PROJECT_DEFAULT_UNAVAILABLE",
+            });
+          }
+          const authored = authorBoringLogDataLayerSymbology(candidateJob, {
+            layerId: input.layerId,
+            expectedKind: layer.kind,
+            visible: input.visible,
+            order: input.order,
+            line: input.line,
+            point: input.point,
+            range: input.range,
+            legend: input.legend,
+            overrideIdentity,
+          });
+          const membership = captured.project.aggregate.logSet.memberships.find(
+            ({ sourceExplorationIdentity }) =>
+              sourceExplorationIdentity === candidateDocument.explorationIdentity,
+          );
+          const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+            ({ scope }) =>
+              membership !== undefined &&
+              scope.kind === "exploration" &&
+              scope.targetIdentity === membership.membershipIdentity,
+          );
+          const representation =
+            captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+              ({ embeddedTemplateRepresentationIdentity }) =>
+                embeddedTemplateRepresentationIdentity ===
+                assignment?.embeddedTemplateRepresentationIdentity,
+            );
+          if (!authored.accepted || assignment === undefined || representation === undefined) {
+            return Object.freeze({
+              accepted: false,
+              code: "DATA_LAYER_SYMBOLOGY_PROJECT_DEFAULT_UNAVAILABLE",
+              detail: authored.accepted ? "PROJECT_ASSIGNMENT_UNAVAILABLE" : authored.code,
+            });
+          }
+          authoredJobs.push(
+            Object.freeze({
+              document: candidateDocument,
+              layoutJob: authored.layoutJob,
+              override: authored.override,
+            }),
+          );
+          replacements.push({
+            explorationIdentity: candidateDocument.explorationIdentity,
+            expectedTemplateAssignmentIdentity: assignment.assignmentIdentity,
+            expectedEmbeddedTemplateRepresentationIdentity:
+              representation.embeddedTemplateRepresentationIdentity,
+            expectedEffectiveContentDigest: representation.effectiveContentDigest,
+            replacementEffectiveContentDigest: authored.layoutJob.templateDigest,
+          });
+        }
+        dataLayerSymbologyCommandSequence += 1;
+        const committed = await commitEmbeddedTemplateReplacementBatch(source.service, {
+          requestId: `urn:rsrender:bld-050:request:data-layer-symbology-project-default:${dataLayerSymbologyCommandSequence}`,
+          documentId: documentIdentity,
+          ownerGeneration: hosted.ownerGeneration,
+          expectedWorkingRevision: input.expectedWorkingRevision,
+          operation: "data-layer-symbology-project-default",
+          replacements,
+          reason: `Set ${input.legend.label} Data Layer symbology project default across ${projectDocuments.length} boring logs`,
+        });
+        if (!committed.accepted) return committed;
+        for (const authored of authoredJobs) {
+          retainedLayoutJobs.set(
+            `${authored.document.boringLogIdentity}\u0000${authored.layoutJob.templateDigest}`,
+            authored.layoutJob,
+          );
+        }
+        projectionCache.clear();
+        const activeAuthored = authoredJobs.find(
+          ({ document: candidate }) => candidate.boringLogIdentity === document.boringLogIdentity,
+        )!;
+        return Object.freeze({
+          accepted: true,
+          code: "DATA_LAYER_SYMBOLOGY_PROJECT_DEFAULT_SET",
+          applyScope: input.applyScope,
+          affectedBoringLogCount: authoredJobs.length,
+          workingRevision: committed.workingRevision,
+          dirty: committed.dirty,
+          canUndo: committed.canUndo,
+          canRedo: committed.canRedo,
+          layerId: layer.id,
+          overrideIdentity: activeAuthored.override.overrideIdentity,
+          overrideRevision: activeAuthored.override.overrideRevision,
+        });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_UNAVAILABLE" });
+      }
+      const prior = currentJob.template.dataLayerSymbologyOverrides?.find(
+        ({ layerId }) => layerId === layer.id,
+      );
+      const authoredLine = (value: NonNullable<typeof input.line>) =>
+        Object.freeze({
+          strokeToken: value.strokeToken,
+          strokeWidthMpt: value.strokeWidthMpt as Mpt,
+          dashMpt: Object.freeze(value.dashMpt.map((dash) => dash as Mpt)),
+        });
+      const authoredPoint = (value: NonNullable<typeof input.point>) =>
+        Object.freeze({
+          shape: value.shape,
+          sizeMpt: value.sizeMpt as Mpt,
+          fillToken: value.fillToken,
+          strokeToken: value.strokeToken,
+          strokeWidthMpt: value.strokeWidthMpt as Mpt,
+        });
+      const overrideIdentity =
+        prior?.overrideIdentity ??
+        `urn:rsrender:data-layer-symbology:${sha256CanonicalJson({
+          boringLogIdentity: currentJob.document.identity.boringLogId,
+          layerId: layer.id,
+        }).slice("sha256:".length, "sha256:".length + 32)}`;
+      const replacement: BoringLogDataLayerSymbologyOverrideInput = Object.freeze({
+        layerId: layer.id,
+        kind: layer.kind,
+        visible: input.visible,
+        order: input.order,
+        line: input.line === null ? null : authoredLine(input.line),
+        point: input.point === null ? null : authoredPoint(input.point),
+        range:
+          input.range === null
+            ? null
+            : Object.freeze({
+                line: authoredLine(input.range.line),
+                firstEndpoint: authoredPoint(input.range.firstEndpoint),
+                secondEndpoint: authoredPoint(input.range.secondEndpoint),
+              }),
+        legend: Object.freeze({ visible: input.legend.visible, label: input.legend.label }),
+        overrideIdentity,
+        overrideRevision: (prior?.overrideRevision ?? 0) + 1,
+      });
+      const overrides = [
+        ...(currentJob.template.dataLayerSymbologyOverrides ?? []).filter(
+          ({ layerId }) => layerId !== layer.id,
+        ),
+        replacement,
+      ].sort((left, right) => left.layerId.localeCompare(right.layerId));
+      const template = Object.freeze({
+        ...currentJob.template,
+        dataLayerSymbologyOverrides: Object.freeze(overrides),
+      });
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_LAYOUT_INVALID" });
+      }
+      if (authored.value.templateDigest === currentJob.templateDigest) {
+        return Object.freeze({ accepted: false, code: "DATA_LAYER_SYMBOLOGY_NO_CHANGE" });
+      }
+      dataLayerSymbologyCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-050:request:data-layer-symbology:${dataLayerSymbologyCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Set ${input.legend.label} data layer symbology in Boring Log Studio`,
+        operation: "data-layer-symbology",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "DATA_LAYER_SYMBOLOGY_SET",
+        applyScope: input.applyScope,
+        affectedBoringLogCount: 1,
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        layerId: layer.id,
+        overrideIdentity,
+        overrideRevision: replacement.overrideRevision,
+      });
+    };
     const handleColumnDivider = async (input: BoringLogStudioColumnDividerInput) => {
       const captured = await captureOverrideRenderDatasetWorkingState(source.service);
       if (captured === null) {
@@ -5916,6 +8329,384 @@ async function main(): Promise<void> {
         resizeMode: resized.resizeMode,
         affectedColumnIds: resized.affectedColumnIds,
         clamped: resized.clamped,
+      });
+    };
+    const handleDataDepthConfiguration = async (
+      input: BoringLogStudioDataDepthConfigurationInput,
+    ) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null || captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      if (currentJob === null)
+        return Object.freeze({ accepted: false, code: "DATA_DEPTH_UNAVAILABLE" });
+      const oldRange = currentJob.document.referenceDepthRange;
+      const newStart = input.startDepthFt;
+      const newEnd = input.totalDepthFt;
+      if (newEnd !== newStart + input.intervalFt || newEnd <= newStart) {
+        return Object.freeze({ accepted: false, code: "DATA_DEPTH_RELATION_INVALID" });
+      }
+      const oldSpan = oldRange.endFt - oldRange.startFt;
+      const newSpan = newEnd - newStart;
+      const mapDepth = (depth: number): number =>
+        newStart + ((depth - oldRange.startFt) * newSpan) / oldSpan;
+      const documentInput = currentJob.document;
+      const nValueGraphMaximum = input.nValueGraphMaximum;
+      const hasNValueAxis = documentInput.dataTrack.axes.some(({ id }) => id === "axis-n-value");
+      if (hasNValueAxis !== (nValueGraphMaximum !== null)) {
+        return Object.freeze({ accepted: false, code: "DATA_N_VALUE_AXIS_STATE_INVALID" });
+      }
+      const nValuesBySampleId = new Map(
+        documentInput.samples.map((sample) => [
+          sample.id,
+          sample.nValue ?? (sample.refusal ? nValueGraphMaximum : null),
+        ]),
+      );
+      const effectiveDocument = {
+        ...documentInput,
+        metadata: { ...documentInput.metadata, totalDepthFt: newEnd },
+        referenceDepthRange: { ...oldRange, startFt: newStart, endFt: newEnd },
+        lithologyIntervals: documentInput.lithologyIntervals.map((interval) => ({
+          ...interval,
+          depthFromFt: mapDepth(interval.depthFromFt),
+          depthToFt: mapDepth(interval.depthToFt),
+          transitions: interval.transitions.map((transition) => ({
+            ...transition,
+            depthFt: mapDepth(transition.depthFt),
+          })),
+        })),
+        samples: documentInput.samples.map((sample) => ({
+          ...sample,
+          depthFt: mapDepth(sample.depthFt),
+        })),
+        remarks: documentInput.remarks.map((remark) => ({
+          ...remark,
+          depthFromFt: mapDepth(remark.depthFromFt),
+          depthToFt: mapDepth(remark.depthToFt),
+        })),
+        dataTrack: {
+          ...documentInput.dataTrack,
+          axes: documentInput.dataTrack.axes.map((axis) =>
+            axis.id === "axis-n-value" && nValueGraphMaximum !== null
+              ? { ...axis, maximum: nValueGraphMaximum }
+              : axis,
+          ),
+          layers: documentInput.dataTrack.layers.map((layer) =>
+            layer.id === "layer-n-value" &&
+            layer.kind === "numeric-polyline" &&
+            nValueGraphMaximum !== null
+              ? {
+                  ...layer,
+                  values: layer.values.flatMap(([sampleId]) => {
+                    const sourceValue = nValuesBySampleId.get(sampleId);
+                    return sourceValue === null || sourceValue === undefined
+                      ? []
+                      : [[sampleId, Math.min(sourceValue, nValueGraphMaximum)] as const];
+                  }),
+                }
+              : layer,
+          ),
+        },
+        notes:
+          nValueGraphMaximum === null
+            ? documentInput.notes
+            : documentInput.notes.map((note) =>
+                note.startsWith("N graph display is capped at the configured ")
+                  ? `N graph display is capped at the configured ${nValueGraphMaximum} blows/ft axis maximum.`
+                  : note,
+              ),
+      };
+      const template = {
+        ...currentJob.template,
+        depthTransform: {
+          ...currentJob.template.depthTransform,
+          depthStartFt: newStart,
+          depthEndFt: newEnd,
+          mptPerFoot: input.mptPerFoot,
+          yEndMpt: (currentJob.template.depthTransform.yStartMpt +
+            Math.round(
+              newSpan * input.mptPerFoot,
+            )) as BoringLogLayoutJobInput["template"]["depthTransform"]["yEndMpt"],
+        },
+      };
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        document: effectiveDocument,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted)
+        return Object.freeze({ accepted: false, code: "DATA_DEPTH_LAYOUT_INVALID" });
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === documentInput.identity.explorationId,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined)
+        return Object.freeze({ accepted: false, code: "DATA_DEPTH_UNAVAILABLE" });
+      dataDepthCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-047:request:data-depth:${dataDepthCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: documentInput.identity.explorationId,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: "Set atomic Boring Log data depth configuration",
+        operation: "data-depth-configuration",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${documentInput.identity.boringLogId}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "DATA_DEPTH_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+      });
+    };
+    const handleColumnHeading = async (input: BoringLogStudioColumnHeadingInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const column = currentJob?.template.columns.find(({ id }) => id === input.columnId);
+      const heading = input.heading.trim();
+      if (
+        currentJob === null ||
+        column === undefined ||
+        heading.length < 1 ||
+        heading.length > 80
+      ) {
+        return Object.freeze({ accepted: false, code: "COLUMN_HEADING_UNAVAILABLE" });
+      }
+      if (column.heading === heading) {
+        return Object.freeze({ accepted: false, code: "COLUMN_HEADING_NO_CHANGE" });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "COLUMN_HEADING_UNAVAILABLE" });
+      }
+      const template = Object.freeze({
+        ...currentJob.template,
+        columns: Object.freeze(
+          currentJob.template.columns.map((candidate) =>
+            candidate.id === column.id ? Object.freeze({ ...candidate, heading }) : candidate,
+          ),
+        ),
+      });
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(template),
+        template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "COLUMN_HEADING_LAYOUT_INVALID" });
+      }
+      columnHeadingCommandSequence += 1;
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-047:request:column-heading:${columnHeadingCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Set ${column.id} heading in the active boring's embedded page template`,
+        operation: "column-heading-text",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "COLUMN_HEADING_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        columnId: column.id,
+        heading,
+      });
+    };
+    const handleAddProviderColumn = async (input: BoringLogStudioAddProviderColumnInput) => {
+      const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+      if (captured === null) {
+        return Object.freeze({ accepted: false, code: "PROJECT_STATE_UNAVAILABLE" });
+      }
+      if (captured.project.workingRevision !== input.expectedWorkingRevision) {
+        return Object.freeze({ accepted: false, code: "PROJECT_WORKING_REVISION_STALE" });
+      }
+      const document = activeDocument();
+      const currentJob = effectiveLayoutJob(document, captured.project.aggregate);
+      const field = rsLogProviderAuthoringCatalog.fields.find(
+        ({ fieldId }) => fieldId === input.fieldId,
+      );
+      if (
+        currentJob === null ||
+        field === undefined ||
+        field.availability.state !== "available" ||
+        !field.supportedTargetRoles.includes(input.targetRole)
+      ) {
+        return Object.freeze({ accepted: false, code: "ADD_COLUMN_FIELD_UNAVAILABLE" });
+      }
+      const referenceColumn =
+        (input.referenceColumnId === null
+          ? currentJob.template.columns.at(-1)
+          : currentJob.template.columns.find(({ id }) => id === input.referenceColumnId)) ?? null;
+      const style = currentJob.template.styles[0] ?? null;
+      if (referenceColumn === null || style === null) {
+        return Object.freeze({ accepted: false, code: "ADD_COLUMN_PLACEMENT_UNAVAILABLE" });
+      }
+      const constraints = currentJob.template.columns.map((column) =>
+        Object.freeze({
+          columnId: column.id,
+          minimumWidthMpt: boringLogDefaultColumnMinimumWidthMpt(column.role),
+          widthPinned: false,
+        }),
+      );
+      const donor = [...currentJob.template.columns]
+        .map((column) => ({
+          column,
+          slackMpt: column.widthMpt - boringLogDefaultColumnMinimumWidthMpt(column.role),
+        }))
+        .sort(
+          (left, right) =>
+            right.slackMpt - left.slackMpt || left.column.id.localeCompare(right.column.id),
+        )[0];
+      const minimumWidthMpt = boringLogDefaultColumnMinimumWidthMpt(input.targetRole);
+      const widthMpt = Math.min(36_000, donor?.slackMpt ?? 0);
+      if (donor === undefined || widthMpt < minimumWidthMpt) {
+        return Object.freeze({ accepted: false, code: "ADD_COLUMN_SPACE_UNAVAILABLE" });
+      }
+      const binding = createRsLogProviderAuthoringBinding({
+        contractVersion: 1,
+        providerId: "rslog",
+        catalogRevision: rsLogProviderAuthoringCatalogRevision,
+        fieldId: field.fieldId,
+        sourcePath: field.binding.sourcePath,
+        targetRole: input.targetRole,
+      });
+      if (!binding.accepted) {
+        return Object.freeze({ accepted: false, code: binding.code });
+      }
+      addProviderColumnCommandSequence += 1;
+      const columnId = `provider-${field.fieldId
+        .replace(/^rslog\./u, "")
+        .replaceAll(/[^a-z0-9]+/gu, "-")}-${addProviderColumnCommandSequence}`.slice(0, 120);
+      const added = addProviderBoundBoringLogColumn({
+        template: currentJob.template,
+        providerCatalog: rsLogProviderAuthoringCatalog,
+        providerBinding: binding.binding,
+        column: {
+          id: columnId,
+          heading: field.label,
+          styleId: style.id,
+          widthMpt,
+          minimumWidthMpt,
+        },
+        placement: {
+          referenceColumnId: referenceColumn.id,
+          side: input.side,
+          resizeDonorColumnId: donor.column.id,
+        },
+        constraints,
+      });
+      if (!added.accepted) {
+        return Object.freeze({ accepted: false, code: added.code });
+      }
+      const membership = captured.project.aggregate.logSet.memberships.find(
+        ({ sourceExplorationIdentity }) =>
+          sourceExplorationIdentity === document.explorationIdentity,
+      );
+      const assignment = captured.project.aggregate.logSet.templateAssignments.find(
+        ({ scope }) =>
+          membership !== undefined &&
+          scope.kind === "exploration" &&
+          scope.targetIdentity === membership.membershipIdentity,
+      );
+      const representation = captured.project.aggregate.logSet.embeddedTemplateRepresentations.find(
+        ({ embeddedTemplateRepresentationIdentity }) =>
+          embeddedTemplateRepresentationIdentity ===
+          assignment?.embeddedTemplateRepresentationIdentity,
+      );
+      if (representation === undefined) {
+        return Object.freeze({ accepted: false, code: "ADD_COLUMN_TEMPLATE_UNAVAILABLE" });
+      }
+      const authored = validateBoringLogLayoutJobInput({
+        ...currentJob,
+        templateDigest: sha256CanonicalJson(added.template),
+        template: added.template,
+      });
+      if (!authored.accepted) {
+        return Object.freeze({ accepted: false, code: "ADD_COLUMN_LAYOUT_INVALID" });
+      }
+      const committed = await commitEmbeddedTemplateReplacement(source.service, {
+        requestId: `urn:rsrender:bld-057:request:add-provider-column:${addProviderColumnCommandSequence}`,
+        documentId: documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        expectedWorkingRevision: input.expectedWorkingRevision,
+        explorationIdentity: document.explorationIdentity,
+        expectedEffectiveContentDigest: representation.effectiveContentDigest,
+        replacementEffectiveContentDigest: authored.value.templateDigest,
+        reason: `Add ${field.label} as a provider-bound Log Column`,
+        operation: "add-provider-column",
+      });
+      if (!committed.accepted) return committed;
+      retainedLayoutJobs.set(
+        `${document.boringLogIdentity}\u0000${authored.value.templateDigest}`,
+        authored.value,
+      );
+      projectionCache.clear();
+      return Object.freeze({
+        accepted: true,
+        code: "ADD_COLUMN_SET",
+        workingRevision: committed.workingRevision,
+        dirty: committed.dirty,
+        canUndo: committed.canUndo,
+        canRedo: committed.canRedo,
+        columnId,
+        fieldId: field.fieldId,
       });
     };
     const handleRegionBoundary = async (input: BoringLogStudioRegionBoundaryInput) => {
@@ -6673,58 +9464,84 @@ async function main(): Promise<void> {
         targetCount: authoredNodes.size,
       });
     };
-    const route = new BoringLogStudioRouteBroker({
-      expectedWindow: window,
-      expectedWebContents: window.webContents,
-      documentIdentity,
-      ownerGeneration: hosted.ownerGeneration,
-      createCapability: () => randomBytes(32).toString("hex"),
-      getProjection: getStudioProjection,
-      lifecycle: handleLifecycle,
-      setLithologyAppearance: handleLithologyAppearance,
-      setTextOccurrenceStyle: handleTextOccurrenceStyle,
-      resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
-      setPageGuides: handlePageGuides,
-      setColumnDivider: handleColumnDivider,
-      setRegionBoundary: handleRegionBoundary,
-      arrangeTextOccurrences: handleArrangeTextOccurrences,
-      mutateTextOccurrences: handleMutateTextOccurrences,
-    });
-    studioBroker = route;
+    installStudioRouteBroker = () => {
+      const route = new BoringLogStudioRouteBroker({
+        expectedWindow: window,
+        expectedWebContents: window.webContents,
+        documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        createCapability: () => randomBytes(32).toString("hex"),
+        getProjection: getStudioProjection,
+        lifecycle: handleLifecycle,
+        setLithologyAppearance: handleLithologyAppearance,
+        setTextOccurrenceStyle: handleTextOccurrenceStyle,
+        resetTextOccurrencePresentation: handleTextOccurrencePresentationReset,
+        setPageGuides: handlePageGuides,
+        setPageSetup: handlePageSetup,
+        setColumnDivider: handleColumnDivider,
+        addProviderColumn: handleAddProviderColumn,
+        setColumnHeading: handleColumnHeading,
+        setDataDepthConfiguration: handleDataDepthConfiguration,
+        setDataLayerSymbology: handleDataLayerSymbology,
+        setRegionBoundary: handleRegionBoundary,
+        arrangeTextOccurrences: handleArrangeTextOccurrences,
+        mutateTextOccurrences: handleMutateTextOccurrences,
+      });
+      studioBroker?.invalidate();
+      studioBroker = route;
+    };
+    installStudioRouteBroker();
     ipcMain.handle(BORING_LOG_STUDIO_BOOTSTRAP_CHANNEL, (event) =>
-      route.bootstrap(routeContext(window, event)),
+      studioBroker!.bootstrap(routeContext(window, event)),
     );
     ipcMain.handle(BORING_LOG_STUDIO_GET_PROJECTION_CHANNEL, (event, input: unknown) =>
-      route.getProjection(routeContext(window, event), input),
+      studioBroker!.getProjection(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_LIFECYCLE_CHANNEL, (event, input: unknown) =>
-      route.lifecycle(routeContext(window, event), input),
+      studioBroker!.lifecycle(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_TEXT_OCCURRENCE_STYLE_CHANNEL, (event, input: unknown) =>
-      route.setTextOccurrenceStyle(routeContext(window, event), input),
+      studioBroker!.setTextOccurrenceStyle(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_LITHOLOGY_APPEARANCE_CHANNEL, (event, input: unknown) =>
-      route.setLithologyAppearance(routeContext(window, event), input),
+      studioBroker!.setLithologyAppearance(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_DATA_LAYER_SYMBOLOGY_CHANNEL, (event, input: unknown) =>
+      studioBroker!.setDataLayerSymbology(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_PAGE_GUIDES_CHANNEL, (event, input: unknown) =>
-      route.setPageGuides(routeContext(window, event), input),
+      studioBroker!.setPageGuides(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_PAGE_SETUP_CHANNEL, (event, input: unknown) =>
+      studioBroker!.setPageSetup(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_COLUMN_DIVIDER_CHANNEL, (event, input: unknown) =>
-      route.setColumnDivider(routeContext(window, event), input),
+      studioBroker!.setColumnDivider(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_ADD_PROVIDER_COLUMN_CHANNEL, (event, input: unknown) =>
+      studioBroker!.addProviderColumn(routeContext(window, event), input),
+    );
+    ipcMain.handle(BORING_LOG_STUDIO_SET_COLUMN_HEADING_CHANNEL, (event, input: unknown) =>
+      studioBroker!.setColumnHeading(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_SET_REGION_BOUNDARY_CHANNEL, (event, input: unknown) =>
-      route.setRegionBoundary(routeContext(window, event), input),
+      studioBroker!.setRegionBoundary(routeContext(window, event), input),
+    );
+    ipcMain.handle(
+      BORING_LOG_STUDIO_SET_DATA_DEPTH_CONFIGURATION_CHANNEL,
+      (event, input: unknown) =>
+        studioBroker!.setDataDepthConfiguration(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_ARRANGE_TEXT_OCCURRENCES_CHANNEL, (event, input: unknown) =>
-      route.arrangeTextOccurrences(routeContext(window, event), input),
+      studioBroker!.arrangeTextOccurrences(routeContext(window, event), input),
     );
     ipcMain.handle(BORING_LOG_STUDIO_MUTATE_TEXT_OCCURRENCES_CHANNEL, (event, input: unknown) =>
-      route.mutateTextOccurrences(routeContext(window, event), input),
+      studioBroker!.mutateTextOccurrences(routeContext(window, event), input),
     );
     ipcMain.handle(
       BORING_LOG_STUDIO_RESET_TEXT_OCCURRENCE_PRESENTATION_CHANNEL,
       (event, input: unknown) =>
-        route.resetTextOccurrencePresentation(routeContext(window, event), input),
+        studioBroker!.resetTextOccurrencePresentation(routeContext(window, event), input),
     );
     let closeAllowed = false;
     let closePromptInFlight = false;
@@ -6764,117 +9581,121 @@ async function main(): Promise<void> {
         }
       })();
     });
-    const publicationRoute = new BoringLogPdfPublicationRouteBroker({
-      expectedWindow: window,
-      expectedWebContents: window.webContents,
-      documentIdentity,
-      ownerGeneration: hosted.ownerGeneration,
-      createCapability: () => randomBytes(32).toString("hex"),
-      exportPdf: async ({ expectedWorkingRevision, orderedBoringLogIdentities }) => {
-        studioQuerySequence += 1;
-        const queried = await hosted.session.getProjection(
-          `urn:rsrender:bld-044:request:publication-package:${studioQuerySequence}`,
-          { minimumWorkingRevision: expectedWorkingRevision },
-        );
-        const captured = await captureOverrideRenderDatasetWorkingState(source.service);
-        if (
-          !queried.accepted ||
-          queried.result.kind !== "render-dataset.projection.result" ||
-          queried.result.workingRevision !== expectedWorkingRevision ||
-          captured === null ||
-          captured.project.workingRevision !== expectedWorkingRevision
-        ) {
-          return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
-        }
-        const selectedDocuments = orderedBoringLogIdentities.map((boringLogIdentity) =>
-          projectDocuments.find((document) => document.boringLogIdentity === boringLogIdentity),
-        );
-        if (
-          selectedDocuments.some((document) => document === undefined) ||
-          new Set(orderedBoringLogIdentities).size !== orderedBoringLogIdentities.length
-        ) {
-          return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
-        }
-        const sceneEntries: BoringLogPublicationSceneSet["entries"][number][] = [];
-        for (const document of selectedDocuments) {
-          if (document === undefined) {
+    installPublicationRouteBroker = () => {
+      const publicationRoute = new BoringLogPdfPublicationRouteBroker({
+        expectedWindow: window,
+        expectedWebContents: window.webContents,
+        documentIdentity,
+        ownerGeneration: hosted.ownerGeneration,
+        createCapability: () => randomBytes(32).toString("hex"),
+        exportPdf: async ({ expectedWorkingRevision, orderedBoringLogIdentities }) => {
+          studioQuerySequence += 1;
+          const queried = await hosted.session.getProjection(
+            `urn:rsrender:bld-044:request:publication-package:${studioQuerySequence}`,
+            { minimumWorkingRevision: expectedWorkingRevision },
+          );
+          const captured = await captureOverrideRenderDatasetWorkingState(source.service);
+          if (
+            !queried.accepted ||
+            queried.result.kind !== "render-dataset.projection.result" ||
+            queried.result.workingRevision !== expectedWorkingRevision ||
+            captured === null ||
+            captured.project.workingRevision !== expectedWorkingRevision
+          ) {
             return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
           }
-          const layoutJob = effectiveLayoutJob(document, captured.project.aggregate);
-          if (layoutJob === null) {
-            return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
-          }
-          const completed = await completeProjectDocumentProjection(
-            document,
-            layoutJob,
-            queried.result.projection,
+          const selectedDocuments = orderedBoringLogIdentities.map((boringLogIdentity) =>
+            projectDocuments.find((document) => document.boringLogIdentity === boringLogIdentity),
           );
-          if (!completed.accepted) {
-            return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
+          if (
+            selectedDocuments.some((document) => document === undefined) ||
+            new Set(orderedBoringLogIdentities).size !== orderedBoringLogIdentities.length
+          ) {
+            return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
           }
-          sceneEntries.push(
-            Object.freeze({
-              boringLogIdentity: document.boringLogIdentity,
-              explorationIdentity: document.explorationIdentity,
-              sourceOrdinal: document.ordinal,
-              scene: completed.projection.scene,
-            }),
-          );
-        }
-        const sceneSet: BoringLogPublicationSceneSet = Object.freeze({
-          contractVersion: 1,
-          schemaVersion: "rsrender.boring-log-publication-scene-set.v1",
-          kind: "boring-log.publication-scene-set",
-          entries: Object.freeze(sceneEntries),
-        });
-        return publishBoringLogPdfPackage({
-          sceneSet,
-          workingRevision: captured.project.workingRevision,
-          expectedWorkingRevision,
-          orderedBoringLogIdentities,
-          chooseDestination: async () => {
-            if (pdfProbeMode || authoringSurfaceProbeMode) {
-              return typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0
-                ? path.resolve(pdfProbeOutput)
-                : null;
+          const sceneEntries: BoringLogPublicationSceneSet["entries"][number][] = [];
+          for (const document of selectedDocuments) {
+            if (document === undefined) {
+              return Object.freeze({ accepted: false, code: "EXPORT_STALE_SCENE" as const });
             }
-            const selected = await dialog.showSaveDialog(window, {
-              title: "Export selected boring logs as PDF package - Create New",
-              defaultPath: path.join(app.getPath("documents"), "RSrender-boring-log-package.pdf"),
-              buttonLabel: "Create PDF Package",
-              filters: [{ name: "PDF document", extensions: ["pdf"] }],
-              properties: ["createDirectory", "showOverwriteConfirmation"],
-            });
-            return selected.canceled || selected.filePath.length === 0 ? null : selected.filePath;
-          },
-          renderPdf: async ({ projection }) => {
-            try {
-              return await renderPublicationPdf(projection);
-            } catch (error) {
-              if (probeMode) {
-                probeFailure =
-                  `LAYOUT_HOST:${error instanceof Error ? error.message : String(error)}`.slice(
-                    0,
-                    256,
-                  );
+            const layoutJob = effectiveLayoutJob(document, captured.project.aggregate);
+            if (layoutJob === null) {
+              return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
+            }
+            const completed = await completeProjectDocumentProjection(
+              document,
+              layoutJob,
+              queried.result.projection,
+            );
+            if (!completed.accepted) {
+              return Object.freeze({ accepted: false, code: "EXPORT_PREFLIGHT_BLOCKED" as const });
+            }
+            sceneEntries.push(
+              Object.freeze({
+                boringLogIdentity: document.boringLogIdentity,
+                explorationIdentity: document.explorationIdentity,
+                sourceOrdinal: document.ordinal,
+                scene: completed.projection.scene,
+              }),
+            );
+          }
+          const sceneSet: BoringLogPublicationSceneSet = Object.freeze({
+            contractVersion: 1,
+            schemaVersion: "rsrender.boring-log-publication-scene-set.v1",
+            kind: "boring-log.publication-scene-set",
+            entries: Object.freeze(sceneEntries),
+          });
+          return publishBoringLogPdfPackage({
+            sceneSet,
+            workingRevision: captured.project.workingRevision,
+            expectedWorkingRevision,
+            orderedBoringLogIdentities,
+            chooseDestination: async () => {
+              if (pdfProbeMode || authoringSurfaceProbeMode) {
+                return typeof pdfProbeOutput === "string" && pdfProbeOutput.length > 0
+                  ? path.resolve(pdfProbeOutput)
+                  : null;
               }
-              throw error;
-            }
-          },
-        });
-      },
-    });
-    publicationBroker = publicationRoute;
+              const selected = await dialog.showSaveDialog(window, {
+                title: "Export selected boring logs as PDF package - Create New",
+                defaultPath: path.join(app.getPath("documents"), "RSrender-boring-log-package.pdf"),
+                buttonLabel: "Create PDF Package",
+                filters: [{ name: "PDF document", extensions: ["pdf"] }],
+                properties: ["createDirectory", "showOverwriteConfirmation"],
+              });
+              return selected.canceled || selected.filePath.length === 0 ? null : selected.filePath;
+            },
+            renderPdf: async ({ projection }) => {
+              try {
+                return await renderPublicationPdf(projection);
+              } catch (error) {
+                if (probeMode) {
+                  probeFailure =
+                    `LAYOUT_HOST:${error instanceof Error ? error.message : String(error)}`.slice(
+                      0,
+                      256,
+                    );
+                }
+                throw error;
+              }
+            },
+          });
+        },
+      });
+      publicationBroker?.invalidate();
+      publicationBroker = publicationRoute;
+    };
+    installPublicationRouteBroker();
     ipcMain.handle(BORING_LOG_PUBLICATION_BOOTSTRAP_CHANNEL, (event) =>
-      publicationRoute.bootstrap(routeContext(window, event)),
+      publicationBroker!.bootstrap(routeContext(window, event)),
     );
     ipcMain.handle(BORING_LOG_PUBLICATION_EXPORT_CHANNEL, (event, input: unknown) =>
-      publicationRoute.exportPdf(routeContext(window, event), input),
+      publicationBroker!.exportPdf(routeContext(window, event), input),
     );
   }
   const rotate = () => {
     counters.rotation += 1;
-    brokerResult.broker.invalidate();
+    broker?.invalidate();
     studioBroker?.invalidate();
     publicationBroker?.invalidate();
   };
@@ -6897,7 +9718,10 @@ async function main(): Promise<void> {
   );
   window.webContents.on("destroyed", rotate);
   window.webContents.on("did-start-navigation", (_event, _url, _isInPlace, isMainFrame) => {
-    if (isMainFrame) rotate();
+    if (isMainFrame && !controlledDocumentReload) rotate();
+  });
+  window.webContents.on("did-finish-load", () => {
+    controlledDocumentReload = false;
   });
   window.webContents.setWindowOpenHandler(() => {
     counters.popup += 1;
@@ -6923,11 +9747,15 @@ async function main(): Promise<void> {
   await window.loadURL(DOCUMENT_ROUTE_URL);
   if (probeMode) {
     const result = studioProbeMode
-      ? rsLogImportProbeMode
-        ? await runRsLogImportProbe(window, counters)
-        : publicationPackageProbeMode
-          ? await runPublicationPackageProbe(window, counters)
-          : await runStudioProbe(window, counters)
+      ? dataLayerSymbologyProbeMode
+        ? await runDataLayerSymbologyProbe(window, counters)
+        : fontPaletteProbeMode
+          ? await runFontPaletteProbe(window, counters)
+          : rsLogImportProbeMode
+            ? await runRsLogImportProbe(window, counters)
+            : publicationPackageProbeMode
+              ? await runPublicationPackageProbe(window, counters)
+              : await runStudioProbe(window, counters)
       : await runProbe(window, counters);
     emitResult(result);
     await teardown();

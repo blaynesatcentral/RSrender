@@ -1,0 +1,101 @@
+{
+  "Properties": {
+    "FileVersion": "v3",
+    "ExportedBy": "synthetic@example.invalid",
+    "DateCreated": "2026-08-25T12:00:00Z"
+  },
+  "Project": {
+    "Id": "bld-051-synthetic-project",
+    "Title": "BLD-051 Synthetic Multi-Borehole Project",
+    "Number": "BLD-051",
+    "ClientName": "Synthetic Client",
+    "Address": "100 Example Way",
+    "UnitSystem": "Imperial",
+    "CoordinateSystem": "WGS 84 / NAVD 88"
+  },
+  "Boreholes": [
+    {
+      "Id": "bld-051-synthetic-boring-1",
+      "Name": "SYNTHETIC-01",
+      "Depth": 25,
+      "Elevation": 180,
+      "Latitude": 45.1,
+      "Longitude": -122.7,
+      "StartDate": "2026-08-24",
+      "LoggedBy": "Synthetic Logger",
+      "ReviewedBy": "Synthetic Reviewer",
+      "DrillingGroundwaterLevels": {
+        "GroundwaterDepth": 14,
+        "GroundwaterNotes": "Synthetic observation"
+      },
+      "Stratigraphy": [
+        {
+          "Id": "bld-051-synthetic-stratum-1",
+          "FromDepth": 0,
+          "ToDepth": 10,
+          "Title": "SILT",
+          "Description": "Synthetic brown moist silt",
+          "SoilSymbol": "ML",
+          "General": {
+            "ForeColor": "#183153",
+            "BackColor": "#e8edf2"
+          }
+        },
+        {
+          "Id": "bld-051-synthetic-stratum-2",
+          "FromDepth": 12,
+          "ToDepth": 25,
+          "Title": "GRAVEL",
+          "Description": "Synthetic gravel below an explicitly unlogged interval",
+          "SoilSymbol": "GP-GW",
+          "General": {
+            "ForeColor": "#76502b",
+            "BackColor": "#f4eadf"
+          }
+        }
+      ],
+      "Samples": [
+        {
+          "Id": "bld-051-synthetic-sample-1",
+          "FromDepth": 5,
+          "ToDepth": 6.5,
+          "Number": "S-1",
+          "TypeName": "SPT",
+          "RecoveryPercent": 80,
+          "BlowCounts": "3-4-5",
+          "LabTests": {
+            "IndexTests": {
+              "MoistureW": 20,
+              "LiquidLimit": 35,
+              "PlasticLimit": 18,
+              "PlasticIndex": 17
+            }
+          }
+        }
+      ],
+      "Comments": [
+        {
+          "Id": "bld-051-synthetic-comment-1",
+          "Depth": 15,
+          "Description": "Synthetic field note"
+        }
+      ]
+    },
+    {
+      "Id": "bld-051-synthetic-boring-2",
+      "Name": "SYNTHETIC-02",
+      "Depth": 60,
+      "Elevation": 175,
+      "Stratigraphy": [
+        {
+          "Id": "bld-051-synthetic-stratum-3",
+          "FromDepth": 0,
+          "ToDepth": 60,
+          "Title": "CLAY",
+          "Description": "Synthetic deep clay boring for pagination qualification",
+          "SoilSymbol": "CL"
+        }
+      ]
+    }
+  ]
+}

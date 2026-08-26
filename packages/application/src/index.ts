@@ -69,6 +69,8 @@ export {
   captureOverrideRenderDatasetWorkingState,
   commitEmbeddedTemplateReplacement,
   commitEmbeddedTemplateReplacementBatch,
+  dataLayerSymbologyProjectDefaultBatchOperationIdentity,
+  dataLayerSymbologyProjectDefaultBatchOperationLabel,
   inMemoryOverrideRenderDatasetServiceRevision,
   lithologyClassificationDefaultBatchOperationIdentity,
   lithologyClassificationDefaultBatchOperationLabel,

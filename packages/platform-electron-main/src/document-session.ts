@@ -10,6 +10,7 @@ import {
   parseOpaqueIdentity,
   type ApplicationRequestIdentity,
   type OverrideHistoryNavigationCommand,
+  type RevertDisplayValueOverrideCommand,
   type OverrideRenderDatasetCommandResult,
   type OverrideRenderDatasetProjection,
   type OverrideRenderDatasetQueryResult,
@@ -45,6 +46,11 @@ export type DocumentSessionCreationResult =
 export type DocumentSessionSetDisplayValueInput = Readonly<
   Pick<SetDisplayValueOverrideCommand, "expectedWorkingRevision"> &
     Omit<SetDisplayValueOverrideCommand["payload"], "authorIdentity" | "recordedAtUtc">
+>;
+
+export type DocumentSessionRevertDisplayValueInput = Readonly<
+  Pick<RevertDisplayValueOverrideCommand, "expectedWorkingRevision"> &
+    RevertDisplayValueOverrideCommand["payload"]
 >;
 
 export type DocumentSessionHistoryInput = Readonly<
@@ -128,25 +134,48 @@ function ownDataRecord(input: unknown, fields: readonly string[]): DataRecord | 
 }
 
 function exactService(input: unknown): InMemoryOverrideRenderDatasetService | null {
-  const record = ownDataRecord(input, ["setDisplayValue", "undo", "redo", "getProjection"]);
-  if (record === null) return null;
+  const record = ownDataRecord(input, [
+    "setDisplayValue",
+    "revertDisplayValue",
+    "undo",
+    "redo",
+    "getProjection",
+  ]);
+  const legacyRecord =
+    record === null
+      ? ownDataRecord(input, ["setDisplayValue", "undo", "redo", "getProjection"])
+      : null;
+  const serviceRecord = record ?? legacyRecord;
+  if (serviceRecord === null) return null;
   if (!(
-    typeof record["setDisplayValue"] === "function" &&
-    typeof record["undo"] === "function" &&
-    typeof record["redo"] === "function" &&
-    typeof record["getProjection"] === "function"
+    typeof serviceRecord["setDisplayValue"] === "function" &&
+    (serviceRecord["revertDisplayValue"] === undefined ||
+      typeof serviceRecord["revertDisplayValue"] === "function") &&
+    typeof serviceRecord["undo"] === "function" &&
+    typeof serviceRecord["redo"] === "function" &&
+    typeof serviceRecord["getProjection"] === "function"
   ))
     return null;
-  const setDisplayValue = record["setDisplayValue"] as (
+  const setDisplayValue = serviceRecord["setDisplayValue"] as (
     value: unknown,
   ) => Promise<OverrideRenderDatasetCommandResult>;
-  const undo = record["undo"] as (value: unknown) => Promise<OverrideRenderDatasetCommandResult>;
-  const redo = record["redo"] as (value: unknown) => Promise<OverrideRenderDatasetCommandResult>;
-  const getProjection = record["getProjection"] as (
+  const revertDisplayValue = serviceRecord["revertDisplayValue"] as
+    ((value: unknown) => Promise<OverrideRenderDatasetCommandResult>) | undefined;
+  const undo = serviceRecord["undo"] as (
+    value: unknown,
+  ) => Promise<OverrideRenderDatasetCommandResult>;
+  const redo = serviceRecord["redo"] as (
+    value: unknown,
+  ) => Promise<OverrideRenderDatasetCommandResult>;
+  const getProjection = serviceRecord["getProjection"] as (
     value: unknown,
   ) => Promise<OverrideRenderDatasetQueryResult>;
   return Object.freeze({
     setDisplayValue: (value: unknown) => setDisplayValue(value),
+    revertDisplayValue: (value: unknown) =>
+      revertDisplayValue === undefined
+        ? Promise.reject(new Error("REVERT_DISPLAY_VALUE_UNAVAILABLE"))
+        : revertDisplayValue(value),
     undo: (value: unknown) => undo(value),
     redo: (value: unknown) => redo(value),
     getProjection: (value: unknown) => getProjection(value),
@@ -398,6 +427,50 @@ export class DocumentSession {
     );
   }
 
+  public async revertDisplayValue(
+    requestIdInput: unknown,
+    input: unknown,
+  ): Promise<DocumentSessionInvocationResult> {
+    const preflight = this.#preflight();
+    if (preflight !== null) return preflight;
+    const record = ownDataRecord(input, [
+      "expectedWorkingRevision",
+      "localOverrideIdentity",
+      "targetSourceFieldIdentity",
+      "expectedOverrideRevision",
+    ]);
+    const requestId = requestIdentity(requestIdInput);
+    if (record === null || requestId === null)
+      return invocationFailure("DOCUMENT_SESSION_INPUT_INVALID");
+    const command = decodeOverrideRenderDatasetCommand({
+      contractVersion: 1,
+      messageType: "command",
+      scope: "document-domain",
+      kind: "presentation-override.revert-display-value",
+      requestId,
+      commandId: "presentation-override.revert-display-value",
+      documentId: this.#documentIdentity,
+      ownerGeneration: this.#ownerGeneration,
+      expectedWorkingRevision: record["expectedWorkingRevision"],
+      payload: {
+        localOverrideIdentity: record["localOverrideIdentity"],
+        targetSourceFieldIdentity: record["targetSourceFieldIdentity"],
+        expectedOverrideRevision: record["expectedOverrideRevision"],
+      },
+    });
+    if (!command.accepted || command.value.kind !== "presentation-override.revert-display-value") {
+      return invocationFailure("DOCUMENT_SESSION_INPUT_INVALID");
+    }
+    return this.#invoke(
+      "command",
+      requestId,
+      command.value.expectedWorkingRevision,
+      "presentation-override.revert-display-value",
+      "mutation",
+      () => this.#service.revertDisplayValue(command.value),
+    );
+  }
+
   public undo(requestId: unknown, input: unknown): Promise<DocumentSessionInvocationResult> {
     return this.#navigate("history.undo", requestId, input);
   }
@@ -456,7 +529,11 @@ export class DocumentSession {
     requestId: ApplicationRequestIdentity,
     expectedRevision: number | null,
     expectedCommandId:
-      "presentation-override.set-display-value" | "history.undo" | "history.redo" | null,
+      | "presentation-override.set-display-value"
+      | "presentation-override.revert-display-value"
+      | "history.undo"
+      | "history.redo"
+      | null,
     expectedOperation: "mutation" | "undo" | "redo" | null,
     operation: () => Promise<unknown>,
   ): Promise<DocumentSessionInvocationResult> {

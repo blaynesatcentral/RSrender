@@ -26,12 +26,17 @@ export const overrideRenderDatasetApplicationContractVersion = 1 as const;
 export const overrideRenderDatasetApplicationContractRevision =
   "bld-019-override-render-dataset-application-v1" as const;
 export const setDisplayValueOverrideCommandId = "presentation-override.set-display-value" as const;
+export const revertDisplayValueOverrideCommandId =
+  "presentation-override.revert-display-value" as const;
 export const overrideRenderDatasetQueryKind = "render-dataset.get" as const;
 export const overrideRenderDatasetProjectionKind = "render-dataset.projection" as const;
 export const overrideRenderDatasetEventKind = "render-dataset.projected" as const;
 
 export type OverrideRenderDatasetCommandId =
-  typeof setDisplayValueOverrideCommandId | "history.undo" | "history.redo";
+  | typeof setDisplayValueOverrideCommandId
+  | typeof revertDisplayValueOverrideCommandId
+  | "history.undo"
+  | "history.redo";
 
 export type OverrideRenderDatasetContractRejectionCode =
   | "OVERRIDE_RENDER_CONTRACT_DIGEST_MISMATCH"
@@ -181,6 +186,23 @@ export interface SetDisplayValueOverrideCommand {
   };
 }
 
+export interface RevertDisplayValueOverrideCommand {
+  readonly contractVersion: 1;
+  readonly messageType: "command";
+  readonly scope: "document-domain";
+  readonly kind: "presentation-override.revert-display-value";
+  readonly requestId: ApplicationRequestIdentity;
+  readonly commandId: "presentation-override.revert-display-value";
+  readonly documentId: string;
+  readonly ownerGeneration: OwnerGeneration;
+  readonly expectedWorkingRevision: WorkingRevision;
+  readonly payload: {
+    readonly localOverrideIdentity: string;
+    readonly targetSourceFieldIdentity: string;
+    readonly expectedOverrideRevision: number;
+  };
+}
+
 export interface OverrideHistoryNavigationCommand {
   readonly contractVersion: 1;
   readonly messageType: "command";
@@ -195,7 +217,9 @@ export interface OverrideHistoryNavigationCommand {
 }
 
 export type OverrideRenderDatasetCommand =
-  SetDisplayValueOverrideCommand | OverrideHistoryNavigationCommand;
+  | SetDisplayValueOverrideCommand
+  | RevertDisplayValueOverrideCommand
+  | OverrideHistoryNavigationCommand;
 
 export interface OverrideRenderDatasetQuery {
   readonly contractVersion: 1;
@@ -1059,6 +1083,59 @@ function parseSetCommand(record: DataRecord): SetDisplayValueOverrideCommand {
   });
 }
 
+function parseRevertCommand(record: DataRecord): RevertDisplayValueOverrideCommand {
+  requireFields(record, [
+    "contractVersion",
+    "messageType",
+    "scope",
+    "kind",
+    "requestId",
+    "commandId",
+    "documentId",
+    "ownerGeneration",
+    "expectedWorkingRevision",
+    "payload",
+  ]);
+  const common = parseCommonRequest(record, "command");
+  if (
+    record["kind"] !== revertDisplayValueOverrideCommandId ||
+    record["commandId"] !== revertDisplayValueOverrideCommandId
+  ) {
+    return fail("OVERRIDE_RENDER_CONTRACT_UNKNOWN_TAG");
+  }
+  if (!isWorkingRevision(record["expectedWorkingRevision"])) {
+    return fail("OVERRIDE_RENDER_CONTRACT_WRONG_TYPE");
+  }
+  const payload = readRecord(record["payload"]);
+  requireFields(payload, [
+    "localOverrideIdentity",
+    "targetSourceFieldIdentity",
+    "expectedOverrideRevision",
+  ]);
+  if (
+    !Number.isSafeInteger(payload["expectedOverrideRevision"]) ||
+    (payload["expectedOverrideRevision"] as number) < 1
+  ) {
+    return fail("OVERRIDE_RENDER_CONTRACT_WRONG_TYPE");
+  }
+  return Object.freeze({
+    contractVersion: 1,
+    messageType: "command",
+    scope: "document-domain",
+    kind: revertDisplayValueOverrideCommandId,
+    requestId: common.requestId,
+    commandId: revertDisplayValueOverrideCommandId,
+    documentId: common.documentId,
+    ownerGeneration: common.ownerGeneration,
+    expectedWorkingRevision: record["expectedWorkingRevision"],
+    payload: Object.freeze({
+      localOverrideIdentity: readIdentity(payload["localOverrideIdentity"]),
+      targetSourceFieldIdentity: readIdentity(payload["targetSourceFieldIdentity"]),
+      expectedOverrideRevision: payload["expectedOverrideRevision"] as number,
+    }),
+  });
+}
+
 function parseNavigationCommand(record: DataRecord): OverrideHistoryNavigationCommand {
   requireFields(record, [
     "contractVersion",
@@ -1101,6 +1178,7 @@ function parseCommand(input: unknown): OverrideRenderDatasetCommand {
   const record = readRecord(input);
   const kind = record["kind"];
   if (kind === setDisplayValueOverrideCommandId) return parseSetCommand(record);
+  if (kind === revertDisplayValueOverrideCommandId) return parseRevertCommand(record);
   if (kind === "history.undo" || kind === "history.redo") return parseNavigationCommand(record);
   return fail("OVERRIDE_RENDER_CONTRACT_UNKNOWN_TAG");
 }
@@ -2070,6 +2148,7 @@ function parseRejectedResult(
 function readCommandId(input: unknown): OverrideRenderDatasetCommandId {
   if (
     input !== setDisplayValueOverrideCommandId &&
+    input !== revertDisplayValueOverrideCommandId &&
     input !== "history.undo" &&
     input !== "history.redo"
   ) {
@@ -2126,6 +2205,7 @@ function parseEvent(input: unknown): OverrideRenderDatasetEvent {
   const operation = readOperation(record["operation"]);
   if (
     (commandId === setDisplayValueOverrideCommandId && operation !== "mutation") ||
+    (commandId === revertDisplayValueOverrideCommandId && operation !== "mutation") ||
     (commandId === "history.undo" && operation !== "undo") ||
     (commandId === "history.redo" && operation !== "redo") ||
     projection.documentId !== documentId ||
@@ -2206,6 +2286,7 @@ function parseCommittedResult(input: unknown): OverrideRenderDatasetCommittedRes
   const documentId = readIdentity(record["documentId"]);
   if (
     (commandId === setDisplayValueOverrideCommandId && operation !== "mutation") ||
+    (commandId === revertDisplayValueOverrideCommandId && operation !== "mutation") ||
     (commandId === "history.undo" && operation !== "undo") ||
     (commandId === "history.redo" && operation !== "redo") ||
     projection.documentId !== documentId ||

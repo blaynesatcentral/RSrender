@@ -358,7 +358,7 @@ test("BLD-023 preserves source-original and effective-override provenance", () =
   assert.deepEqual(result.value.document.samples[0].provenance.original, source);
 });
 
-test("BLD-023 rejects float mpt, invalid depth ranges, duplicates, and broken references", () => {
+test("BLD-023 rejects float mpt, overlapping depth ranges, duplicates, and broken references", () => {
   const floatGeometry = layoutJob();
   floatGeometry.template.page.widthMpt = 612_000.5;
   assert.equal(
@@ -366,10 +366,10 @@ test("BLD-023 rejects float mpt, invalid depth ranges, duplicates, and broken re
     "BORING_LOG_CONTRACT_INVALID_GEOMETRY",
   );
 
-  const depthGap = layoutJob();
-  depthGap.document.lithologyIntervals[1].depthFromFt = 16;
+  const depthOverlap = layoutJob();
+  depthOverlap.document.lithologyIntervals[1].depthFromFt = 14;
   assert.equal(
-    validateBoringLogLayoutJobInput(depthGap).code,
+    validateBoringLogLayoutJobInput(depthOverlap).code,
     "BORING_LOG_CONTRACT_INVALID_DEPTH_RANGE",
   );
 
@@ -429,6 +429,12 @@ test("BLD-023 validates structured blow increments, refusal outcomes, and materi
   ]);
   assert.equal(validateBoringLogLayoutJobInput(accepted).accepted, true);
 
+  const unavailableBlows = layoutJob();
+  unavailableBlows.document.samples[0].blowIncrements = [];
+  unavailableBlows.document.samples[0].nValue = null;
+  unavailableBlows.document.samples[0].refusal = false;
+  assert.equal(validateBoringLogLayoutJobInput(unavailableBlows).accepted, true);
+
   const missingPenetration = layoutJob();
   delete missingPenetration.document.samples[0].blowIncrements[0].penetrationInches;
   assert.equal(
@@ -443,12 +449,16 @@ test("BLD-023 validates structured blow increments, refusal outcomes, and materi
     "BORING_LOG_CONTRACT_WRONG_TYPE",
   );
 
-  const contradictoryRefusal = layoutJob();
-  contradictoryRefusal.document.samples[0].refusal = true;
-  assert.equal(
-    validateBoringLogLayoutJobInput(contradictoryRefusal).code,
-    "BORING_LOG_CONTRACT_WRONG_TYPE",
-  );
+  const reportedNWithRefusal = layoutJob();
+  reportedNWithRefusal.document.samples[0].refusal = true;
+  assert.equal(validateBoringLogLayoutJobInput(reportedNWithRefusal).accepted, true);
+
+  const fourIncrements = layoutJob();
+  fourIncrements.document.samples[0].blowIncrements.push({
+    blows: 50,
+    penetrationInches: 3,
+  });
+  assert.equal(validateBoringLogLayoutJobInput(fourIncrements).accepted, true);
 
   const missingFillAuthority = layoutJob();
   delete missingFillAuthority.document.lithologyIntervals[0].materialFillToken;

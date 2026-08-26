@@ -46,6 +46,9 @@ export const SOURCE_MAPPED_FIELD_PATHS = Object.freeze({
   projectName: "mapped:/name",
   explorationName: "mapped:/name",
   explorationTotalDepth: "mapped:/totalDepth",
+  explorationGroundElevation: "mapped:/groundElevation",
+  explorationElevationDatum: "mapped:/elevationDatum",
+  explorationCompletionDepth: "mapped:/completionDepth",
   intervalStartDepth: "mapped:/startDepth",
   intervalEndDepth: "mapped:/endDepth",
   stratumDescription: "mapped:/description",
@@ -103,6 +106,9 @@ export const SOURCE_RECORD_FAMILY_RULES = Object.freeze({
     allowedFieldPaths: Object.freeze([
       SOURCE_MAPPED_FIELD_PATHS.explorationName,
       SOURCE_MAPPED_FIELD_PATHS.explorationTotalDepth,
+      SOURCE_MAPPED_FIELD_PATHS.explorationGroundElevation,
+      SOURCE_MAPPED_FIELD_PATHS.explorationElevationDatum,
+      SOURCE_MAPPED_FIELD_PATHS.explorationCompletionDepth,
     ]),
   }),
   stratum: Object.freeze({

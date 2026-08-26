@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   createBoringLogStudioHtml,
   resolveStudioContextMenuPosition,
+  resolveStudioEffectiveViewportWidth,
   resolveStudioPaneWidths,
   studioPaneLimits,
 } from "../packages/renderer-ui/dist/index.js";
@@ -39,6 +40,83 @@ test("BLD-046 resolves bounded pane widths while preserving a usable Canvas", ()
   assert.equal(resizedContents.canvasWidth, studioPaneLimits.minimumCanvasWidth);
   assert.equal(resizedContents.contentsWidth, 268);
   assert.equal(resizedContents.propertiesWidth, 500);
+
+  // 1,280 physical px at 125% Windows scaling exposes roughly 1,024 CSS px.
+  // All three panes must fit in that effective renderer viewport.
+  const dpiCompacted = resolveStudioPaneWidths({
+    workspaceWidth: 1_024,
+    requestedContentsWidth: studioPaneLimits.contents.default,
+    requestedPropertiesWidth: studioPaneLimits.properties.default,
+    resizeTarget: "viewport",
+  });
+  assert.ok(dpiCompacted.canvasWidth >= studioPaneLimits.minimumCanvasWidth);
+  assert.equal(
+    dpiCompacted.contentsWidth +
+      dpiCompacted.canvasWidth +
+      dpiCompacted.propertiesWidth +
+      studioPaneLimits.splitterWidth * 2,
+    1_024,
+  );
+});
+
+test("BLD-046 resolves only native/DPI-mismatched viewport widths", () => {
+  const availableScreenWidth = 1_229;
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_180,
+      devicePixelRatio: 1.25,
+      availableScreenWidth: 1_536,
+    }),
+    1_180,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_280,
+      devicePixelRatio: 1.25,
+      availableScreenWidth,
+    }),
+    1_024,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_280,
+      devicePixelRatio: 1.5,
+      availableScreenWidth,
+    }),
+    853,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_280,
+      devicePixelRatio: 1.75,
+      availableScreenWidth,
+    }),
+    731,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_280,
+      devicePixelRatio: 2,
+      availableScreenWidth,
+    }),
+    640,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_024,
+      devicePixelRatio: 1.25,
+      availableScreenWidth,
+    }),
+    1_024,
+  );
+  assert.equal(
+    resolveStudioEffectiveViewportWidth({
+      innerWidth: 1_280,
+      devicePixelRatio: 1,
+      availableScreenWidth,
+    }),
+    1_280,
+  );
 });
 
 test("BLD-046 clamps the compact Canvas context menu inside the viewport", () => {
@@ -79,22 +157,31 @@ test("BLD-046 exposes accessible splitters and compact responsive panes", async 
   );
   assert.match(
     stylesheet,
-    /grid-template-columns:[\s\S]+var\(--contents-pane-width\)[\s\S]+var\(--properties-pane-width\)/u,
+    /grid-template-columns:[\s\S]+attr\(data-contents-width px,[\s\S]+attr\(data-properties-width px,/u,
   );
-  assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-x:\s*auto/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*flex-wrap:\s*wrap/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-x:\s*hidden/su);
+  assert.match(stylesheet, /\.ribbon\s*\{[^}]*overflow-y:\s*auto/su);
   assert.match(
     stylesheet,
     /\.canvas-context-menu\s*\{[^}]*position:\s*fixed[^}]*max-height:[^}]*overflow-y:\s*auto/su,
   );
   assert.match(stylesheet, /@container properties-pane \(max-width: 340px\)/u);
   assert.match(stylesheet, /overflow-wrap:\s*break-word/u);
+  assert.match(stylesheet, /\.workspace\s*\{[\s\S]+width: 100%;[\s\S]+max-width: none/u);
 });
 
 test("BLD-046 wires pointer, keyboard, and precision-touchpad input", async () => {
-  const entry = await readFile(
-    new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
-    "utf8",
-  );
+  const [entry, main] = await Promise.all([
+    readFile(
+      new URL("../packages/renderer-ui/src/boring-log-studio-entry.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../packages/platform-electron-main/src/semantic-editor-main.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
   assert.match(entry, /function beginPaneResize\(/u);
   assert.match(entry, /splitter\.setPointerCapture\(event\.pointerId\)/u);
   assert.match(entry, /resizePaneFromKeyboard\(event, resizeTarget\)/u);
@@ -108,4 +195,5 @@ test("BLD-046 wires pointer, keyboard, and precision-touchpad input", async () =
   assert.match(entry, /ribbon\.scrollLeft \+= event\.deltaY/u);
   assert.match(entry, /event\.preventDefault\(\)/u);
   assert.match(entry, /openCanvasContextMenu\(event\.clientX, event\.clientY\)/u);
+  assert.match(main, /if \(!probeMode\) window\.center\(\)/u);
 });

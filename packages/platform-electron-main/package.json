@@ -20,6 +20,7 @@
     "@rsrender/layout-host": "0.0.0",
     "@rsrender/package-contract": "0.0.0",
     "@rsrender/platform-zipjs": "0.0.0",
-    "@rsrender/scene": "0.0.0"
+    "@rsrender/scene": "0.0.0",
+    "@rsrender/source-contract": "0.0.0"
   }
 }
