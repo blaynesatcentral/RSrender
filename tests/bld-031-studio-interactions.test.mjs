@@ -100,7 +100,16 @@ test("BLD-031 builds a collapsible semantic tree and preserves filtered ancestry
   assert.equal(items[0].semanticId, "page-root");
   assert.equal(items[0].hasChildren, true);
   assert.ok(
-    items.some(({ semanticId, level }) => semanticId === "sample:sample-01" && level === 4),
+    items.some(
+      ({ semanticId, level, label }) =>
+        semanticId === "sample:sample-01" && level === 4 && label === "Sample S-1",
+    ),
+  );
+  assert.ok(
+    items.some(
+      ({ semanticId, label }) =>
+        semanticId === "lithology:stratum-01" && label === "Stratum 1 — Silt (ML)",
+    ),
   );
   assert.deepEqual(
     visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "").map(
@@ -108,19 +117,10 @@ test("BLD-031 builds a collapsible semantic tree and preserves filtered ancestry
     ),
     ["page-root"],
   );
-  const filtered = visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "sample 01");
+  const filtered = visibleBoringLogStudioTreeItems(items, new Set(["page-root"]), "sample s-1");
   assert.deepEqual(
     filtered.map(({ semanticId }) => semanticId),
-    [
-      "page-root",
-      "region-depth-body",
-      "column-sample",
-      "sample:sample-01",
-      "column-data-track",
-      "data-layer:layer-n-value:sample-01",
-      "data-layer:layer-moisture:sample-01",
-      "data-layer:layer-plasticity-range:sample-01",
-    ],
+    ["page-root", "region-depth-body", "column-sample", "sample:sample-01"],
   );
 });
 

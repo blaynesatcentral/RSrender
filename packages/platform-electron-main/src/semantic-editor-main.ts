@@ -4284,7 +4284,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_OCCURRENCE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Text properties applied to Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-font-face-id") === "font.face.source-serif-4.bold-italic" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "9000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-weight") === "700" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#b42318" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-x-mpt") === "125000" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-frame-anchor") === "bottom-center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-horizontal-alignment") === "center" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("data-locked") === "true"`,
       "WAIT_TEXT_OCCURRENCE_APPLY",
     );
     const applied = record(
@@ -4444,7 +4444,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#reset-text-presentation", "Space", "FOCUS_TEXT_OCCURRENCE_RESET");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Presentation reset to inherited for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited" && document.getElementById("reset-text-presentation")?.disabled === true`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Presentation reset to inherited for Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("font-size") === "5500" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.hasAttribute("data-frame-x-mpt") === false && document.getElementById("text-style-inheritance")?.textContent === "Inherited" && document.getElementById("text-layout-inheritance")?.textContent === "Inherited" && document.getElementById("reset-text-presentation")?.disabled === true`,
       "WAIT_TEXT_OCCURRENCE_RESET",
     );
     const reset = record(
@@ -4559,7 +4559,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     await press(window, "#apply-text-style", "Space", "FOCUS_TEXT_NAMED_STYLE_APPLY");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("Named style style-small typography updated at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration") === "underline"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Named style Style Small typography updated at revision ") === true && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:1:text")?.getAttribute("fill") === "#1d4ed8" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("text-decoration") === "underline"`,
       "WAIT_TEXT_NAMED_STYLE_APPLY",
     );
     const namedStyleApplied = record(
@@ -4705,7 +4705,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
     emitStudioProbePhase("column-apply-pressed");
     await waitFor(
       window,
-      `document.getElementById("editor-status")?.textContent?.startsWith("column-description typography default updated at revision ") === true && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
+      `document.getElementById("editor-status")?.textContent?.startsWith("Column Description typography default updated at revision ") === true && document.getElementById("node:lithology:stratum-02:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-03:transition:1:text")?.getAttribute("fill") === "#047857" && document.getElementById("node:lithology:stratum-01:transition:2:text")?.getAttribute("fill") === "#c2410c"`,
       "WAIT_TEXT_COLUMN_STYLE_APPLY",
     );
     const columnStyleApplied = record(
@@ -4892,7 +4892,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && document.getElementById("direct-manipulation-overlay") !== null`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for Stratum 1 note — Trace organics. at revision ") === true && document.getElementById("direct-manipulation-overlay") !== null`,
         "WAIT_DIRECT_MANIPULATION_MOVE",
       );
       const directMoved = record(await pageValue(window, directSnapshotExpression));
@@ -4942,7 +4942,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       );
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for node:lithology:stratum-01:transition:2:text at revision ") === true && Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")) !== ${String(movedFrame["widthMpt"])}`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas geometry committed for Stratum 1 note — Trace organics. at revision ") === true && Number(document.getElementById("direct-manipulation-frame")?.getAttribute("width")) !== ${String(movedFrame["widthMpt"])}`,
         "WAIT_DIRECT_MANIPULATION_RESIZE",
       );
       const directResized = record(await pageValue(window, directSnapshotExpression));
@@ -4980,7 +4980,7 @@ async function runStudioProbe(window: BrowserWindow, counters: Counters): Promis
       });
       await waitFor(
         window,
-        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas gesture canceled for node:lithology:stratum-01:transition:2:text") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === undefined`,
+        `document.getElementById("editor-status")?.textContent?.startsWith("Canvas gesture canceled for Stratum 1 note — Trace organics.") === true && document.getElementById("canvas-stage")?.dataset.directManipulationHandle === undefined`,
         "WAIT_DIRECT_MANIPULATION_CANCEL",
       );
       const directCanceled = record(await pageValue(window, directSnapshotExpression));

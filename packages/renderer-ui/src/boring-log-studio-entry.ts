@@ -162,6 +162,7 @@ function frameFromAnchor(
 
 import { projectBoringLogSceneToSvg } from "./boring-log-svg-projection.js";
 import {
+  boringLogStudioElementLabel,
   buildBoringLogStudioTree,
   visibleBoringLogStudioTreeItems,
 } from "./boring-log-studio-tree.js";
@@ -713,6 +714,8 @@ async function main(): Promise<void> {
 
   let scene = initialProjection.scene;
   let page = scene.pages[0]!;
+  const elementLabel = (semanticId: string): string =>
+    boringLogStudioElementLabel(scene, semanticId);
   const pageHost = element<HTMLDivElement>("svg-page");
   const pageShadow = element<HTMLDivElement>("page-shadow");
   const pageGuidesHost = element<SVGSVGElement>("page-guides");
@@ -1956,7 +1959,10 @@ async function main(): Promise<void> {
     group.dataset["semanticId"] = node.semanticId;
     group.dataset["positionMode"] = positionMode;
     group.dataset["locked"] = String(locked);
-    group.setAttribute("aria-label", `Canvas geometry controls for ${node.id}`);
+    group.setAttribute(
+      "aria-label",
+      `Canvas geometry controls for ${elementLabel(node.semanticId)}`,
+    );
     const moveTarget = document.createElementNS(namespace, "rect");
     moveTarget.id = "direct-manipulation-move";
     moveTarget.classList.add("direct-manipulation-move-target");
@@ -2178,7 +2184,7 @@ async function main(): Promise<void> {
     line?.setAttribute("x1", String(gesture.previewDividerXMpt));
     line?.setAttribute("x2", String(gesture.previewDividerXMpt));
     const modeLabel = gesture.resizeMode === "adjacent-pair" ? "adjacent pair" : "push following";
-    status.textContent = `Column preview (${modeLabel}): ${previewColumns.map(({ widthMpt }, index) => `${gesture.affectedColumns[index]!.id} ${widthMpt / 1_000} pt`).join(" · ")}. The ${((gesture.conservedEndMpt - gesture.leftXMpt) / 1_000).toFixed(0)} pt affected span is conserved; release commits one Undo item and Esc cancels.`;
+    status.textContent = `Column preview (${modeLabel}): ${previewColumns.map(({ widthMpt }, index) => `${humanize(gesture.affectedColumns[index]!.id)} ${widthMpt / 1_000} pt`).join(" · ")}. The ${((gesture.conservedEndMpt - gesture.leftXMpt) / 1_000).toFixed(0)} pt affected span is conserved; release commits one Undo item and Esc cancels.`;
   }
 
   function beginColumnDividerGesture(event: PointerEvent, leftColumnId: string): void {
@@ -2265,7 +2271,7 @@ async function main(): Promise<void> {
     columnDividerGesture = undefined;
     Reflect.deleteProperty(canvasStage.dataset, "columnDividerAfter");
     installSvg();
-    status.textContent = `Column divider gesture canceled for ${gesture.leftColumnId}; history and template geometry were unchanged.`;
+    status.textContent = `Column divider gesture canceled for ${humanize(gesture.leftColumnId)}; history and template geometry were unchanged.`;
   }
 
   async function commitColumnDivider(
@@ -2597,7 +2603,7 @@ async function main(): Promise<void> {
       occurrenceNodeIds.length > 1
         ? `${occurrenceNodeIds.length} independent text frames; Properties values follow the Key Element`
         : physicalBoundsText([key]);
-    selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${key.id}`;
+    selectionStatus.textContent = `${occurrenceNodeIds.length} text occurrence${occurrenceNodeIds.length === 1 ? "" : "s"}; Key Element ${elementLabel(key.semanticId)}`;
     status.textContent = announcement;
   }
 
@@ -3445,7 +3451,7 @@ async function main(): Promise<void> {
           selectionName.textContent = `${nextIds.size} text elements`;
           propertySemanticId.textContent =
             nextIds.size > 1 ? "Mixed selection" : keyNode.semanticId;
-          selectionStatus.textContent = `${nextIds.size} grouped text occurrence${nextIds.size === 1 ? "" : "s"}; Key Element ${keyNode.id}`;
+          selectionStatus.textContent = `${nextIds.size} grouped text occurrence${nextIds.size === 1 ? "" : "s"}; Key Element ${elementLabel(keyNode.semanticId)}`;
           status.textContent = `${humanize(exactGroupNode.semanticId)} selected from Contents.`;
           return;
         }
@@ -4399,7 +4405,7 @@ async function main(): Promise<void> {
     if (representative === undefined) {
       emptySelection.hidden = false;
       selectionProperties.hidden = true;
-      selectionStatus.textContent = effectiveSemanticId;
+      selectionStatus.textContent = elementLabel(effectiveSemanticId);
       renderAttributeTable();
       return;
     }
@@ -4408,7 +4414,7 @@ async function main(): Promise<void> {
     selectionName.textContent =
       selectedTextNodeIds.size > 1
         ? `${selectedTextNodeIds.size} text elements`
-        : humanize(effectiveSemanticId);
+        : elementLabel(effectiveSemanticId);
     selectionRole.textContent = humanize(representative.role);
     selectionProvenance.textContent =
       representative.provenance?.provenanceClass === "effective-override"
@@ -4726,14 +4732,14 @@ async function main(): Promise<void> {
         : editable === null
           ? "Not applicable"
           : "Source original (not overridden)";
-    selectionStatus.textContent = `${humanize(effectiveSemanticId)} · ${representative.id}`;
+    selectionStatus.textContent = elementLabel(effectiveSemanticId);
     if (selectedTextNodeIds.size > 1) {
-      selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; primary ${representative.id}`;
+      selectionStatus.textContent = `${selectedTextNodeIds.size} text occurrences; Key Element ${elementLabel(representative.semanticId)}`;
     }
     status.textContent =
       selectedTextNodeIds.size > 1
         ? `${selectedTextNodeIds.size} exact text occurrences selected. Shift-click toggles membership; the orange occurrence is the Key Element.`
-        : `Selected exact occurrence ${representative.id}. Canvas, Contents, and Properties synchronized.`;
+        : `${elementLabel(effectiveSemanticId)} selected. Canvas, Contents, and Properties synchronized.`;
     renderAttributeTable();
   }
 
@@ -4768,7 +4774,7 @@ async function main(): Promise<void> {
     updateArrangementControls();
     selectionName.textContent = `${textNodes.length} text elements`;
     propertySemanticId.textContent = "Mixed selection";
-    selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${key.id}`;
+    selectionStatus.textContent = `${textNodes.length} text occurrences; Key Element ${elementLabel(key.semanticId)}`;
     status.textContent = `${textNodes.length} text occurrences selected on the active page; the orange occurrence is the Key Element.`;
     renderAttributeTable();
   }
@@ -6019,14 +6025,14 @@ async function main(): Promise<void> {
       return false;
     }
     applyTextStyle.disabled = true;
-    status.textContent = `Applying text properties to ${node.id}…`;
+    status.textContent = `Applying text properties to ${elementLabel(node.semanticId)}…`;
     if (applyScope === "named-style") {
-      status.textContent = `Applying typography to named style ${style.id}...`;
+      status.textContent = `Applying typography to named style ${humanize(style.id)}…`;
     } else if (applyScope === "template-default") {
       const summary = studioProjection.textTemplateScopeSummary;
       status.textContent = `Applying ${propertyMask.length} changed typography ${propertyMask.length === 1 ? "property" : "properties"} to ${summary.authoredStyleCount} embedded-template styles; preserving ${summary.excludedOverrideStyleCount} override styles...`;
     } else if (applyScope === "column-default") {
-      status.textContent = `Applying typography to ${columnId}...`;
+      status.textContent = `Applying typography to ${humanize(columnId ?? "selected-column")}…`;
     } else if (applyScope === "all-selected") {
       status.textContent = `Applying typography to ${selectedTargetNodes.length} selected occurrences...`;
     }
@@ -6096,14 +6102,14 @@ async function main(): Promise<void> {
       applyScope === "template-default"
         ? `Changed typography applied to ${String(result["affectedStyleCount"])} embedded-template styles at revision ${String(result["workingRevision"])}; ${String(result["excludedStyleCount"])} occurrence/column override styles were preserved.`
         : applyScope === "named-style"
-          ? `Named style ${style.id} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
+          ? `Named style ${humanize(style.id)} typography updated at revision ${String(result["workingRevision"])}; occurrence geometry was unchanged.`
           : applyScope === "column-default"
-            ? `${columnId} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
+            ? `${humanize(columnId ?? "selected-column")} typography default updated at revision ${String(result["workingRevision"])}; occurrence overrides and geometry were unchanged.`
             : applyScope === "all-selected"
               ? `Typography applied to ${targets.length} selected occurrences at revision ${String(result["workingRevision"])}; their geometry was unchanged.`
               : origin === "canvas"
-                ? `Canvas geometry committed for ${node.id} at revision ${String(result["workingRevision"])}; text was reflowed by the shared layout authority.`
-                : `Text properties applied to ${node.id} at revision ${String(result["workingRevision"])}.`,
+                ? `Canvas geometry committed for ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}; text was reflowed by the shared layout authority.`
+                : `Text properties applied to ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
     applyTextStyle.disabled = false;
@@ -6124,7 +6130,8 @@ async function main(): Promise<void> {
     detachTextAnnotation.disabled = true;
     textPositionMode.value = "free";
     textFrameY.readOnly = false;
-    status.textContent = `Detaching ${selectedSceneNodeId} as a free annotationâ€¦`;
+    const selectedNode = page.nodes.find(({ id }) => id === selectedSceneNodeId);
+    status.textContent = `Detaching ${selectedNode === undefined ? "selected text" : elementLabel(selectedNode.semanticId)} as a free annotation…`;
     if (!(await applySelectedTextStyle())) {
       textPositionMode.value = "depth-bound";
       textFrameY.readOnly = true;
@@ -6155,7 +6162,7 @@ async function main(): Promise<void> {
       return;
     }
     resetTextPresentation.disabled = true;
-    status.textContent = `Resetting ${node.id} to inherited presentation…`;
+    status.textContent = `Resetting ${elementLabel(node.semanticId)} to inherited presentation…`;
     const raw = await apis.studio.resetTextOccurrencePresentation({
       expectedWorkingRevision: studioProjection.workingRevision,
       occurrenceNodeId: node.id,
@@ -6174,7 +6181,7 @@ async function main(): Promise<void> {
     }
     const refreshed = await refreshStudioProjection(
       result["workingRevision"] as number,
-      `Presentation reset to inherited for ${node.id} at revision ${String(result["workingRevision"])}.`,
+      `Presentation reset to inherited for ${elementLabel(node.semanticId)} at revision ${String(result["workingRevision"])}.`,
     );
     if (refreshed) await refreshLifecycleStateSilently();
   }
@@ -6498,7 +6505,7 @@ async function main(): Promise<void> {
     canvasStage.dataset["directManipulationHandle"] = handle;
     event.preventDefault();
     event.stopPropagation();
-    status.textContent = `${humanize(handle)} gesture active for ${node.id}. Geometry is integer mpt; release commits one Undo/Redo step and Esc cancels.`;
+    status.textContent = `${humanize(handle)} gesture active for ${elementLabel(node.semanticId)}. Geometry is integer mpt; release commits one Undo/Redo step and Esc cancels.`;
   }
 
   function updateDirectManipulation(event: PointerEvent): void {
@@ -6563,7 +6570,7 @@ async function main(): Promise<void> {
     suppressCanvasClick = true;
     installSvg();
     syncTextFrameInputs(gesture.originalFrame);
-    status.textContent = `Canvas gesture canceled for ${gesture.nodeId}; document history and scene authority were unchanged.`;
+    status.textContent = `Canvas gesture canceled for ${elementLabel(gesture.semanticId)}; document history and scene authority were unchanged.`;
   }
 
   async function finishDirectManipulation(event: PointerEvent): Promise<void> {
