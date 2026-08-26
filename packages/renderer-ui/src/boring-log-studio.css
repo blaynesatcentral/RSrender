@@ -1514,12 +1514,17 @@ button[aria-pressed="true"] {
   line-height: 1.5;
 }
 .selection-card {
+  position: sticky;
+  top: 0;
+  z-index: 6;
   display: flex;
   flex-direction: column;
-  margin: 12px;
+  margin: 0;
   padding: 12px;
   background: linear-gradient(135deg, #e5f1f7, #f7fafb);
   border-left: 3px solid #197aa6;
+  border-bottom: 1px solid var(--rs-border-subtle);
+  box-shadow: var(--rs-shadow-1);
 }
 .selection-card span {
   color: #267498;

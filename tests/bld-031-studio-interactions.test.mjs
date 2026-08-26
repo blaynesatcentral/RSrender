@@ -137,7 +137,8 @@ test("BLD-031 route exposes live ribbon tabs, property tabs, and disclosure cont
     html,
     /id="property-tab-diagnostics"[^>]+aria-controls="property-diagnostics-panel"/u,
   );
-  assert.equal((html.match(/<details class="property-group" open>/gu) ?? []).length, 2);
+  assert.equal((html.match(/<details class="property-group" open>/gu) ?? []).length, 1);
+  assert.match(html, /<details class="property-group"><summary>Value source<\/summary>/u);
   assert.match(html, /<details class="property-group"><summary>Advanced diagnostics<\/summary>/u);
 });
 
