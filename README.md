@@ -1,27 +1,60 @@
 # RSrender
 
-RSrender is an internal-development project for producing precise, readable boring logs from RSLog data without relying on RSLog's report-template designer.
-
-The intended product combines deterministic PDF rendering with a layout-design experience inspired by ArcGIS Pro: physical page dimensions, rulers and guides, snapping, layers, exact typography and line weights, reliable overflow behavior, and geotechnical plots that share a real axis.
+RSrender is a Windows desktop application for turning structured RSLog project data into editable, publication-quality boring logs. It combines a modern ArcGIS Pro-inspired Contents/Canvas/Properties workflow with deterministic rendering from one renderer-neutral Page Plan and Resolved Page Scene.
 
 ## Status
 
-Wayfinder planning is complete. The decision-complete v0.9 product, domain, UX, architecture, acceptance, and implementation-roadmap package is indexed in [`docs/planning`](docs/planning), with the ubiquitous language in [`CONTEXT.md`](CONTEXT.md) and hard-to-reverse decisions under [`docs/adr`](docs/adr).
+RSrender is a working internal beta. The packaged application can:
 
-Production implementation began with BLD-001. The exact internal-use dependency graph is admitted and locked; the TypeScript/Electron workspace, package boundaries, clean build, tests, dependency checks, and deterministic packaging baseline are active. The build frontier is BLD-001 through BLD-013 in the [phased roadmap](docs/planning/specifications/rsrender-phased-implementation-roadmap.md). Open capability, evidence, organizational, and any future external-distribution gates remain tracked in GitHub; they do not reopen settled product behavior.
+- sign in to an authorized RSLog account without persisting credentials;
+- select a project and import its supported borings in place;
+- navigate and edit multiple boring logs from structured data;
+- synchronize selection across Contents, Canvas, Properties, graphs, and the Attribute Table;
+- edit text, dynamic text, typography, layout, column widths, page setup, lithology appearance, and graph symbology through shared command history;
+- Undo/Redo and Save/Reopen authored `.rsrender` projects;
+- select all or a subset of borings and export one verified PDF package from the same resolved scene used on screen; and
+- use Arial plus bundled Source Sans 3, Source Serif 4, and Source Code Pro faces in Regular, Italic, Bold, and Bold Italic styles.
 
-## Initial problem statement
+The current source-of-truth beta checkpoint is commit `1118cdf`. Per-edge border authoring and the broader presentation overhaul remain active work. The bundled-font workflow passes packaged Save/Reopen/Undo/Redo/PDF qualification, while formal BLD-007 production-asset/topology admission remains open; this repository does not claim external release approval.
 
-RSLog stores the required boring data but its template manager does not reliably support:
+## Rendering path
 
-- multiple datasets on one graph axis;
-- PL–LL intervals alongside moisture and penetration values;
-- dependable font sizing, alignment, text wrapping, and overflow handling;
-- stable headers and footers;
-- exact line weights and page geometry; or
-- a professional visual layout workflow.
+```text
+RSLog or synthetic structured data
+  -> Source Snapshot / Render Dataset
+  -> renderer-neutral Page Plan
+  -> Resolved Page Scene with integer mpt geometry
+  -> semantic HTML/SVG Canvas
+  -> shared-scene PDF publication
+```
 
-RSrender will explore a renderer and designer that make those behaviors explicit, testable, and portable.
+Screenshots, background images, external image generation, and monolithic hard-coded SVG are not rendering authorities.
+
+## Development
+
+The repository is an npm workspace targeting the pinned Node and npm versions in `package.json`.
+
+```powershell
+npm install
+npm run typecheck
+npm test
+npm run package:check
+npm run architecture:check
+```
+
+Use the ticket-specific packaged qualification scripts in `tooling/` for executable workflow evidence. Generated packages and local profiles belong under `.tmp/` and must not be committed.
+
+## Project references
+
+- [Product and architecture planning](docs/planning)
+- [Domain language](CONTEXT.md)
+- [Architecture decisions](docs/adr)
+- [Phased implementation roadmap](docs/planning/specifications/rsrender-phased-implementation-roadmap.md)
+- [Future maintainability improvements](future_improvements.md)
+- [UX and presentation overhaul plan](ux_overhaul_plan.md)
+- [GitHub Issues](https://github.com/blaynesatcentral/RSrender/issues)
+
+Only synthetic or explicitly authorized sanitized fixtures belong in the repository. Never commit RSLog credentials, tokens, raw client responses, or real client/project data.
 
 ## License
 
