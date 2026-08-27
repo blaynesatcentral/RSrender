@@ -23,6 +23,7 @@ export {
 } from "./physical-length.js";
 export type { Mpt, PhysicalUnit } from "./physical-length.js";
 export {
+  boringLogBorderDashMpt,
   boringLogLayoutJobSchemaVersion,
   boringLogPagePlanSchemaVersion,
   boringLogRenderContractRevision,
@@ -35,6 +36,8 @@ export {
   validateResolvedBoringLogPageScene,
 } from "./boring-log-render-contract.js";
 export type {
+  BoringLogBorderLinePattern,
+  BoringLogBorderStyleInput,
   BoringLogApprovalInput,
   BoringLogColumnInput,
   BoringLogDataAxisInput,

@@ -63,7 +63,7 @@ function boundedText(input: unknown, maximumBytes: number): string | null {
 function nullableText(input: unknown, maximumBytes: number): string | null | undefined {
   if (input === null || input === "") return null;
   if (typeof input !== "string") return undefined;
-  const normalized = input.replace(/[\u0009-\u000d]+/gu, " ").trim();
+  const normalized = input.replace(/[^\S ]+/gu, " ").trim();
   return normalized.length === 0 ? null : (boundedText(normalized, maximumBytes) ?? undefined);
 }
 

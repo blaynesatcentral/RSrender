@@ -1,4 +1,4 @@
-import { isWellFormedUnicode } from "@rsrender/contracts";
+import { isWellFormedUnicode, type BoringLogBorderStyleInput } from "@rsrender/contracts";
 
 import type { BoringLogStudioProjectionResult } from "./boring-log-studio-projection.js";
 import { DOCUMENT_ROUTE_URL } from "./document-route-contract.js";
@@ -127,6 +127,7 @@ export interface BoringLogStudioTextOccurrenceStyleInput {
     readonly frameFillColor: string | null;
     readonly frameStrokeColor: string | null;
     readonly frameStrokeWidthMpt: number;
+    readonly frameBorder?: BoringLogBorderStyleInput;
     readonly rotationMilliDegrees: number;
     readonly positionMode: "depth-bound" | "free";
   };
@@ -194,8 +195,10 @@ export interface BoringLogStudioColumnHeadingInput {
 
 export interface BoringLogStudioRegionBoundaryInput {
   readonly expectedWorkingRevision: number;
-  readonly boundary: "header-depth" | "depth-footer";
-  readonly requestedBoundaryYMpt: number;
+  readonly boundary: "header-depth" | "depth-footer" | null;
+  readonly requestedBoundaryYMpt: number | null;
+  readonly regionId: string | null;
+  readonly border: BoringLogBorderStyleInput | null;
 }
 
 export interface BoringLogStudioDataDepthConfigurationInput {
@@ -336,6 +339,28 @@ function exactRecord(input: unknown, fields: readonly string[]): DataRecord | nu
   } catch {
     return null;
   }
+}
+
+function validBorderStyle(input: unknown): input is BoringLogBorderStyleInput {
+  const border = exactRecord(input, [
+    "top",
+    "right",
+    "bottom",
+    "left",
+    "color",
+    "widthMpt",
+    "linePattern",
+  ]);
+  return (
+    border !== null &&
+    ["top", "right", "bottom", "left"].every((edge) => typeof border[edge] === "boolean") &&
+    typeof border["color"] === "string" &&
+    /^#[0-9a-f]{6}$/iu.test(border["color"]) &&
+    Number.isSafeInteger(border["widthMpt"]) &&
+    Number(border["widthMpt"]) >= 0 &&
+    Number(border["widthMpt"]) <= 12_000 &&
+    ["solid", "dashed", "dotted", "dash-dot"].includes(String(border["linePattern"]))
+  );
 }
 
 function validContext(
@@ -917,6 +942,11 @@ export class BoringLogStudioRouteBroker {
       typeof args["layout"] === "object" &&
       args["layout"] !== null &&
       Object.hasOwn(args["layout"], "minimumFontSizeMpt");
+    const hasFrameBorder =
+      args !== null &&
+      typeof args["layout"] === "object" &&
+      args["layout"] !== null &&
+      Object.hasOwn(args["layout"], "frameBorder");
     const layout =
       args === null
         ? null
@@ -932,6 +962,7 @@ export class BoringLogStudioRouteBroker {
             "frameFillColor",
             "frameStrokeColor",
             "frameStrokeWidthMpt",
+            ...(hasFrameBorder ? ["frameBorder"] : []),
             "rotationMilliDegrees",
             "positionMode",
           ]);
@@ -1059,6 +1090,7 @@ export class BoringLogStudioRouteBroker {
       !Number.isSafeInteger(layout["frameStrokeWidthMpt"]) ||
       (layout["frameStrokeWidthMpt"] as number) < 0 ||
       (layout["frameStrokeWidthMpt"] as number) > 12_000 ||
+      (hasFrameBorder && !validBorderStyle(layout["frameBorder"])) ||
       !Number.isSafeInteger(layout["rotationMilliDegrees"]) ||
       (layout["rotationMilliDegrees"] as number) < -180_000 ||
       (layout["rotationMilliDegrees"] as number) > 180_000 ||
@@ -1669,18 +1701,37 @@ export class BoringLogStudioRouteBroker {
     ) {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }
+    const hasBorderModeFields =
+      typeof request["args"] === "object" &&
+      request["args"] !== null &&
+      Object.hasOwn(request["args"], "regionId") &&
+      Object.hasOwn(request["args"], "border");
     const args = exactRecord(request["args"], [
       "expectedWorkingRevision",
       "boundary",
       "requestedBoundaryYMpt",
+      ...(hasBorderModeFields ? ["regionId", "border"] : []),
     ]);
+    const resizeMode =
+      args !== null &&
+      ["header-depth", "depth-footer"].includes(String(args["boundary"])) &&
+      Number.isSafeInteger(args["requestedBoundaryYMpt"]) &&
+      Number(args["requestedBoundaryYMpt"]) >= 0 &&
+      (!hasBorderModeFields || (args["regionId"] === null && args["border"] === null));
+    const borderMode =
+      args !== null &&
+      hasBorderModeFields &&
+      args["boundary"] === null &&
+      args["requestedBoundaryYMpt"] === null &&
+      typeof args["regionId"] === "string" &&
+      args["regionId"].length > 0 &&
+      args["regionId"].length <= 512 &&
+      validBorderStyle(args["border"]);
     if (
       args === null ||
       !Number.isSafeInteger(args["expectedWorkingRevision"]) ||
       (args["expectedWorkingRevision"] as number) < 0 ||
-      !["header-depth", "depth-footer"].includes(String(args["boundary"])) ||
-      !Number.isSafeInteger(args["requestedBoundaryYMpt"]) ||
-      (args["requestedBoundaryYMpt"] as number) < 0
+      (!resizeMode && !borderMode)
     ) {
       return lifecycleRejected("STUDIO_ROUTE_ARGUMENT_INVALID");
     }

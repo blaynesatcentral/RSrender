@@ -1,5 +1,6 @@
 import { boringLogDynamicTextCatalog, boringLogTextColumnSemanticId } from "@rsrender/contracts";
 import type {
+  BoringLogBorderLinePattern,
   BoringLogSceneNode,
   BoringLogTextFrameAnchor,
   BoringLogValueProvenance,
@@ -8,6 +9,16 @@ import type {
   OverrideRenderUnitState,
   ResolvedBoringLogPageScene,
 } from "@rsrender/contracts";
+
+type StudioBorderStyle = Readonly<{
+  top: boolean;
+  right: boolean;
+  bottom: boolean;
+  left: boolean;
+  color: string;
+  widthMpt: number;
+  linePattern: BoringLogBorderLinePattern;
+}>;
 
 type TextFrame = Readonly<{
   xMpt: number;
@@ -484,6 +495,7 @@ type StudioApis = Readonly<{
         readonly frameFillColor: string | null;
         readonly frameStrokeColor: string | null;
         readonly frameStrokeWidthMpt: number;
+        readonly frameBorder?: StudioBorderStyle;
         readonly rotationMilliDegrees: number;
         readonly positionMode: "depth-bound" | "free";
       };
@@ -531,8 +543,10 @@ type StudioApis = Readonly<{
     }) => Promise<CommandResult>;
     readonly setRegionBoundary: (input: {
       readonly expectedWorkingRevision: number;
-      readonly boundary: RegionBoundary;
-      readonly requestedBoundaryYMpt: number;
+      readonly boundary: RegionBoundary | null;
+      readonly requestedBoundaryYMpt: number | null;
+      readonly regionId: string | null;
+      readonly border: StudioBorderStyle | null;
     }) => Promise<CommandResult>;
     readonly setDataDepthConfiguration: (input: {
       readonly expectedWorkingRevision: number;
@@ -750,6 +764,14 @@ async function main(): Promise<void> {
   const regionResizeProperties = element<HTMLDetailsElement>("region-resize-properties");
   const regionHeight = element<HTMLInputElement>("region-height");
   const applyRegionHeight = element<HTMLButtonElement>("apply-region-height");
+  const regionBorderAll = element<HTMLInputElement>("region-border-all");
+  const regionBorderTop = element<HTMLInputElement>("region-border-top");
+  const regionBorderRight = element<HTMLInputElement>("region-border-right");
+  const regionBorderBottom = element<HTMLInputElement>("region-border-bottom");
+  const regionBorderLeft = element<HTMLInputElement>("region-border-left");
+  const regionBorderColor = element<HTMLInputElement>("region-border-color");
+  const regionBorderWidth = element<HTMLInputElement>("region-border-width");
+  const regionBorderPattern = element<HTMLSelectElement>("region-border-pattern");
   const regionMinimumHeight = element<HTMLElement>("region-minimum-height");
   const regionDepthScale = element<HTMLElement>("region-depth-scale");
   const regionPagination = element<HTMLElement>("region-pagination");
@@ -868,6 +890,11 @@ async function main(): Promise<void> {
   const textFrameStrokeEnabled = element<HTMLInputElement>("text-frame-stroke-enabled");
   const textFrameStrokeColor = element<HTMLInputElement>("text-frame-stroke-color");
   const textFrameStrokeWidth = element<HTMLInputElement>("text-frame-stroke-width");
+  const textBorderTop = element<HTMLInputElement>("text-border-top");
+  const textBorderRight = element<HTMLInputElement>("text-border-right");
+  const textBorderBottom = element<HTMLInputElement>("text-border-bottom");
+  const textBorderLeft = element<HTMLInputElement>("text-border-left");
+  const textBorderPattern = element<HTMLSelectElement>("text-border-pattern");
   const textPositionMode = element<HTMLSelectElement>("text-position-mode");
   const detachTextAnnotation = element<HTMLButtonElement>("detach-text-annotation");
   const textLocked = element<HTMLInputElement>("text-locked");
@@ -879,6 +906,50 @@ async function main(): Promise<void> {
   const resetTextPresentation = element<HTMLButtonElement>("reset-text-presentation");
   const selectionStatus = element<HTMLElement>("selection-status");
   const diagnosticsList = element<HTMLUListElement>("diagnostics-list");
+
+  const textBorderEdges = [textBorderTop, textBorderRight, textBorderBottom, textBorderLeft];
+  const regionBorderEdges = [
+    regionBorderTop,
+    regionBorderRight,
+    regionBorderBottom,
+    regionBorderLeft,
+  ];
+
+  function setBorderEdges(controls: readonly HTMLInputElement[], checked: boolean): void {
+    for (const control of controls) control.checked = checked;
+  }
+
+  function syncBorderControls(
+    allControl: HTMLInputElement,
+    controls: readonly HTMLInputElement[],
+    colorControl: HTMLInputElement,
+    widthControl: HTMLInputElement,
+    patternControl: HTMLSelectElement,
+  ): void {
+    allControl.checked = controls.every(({ checked }) => checked);
+    allControl.indeterminate = !allControl.checked && controls.some(({ checked }) => checked);
+    const enabled = controls.some(({ checked }) => checked);
+    colorControl.disabled = !enabled;
+    widthControl.disabled = !enabled;
+    patternControl.disabled = !enabled;
+  }
+
+  function borderFromControls(
+    controls: readonly HTMLInputElement[],
+    colorControl: HTMLInputElement,
+    widthControl: HTMLInputElement,
+    patternControl: HTMLSelectElement,
+  ): StudioBorderStyle {
+    return {
+      top: controls[0]!.checked,
+      right: controls[1]!.checked,
+      bottom: controls[2]!.checked,
+      left: controls[3]!.checked,
+      color: colorControl.value,
+      widthMpt: Math.round(Number(widthControl.value) * 1_000),
+      linePattern: patternControl.value as BoringLogBorderLinePattern,
+    };
+  }
   const diagnosticBadge = element<HTMLElement>("diagnostic-badge");
   const propertiesScroll = element<HTMLElement>("properties-scroll");
   const propertyElementPanel = element<HTMLElement>("property-element-panel");
@@ -2377,6 +2448,8 @@ async function main(): Promise<void> {
       expectedWorkingRevision: studioProjection.workingRevision,
       boundary,
       requestedBoundaryYMpt,
+      regionId: null,
+      border: null,
     });
     if (!result.accepted || result.workingRevision === undefined) {
       status.textContent = `Page Region command failed: ${result.code ?? "REGION_BOUNDARY_UNAVAILABLE"}`;
@@ -2386,6 +2459,41 @@ async function main(): Promise<void> {
     return refreshStudioProjection(
       result.workingRevision,
       `Page Region boundary committed at revision ${result.workingRevision}; ${result.pageCount ?? 1} page${result.pageCount === 1 ? "" : "s"} now preserve the fixed depth scale.`,
+    );
+  }
+
+  async function applySelectedRegionBorder(): Promise<boolean> {
+    const apis = studioApis();
+    if (apis === null || studioProjection === null || selectedSemanticId === null) return false;
+    const border = borderFromControls(
+      regionBorderEdges,
+      regionBorderColor,
+      regionBorderWidth,
+      regionBorderPattern,
+    );
+    if (
+      !/^#[0-9a-f]{6}$/iu.test(border.color) ||
+      !Number.isSafeInteger(border.widthMpt) ||
+      border.widthMpt < 0 ||
+      border.widthMpt > 12_000
+    ) {
+      status.textContent = "Region border requires a valid color and a width from 0 to 12 pt.";
+      return false;
+    }
+    const result = await apis.studio.setRegionBoundary({
+      expectedWorkingRevision: studioProjection.workingRevision,
+      boundary: null,
+      requestedBoundaryYMpt: null,
+      regionId: selectedSemanticId,
+      border,
+    });
+    if (!result.accepted || result.workingRevision === undefined) {
+      status.textContent = `Page Region border failed: ${result.code ?? "REGION_BORDER_UNAVAILABLE"}`;
+      return false;
+    }
+    return refreshStudioProjection(
+      result.workingRevision,
+      `Page Region border committed at revision ${result.workingRevision}.`,
     );
   }
 
@@ -4262,6 +4370,28 @@ async function main(): Promise<void> {
       regionDepthScale.textContent = `${plannedPage.depthTransform.mptPerFoot} mpt/ft (fixed)`;
       regionPagination.textContent = `${plannedPage.depthRange.endFt - plannedPage.depthRange.startFt} ft · 1 page`;
       applyRegionHeight.disabled = lifecycleState?.readOnly === true;
+      const border = selectedRegion.border;
+      setBorderEdges(regionBorderEdges, border === undefined ? true : false);
+      if (border !== undefined) {
+        regionBorderTop.checked = border.top;
+        regionBorderRight.checked = border.right;
+        regionBorderBottom.checked = border.bottom;
+        regionBorderLeft.checked = border.left;
+        regionBorderColor.value = border.color;
+        regionBorderWidth.value = String(border.widthMpt / 1_000);
+        regionBorderPattern.value = border.linePattern;
+      } else {
+        regionBorderColor.value = "#1f2529";
+        regionBorderWidth.value = "0.5";
+        regionBorderPattern.value = "solid";
+      }
+      syncBorderControls(
+        regionBorderAll,
+        regionBorderEdges,
+        regionBorderColor,
+        regionBorderWidth,
+        regionBorderPattern,
+      );
     }
     const lithologyMatch = /^lithology:([^:]+)/u.exec(effectiveSemanticId);
     const lithologyState =
@@ -4359,13 +4489,31 @@ async function main(): Promise<void> {
         ? presentation!.frameFillColor!
         : "#fff4cc";
       textFrameFillColor.disabled = !textFrameFillEnabled.checked;
-      textFrameStrokeEnabled.checked = presentation?.frameStrokeColor != null;
-      textFrameStrokeColor.value = /^#[0-9a-f]{6}$/iu.test(presentation?.frameStrokeColor ?? "")
-        ? presentation!.frameStrokeColor!
+      const frameBorder = presentation?.frameBorder;
+      const legacyFrameBorder = presentation?.frameStrokeColor != null;
+      setBorderEdges(textBorderEdges, frameBorder === undefined ? legacyFrameBorder : false);
+      if (frameBorder !== undefined) {
+        textBorderTop.checked = frameBorder.top;
+        textBorderRight.checked = frameBorder.right;
+        textBorderBottom.checked = frameBorder.bottom;
+        textBorderLeft.checked = frameBorder.left;
+      }
+      textFrameStrokeColor.value = /^#[0-9a-f]{6}$/iu.test(
+        frameBorder?.color ?? presentation?.frameStrokeColor ?? "",
+      )
+        ? (frameBorder?.color ?? presentation!.frameStrokeColor!)
         : "#b42318";
-      textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
-      textFrameStrokeWidth.value = String((presentation?.frameStrokeWidthMpt ?? 500) / 1_000);
-      textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
+      textFrameStrokeWidth.value = String(
+        (frameBorder?.widthMpt ?? presentation?.frameStrokeWidthMpt ?? 500) / 1_000,
+      );
+      textBorderPattern.value = frameBorder?.linePattern ?? "solid";
+      syncBorderControls(
+        textFrameStrokeEnabled,
+        textBorderEdges,
+        textFrameStrokeColor,
+        textFrameStrokeWidth,
+        textBorderPattern,
+      );
       textPositionMode.value = presentation?.positionMode ?? "depth-bound";
       textFrameY.readOnly = textPositionMode.value !== "free";
       detachTextAnnotation.disabled =
@@ -5727,6 +5875,14 @@ async function main(): Promise<void> {
     };
     const rotationMilliDegrees = Math.round(Number(textRotation.value) * 1_000);
     const frameStrokeWidthMpt = Math.round(Number(textFrameStrokeWidth.value) * 1_000);
+    const frameBorder = borderFromControls(
+      textBorderEdges,
+      textFrameStrokeColor,
+      textFrameStrokeWidth,
+      textBorderPattern,
+    );
+    const useLegacyFullBorder =
+      textBorderEdges.every(({ checked }) => checked) && frameBorder.linePattern === "solid";
     const positionMode = textPositionMode.value as "depth-bound" | "free";
     if (
       !Number.isSafeInteger(fontSizeMpt) ||
@@ -5824,8 +5980,9 @@ async function main(): Promise<void> {
         overflowPolicy: textOverflowPolicy.value as "clip-with-diagnostic" | "shrink-to-minimum",
         ...(textOverflowPolicy.value === "shrink-to-minimum" ? { minimumFontSizeMpt } : {}),
         frameFillColor: textFrameFillEnabled.checked ? textFrameFillColor.value : null,
-        frameStrokeColor: textFrameStrokeEnabled.checked ? textFrameStrokeColor.value : null,
+        frameStrokeColor: useLegacyFullBorder ? textFrameStrokeColor.value : null,
         frameStrokeWidthMpt,
+        ...(!useLegacyFullBorder ? { frameBorder } : {}),
         rotationMilliDegrees,
         positionMode,
       },
@@ -7070,10 +7227,62 @@ async function main(): Promise<void> {
   textFrameFillEnabled.addEventListener("change", () => {
     textFrameFillColor.disabled = !textFrameFillEnabled.checked;
   });
+  const commitTextBorderControlChange = (): void => {
+    textStyleScope.value = "occurrence";
+    void applySelectedTextStyle();
+  };
   textFrameStrokeEnabled.addEventListener("change", () => {
-    textFrameStrokeColor.disabled = !textFrameStrokeEnabled.checked;
-    textFrameStrokeWidth.disabled = !textFrameStrokeEnabled.checked;
+    setBorderEdges(textBorderEdges, textFrameStrokeEnabled.checked);
+    syncBorderControls(
+      textFrameStrokeEnabled,
+      textBorderEdges,
+      textFrameStrokeColor,
+      textFrameStrokeWidth,
+      textBorderPattern,
+    );
+    commitTextBorderControlChange();
   });
+  for (const control of textBorderEdges) {
+    control.addEventListener("change", () => {
+      syncBorderControls(
+        textFrameStrokeEnabled,
+        textBorderEdges,
+        textFrameStrokeColor,
+        textFrameStrokeWidth,
+        textBorderPattern,
+      );
+      commitTextBorderControlChange();
+    });
+  }
+  for (const control of [textFrameStrokeColor, textFrameStrokeWidth, textBorderPattern]) {
+    control.addEventListener("change", commitTextBorderControlChange);
+  }
+  regionBorderAll.addEventListener("change", () => {
+    setBorderEdges(regionBorderEdges, regionBorderAll.checked);
+    syncBorderControls(
+      regionBorderAll,
+      regionBorderEdges,
+      regionBorderColor,
+      regionBorderWidth,
+      regionBorderPattern,
+    );
+    void applySelectedRegionBorder();
+  });
+  for (const control of regionBorderEdges) {
+    control.addEventListener("change", () => {
+      syncBorderControls(
+        regionBorderAll,
+        regionBorderEdges,
+        regionBorderColor,
+        regionBorderWidth,
+        regionBorderPattern,
+      );
+      void applySelectedRegionBorder();
+    });
+  }
+  for (const control of [regionBorderColor, regionBorderWidth, regionBorderPattern]) {
+    control.addEventListener("change", () => void applySelectedRegionBorder());
+  }
   for (const control of [
     dataLayerLineColor,
     dataLayerLineWidth,

@@ -911,6 +911,7 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
             "column-heading-text",
             "data-depth-configuration",
             "region-boundary-resize",
+            "region-border-style",
             "page-setup",
             "text-occurrence-authoring",
             "lithology-interval-appearance",
@@ -1043,15 +1044,17 @@ class InMemoryOverrideRenderDatasetServiceImplementation implements InMemoryOver
                       ? "Set Log Column heading"
                       : operation === "region-boundary-resize"
                         ? "Resize Page Region boundary"
-                        : operation === "page-setup"
-                          ? "Set physical Page Setup"
-                          : operation === "text-occurrence-authoring"
-                            ? "Author selected text occurrences"
-                            : operation === "lithology-interval-appearance"
-                              ? "Set lithology interval appearance"
-                              : operation === "data-layer-symbology"
-                                ? "Set Data Layer symbology"
-                                : "Set text occurrence style";
+                        : operation === "region-border-style"
+                          ? "Set Page Region border"
+                          : operation === "page-setup"
+                            ? "Set physical Page Setup"
+                            : operation === "text-occurrence-authoring"
+                              ? "Author selected text occurrences"
+                              : operation === "lithology-interval-appearance"
+                                ? "Set lithology interval appearance"
+                                : operation === "data-layer-symbology"
+                                  ? "Set Data Layer symbology"
+                                  : "Set text occurrence style";
       const eventPayload = canonicalizeJson({
         kind: commandIdentity,
         explorationIdentity: command["explorationIdentity"],

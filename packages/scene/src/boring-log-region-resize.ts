@@ -44,7 +44,7 @@ function exactRegion(input: unknown): input is BoringLogTemplateRegionInput {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return false;
   const value = input as Readonly<Record<string, unknown>>;
   return (
-    Reflect.ownKeys(value).length === 6 &&
+    Reflect.ownKeys(value).length === (Object.hasOwn(value, "border") ? 7 : 6) &&
     typeof value["id"] === "string" &&
     ["header", "depth-body", "footer"].includes(String(value["role"])) &&
     ["xMpt", "yMpt", "widthMpt", "heightMpt"].every(

@@ -7366,6 +7366,13 @@ async function main(): Promise<void> {
           !/^#[0-9a-f]{6}$/iu.test(input.layout.frameStrokeColor)) ||
         input.layout.frameStrokeWidthMpt < 0 ||
         input.layout.frameStrokeWidthMpt > 12_000 ||
+        (input.layout.frameBorder !== undefined &&
+          (!/^#[0-9a-f]{6}$/iu.test(input.layout.frameBorder.color) ||
+            input.layout.frameBorder.widthMpt < 0 ||
+            input.layout.frameBorder.widthMpt > 12_000 ||
+            !["solid", "dashed", "dotted", "dash-dot"].includes(
+              input.layout.frameBorder.linePattern,
+            ))) ||
         (input.layout.positionMode === "depth-bound" &&
           input.layout.frame.yMpt !== node.frame.yMpt) ||
         input.layout.frame.xMpt + input.layout.frame.widthMpt >
@@ -8731,17 +8738,20 @@ async function main(): Promise<void> {
       if (currentJob === null) {
         return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
       }
-      const resized = resizeBoringLogPageRegions({
-        pageHeightMpt: currentJob.template.page.heightMpt,
-        regions: currentJob.template.regions,
-        depthTransform: currentJob.template.depthTransform,
-        boundary: input.boundary,
-        requestedBoundaryYMpt: input.requestedBoundaryYMpt,
-        minimumHeaderHeightMpt: 60_000,
-        minimumDepthBodyHeightMpt: 300_000,
-        minimumFooterHeightMpt: 72_000,
-      });
-      if (!resized.accepted || !resized.changed) {
+      const borderMode = input.border !== null;
+      const resized = borderMode
+        ? null
+        : resizeBoringLogPageRegions({
+            pageHeightMpt: currentJob.template.page.heightMpt,
+            regions: currentJob.template.regions,
+            depthTransform: currentJob.template.depthTransform,
+            boundary: input.boundary!,
+            requestedBoundaryYMpt: input.requestedBoundaryYMpt!,
+            minimumHeaderHeightMpt: 60_000,
+            minimumDepthBodyHeightMpt: 300_000,
+            minimumFooterHeightMpt: 72_000,
+          });
+      if (resized !== null && (!resized.accepted || !resized.changed)) {
         return Object.freeze({
           accepted: false,
           code: !resized.accepted ? resized.code : "REGION_BOUNDARY_NO_CHANGE",
@@ -8772,36 +8782,59 @@ async function main(): Promise<void> {
       if (representation === undefined) {
         return Object.freeze({ accepted: false, code: "REGION_BOUNDARY_UNAVAILABLE" });
       }
-      const currentDepthBody = currentJob.template.regions.find(
-        ({ role }) => role === "depth-body",
-      )!;
-      const nextDepthBody = resized.regions.find(({ role }) => role === "depth-body")!;
-      const yStartMpt =
-        nextDepthBody.yMpt + (currentJob.template.depthTransform.yStartMpt - currentDepthBody.yMpt);
-      const depthTransform =
-        resized.depthTransform ??
-        Object.freeze({
-          ...currentJob.template.depthTransform,
-          yStartMpt,
-          yEndMpt: yStartMpt + resized.requiredPlotHeightMpt,
+      let template: BoringLogLayoutJobInput["template"];
+      if (borderMode) {
+        const target = currentJob.template.regions.find(({ id }) => id === input.regionId);
+        if (target === undefined) {
+          return Object.freeze({ accepted: false, code: "REGION_BORDER_UNAVAILABLE" });
+        }
+        if (sha256CanonicalJson(target.border ?? null) === sha256CanonicalJson(input.border)) {
+          return Object.freeze({ accepted: false, code: "REGION_BORDER_NO_CHANGE" });
+        }
+        template = Object.freeze({
+          ...currentJob.template,
+          regions: Object.freeze(
+            currentJob.template.regions.map((region) =>
+              region.id === input.regionId
+                ? Object.freeze({ ...region, border: input.border! })
+                : region,
+            ),
+          ),
         });
-      const templateWithoutPagination: BoringLogLayoutJobInput["template"] = {
-        ...currentJob.template,
-      };
-      Reflect.deleteProperty(templateWithoutPagination, "pagination");
-      const template = Object.freeze({
-        ...templateWithoutPagination,
-        regions: resized.regions,
-        depthTransform,
-        ...(resized.repaginationRequired
-          ? {
-              pagination: Object.freeze({
-                policy: "fixed-scale-continuation-v1" as const,
-                yEndLimitMpt: nextDepthBody.yMpt + nextDepthBody.heightMpt,
-              }),
-            }
-          : {}),
-      });
+      } else {
+        const acceptedResize = resized!;
+        const currentDepthBody = currentJob.template.regions.find(
+          ({ role }) => role === "depth-body",
+        )!;
+        const nextDepthBody = acceptedResize.regions.find(({ role }) => role === "depth-body")!;
+        const yStartMpt =
+          nextDepthBody.yMpt +
+          (currentJob.template.depthTransform.yStartMpt - currentDepthBody.yMpt);
+        const depthTransform: typeof currentJob.template.depthTransform =
+          acceptedResize.depthTransform ??
+          (Object.freeze({
+            ...currentJob.template.depthTransform,
+            yStartMpt,
+            yEndMpt: yStartMpt + acceptedResize.requiredPlotHeightMpt,
+          }) as typeof currentJob.template.depthTransform);
+        const templateWithoutPagination: BoringLogLayoutJobInput["template"] = {
+          ...currentJob.template,
+        };
+        Reflect.deleteProperty(templateWithoutPagination, "pagination");
+        template = Object.freeze({
+          ...templateWithoutPagination,
+          regions: acceptedResize.regions,
+          depthTransform,
+          ...(acceptedResize.repaginationRequired
+            ? {
+                pagination: Object.freeze({
+                  policy: "fixed-scale-continuation-v1" as const,
+                  yEndLimitMpt: nextDepthBody.yMpt + nextDepthBody.heightMpt,
+                }),
+              }
+            : {}),
+        }) as BoringLogLayoutJobInput["template"];
+      }
       const authored = validateBoringLogLayoutJobInput({
         ...currentJob,
         templateDigest: sha256CanonicalJson(template),
@@ -8812,15 +8845,19 @@ async function main(): Promise<void> {
       }
       regionBoundaryCommandSequence += 1;
       const committed = await commitEmbeddedTemplateReplacement(source.service, {
-        requestId: `urn:rsrender:bld-039:request:region-boundary:${regionBoundaryCommandSequence}`,
+        requestId: `urn:rsrender:${borderMode ? "bld-058:request:region-border" : "bld-039:request:region-boundary"}:${regionBoundaryCommandSequence}`,
         documentId: documentIdentity,
         ownerGeneration: hosted.ownerGeneration,
         expectedWorkingRevision: input.expectedWorkingRevision,
         explorationIdentity: document.explorationIdentity,
         expectedEffectiveContentDigest: representation.effectiveContentDigest,
         replacementEffectiveContentDigest: authored.value.templateDigest,
-        reason: `Resize ${resized.boundary} Page Region boundary in Boring Log Studio`,
-        operation: "region-boundary-resize",
+        reason: borderMode
+          ? `Set ${input.regionId} Page Region border in Boring Log Studio`
+          : `Resize ${resized!.accepted ? resized!.boundary : "unknown"} Page Region boundary in Boring Log Studio`,
+        ...(borderMode
+          ? { operation: "region-border-style" }
+          : { operation: "region-boundary-resize" }),
       });
       if (!committed.accepted) return committed;
       retainedLayoutJobs.set(
@@ -8830,16 +8867,22 @@ async function main(): Promise<void> {
       projectionCache.clear();
       return Object.freeze({
         accepted: true,
-        code: "REGION_BOUNDARY_SET",
+        code: borderMode ? "REGION_BORDER_SET" : "REGION_BOUNDARY_SET",
         workingRevision: committed.workingRevision,
         dirty: committed.dirty,
         canUndo: committed.canUndo,
         canRedo: committed.canRedo,
-        boundary: resized.boundary,
-        effectiveBoundaryYMpt: resized.effectiveBoundaryYMpt,
-        pageCount: resized.pageCount,
-        repaginated: resized.repaginationRequired,
-        clamped: resized.clamped,
+        ...(borderMode
+          ? { regionId: input.regionId }
+          : resized!.accepted
+            ? {
+                boundary: resized!.boundary,
+                effectiveBoundaryYMpt: resized!.effectiveBoundaryYMpt,
+                pageCount: resized!.pageCount,
+                repaginated: resized!.repaginationRequired,
+                clamped: resized!.clamped,
+              }
+            : {}),
       });
     };
     const handleArrangeTextOccurrences = async (

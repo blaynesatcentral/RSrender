@@ -1,4 +1,5 @@
 import {
+  boringLogBorderDashMpt,
   resolveExactFontProjectionFace,
   rsrenderSansFontProjectionBindings,
   validateFontProjectionBindingCatalog,
@@ -79,6 +80,35 @@ function escapeAttribute(value: string): string {
 
 function attribute(name: string, value: string | number): string {
   return ` ${name}="${escapeAttribute(String(value))}"`;
+}
+
+function textFrameBorderMarkup(
+  node: Extract<BoringLogSceneNode, { readonly kind: "text" }>,
+  frameTransform: string,
+): string {
+  const border = node.presentation?.frameBorder;
+  if (border === undefined) return "";
+  const dash = boringLogBorderDashMpt(border.linePattern);
+  const dashAttribute = dash.length === 0 ? "" : attribute("stroke-dasharray", dash.join(" "));
+  const common = `${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame-border")}${attribute("stroke", border.color)}${attribute("stroke-width", border.widthMpt)}${attribute("pointer-events", "none")}${dashAttribute}${frameTransform}`;
+  const x1 = node.frame.xMpt;
+  const x2 = node.frame.xMpt + node.frame.widthMpt;
+  const y1 = node.frame.yMpt;
+  const y2 = node.frame.yMpt + node.frame.heightMpt;
+  return [
+    border.top
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-top`)}${common}${attribute("x1", x1)}${attribute("y1", y1)}${attribute("x2", x2)}${attribute("y2", y1)}/>`
+      : "",
+    border.right
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-right`)}${common}${attribute("x1", x2)}${attribute("y1", y1)}${attribute("x2", x2)}${attribute("y2", y2)}/>`
+      : "",
+    border.bottom
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-bottom`)}${common}${attribute("x1", x1)}${attribute("y1", y2)}${attribute("x2", x2)}${attribute("y2", y2)}/>`
+      : "",
+    border.left
+      ? `<line${attribute("id", `${node.id}:presentation-frame:border-left`)}${common}${attribute("x1", x1)}${attribute("y1", y1)}${attribute("x2", x1)}${attribute("y2", y2)}/>`
+      : "",
+  ].join("");
 }
 
 function semanticAttributes(node: BoringLogSceneNode, selectedSemanticId: string | null): string {
@@ -244,10 +274,12 @@ function renderNode(
           `rotate(${presentation.rotationMilliDegrees / 1_000} ${node.frame.xMpt + Math.round(node.frame.widthMpt / 2)} ${node.frame.yMpt + Math.round(node.frame.heightMpt / 2)})`,
         );
   const frameMarkup =
-    presentation?.frameStrokeWidthMpt === undefined ||
-    (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
-      ? ""
-      : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", node.frame.xMpt)}${attribute("y", node.frame.yMpt)}${attribute("width", node.frame.widthMpt)}${attribute("height", node.frame.heightMpt)}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", presentation.frameStrokeWidthMpt)}${attribute("pointer-events", "none")}${frameTransform}/>`;
+    presentation?.frameBorder === undefined
+      ? presentation?.frameStrokeWidthMpt === undefined ||
+        (presentation.frameFillColor === null && presentation.frameStrokeColor === null)
+        ? ""
+        : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", node.frame.xMpt)}${attribute("y", node.frame.yMpt)}${attribute("width", node.frame.widthMpt)}${attribute("height", node.frame.heightMpt)}${attribute("fill", presentation.frameFillColor ?? "none")}${attribute("stroke", presentation.frameStrokeColor ?? "none")}${attribute("stroke-width", presentation.frameStrokeWidthMpt)}${attribute("pointer-events", "none")}${frameTransform}/>`
+      : `${presentation.frameFillColor == null ? "" : `<rect${attribute("id", `${node.id}:presentation-frame`)}${attribute("data-text-frame-owner", node.id)}${attribute("data-semantic-id", node.semanticId)}${attribute("data-node-role", "text-presentation-frame")}${attribute("x", node.frame.xMpt)}${attribute("y", node.frame.yMpt)}${attribute("width", node.frame.widthMpt)}${attribute("height", node.frame.heightMpt)}${attribute("fill", presentation.frameFillColor)} stroke="none"${attribute("pointer-events", "none")}${frameTransform}/>`}${textFrameBorderMarkup(node, frameTransform)}`;
   return `${frameMarkup}<text${common}${attribute("font-family", fontFace.cssFamilyName)}${attribute("font-size", measurement.effectiveFontSizeMpt)}${attribute("font-style", style.fontStyle ?? "normal")}${attribute("font-weight", style.fontWeight)}${style.textDecoration === undefined || style.textDecoration === "none" ? "" : attribute("text-decoration", style.textDecoration)}${style.letterSpacingMpt === undefined ? "" : attribute("letter-spacing", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("word-spacing", style.wordSpacingMpt)}${attribute("fill", style.color)}${attribute("data-font-family-id", style.fontFamilyId)}${attribute("data-font-face-id", fontFace.faceId)}${attribute("data-font-style", style.fontStyle ?? "normal")}${attribute("data-text-decoration", style.textDecoration ?? "none")}${style.letterSpacingMpt === undefined ? "" : attribute("data-letter-spacing-mpt", style.letterSpacingMpt)}${style.wordSpacingMpt === undefined ? "" : attribute("data-word-spacing-mpt", style.wordSpacingMpt)}${style.paragraphSpacingMpt === undefined ? "" : attribute("data-paragraph-spacing-mpt", style.paragraphSpacingMpt)}${attribute("data-authored-font-size-mpt", style.fontSizeMpt)}${attribute("data-effective-font-size-mpt", measurement.effectiveFontSizeMpt)}${attribute("data-font-face-digest", measurement.fontFaceDigest)}${attribute("data-font-metrics-digest", measurement.fontMetricsDigest)}${attribute("data-measurement-id", node.measurementId)}${attribute("data-overflow", measurement.overflow)}${presentationAttributes}>${lines}</text>`;
 }
 
